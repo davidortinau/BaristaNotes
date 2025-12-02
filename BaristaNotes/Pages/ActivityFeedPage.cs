@@ -96,14 +96,32 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         await LoadShotsAsync();
     }
 
+    async Task NavigateToSettings()
+    {
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync("settings");
+    }
+
     public override VisualNode Render()
     {
         return ContentPage("Shot History",
-            RefreshView(
-                RenderContent()
+            ToolbarItem("Settings")
+                .Order(Microsoft.Maui.Controls.ToolbarItemOrder.Primary)
+                .Priority(0)
+                .OnClicked(async () => await NavigateToSettings()),
+            Grid("Auto,*", "*",
+                Label("Shot History")
+                    .FontSize(24)
+                    .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
+                    .Padding(16, 8)
+                    .GridRow(0),
+
+                RefreshView(
+                    RenderContent()
+                )
+                .IsRefreshing(State.IsRefreshing)
+                .OnRefreshing(async () => await LoadShotsAsync(isRefresh: true))
+                .GridRow(1)
             )
-            .IsRefreshing(State.IsRefreshing)
-            .OnRefreshing(async () => await LoadShotsAsync(isRefresh: true))
         );
     }
 
@@ -114,7 +132,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
             return VStack(
                 ActivityIndicator()
                     .IsRunning(true),
-                
+
                 Label("Loading shot history...")
                     .FontSize(16)
                     .Margin(0, 8, 0, 0)
@@ -129,12 +147,12 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                 Label("Error Loading History")
                     .FontSize(18)
                     .HCenter(),
-                
+
                 Label(State.ErrorMessage)
                     .FontSize(14)
                     .TextColor(Colors.Red)
                     .HCenter(),
-                
+
                 Button("Retry")
                     .OnClicked(async () => await LoadShotsAsync(isRefresh: true))
                     .HeightRequest(48)
@@ -150,11 +168,11 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                 Label("☕")
                     .FontSize(64)
                     .HCenter(),
-                
+
                 Label("No Shots Yet")
                     .FontSize(20)
                     .HCenter(),
-                
+
                 Label("Start logging your espresso shots to see them here")
                     .FontSize(16)
                     .TextColor(Colors.Gray)

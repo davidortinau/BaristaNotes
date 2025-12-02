@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using CommunityToolkit.Maui;
 using MauiReactor;
+using The49.Maui.BottomSheet;
 using BaristaNotes.Core.Data;
 using BaristaNotes.Core.Data.Repositories;
 using BaristaNotes.Core.Services;
@@ -16,6 +17,7 @@ public static class MauiProgram
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiReactorApp<App>()
+			.UseBottomSheet()
 			.UseMauiCommunityToolkit()
 			.ConfigureFonts(fonts =>
 			{
@@ -23,20 +25,23 @@ public static class MauiProgram
 				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
 			});
 
+		// Register MauiReactor routes
+		RegisterRoutes();
+
 		// Database configuration
 		var dbPath = Path.Combine(FileSystem.AppDataDirectory, "barista_notes.db");
 		builder.Services.AddDbContext<BaristaNotesContext>(options =>
 			options.UseSqlite($"Data Source={dbPath}"));
-		
+
 		// Register Repositories (scoped)
 		builder.Services.AddScoped<IEquipmentRepository, EquipmentRepository>();
 		builder.Services.AddScoped<IBeanRepository, BeanRepository>();
 		builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 		builder.Services.AddScoped<IShotRecordRepository, ShotRecordRepository>();
-		
+
 		// Register MAUI preferences store
 		builder.Services.AddSingleton<IPreferencesStore, MauiPreferencesStore>();
-		
+
 		// Register Services (scoped/singleton)
 		builder.Services.AddScoped<IShotService, ShotService>();
 		builder.Services.AddScoped<IEquipmentService, EquipmentService>();
@@ -49,7 +54,7 @@ public static class MauiProgram
 #endif
 
 		var app = builder.Build();
-		
+
 		// Run migrations on startup
 		using (var scope = app.Services.CreateScope())
 		{
@@ -58,5 +63,13 @@ public static class MauiProgram
 		}
 
 		return app;
+	}
+
+	private static void RegisterRoutes()
+	{
+		MauiReactor.Routing.RegisterRoute<Pages.SettingsPage>("settings");
+		MauiReactor.Routing.RegisterRoute<Pages.EquipmentManagementPage>("equipment");
+		MauiReactor.Routing.RegisterRoute<Pages.BeanManagementPage>("beans");
+		MauiReactor.Routing.RegisterRoute<Pages.UserProfileManagementPage>("profiles");
 	}
 }

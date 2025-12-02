@@ -1,5 +1,6 @@
 using MauiReactor;
 using BaristaNotes.Pages;
+using MauiControls = Microsoft.Maui.Controls;
 
 namespace BaristaNotes;
 
@@ -9,32 +10,18 @@ public class AppShell : Component
     {
         return Shell(
             TabBar(
-                ShellContent("Shot Log")
-                    .Icon("coffee.png")
-                    .Route("shots")
-                    .RenderContent(() => new ShotLoggingPage()),
-                
-                ShellContent("History")
+                // Activity Feed is now the primary tab
+                ShellContent("Activity")
                     .Icon("list.png")
                     .Route("history")
                     .RenderContent(() => new ActivityFeedPage()),
-                
-                ShellContent("Equipment")
-                    .Icon("gear.png")
-                    .Route("equipment")
-                    .RenderContent(() => new EquipmentManagementPage()),
-                
-                ShellContent("Beans")
-                    .Icon("bean.png")
-                    .Route("beans")
-                    .RenderContent(() => new BeanManagementPage()),
-                
-                ShellContent("Profiles")
-                    .Icon("person.png")
-                    .Route("profiles")
-                    .RenderContent(() => new UserProfileManagementPage())
+
+                // Shot Log remains as the second tab
+                ShellContent("New Shot")
+                    .Icon("coffee.png")
+                    .Route("shots")
+                    .RenderContent(() => new ShotLoggingPage())
             )
         );
     }
 }
-

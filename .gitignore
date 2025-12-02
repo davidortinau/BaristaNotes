@@ -13,6 +13,7 @@ packages/
 *.swp
 *~
 .DS_Store
+*.binlog
 
 # Build results
 [Dd]ebug/

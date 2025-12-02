@@ -77,6 +77,9 @@
 		<!-- CoreSync (for future sync capability - using latest available version) -->
 		<PackageReference Include="CoreSync.Sqlite" Version="0.1.122" />
 		<PackageReference Include="CoreSync.Http.Client" Version="0.1.122" />
+		
+		<!-- Bottom Sheet for modal forms -->
+		<PackageReference Include="The49.Maui.BottomSheet" Version="8.0.3" />
 	</ItemGroup>
 
 	<ItemGroup>

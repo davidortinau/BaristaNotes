@@ -22,35 +22,14 @@ public class AppShell : Component
                 ShellContent("Equipment")
                     .Icon("gear.png")
                     .Route("equipment")
-                    .RenderContent(() => new PlaceholderPage().Title("Equipment Management")),
+                    .RenderContent(() => new EquipmentManagementPage()),
                 
                 ShellContent("Beans")
                     .Icon("bean.png")
                     .Route("beans")
-                    .RenderContent(() => new PlaceholderPage().Title("Bean Management"))
+                    .RenderContent(() => new BeanManagementPage())
             )
         );
     }
 }
 
-partial class PlaceholderPage : Component
-{
-    [Prop]
-    string _title = string.Empty;
-
-    public override VisualNode Render()
-    {
-        return ContentPage(_title,
-            VStack(spacing: 16,
-                Label($"{_title} Page")
-                    .FontSize(24)
-                    .HCenter(),
-                Label("Coming soon...")
-                    .FontSize(16)
-                    .HCenter()
-            )
-            .VCenter()
-            .HCenter()
-        );
-    }
-}

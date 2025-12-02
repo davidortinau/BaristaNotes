@@ -1,0 +1,200 @@
+using Xunit;
+using Moq;
+using BaristaNotes.Core.Services;
+using BaristaNotes.Core.Data.Repositories;
+using BaristaNotes.Core.Models;
+using BaristaNotes.Core.Services.DTOs;
+using BaristaNotes.Core.Services.Exceptions;
+
+namespace BaristaNotes.Tests.Unit.Services;
+
+public class BeanServiceTests
+{
+    private readonly Mock<IBeanRepository> _mockRepository;
+    private readonly BeanService _service;
+
+    public BeanServiceTests()
+    {
+        _mockRepository = new Mock<IBeanRepository>();
+        _service = new BeanService(_mockRepository.Object);
+    }
+
+    [Fact]
+    public async Task CreateBeanAsync_WithValidData_CreatesBean()
+    {
+        // Arrange
+        var createDto = new CreateBeanDto
+        {
+            Name = "Ethiopia Yirgacheffe",
+            Roaster = "Local Roasters",
+            RoastDate = DateTimeOffset.Now.AddDays(-7),
+            Origin = "Ethiopia",
+            Notes = "Floral and citrus notes"
+        };
+
+        _mockRepository
+            .Setup(r => r.AddAsync(It.IsAny<Bean>()))
+            .ReturnsAsync((Bean b) => b);
+
+        // Act
+        var result = await _service.CreateBeanAsync(createDto);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(createDto.Name, result.Name);
+        Assert.Equal(createDto.Roaster, result.Roaster);
+        Assert.Equal(createDto.Origin, result.Origin);
+        Assert.True(result.IsActive);
+        _mockRepository.Verify(r => r.AddAsync(It.IsAny<Bean>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateBeanAsync_WithEmptyName_ThrowsValidationException()
+    {
+        // Arrange
+        var createDto = new CreateBeanDto
+        {
+            Name = "",
+            Roaster = "Test Roaster"
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ValidationException>(() => 
+            _service.CreateBeanAsync(createDto));
+    }
+
+    [Fact]
+    public async Task CreateBeanAsync_WithNameTooLong_ThrowsValidationException()
+    {
+        // Arrange
+        var createDto = new CreateBeanDto
+        {
+            Name = new string('A', 101),
+            Roaster = "Test Roaster"
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ValidationException>(() => 
+            _service.CreateBeanAsync(createDto));
+    }
+
+    [Fact]
+    public async Task CreateBeanAsync_WithFutureRoastDate_ThrowsValidationException()
+    {
+        // Arrange
+        var createDto = new CreateBeanDto
+        {
+            Name = "Future Bean",
+            Roaster = "Test Roaster",
+            RoastDate = DateTimeOffset.Now.AddDays(1)
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ValidationException>(() => 
+            _service.CreateBeanAsync(createDto));
+    }
+
+    [Fact]
+    public async Task ArchiveBeanAsync_ExistingBean_SetsIsActiveFalse()
+    {
+        // Arrange
+        var bean = new Bean
+        {
+            Id = 1,
+            Name = "Old Bean",
+            IsActive = true,
+            SyncId = Guid.NewGuid(),
+            CreatedAt = DateTimeOffset.Now,
+            LastModifiedAt = DateTimeOffset.Now
+        };
+
+        _mockRepository
+            .Setup(r => r.GetByIdAsync(1))
+            .ReturnsAsync(bean);
+
+        _mockRepository
+            .Setup(r => r.UpdateAsync(It.IsAny<Bean>()))
+            .ReturnsAsync((Bean b) => b);
+
+        // Act
+        await _service.ArchiveBeanAsync(1);
+
+        // Assert
+        Assert.False(bean.IsActive);
+        _mockRepository.Verify(r => r.UpdateAsync(It.Is<Bean>(b => !b.IsActive)), Times.Once);
+    }
+
+    [Fact]
+    public async Task ArchiveBeanAsync_NonExistentBean_ThrowsEntityNotFoundException()
+    {
+        // Arrange
+        _mockRepository
+            .Setup(r => r.GetByIdAsync(999))
+            .ReturnsAsync((Bean?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<EntityNotFoundException>(() => 
+            _service.ArchiveBeanAsync(999));
+    }
+
+    [Fact]
+    public async Task GetAllActiveBeansAsync_ReturnsOnlyActiveBeans()
+    {
+        // Arrange
+        var beans = new List<Bean>
+        {
+            new Bean { Id = 1, Name = "Active Bean", IsActive = true, SyncId = Guid.NewGuid(), CreatedAt = DateTimeOffset.Now, LastModifiedAt = DateTimeOffset.Now },
+            new Bean { Id = 2, Name = "Archived Bean", IsActive = false, SyncId = Guid.NewGuid(), CreatedAt = DateTimeOffset.Now, LastModifiedAt = DateTimeOffset.Now }
+        };
+
+        _mockRepository
+            .Setup(r => r.GetActiveBeansAsync())
+            .ReturnsAsync(beans.Where(b => b.IsActive).ToList());
+
+        // Act
+        var result = await _service.GetAllActiveBeansAsync();
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("Active Bean", result.First().Name);
+    }
+
+    [Fact]
+    public async Task UpdateBeanAsync_ExistingBean_UpdatesProperties()
+    {
+        // Arrange
+        var bean = new Bean
+        {
+            Id = 1,
+            Name = "Old Name",
+            Roaster = "Old Roaster",
+            IsActive = true,
+            SyncId = Guid.NewGuid(),
+            CreatedAt = DateTimeOffset.Now,
+            LastModifiedAt = DateTimeOffset.Now
+        };
+
+        var updateDto = new UpdateBeanDto
+        {
+            Name = "New Name",
+            Roaster = "New Roaster",
+            Origin = "Colombia"
+        };
+
+        _mockRepository
+            .Setup(r => r.GetByIdAsync(1))
+            .ReturnsAsync(bean);
+
+        _mockRepository
+            .Setup(r => r.UpdateAsync(It.IsAny<Bean>()))
+            .ReturnsAsync((Bean b) => b);
+
+        // Act
+        var result = await _service.UpdateBeanAsync(1, updateDto);
+
+        // Assert
+        Assert.Equal("New Name", result.Name);
+        Assert.Equal("New Roaster", result.Roaster);
+        Assert.Equal("Colombia", result.Origin);
+    }
+}

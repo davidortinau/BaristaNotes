@@ -31,7 +31,14 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+All features must demonstrate alignment with constitutional principles:
+
+- [ ] **Code Quality Standards**: Does the design enable readable, maintainable, single-responsibility code? Are complexity points identified and justified?
+- [ ] **Test-First Development**: Are test scenarios defined, approved by stakeholders, and will be written before implementation begins? Coverage targets identified?
+- [ ] **User Experience Consistency**: Does the feature follow design system principles? Are accessibility requirements (WCAG 2.1 AA) and responsive design addressed?
+- [ ] **Performance Requirements**: Have performance targets been defined (response time, resource usage)? Is monitoring/instrumentation planned?
+
+**Violations requiring justification**: If any principle cannot be met, document in "Complexity Tracking" section below with rationale and simpler alternatives considered.
 
 ## Project Structure
 

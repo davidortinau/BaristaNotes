@@ -90,6 +90,31 @@
 - **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
 - **FR-005**: System MUST [behavior, e.g., "log all security events"]
 
+### Non-Functional Requirements (Constitution-Mandated)
+
+**Performance** *(Per Principle IV: Performance Requirements)*:
+- **NFR-P1**: Page load time MUST be <2 seconds (p95)
+- **NFR-P2**: API responses MUST complete in <500ms (p95)
+- **NFR-P3**: User interactions MUST provide feedback within 100ms
+- **NFR-P4**: [Add feature-specific performance requirements]
+
+**Accessibility** *(Per Principle III: User Experience Consistency)*:
+- **NFR-A1**: All interactive elements MUST be keyboard navigable
+- **NFR-A2**: WCAG 2.1 Level AA compliance MUST be verified
+- **NFR-A3**: Touch targets MUST be minimum 44x44px
+- **NFR-A4**: Screen readers MUST announce all state changes
+
+**UX Consistency** *(Per Principle III: User Experience Consistency)*:
+- **NFR-UX1**: Design system components MUST be used (document any custom components)
+- **NFR-UX2**: Error messages MUST be user-friendly with recovery steps
+- **NFR-UX3**: Loading states MUST be shown for all async operations
+- **NFR-UX4**: Responsive design MUST support mobile, tablet, and desktop
+
+**Code Quality** *(Per Principle I: Code Quality Standards)*:
+- **NFR-Q1**: Code coverage MUST meet 80% minimum (100% for critical paths)
+- **NFR-Q2**: Static analysis MUST pass without warnings
+- **NFR-Q3**: All code MUST pass peer review
+
 *Example of marking unclear requirements:*
 
 - **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]

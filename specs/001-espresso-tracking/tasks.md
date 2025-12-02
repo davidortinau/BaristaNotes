@@ -122,13 +122,13 @@ Based on plan.md:
 - [X] T046 [US1] Implement ShotService in BaristaNotes.Core/Services/ShotService.cs with CreateShotAsync (validation per service-interfaces.md, remember selections via PreferencesService), GetMostRecentShotAsync, GetShotHistoryAsync, UpdateShotAsync, DeleteShotAsync (depends on T038, T039, T041, T045)
 
 **UI Layer** (MVU Pattern - Reactor Components):
-- [ ] T047 [US1] Create ShotLoggingPage in BaristaNotes/Pages/ShotLoggingPage.cs with Maui Reactor MVU pattern: State record (DoseIn, GrindSetting, ExpectedTime, ExpectedOutput, DrinkType, ActualTime, ActualOutput, Rating, Beans, Machines, Grinders), Messages (Load, Save, UpdateField), Update functions, View rendering with form fields and save button (depends on T046)
-- [ ] T048 [US1] Create ActivityFeedPage in BaristaNotes/Pages/ActivityFeedPage.cs with Maui Reactor MVU pattern: State record (ShotRecords, IsLoading), Messages (Load, Refresh), Update functions, View with CollectionView virtualization (depends on T046)
-- [ ] T049 [US1] Create RatingControl component in BaristaNotes/Components/RatingControl.cs with 5-point rating display/input using Maui Reactor (depends on T047)
-- [ ] T050 [US1] Create ShotRecordCard component in BaristaNotes/Components/ShotRecordCard.cs displaying timestamp, drink type, recipe, actuals, rating using theme styles (depends on T048)
+- [X] T047 [US1] Create ShotLoggingPage in BaristaNotes/Pages/ShotLoggingPage.cs with Maui Reactor MVU pattern: State record (DoseIn, GrindSetting, ExpectedTime, ExpectedOutput, DrinkType, ActualTime, ActualOutput, Rating, Beans, Machines, Grinders), Messages (Load, Save, UpdateField), Update functions, View rendering with form fields and save button (depends on T046)
+- [X] T048 [US1] Create ActivityFeedPage in BaristaNotes/Pages/ActivityFeedPage.cs with Maui Reactor MVU pattern: State record (ShotRecords, IsLoading), Messages (Load, Refresh), Update functions, View with CollectionView virtualization (depends on T046)
+- [X] T049 [US1] Create RatingControl component in BaristaNotes/Components/RatingControl.cs with 5-point rating display/input using Maui Reactor (depends on T047)
+- [X] T050 [US1] Create ShotRecordCard component in BaristaNotes/Components/ShotRecordCard.cs displaying timestamp, drink type, recipe, actuals, rating using theme styles (depends on T048)
 
 **Integration & Validation**:
-- [ ] T051 [US1] Run all User Story 1 tests and verify 100% pass (depends on T038-T042, T045-T050)
+- [X] T051 [US1] Run all User Story 1 tests and verify 100% pass (depends on T038-T042, T045-T050)
 - [ ] T052 [US1] Manual testing: Log shot, verify pre-population works on second shot, verify shot appears in activity feed (depends on T051)
 - [ ] T053 [US1] Performance validation: Form pre-population <500ms, activity feed loads 50 records <1s, 60fps scrolling (depends on T052)
 

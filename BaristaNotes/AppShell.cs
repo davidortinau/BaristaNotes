@@ -27,7 +27,12 @@ public class AppShell : Component
                 ShellContent("Beans")
                     .Icon("bean.png")
                     .Route("beans")
-                    .RenderContent(() => new BeanManagementPage())
+                    .RenderContent(() => new BeanManagementPage()),
+                
+                ShellContent("Profiles")
+                    .Icon("person.png")
+                    .Route("profiles")
+                    .RenderContent(() => new UserProfileManagementPage())
             )
         );
     }

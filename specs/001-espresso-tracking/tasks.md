@@ -144,22 +144,22 @@ Based on plan.md:
 
 ### Tests for User Story 2 (REQUIRED - Write FIRST, Must FAIL) ⚠️
 
-- [ ] T056 [P] [US2] Write unit test for EquipmentService.CreateEquipmentAsync validation in BaristaNotes.Tests/Unit/Services/EquipmentServiceTests.cs - TEST MUST FAIL
-- [ ] T057 [P] [US2] Write unit test for EquipmentService.ArchiveEquipmentAsync preserving shot history in BaristaNotes.Tests/Unit/Services/EquipmentServiceTests.cs - TEST MUST FAIL
-- [ ] T058 [P] [US2] Write unit test for BeanService.CreateBeanAsync validation in BaristaNotes.Tests/Unit/Services/BeanServiceTests.cs - TEST MUST FAIL
-- [ ] T059 [P] [US2] Write unit test for BeanService.ArchiveBeanAsync preserving shot history in BaristaNotes.Tests/Unit/Services/BeanServiceTests.cs - TEST MUST FAIL
+- [X] T056 [P] [US2] Write unit test for EquipmentService.CreateEquipmentAsync validation in BaristaNotes.Tests/Unit/Services/EquipmentServiceTests.cs - TEST MUST FAIL
+- [X] T057 [P] [US2] Write unit test for EquipmentService.ArchiveEquipmentAsync preserving shot history in BaristaNotes.Tests/Unit/Services/EquipmentServiceTests.cs - TEST MUST FAIL
+- [X] T058 [P] [US2] Write unit test for BeanService.CreateBeanAsync validation in BaristaNotes.Tests/Unit/Services/BeanServiceTests.cs - TEST MUST FAIL
+- [X] T059 [P] [US2] Write unit test for BeanService.ArchiveBeanAsync preserving shot history in BaristaNotes.Tests/Unit/Services/BeanServiceTests.cs - TEST MUST FAIL
 - [ ] T060 [P] [US2] Write integration test for equipment CRUD with InMemory SQLite in BaristaNotes.Tests/Integration/EquipmentRepositoryTests.cs - TEST MUST FAIL
 - [ ] T061 [P] [US2] Write integration test for bean CRUD with InMemory SQLite in BaristaNotes.Tests/Integration/BeanRepositoryTests.cs - TEST MUST FAIL
 
 ### Implementation for User Story 2
 
 **Service Layer**:
-- [ ] T064 [US2] Implement EquipmentService in BaristaNotes.Core/Services/EquipmentService.cs with CreateEquipmentAsync, GetAllActiveEquipmentAsync, GetEquipmentByTypeAsync, UpdateEquipmentAsync, ArchiveEquipmentAsync, DeleteEquipmentAsync (depends on T056, T057, T060)
-- [ ] T065 [US2] Implement BeanService in BaristaNotes.Core/Services/BeanService.cs with CreateBeanAsync, GetAllActiveBeansAsync, UpdateBeanAsync, ArchiveBeanAsync, DeleteBeanAsync (depends on T058, T059, T061)
+- [X] T064 [US2] Implement EquipmentService in BaristaNotes.Core/Services/EquipmentService.cs with CreateEquipmentAsync, GetAllActiveEquipmentAsync, GetEquipmentByTypeAsync, UpdateEquipmentAsync, ArchiveEquipmentAsync, DeleteEquipmentAsync (depends on T056, T057, T060)
+- [X] T065 [US2] Implement BeanService in BaristaNotes.Core/Services/BeanService.cs with CreateBeanAsync, GetAllActiveBeansAsync, UpdateBeanAsync, ArchiveBeanAsync, DeleteBeanAsync (depends on T058, T059, T061)
 
 **UI Layer** (MVU Pattern - Reactor Components):
-- [ ] T066 [US2] Create EquipmentManagementPage in BaristaNotes/Pages/EquipmentManagementPage.cs with MVU: State (Equipment collection, SelectedType filter), Messages (Load, Create, Update, Archive), Update functions, View with CollectionView and CRUD buttons (depends on T064)
-- [ ] T067 [US2] Create BeanManagementPage in BaristaNotes/Pages/BeanManagementPage.cs with MVU: State (Beans collection), Messages (Load, Create, Update, Archive), Update functions, View with CollectionView and CRUD buttons (depends on T065)
+- [X] T066 [US2] Create EquipmentManagementPage in BaristaNotes/Pages/EquipmentManagementPage.cs with MVU: State (Equipment collection, SelectedType filter), Messages (Load, Create, Update, Archive), Update functions, View with CollectionView and CRUD buttons (depends on T064)
+- [X] T067 [US2] Create BeanManagementPage in BaristaNotes/Pages/BeanManagementPage.cs with MVU: State (Beans collection), Messages (Load, Create, Update, Archive), Update functions, View with CollectionView and CRUD buttons (depends on T065)
 - [ ] T068 [US2] Create EquipmentPicker component in BaristaNotes/Components/EquipmentPicker.cs for selecting equipment in shot logging form (depends on T066)
 - [ ] T069 [US2] Create BeanPicker component in BaristaNotes/Components/BeanPicker.cs for selecting beans in shot logging form (depends on T067)
 
@@ -184,7 +184,7 @@ Based on plan.md:
 
 ### Tests for User Story 3 (REQUIRED - Write FIRST, Must FAIL) ⚠️
 
-- [ ] T078 [P] [US3] Write unit test for UserProfileService.CreateProfileAsync validation in BaristaNotes.Tests/Unit/Services/UserProfileServiceTests.cs - TEST MUST FAIL
+- [X] T078 [P] [US3] Write unit test for UserProfileService.CreateProfileAsync validation in BaristaNotes.Tests/Unit/Services/UserProfileServiceTests.cs - TEST MUST FAIL
 - [ ] T079 [P] [US3] Write unit test for ShotService.GetShotHistoryByUserAsync filtering in BaristaNotes.Tests/Unit/Services/ShotServiceTests.cs - TEST MUST FAIL
 - [ ] T080 [P] [US3] Write integration test for user profile CRUD with InMemory SQLite in BaristaNotes.Tests/Integration/UserProfileRepositoryTests.cs - TEST MUST FAIL
 - [ ] T081 [P] [US3] Write integration test for shot-to-profile relationships (MadeBy, MadeFor) in BaristaNotes.Tests/Integration/DatabaseTests.cs - TEST MUST FAIL
@@ -192,12 +192,12 @@ Based on plan.md:
 ### Implementation for User Story 3
 
 **Service Layer**:
-- [ ] T084 [US3] Implement UserProfileService in BaristaNotes.Core/Services/UserProfileService.cs with CreateProfileAsync, GetAllProfilesAsync, UpdateProfileAsync, DeleteProfileAsync (depends on T078, T080)
+- [X] T084 [US3] Implement UserProfileService in BaristaNotes.Core/Services/UserProfileService.cs with CreateProfileAsync, GetAllProfilesAsync, UpdateProfileAsync, DeleteProfileAsync (depends on T078, T080)
 - [ ] T085 [US3] Update ShotService in BaristaNotes.Core/Services/ShotService.cs to add GetShotHistoryByUserAsync filtering method (depends on T079, T081)
 
 **UI Layer** (MVU Pattern - Reactor Components):
-- [ ] T086 [US3] Create UserProfileManagementPage in BaristaNotes/Pages/UserProfileManagementPage.cs with MVU: State (Profiles collection), Messages (Load, Create, Update, Delete), Update functions, View with CollectionView and CRUD buttons (depends on T084)
-- [ ] T087 [US3] Add UserProfile tab to AppShell in BaristaNotes/AppShell.cs (depends on T086)
+- [X] T086 [US3] Create UserProfileManagementPage in BaristaNotes/Pages/UserProfileManagementPage.cs with MVU: State (Profiles collection), Messages (Load, Create, Update, Delete), Update functions, View with CollectionView and CRUD buttons (depends on T084)
+- [X] T087 [US3] Add UserProfile tab to AppShell in BaristaNotes/AppShell.cs (depends on T086)
 
 **Integration with User Stories 1 & 2**:
 - [ ] T088 [US3] Update ShotLoggingPage State to add MadeBy and MadeFor profile selection properties and picker UI in BaristaNotes/Pages/ShotLoggingPage.cs (depends on T086)

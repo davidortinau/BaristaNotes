@@ -141,7 +141,8 @@ public class FeedbackService : IFeedbackService
                 var popup = new UXDivers.Popups.Maui.PopupPage
                 {
                     BackgroundColor = Colors.Transparent,
-                    CloseWhenBackgroundIsClicked = false
+                    CloseWhenBackgroundIsClicked = false,
+                    InputTransparent = true // Don't block input to underlying page
                 };
 
                 var content = new Border
@@ -150,8 +151,8 @@ public class FeedbackService : IFeedbackService
                     Stroke = bgColor,
                     StrokeShape = new RoundRectangle { CornerRadius = 12 },
                     Padding = new Thickness(16, 12),
-                    Margin = new Thickness(20),
-                    VerticalOptions = LayoutOptions.Center,
+                    Margin = new Thickness(20, 50, 20, 0), // Top margin to position at top
+                    VerticalOptions = LayoutOptions.Start, // Position at top
                     HorizontalOptions = LayoutOptions.Center,
                     Shadow = new Shadow { Brush = Brush.Black, Opacity = 0.3f, Radius = 10, Offset = new Point(0, 4) },
                     Content = new HorizontalStackLayout

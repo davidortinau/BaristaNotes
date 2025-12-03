@@ -17,22 +17,40 @@ partial class ToastComponent : Component<ToastComponentState>
     [Prop]
     Action<Guid>? _onDismiss;
 
+    private bool _isComponentMounted = false;
+
     protected override void OnMounted()
     {
+        _isComponentMounted = true;
         if (_message == null) return;
 
         // Auto-dismiss after duration
         Task.Delay(_message.DurationMs).ContinueWith(_ =>
         {
-            MainThread.BeginInvokeOnMainThread(() => Dismiss());
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (_isComponentMounted) // Only set state if still mounted
+                {
+                    Dismiss();
+                }
+            });
         });
 
         base.OnMounted();
     }
 
+    protected override void OnWillUnmount()
+    {
+        _isComponentMounted = false;
+        base.OnWillUnmount();
+    }
+
     void Dismiss()
     {
-        SetState(s => s.IsVisible = false);
+        if (_isComponentMounted)
+        {
+            SetState(s => s.IsVisible = false);
+        }
         _onDismiss?.Invoke(_message?.Id ?? Guid.Empty);
     }
 

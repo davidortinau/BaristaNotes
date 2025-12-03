@@ -3,13 +3,11 @@ using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Core.Services.Exceptions;
 using BaristaNotes.Services;
-using Microsoft.Maui.Controls;
 
 namespace BaristaNotes.Pages;
 
 class EditShotPageState
 {
-    public int ShotId { get; set; }
     public bool IsLoading { get; set; } = true;
     public bool IsSaving { get; set; }
     
@@ -30,40 +28,31 @@ class EditShotPageState
     public List<string> ValidationErrors { get; set; } = new();
 }
 
-[QueryProperty(nameof(ShotId), "shotId")]
-partial class EditShotPage : Component<EditShotPageState>
+class EditShotPageProps
 {
-    public int _shotId;
-    
+    public int ShotId { get; set; }
+}
+
+partial class EditShotPage : Component<EditShotPageState, EditShotPageProps>
+{
     [Inject]
     IShotService _shotService;
     
     [Inject]
     IFeedbackService _feedbackService;
     
-    public int ShotId
-    {
-        get => _shotId;
-        set
-        {
-            _shotId = value;
-            System.Diagnostics.Debug.WriteLine($"[EditShotPage] ShotId property set to: {value}");
-        }
-    }
-    
     protected override void OnMounted()
     {
-        System.Diagnostics.Debug.WriteLine($"[EditShotPage] OnMounted called, _shotId = {_shotId}");
+        System.Diagnostics.Debug.WriteLine($"[EditShotPage] OnMounted called, Props.ShotId = {Props.ShotId}");
         
-        if (_shotId > 0)
+        if (Props.ShotId > 0)
         {
-            State.ShotId = _shotId;
-            System.Diagnostics.Debug.WriteLine($"[EditShotPage] Starting LoadShotData for ID: {_shotId}");
+            System.Diagnostics.Debug.WriteLine($"[EditShotPage] Starting LoadShotData for ID: {Props.ShotId}");
             _ = LoadShotData();
         }
         else
         {
-            System.Diagnostics.Debug.WriteLine($"[EditShotPage] Invalid shotId: {_shotId}");
+            System.Diagnostics.Debug.WriteLine($"[EditShotPage] Invalid shotId: {Props.ShotId}");
             _feedbackService.ShowError("Invalid shot ID");
             _ = Microsoft.Maui.Controls.Application.Current?.MainPage?.Navigation.PopAsync();
         }
@@ -77,9 +66,9 @@ partial class EditShotPage : Component<EditShotPageState>
         {
             SetState(s => s.IsLoading = true);
             
-            System.Diagnostics.Debug.WriteLine($"[EditShotPage] Loading shot ID: {State.ShotId}");
+            System.Diagnostics.Debug.WriteLine($"[EditShotPage] Loading shot ID: {Props.ShotId}");
             
-            var shot = await _shotService.GetShotByIdAsync(State.ShotId);
+            var shot = await _shotService.GetShotByIdAsync(Props.ShotId);
             
             System.Diagnostics.Debug.WriteLine($"[EditShotPage] Shot loaded: {shot != null}");
             
@@ -152,7 +141,7 @@ partial class EditShotPage : Component<EditShotPageState>
                 DrinkType = State.DrinkType
             };
             
-            await _shotService.UpdateShotAsync(State.ShotId, dto);
+            await _shotService.UpdateShotAsync(Props.ShotId, dto);
             _feedbackService.ShowSuccess("Shot updated successfully");
             await Navigation.PopAsync();
         }

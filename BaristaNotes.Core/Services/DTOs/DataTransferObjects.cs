@@ -49,11 +49,17 @@ public record CreateShotDto
 
 /// <summary>
 /// DTO for updating editable fields of a shot record.
-/// Only mutable fields included - immutable fields (timestamp, bean, grind settings, etc.) 
-/// are not included and will be preserved during update.
+/// Includes result fields (actual time/output, rating) and correctable setup fields (bean).
 /// </summary>
 public record UpdateShotDto
 {
+    /// <summary>
+    /// Bean used for the shot.
+    /// Optional - null means no change to existing value.
+    /// Allows correcting bean selection mistakes.
+    /// </summary>
+    public int? BeanId { get; init; }
+    
     /// <summary>
     /// Actual shot extraction time in seconds.
     /// Optional - null means no change to existing value.

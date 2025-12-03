@@ -91,6 +91,10 @@ public class ShotService : IShotService
         if (shot == null || shot.IsDeleted)
             throw new EntityNotFoundException(nameof(ShotRecord), id);
         
+        // Update bean if provided
+        if (dto.BeanId.HasValue)
+            shot.BeanId = dto.BeanId.Value;
+        
         // Update only editable fields
         if (dto.ActualTime.HasValue)
             shot.ActualTime = dto.ActualTime.Value;

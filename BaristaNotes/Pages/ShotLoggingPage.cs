@@ -139,8 +139,16 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             // Edit mode: Update existing shot
             if (Props.ShotId.HasValue)
             {
+                if (State.SelectedBeanId == null)
+                {
+                    _feedbackService.HideLoading();
+                    _feedbackService.ShowError("Please select a bean");
+                    return;
+                }
+                
                 var updateDto = new UpdateShotDto
                 {
+                    BeanId = State.SelectedBeanId.Value,
                     ActualTime = State.ActualTime,
                     ActualOutput = State.ActualOutput,
                     Rating = State.Rating > 0 ? State.Rating : null,
@@ -231,33 +239,28 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                             .Margin(0, 8) :
                         null,
                     
-                    // Bean - readonly in edit mode, picker in add mode
+                    // Bean Picker - editable in all modes
                     VStack(spacing: 4,
                         Label("Bean")
                             .FontSize(12)
                             .TextColor(Colors.Gray),
                         
-                        Props.ShotId.HasValue
-                            ? (VisualNode)Label(State.BeanName ?? "Unknown Bean")
-                                .FontSize(16)
-                                .Padding(12, 15)
-                                .BackgroundColor(Color.FromArgb("#F5F5F5"))
-                            : Picker()
-                                .Title("Select Bean")
-                                .ItemsSource(State.AvailableBeans.Select(b => b.Name).ToList())
-                                .SelectedIndex(State.SelectedBeanIndex)
-                                .OnSelectedIndexChanged(idx =>
+                        Picker()
+                            .Title("Select Bean")
+                            .ItemsSource(State.AvailableBeans.Select(b => b.Name).ToList())
+                            .SelectedIndex(State.SelectedBeanIndex)
+                            .OnSelectedIndexChanged(idx =>
+                            {
+                                if (idx >= 0 && idx < State.AvailableBeans.Count)
                                 {
-                                    if (idx >= 0 && idx < State.AvailableBeans.Count)
+                                    SetState(s =>
                                     {
-                                        SetState(s =>
-                                        {
-                                            s.SelectedBeanIndex = idx;
-                                            s.SelectedBeanId = State.AvailableBeans[idx].Id;
-                                        });
-                                    }
-                                })
-                                .HeightRequest(50)
+                                        s.SelectedBeanIndex = idx;
+                                        s.SelectedBeanId = State.AvailableBeans[idx].Id;
+                                    });
+                                }
+                            })
+                            .HeightRequest(50)
                     ),
 
                     // Dose In

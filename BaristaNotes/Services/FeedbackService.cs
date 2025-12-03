@@ -1,7 +1,8 @@
 using System.Reactive.Subjects;
 using BaristaNotes.Models;
-using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups.Services;
+using Microsoft.Maui.Graphics;
+using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 
 namespace BaristaNotes.Services;
@@ -27,7 +28,7 @@ public class FeedbackService : IFeedbackService
         };
         
         PublishMessage(feedbackMessage);
-        ShowToast("✓", Colors.Green, message, durationMs);
+        ShowToast(Color.FromArgb("#2D5016"), Color.FromArgb("#7CFC00"), "✓", message, durationMs);
     }
 
     public void ShowError(string message, string? recoveryAction = null, int durationMs = 5000)
@@ -50,7 +51,7 @@ public class FeedbackService : IFeedbackService
         {
             _isShowingError = true;
             PublishMessage(errorMessage);
-            ShowToast("✕", Colors.Red, message, durationMs);
+            ShowToast(Color.FromArgb("#5C1A1A"), Color.FromArgb("#FF6B6B"), "✕", message, durationMs);
             
             Task.Delay(durationMs).ContinueWith(_ =>
             {
@@ -75,7 +76,7 @@ public class FeedbackService : IFeedbackService
         };
         
         PublishMessage(feedbackMessage);
-        ShowToast("ⓘ", Colors.Blue, message, durationMs);
+        ShowToast(Color.FromArgb("#1A3A5C"), Color.FromArgb("#4A9EFF"), "ℹ", message, durationMs);
     }
 
     public void ShowWarning(string message, int durationMs = 3000)
@@ -89,7 +90,7 @@ public class FeedbackService : IFeedbackService
         };
         
         PublishMessage(feedbackMessage);
-        ShowToast("⚠", Colors.Orange, message, durationMs);
+        ShowToast(Color.FromArgb("#5C4A1A"), Color.FromArgb("#FFB74A"), "⚠", message, durationMs);
     }
 
     public void ShowLoading(string message)
@@ -131,23 +132,28 @@ public class FeedbackService : IFeedbackService
         });
     }
 
-    private async void ShowToast(string icon, Color iconColor, string message, int durationMs)
+    private async void ShowToast(Color bgColor, Color iconColor, string icon, string message, int durationMs)
     {
         await Application.Current!.Dispatcher.DispatchAsync(async () =>
         {
             try
             {
-                var toast = new Toast();
-                
-                // Create the content view using Border (Frame is obsolete in .NET 9+)
+                var popup = new UXDivers.Popups.Maui.PopupPage
+                {
+                    BackgroundColor = Colors.Transparent,
+                    CloseWhenBackgroundIsClicked = false
+                };
+
                 var content = new Border
                 {
-                    BackgroundColor = iconColor,
-                    StrokeShape = new RoundRectangle { CornerRadius = 8 },
-                    Stroke = iconColor,
-                    Padding = 16,
-                    Margin = new Thickness(16, 0),
-                    Shadow = new Shadow { Brush = Brush.Black, Opacity = 0.3f, Radius = 10, Offset = new Point(0, 2) },
+                    BackgroundColor = bgColor,
+                    Stroke = bgColor,
+                    StrokeShape = new RoundRectangle { CornerRadius = 12 },
+                    Padding = new Thickness(16, 12),
+                    Margin = new Thickness(20),
+                    VerticalOptions = LayoutOptions.Center,
+                    HorizontalOptions = LayoutOptions.Center,
+                    Shadow = new Shadow { Brush = Brush.Black, Opacity = 0.3f, Radius = 10, Offset = new Point(0, 4) },
                     Content = new HorizontalStackLayout
                     {
                         Spacing = 12,
@@ -156,14 +162,14 @@ public class FeedbackService : IFeedbackService
                             new Label
                             {
                                 Text = icon,
-                                FontSize = 24,
-                                TextColor = Colors.White,
+                                FontSize = 20,
+                                TextColor = iconColor,
                                 VerticalOptions = LayoutOptions.Center
                             },
                             new Label
                             {
                                 Text = message,
-                                FontSize = 16,
+                                FontSize = 14,
                                 TextColor = Colors.White,
                                 VerticalOptions = LayoutOptions.Center,
                                 LineBreakMode = LineBreakMode.WordWrap
@@ -171,18 +177,15 @@ public class FeedbackService : IFeedbackService
                         }
                     }
                 };
-                
-                toast.Content = content;
 
-                await IPopupService.Current.PushAsync(toast);
-                
-                // Auto-dismiss after duration
+                popup.Content = content;
+
+                await PopupService.Instance.PushAsync(popup);
                 await Task.Delay(durationMs);
-                await IPopupService.Current.PopAsync();
+                await PopupService.Instance.PopAsync();
             }
             catch (Exception ex)
             {
-                // Fallback: just log if popup fails
                 System.Diagnostics.Debug.WriteLine($"Failed to show toast: {ex.Message}");
             }
         });

@@ -4,6 +4,8 @@ using UXDivers.Popups.Services;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
+using UXDivers.Popups;
+using UXDivers.Popups.Maui.Controls;
 
 namespace BaristaNotes.Services;
 
@@ -26,7 +28,7 @@ public class FeedbackService : IFeedbackService
             Message = message,
             DurationMs = durationMs
         };
-        
+
         PublishMessage(feedbackMessage);
         ShowToast(Color.FromArgb("#2D5016"), Color.FromArgb("#7CFC00"), "✓", message, durationMs);
     }
@@ -34,7 +36,7 @@ public class FeedbackService : IFeedbackService
     public void ShowError(string message, string? recoveryAction = null, int durationMs = 5000)
     {
         ValidateMessage(message, durationMs);
-        
+
         var errorMessage = new FeedbackMessage
         {
             Type = FeedbackType.Error,
@@ -52,7 +54,7 @@ public class FeedbackService : IFeedbackService
             _isShowingError = true;
             PublishMessage(errorMessage);
             ShowToast(Color.FromArgb("#5C1A1A"), Color.FromArgb("#FF6B6B"), "✕", message, durationMs);
-            
+
             Task.Delay(durationMs).ContinueWith(_ =>
             {
                 _isShowingError = false;
@@ -74,7 +76,7 @@ public class FeedbackService : IFeedbackService
             Message = message,
             DurationMs = durationMs
         };
-        
+
         PublishMessage(feedbackMessage);
         ShowToast(Color.FromArgb("#1A3A5C"), Color.FromArgb("#4A9EFF"), "ℹ", message, durationMs);
     }
@@ -88,7 +90,7 @@ public class FeedbackService : IFeedbackService
             Message = message,
             DurationMs = durationMs
         };
-        
+
         PublishMessage(feedbackMessage);
         ShowToast(Color.FromArgb("#5C4A1A"), Color.FromArgb("#FFB74A"), "⚠", message, durationMs);
     }
@@ -138,12 +140,20 @@ public class FeedbackService : IFeedbackService
         {
             try
             {
+                // await AppShell.DisplayToastAsync(message);
+
                 var popup = new UXDivers.Popups.Maui.PopupPage
                 {
                     BackgroundColor = Colors.Transparent,
                     CloseWhenBackgroundIsClicked = false,
-                    InputTransparent = true // Don't block input to underlying page
+                    InputTransparent = true, // Don't block input to underlying page
                 };
+
+                popup.AppearingAnimation = new UXDivers.Popups.Maui.FadeInPopupAnimation();
+                popup.DisappearingAnimation = new UXDivers.Popups.Maui.FadeOutPopupAnimation();
+                popup.VerticalOptions = LayoutOptions.End;
+                popup.CloseWhenBackgroundIsClicked = true;
+                popup.HeightRequest = 200;
 
                 var content = new Border
                 {
@@ -180,6 +190,14 @@ public class FeedbackService : IFeedbackService
                 };
 
                 popup.Content = content;
+                // popup.PopupContent = content;
+
+                // var p = new Toast()
+                // {
+                //     Title = "David's Successful Toast"
+                // };
+
+                // await IPopupService.Current.PushAsync(p);
 
                 await IPopupService.Current.PushAsync(popup);
                 await Task.Delay(durationMs);

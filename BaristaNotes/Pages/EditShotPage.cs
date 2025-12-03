@@ -47,11 +47,7 @@ partial class EditShotPage : Component<EditShotPageState>
         set
         {
             _shotId = value;
-            if (_shotId > 0 && !State.IsLoading)
-            {
-                SetState(s => s.ShotId = _shotId);
-                _ = LoadShotData();
-            }
+            // Property is set before OnMounted, so we set it and let OnMounted handle loading
         }
     }
     

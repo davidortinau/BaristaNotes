@@ -2,6 +2,7 @@ using System.Reactive.Subjects;
 using BaristaNotes.Models;
 using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups.Services;
+using Microsoft.Maui.Controls.Shapes;
 
 namespace BaristaNotes.Services;
 
@@ -132,16 +133,46 @@ public class FeedbackService : IFeedbackService
 
     private async void ShowToast(string icon, Color iconColor, string message, int durationMs)
     {
-        Application.Current?.Dispatcher.Dispatch(async () =>
+        await Application.Current!.Dispatcher.DispatchAsync(async () =>
         {
             try
             {
-                var toast = new Toast
+                var toast = new Toast();
+                
+                // Create the content view using Border (Frame is obsolete in .NET 9+)
+                var content = new Border
                 {
-                    IconText = icon,
-                    IconColor = iconColor,
-                    Title = message
+                    BackgroundColor = iconColor,
+                    StrokeShape = new RoundRectangle { CornerRadius = 8 },
+                    Stroke = iconColor,
+                    Padding = 16,
+                    Margin = new Thickness(16, 0),
+                    Shadow = new Shadow { Brush = Brush.Black, Opacity = 0.3f, Radius = 10, Offset = new Point(0, 2) },
+                    Content = new HorizontalStackLayout
+                    {
+                        Spacing = 12,
+                        Children =
+                        {
+                            new Label
+                            {
+                                Text = icon,
+                                FontSize = 24,
+                                TextColor = Colors.White,
+                                VerticalOptions = LayoutOptions.Center
+                            },
+                            new Label
+                            {
+                                Text = message,
+                                FontSize = 16,
+                                TextColor = Colors.White,
+                                VerticalOptions = LayoutOptions.Center,
+                                LineBreakMode = LineBreakMode.WordWrap
+                            }
+                        }
+                    }
                 };
+                
+                toast.Content = content;
 
                 await IPopupService.Current.PushAsync(toast);
                 

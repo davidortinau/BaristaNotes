@@ -180,9 +180,9 @@ public class FeedbackService : IFeedbackService
 
                 popup.Content = content;
 
-                await PopupService.Instance.PushAsync(popup);
+                await IPopupService.Current.PushAsync(popup);
                 await Task.Delay(durationMs);
-                await PopupService.Instance.PopAsync();
+                await IPopupService.Current.PopAsync();
             }
             catch (Exception ex)
             {

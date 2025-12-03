@@ -2,7 +2,7 @@ using MauiReactor;
 using MauiReactor.Internals;
 using UXDivers.Popups.Maui;
 
-namespace BaristaNotes.MauiControls;
+namespace BaristaNotes.Integrations.Popups;
 
 [Scaffold(typeof(UXDivers.Popups.Maui.PopupPage))]
 partial class PopupPage

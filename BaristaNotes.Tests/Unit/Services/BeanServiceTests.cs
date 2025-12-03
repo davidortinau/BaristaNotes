@@ -41,10 +41,11 @@ public class BeanServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(createDto.Name, result.Name);
-        Assert.Equal(createDto.Roaster, result.Roaster);
-        Assert.Equal(createDto.Origin, result.Origin);
-        Assert.True(result.IsActive);
+        Assert.NotNull(result.Data);
+        Assert.Equal(createDto.Name, result.Data.Name);
+        Assert.Equal(createDto.Roaster, result.Data.Roaster);
+        Assert.Equal(createDto.Origin, result.Data.Origin);
+        Assert.True(result.Data.IsActive);
         _mockRepository.Verify(r => r.AddAsync(It.IsAny<Bean>()), Times.Once);
     }
 

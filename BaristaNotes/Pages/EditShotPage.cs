@@ -3,6 +3,7 @@ using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Core.Services.Exceptions;
 using BaristaNotes.Services;
+using Microsoft.Maui.Controls;
 
 namespace BaristaNotes.Pages;
 
@@ -29,16 +30,26 @@ class EditShotPageState
     public List<string> ValidationErrors { get; set; } = new();
 }
 
+[QueryProperty(nameof(ShotId), "shotId")]
 partial class EditShotPage : Component<EditShotPageState>
 {
-    [Prop]
-    private int _shotId;
+    public int _shotId;
     
     [Inject]
     IShotService _shotService;
     
     [Inject]
     IFeedbackService _feedbackService;
+    
+    public int ShotId
+    {
+        get => _shotId;
+        set
+        {
+            _shotId = value;
+            System.Diagnostics.Debug.WriteLine($"[EditShotPage] ShotId property set to: {value}");
+        }
+    }
     
     protected override void OnMounted()
     {

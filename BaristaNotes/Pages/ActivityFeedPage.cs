@@ -109,10 +109,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
     
     async void NavigateToEdit(int shotId)
     {
-        await Microsoft.Maui.Controls.Shell.Current.GoToAsync("edit-shot", new System.Collections.Generic.Dictionary<string, object>
-        {
-            { "shotId", shotId }
-        });
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync($"edit-shot?shotId={shotId}");
     }
     
     async Task ShowDeleteConfirmation(int shotId)

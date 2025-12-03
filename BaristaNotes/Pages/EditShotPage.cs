@@ -3,11 +3,9 @@ using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Core.Services.Exceptions;
 using BaristaNotes.Services;
-using Microsoft.Maui.Controls;
 
 namespace BaristaNotes.Pages;
 
-[QueryProperty(nameof(ShotId), "shotId")]
 class EditShotPageState
 {
     public int ShotId { get; set; }
@@ -33,6 +31,7 @@ class EditShotPageState
 
 partial class EditShotPage : Component<EditShotPageState>
 {
+    [Prop]
     private int _shotId;
     
     [Inject]
@@ -40,16 +39,6 @@ partial class EditShotPage : Component<EditShotPageState>
     
     [Inject]
     IFeedbackService _feedbackService;
-    
-    public int ShotId
-    {
-        get => _shotId;
-        set
-        {
-            _shotId = value;
-            // Property is set before OnMounted, so we set it and let OnMounted handle loading
-        }
-    }
     
     protected override void OnMounted()
     {

@@ -80,11 +80,13 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
         {
             Title = "Select type"
         };
-        foreach (var type in Enum.GetValues<EquipmentType>())
+        var equipmentTypes = Enum.GetValues<EquipmentType>().ToList();
+        foreach (var type in equipmentTypes)
         {
             typePicker.Items.Add(type.ToString());
         }
-        typePicker.SelectedIndex = equipment != null ? (int)equipment.Type : 0;
+        // Find the index of the current type in the list (not the enum value)
+        typePicker.SelectedIndex = equipment != null ? equipmentTypes.IndexOf(equipment.Type) : 0;
 
         var notesEditor = new MauiControls.Editor
         {
@@ -134,7 +136,8 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
 
             try
             {
-                var selectedType = (EquipmentType)typePicker.SelectedIndex;
+                // Get the actual enum value from the list, not by casting the index
+                var selectedType = equipmentTypes[typePicker.SelectedIndex];
 
                 if (equipment != null)
                 {

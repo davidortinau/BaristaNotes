@@ -63,7 +63,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
             {
                 SetState(s =>
                 {
-                    s.ShotRecords = shots;
+                    s.ShotRecords = new List<ShotRecordDto>(shots);
                     s.IsRefreshing = false;
                     s.IsLoading = false;
                     s.HasMore = hasMore;
@@ -75,7 +75,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
             {
                 SetState(s =>
                 {
-                    s.ShotRecords = s.ShotRecords.Concat(shots).ToList();
+                    s.ShotRecords = new List<ShotRecordDto>(s.ShotRecords.Concat(shots));
                     s.IsLoading = false;
                     s.HasMore = hasMore;
                     s.ErrorMessage = null;
@@ -178,7 +178,14 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                 .OnRefreshing(async () => await LoadShotsAsync(isRefresh: true))
                 .GridRow(1)
             )
-        );
+        )
+        .OnAppearing(() => OnPageAppearing());
+    }
+    
+    void OnPageAppearing()
+    {
+        // Refresh data when returning from edit/delete
+        _ = LoadShotsAsync(isRefresh: true);
     }
 
     VisualNode RenderContent()

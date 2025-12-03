@@ -52,7 +52,6 @@ partial class ShotRecordCard : Component
         )
         .StrokeThickness(1)
         .Stroke(Colors.LightGray)
-        .StrokeShape(new MauiReactor.Shapes.RoundRectangle(rr => rr.CornerRadius = new Microsoft.Maui.CornerRadius(12)))
         .Margin(8);
     }
 

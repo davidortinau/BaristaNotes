@@ -60,35 +60,38 @@ As a user performing CRUD operations, I need visual indication that the system i
 
 ### Edge Cases
 
-- What happens when multiple operations are triggered in rapid succession?
-- How does the system handle partial failures (e.g., saved locally but sync failed)?
-- What feedback is shown if an operation times out?
-- How are transient vs. permanent errors differentiated in messaging?
-- What happens if the user navigates away during an operation?
-- How does feedback behave across theme changes (dark/light mode)?
+- What happens when multiple toast notifications are triggered in rapid succession? (Queue toasts with stacking behavior or replace previous toast)
+- How does the system handle partial failures (e.g., saved locally but sync failed)? (Show "Saved locally, sync pending" toast)
+- What feedback is shown if an operation times out? (Error toast: "Operation timed out. Please try again.")
+- How are transient vs. permanent errors differentiated in messaging? (Transient: "Retry" action; Permanent: "Learn more" or detailed explanation)
+- What happens if the user navigates away during an operation? (Toast persists across navigation or is dismissed; loading state cleared)
+- How does toast appearance behave across theme changes (dark/light mode)? (Toast uses theme-aware colors with proper contrast ratios)
+- Should toasts support action buttons (e.g., "Undo", "Retry")? (Deferred to future enhancement; current implementation focuses on informational toasts)
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: System MUST display visual confirmation immediately when any create operation succeeds (beans, equipment, profiles, shots)
-- **FR-002**: System MUST display visual confirmation immediately when any update operation succeeds
-- **FR-003**: System MUST display visual confirmation immediately when any delete operation succeeds
-- **FR-004**: System MUST display clear error messages when any CRUD operation fails, indicating the reason for failure
+- **FR-001**: System MUST display toast notification immediately when any create operation succeeds (beans, equipment, profiles, shots)
+- **FR-002**: System MUST display toast notification immediately when any update operation succeeds
+- **FR-003**: System MUST display toast notification immediately when any delete operation succeeds
+- **FR-004**: System MUST display toast notification with clear error messages when any CRUD operation fails, indicating the reason for failure
 - **FR-005**: System MUST show loading/processing indicators during all CRUD operations that take longer than 100ms
 - **FR-006**: System MUST prevent duplicate submissions while an operation is in progress
-- **FR-007**: Error messages MUST provide actionable guidance for recovery (e.g., "Check network connection and retry")
-- **FR-008**: Success and error feedback MUST be visually distinct and follow accessibility guidelines
-- **FR-009**: Feedback indicators MUST automatically dismiss after an appropriate duration (success: 2-3 seconds, errors: user-dismissible or longer timeout)
+- **FR-007**: Error toast messages MUST provide actionable guidance for recovery (e.g., "Check network connection and retry")
+- **FR-008**: Success and error toast notifications MUST be visually distinct and follow accessibility guidelines
+- **FR-009**: Toast notifications MUST automatically dismiss after appropriate duration (success: 2-3 seconds, errors: 5-7 seconds or user-dismissible)
 - **FR-010**: System MUST preserve user input when validation errors occur, allowing correction without data loss
+- **FR-011**: Toast notifications MUST be non-modal and not block user interaction with the underlying UI
+- **FR-012**: Toast notifications MUST appear in a consistent position across all screens (bottom of screen recommended for mobile ergonomics)
 
 ### Non-Functional Requirements (Constitution-Mandated)
 
 **Performance** *(Per Principle IV: Performance Requirements)*:
-- **NFR-P1**: Feedback indicators MUST appear within 100ms of operation completion
+- **NFR-P1**: Toast notifications MUST appear within 100ms of operation completion
 - **NFR-P2**: Loading states MUST appear within 100ms of operation initiation
-- **NFR-P3**: Feedback animations MUST run at 60fps minimum
-- **NFR-P4**: Feedback display MUST not block UI interactions (non-modal toasts preferred)
+- **NFR-P3**: Toast animations (slide-in, fade-out) MUST run at 60fps minimum
+- **NFR-P4**: Toast notifications MUST be non-modal and not block UI interactions
 
 **Accessibility** *(Per Principle III: User Experience Consistency)*:
 - **NFR-A1**: All feedback messages MUST be announced by screen readers
@@ -97,22 +100,38 @@ As a user performing CRUD operations, I need visual indication that the system i
 - **NFR-A4**: Error messages MUST be programmatically associated with failed form fields
 
 **UX Consistency** *(Per Principle III: User Experience Consistency)*:
-- **NFR-UX1**: All CRUD operations MUST use consistent feedback patterns (same toast/banner style, same positioning)
-- **NFR-UX2**: Feedback messages MUST follow the coffee-themed design language (brown, cream, warm tones)
+- **NFR-UX1**: All CRUD operations MUST use consistent toast notification patterns (same style, positioning, animation)
+- **NFR-UX2**: Toast messages MUST follow the coffee-themed design language (brown, cream, warm tones)
 - **NFR-UX3**: Loading indicators MUST be consistent across all operations (same spinner/progress style)
-- **NFR-UX4**: Success feedback MUST use positive visual cues (checkmark icon, success color)
-- **NFR-UX5**: Error feedback MUST use clear warning visual cues (warning icon, error color) without being aggressive
-- **NFR-UX6**: Feedback MUST work seamlessly in both light and dark themes
+- **NFR-UX4**: Success toasts MUST use positive visual cues (checkmark icon, success color from theme)
+- **NFR-UX5**: Error toasts MUST use clear warning visual cues (warning icon, error color from theme) without being aggressive
+- **NFR-UX6**: Toast notifications MUST work seamlessly in both light and dark themes with appropriate opacity/blur for readability
+- **NFR-UX7**: Toast positioning MUST be consistent (bottom of screen, centered horizontally)
 
 **Code Quality** *(Per Principle I: Code Quality Standards)*:
-- **NFR-Q1**: Feedback display logic MUST be centralized and reusable across all CRUD operations
+- **NFR-Q1**: Toast notification logic MUST be centralized in a reusable service/component across all CRUD operations
 - **NFR-Q2**: Code coverage for feedback mechanisms MUST meet 80% minimum
-- **NFR-Q3**: Feedback components MUST be unit testable without UI rendering
+- **NFR-Q3**: Toast notification service MUST be unit testable without UI rendering
+
+### Technical Constraints
+
+- **TC-001**: MUST use UXDivers.Popups.Maui package for all feedback UI (toasts, snackbars, popup notifications)
+- **TC-002**: MUST scaffold UXDivers.Popups.Maui controls for Maui Reactor using the integration patterns from https://github.com/adospace/mauireactor-integration
+- **TC-003**: Feedback components MUST follow Maui Reactor's fluent C# syntax and MVU architecture patterns
+- **TC-004**: No XAML allowed - all UI must be defined in C# using Maui Reactor patterns
 
 ### Key Entities
 
-- **FeedbackMessage**: Represents a user-facing notification with type (success/error/info), message text, optional actions, and display duration
-- **OperationResult**: Represents the outcome of a CRUD operation with success status, error details if failed, and user-facing message
+- **ToastFeedback**: Reactor-scaffolded wrapper for UXDivers.Popups.Maui toast controls providing fluent API for displaying non-modal notifications
+- **FeedbackMessage**: Represents a user-facing toast notification with type (success/error/info/warning), message text, icon, display duration, and optional action callback
+- **OperationResult**: Represents the outcome of a CRUD operation with success status, error details if failed, and user-facing message for toast display
+- **FeedbackService**: Centralized service managing toast display queue, duration, positioning, and theme-aware styling
+
+## Clarifications
+
+### Session 2025-12-02
+
+- Q: Which feedback UI approach should be used for CRUD operation results? → A: Option B - Toast notifications (non-modal, auto-dismiss)
 
 ## Success Criteria *(mandatory)*
 

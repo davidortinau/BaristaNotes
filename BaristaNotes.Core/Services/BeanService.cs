@@ -2,6 +2,7 @@ using BaristaNotes.Core.Data.Repositories;
 using BaristaNotes.Core.Models;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Core.Services.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace BaristaNotes.Core.Services;
 
@@ -26,25 +27,56 @@ public class BeanService : IBeanService
         return bean == null ? null : MapToDto(bean);
     }
     
-    public async Task<BeanDto> CreateBeanAsync(CreateBeanDto dto)
+    public async Task<OperationResult<BeanDto>> CreateBeanAsync(CreateBeanDto dto)
     {
-        ValidateCreateBean(dto);
-        
-        var bean = new Bean
+        try
         {
-            Name = dto.Name,
-            Roaster = dto.Roaster,
-            RoastDate = dto.RoastDate,
-            Origin = dto.Origin,
-            Notes = dto.Notes,
-            IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
-            SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
-        };
+            ValidateCreateBean(dto);
+        }
+        catch (ValidationException ex)
+        {
+            var firstError = ex.Errors.FirstOrDefault();
+            var errorMessage = firstError.Value?.FirstOrDefault() ?? "Validation failed";
+            return OperationResult<BeanDto>.Fail(
+                errorMessage,
+                "Please correct the errors and try again"
+            );
+        }
         
-        var created = await _beanRepository.AddAsync(bean);
-        return MapToDto(created);
+        try
+        {
+            var bean = new Bean
+            {
+                Name = dto.Name,
+                Roaster = dto.Roaster,
+                RoastDate = dto.RoastDate,
+                Origin = dto.Origin,
+                Notes = dto.Notes,
+                IsActive = true,
+                CreatedAt = DateTimeOffset.Now,
+                SyncId = Guid.NewGuid(),
+                LastModifiedAt = DateTimeOffset.Now
+            };
+            
+            var created = await _beanRepository.AddAsync(bean);
+            return OperationResult<BeanDto>.Ok(MapToDto(created), $"{dto.Name} saved successfully");
+        }
+        catch (DbUpdateException)
+        {
+            return OperationResult<BeanDto>.Fail(
+                "Failed to save bean to database",
+                "Check your connection and try again",
+                "DB_UPDATE_FAILED"
+            );
+        }
+        catch (Exception)
+        {
+            return OperationResult<BeanDto>.Fail(
+                "An unexpected error occurred",
+                "Please try again later",
+                "UNKNOWN_ERROR"
+            );
+        }
     }
     
     public async Task<BeanDto> UpdateBeanAsync(int id, UpdateBeanDto dto)

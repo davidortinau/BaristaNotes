@@ -7,6 +7,7 @@ using BaristaNotes.Core.Data;
 using BaristaNotes.Core.Data.Repositories;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Infrastructure;
+using BaristaNotes.Services;
 
 namespace BaristaNotes;
 
@@ -48,6 +49,7 @@ public static class MauiProgram
 		builder.Services.AddScoped<IBeanService, BeanService>();
 		builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 		builder.Services.AddSingleton<IPreferencesService, PreferencesService>();
+		builder.Services.AddSingleton<IFeedbackService, FeedbackService>();
 
 #if DEBUG
 		builder.Logging.AddDebug();

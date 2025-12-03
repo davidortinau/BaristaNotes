@@ -8,6 +8,7 @@ using BaristaNotes.Core.Data.Repositories;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Infrastructure;
 using BaristaNotes.Services;
+using The49.Maui.BottomSheet;
 
 namespace BaristaNotes;
 
@@ -22,6 +23,7 @@ public static class MauiProgram
 				app.SetWindowsSpecificAssetsDirectory("Assets");
 			})
 			.UseUXDiversPopups()
+			.UseBottomSheet()
 			.UseMauiCommunityToolkit()
 			.ConfigureFonts(fonts =>
 			{

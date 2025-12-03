@@ -1,6 +1,5 @@
 using MauiReactor;
 using BaristaNotes.Pages;
-using MauiControls = Microsoft.Maui.Controls;
 
 namespace BaristaNotes;
 

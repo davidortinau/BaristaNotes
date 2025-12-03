@@ -78,6 +78,7 @@
 		<PackageReference Include="CoreSync.Sqlite" Version="0.1.122" />
 		<PackageReference Include="CoreSync.Http.Client" Version="0.1.122" />
 		<PackageReference Include="System.Reactive" Version="6.0.1" />
+		<PackageReference Include="The49.Maui.BottomSheet" Version="8.0.3" />
 		
 		<!-- UXDivers Popups for user feedback and modals -->
 		<PackageReference Include="UXDivers.Popups.Maui" Version="0.9.0" />

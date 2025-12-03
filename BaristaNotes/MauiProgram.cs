@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using CommunityToolkit.Maui;
 using MauiReactor;
-using The49.Maui.BottomSheet;
+using UXDivers.Popups.Maui;
 using BaristaNotes.Core.Data;
 using BaristaNotes.Core.Data.Repositories;
 using BaristaNotes.Core.Services;
@@ -17,8 +17,11 @@ public static class MauiProgram
 	{
 		var builder = MauiApp.CreateBuilder();
 		builder
-			.UseMauiReactorApp<App>()
-			.UseBottomSheet()
+			.UseMauiReactorApp<App>(app =>
+			{
+				app.SetWindowsSpecificAssetsDirectory("Assets");
+			})
+			.UseUXDiversPopups()
 			.UseMauiCommunityToolkit()
 			.ConfigureFonts(fonts =>
 			{

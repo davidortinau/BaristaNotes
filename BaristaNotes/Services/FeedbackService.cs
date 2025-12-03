@@ -1,5 +1,7 @@
 using System.Reactive.Subjects;
 using BaristaNotes.Models;
+using UXDivers.Popups.Maui.Controls;
+using UXDivers.Popups.Services;
 
 namespace BaristaNotes.Services;
 
@@ -16,12 +18,15 @@ public class FeedbackService : IFeedbackService
     public void ShowSuccess(string message, int durationMs = 2000)
     {
         ValidateMessage(message, durationMs);
-        PublishMessage(new FeedbackMessage
+        var feedbackMessage = new FeedbackMessage
         {
             Type = FeedbackType.Success,
             Message = message,
             DurationMs = durationMs
-        });
+        };
+        
+        PublishMessage(feedbackMessage);
+        ShowToast("✓", Colors.Green, message, durationMs);
     }
 
     public void ShowError(string message, string? recoveryAction = null, int durationMs = 5000)
@@ -44,6 +49,7 @@ public class FeedbackService : IFeedbackService
         {
             _isShowingError = true;
             PublishMessage(errorMessage);
+            ShowToast("✕", Colors.Red, message, durationMs);
             
             Task.Delay(durationMs).ContinueWith(_ =>
             {
@@ -60,23 +66,29 @@ public class FeedbackService : IFeedbackService
     public void ShowInfo(string message, int durationMs = 3000)
     {
         ValidateMessage(message, durationMs);
-        PublishMessage(new FeedbackMessage
+        var feedbackMessage = new FeedbackMessage
         {
             Type = FeedbackType.Info,
             Message = message,
             DurationMs = durationMs
-        });
+        };
+        
+        PublishMessage(feedbackMessage);
+        ShowToast("ⓘ", Colors.Blue, message, durationMs);
     }
 
     public void ShowWarning(string message, int durationMs = 3000)
     {
         ValidateMessage(message, durationMs);
-        PublishMessage(new FeedbackMessage
+        var feedbackMessage = new FeedbackMessage
         {
             Type = FeedbackType.Warning,
             Message = message,
             DurationMs = durationMs
-        });
+        };
+        
+        PublishMessage(feedbackMessage);
+        ShowToast("⚠", Colors.Orange, message, durationMs);
     }
 
     public void ShowLoading(string message)
@@ -115,6 +127,33 @@ public class FeedbackService : IFeedbackService
         Application.Current?.Dispatcher.Dispatch(() =>
         {
             _feedbackSubject.OnNext(message);
+        });
+    }
+
+    private async void ShowToast(string icon, Color iconColor, string message, int durationMs)
+    {
+        Application.Current?.Dispatcher.Dispatch(async () =>
+        {
+            try
+            {
+                var toast = new Toast
+                {
+                    IconText = icon,
+                    IconColor = iconColor,
+                    Title = message
+                };
+
+                await IPopupService.Current.PushAsync(toast);
+                
+                // Auto-dismiss after duration
+                await Task.Delay(durationMs);
+                await IPopupService.Current.PopAsync();
+            }
+            catch (Exception ex)
+            {
+                // Fallback: just log if popup fails
+                System.Diagnostics.Debug.WriteLine($"Failed to show toast: {ex.Message}");
+            }
         });
     }
 }

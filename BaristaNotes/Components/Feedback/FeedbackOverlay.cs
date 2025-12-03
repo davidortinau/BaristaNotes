@@ -77,27 +77,25 @@ partial class FeedbackOverlay : Component<FeedbackOverlayState>
 
     public override VisualNode Render()
     {
-        return AbsoluteLayout(
-            // Toast messages
-            VStack(spacing: 8,
+        return new Grid
+        {
+            // Toast messages at top
+            new VStack(spacing: 8)
+            {
                 State.ActiveMessages.Select(msg =>
                     new ToastComponent()
                         .Message(msg)
                         .OnDismiss(OnToastDismiss)
                 ).ToArray()
-            )
-            .LayoutFlags(Microsoft.Maui.Layouts.AbsoluteLayoutFlags.PositionProportional)
-            .LayoutBounds(new Rect(0.5, 0, -1, -1))
-            .InputTransparent(false),
+            }
+            .VStart()
+            .HCenter(),
 
-            // Loading overlay
+            // Loading overlay (fullscreen)
             State.IsLoading
                 ? new LoadingOverlay()
                     .Message(State.LoadingMessage ?? "Loading...")
-                    .LayoutFlags(Microsoft.Maui.Layouts.AbsoluteLayoutFlags.All)
-                    .LayoutBounds(new Rect(0, 0, 1, 1))
                 : null
-        )
-        .InputTransparent(true);
+        };
     }
 }

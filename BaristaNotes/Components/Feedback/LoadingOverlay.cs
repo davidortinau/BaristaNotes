@@ -9,31 +9,28 @@ partial class LoadingOverlay : Component
 
     public override VisualNode Render()
     {
-        return Grid(
+        return new Grid
+        {
             // Semi-transparent background
-            BoxView()
-                .BackgroundColor(Color.FromArgb("#B32D1F1A"))
-                .InputTransparent(false),
+            new BoxView()
+                .BackgroundColor(Color.FromArgb("#B32D1F1A")),
 
             // Loading content
-            VStack(spacing: 16,
-                ActivityIndicator()
+            new VStack(spacing: 16)
+            {
+                new ActivityIndicator()
                     .IsRunning(true)
                     .Color(Color.FromArgb("#D4A574"))
                     .WidthRequest(48)
                     .HeightRequest(48),
 
-                Label(_message ?? "Loading...")
+                new Label(_message ?? "Loading...")
                     .FontSize(18)
                     .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
                     .TextColor(Color.FromArgb("#F5E6D3"))
                     .HorizontalTextAlignment(TextAlignment.Center)
-            )
+            }
             .Center()
-        )
-        .InputTransparent(false)
-        .SemanticProperties(sp => sp
-            .Description($"Loading: {_message}")
-            .Announce(_message ?? "Loading"));
+        };
     }
 }

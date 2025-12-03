@@ -1,5 +1,6 @@
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
+using BaristaNotes.Services;
 using MauiReactor;
 using The49MauiBottomSheet = The49.Maui.BottomSheet;
 using MauiControls = Microsoft.Maui.Controls;
@@ -17,6 +18,9 @@ partial class BeanManagementPage : Component<BeanManagementState>
 {
     [Inject]
     IBeanService _beanService;
+
+    [Inject]
+    IFeedbackService _feedbackService;
 
     private The49MauiBottomSheet.BottomSheet? _currentSheet;
 
@@ -136,13 +140,12 @@ partial class BeanManagementPage : Component<BeanManagementState>
             // Validate
             if (string.IsNullOrWhiteSpace(nameEntry.Text))
             {
-                errorLabel.Text = "Bean name is required";
-                errorLabel.IsVisible = true;
+                _feedbackService.ShowError("Bean name is required", "Please enter a name for your coffee bean");
                 return;
             }
 
+            _feedbackService.ShowLoading("Saving bean...");
             saveButton.IsEnabled = false;
-            saveButton.Text = "Saving...";
 
             try
             {
@@ -162,10 +165,13 @@ partial class BeanManagementPage : Component<BeanManagementState>
                             RoastDate = roastDate,
                             Notes = string.IsNullOrWhiteSpace(notesEditor.Text) ? null : notesEditor.Text
                         });
+                    
+                    _feedbackService.HideLoading();
+                    _feedbackService.ShowSuccess($"{nameEntry.Text} updated successfully");
                 }
                 else
                 {
-                    await _beanService.CreateBeanAsync(
+                    var result = await _beanService.CreateBeanAsync(
                         new CreateBeanDto
                         {
                             Name = nameEntry.Text,
@@ -174,6 +180,19 @@ partial class BeanManagementPage : Component<BeanManagementState>
                             RoastDate = roastDate,
                             Notes = string.IsNullOrWhiteSpace(notesEditor.Text) ? null : notesEditor.Text
                         });
+                    
+                    _feedbackService.HideLoading();
+                    
+                    if (result.Success)
+                    {
+                        _feedbackService.ShowSuccess(result.Message);
+                    }
+                    else
+                    {
+                        _feedbackService.ShowError(result.ErrorMessage!, result.RecoveryAction);
+                        saveButton.IsEnabled = true;
+                        return;
+                    }
                 }
 
                 await _currentSheet?.DismissAsync()!;
@@ -181,10 +200,9 @@ partial class BeanManagementPage : Component<BeanManagementState>
             }
             catch (Exception ex)
             {
-                errorLabel.Text = ex.Message;
-                errorLabel.IsVisible = true;
+                _feedbackService.HideLoading();
+                _feedbackService.ShowError("Failed to save bean", "Please try again");
                 saveButton.IsEnabled = true;
-                saveButton.Text = "Save";
             }
         };
 

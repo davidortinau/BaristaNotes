@@ -65,17 +65,17 @@
 
 ### Implementation for User Story 1
 
-- [ ] T016 [P] [US1] Create ToastComponent.cs Reactor component in BaristaNotes/Components/Feedback/ToastComponent.cs
-- [ ] T017 [P] [US1] Create FeedbackOverlay.cs Reactor component in BaristaNotes/Components/Feedback/FeedbackOverlay.cs
-- [ ] T018 [US1] Implement ToastComponent with slide-in animation (TranslationY -50 to 0)
-- [ ] T019 [US1] Implement auto-dismiss logic in ToastComponent using Task.Delay
-- [ ] T020 [US1] Implement FeedbackOverlay to subscribe to IFeedbackService.FeedbackMessages
-- [ ] T021 [US1] Add coffee-themed success colors (green #8BC34A dark, #689F38 light)
-- [ ] T022 [US1] Add checkmark icon to success toasts
-- [ ] T023 [US1] Add SemanticProperties.Announce for screen reader support
-- [ ] T024 [US1] Update BeanService.CreateAsync to return OperationResult<Bean> in BaristaNotes.Core/Services/BeanService.cs
-- [ ] T025 [US1] Update BeanForm component to call FeedbackService.ShowSuccess in BaristaNotes/Components/Beans/BeanForm.cs
-- [ ] T026 [US1] Add FeedbackOverlay to MainPage.cs layout in BaristaNotes/MainPage.cs
+- [X] T016 [P] [US1] Create ToastComponent.cs Reactor component in BaristaNotes/Components/Feedback/ToastComponent.cs
+- [X] T017 [P] [US1] Create FeedbackOverlay.cs Reactor component in BaristaNotes/Components/Feedback/FeedbackOverlay.cs
+- [X] T018 [US1] Implement ToastComponent with slide-in animation (TranslationY -50 to 0)
+- [X] T019 [US1] Implement auto-dismiss logic in ToastComponent using Task.Delay
+- [X] T020 [US1] Implement FeedbackOverlay to subscribe to IFeedbackService.FeedbackMessages
+- [X] T021 [US1] Add coffee-themed success colors (green #8BC34A dark, #689F38 light)
+- [X] T022 [US1] Add checkmark icon to success toasts
+- [X] T023 [US1] Add SemanticProperties.Announce for screen reader support
+- [X] T024 [US1] Update BeanService.CreateAsync to return OperationResult<Bean> in BaristaNotes.Core/Services/BeanService.cs
+- [X] T025 [US1] Update BeanForm component to call FeedbackService.ShowSuccess in BaristaNotes/Components/Beans/BeanForm.cs
+- [X] T026 [US1] Add FeedbackOverlay to MainPage.cs layout in BaristaNotes/MainPage.cs
 - [ ] T027 [US1] Integration test: Create bean triggers success feedback in BaristaNotes.Tests/Integration/BeanCrudFeedbackTests.cs
 
 **Checkpoint**: User Story 1 complete - success feedback working for bean creation

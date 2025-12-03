@@ -69,8 +69,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 var shot = await _shotService.GetShotByIdAsync(Props.ShotId.Value);
                 if (shot == null)
                 {
-                    var errorToast = CommunityToolkit.Maui.Alerts.Toast.Make("Shot not found", CommunityToolkit.Maui.Core.ToastDuration.Short);
-                    await errorToast.Show();
+                    _feedbackService.ShowError("Shot not found");
                     await Navigation.PopAsync();
                     return;
                 }
@@ -143,8 +142,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 if (State.SelectedBeanId == null)
                 {
                     _feedbackService.HideLoading();
-                    var errorToast = CommunityToolkit.Maui.Alerts.Toast.Make("Please select a bean", CommunityToolkit.Maui.Core.ToastDuration.Short);
-                    await errorToast.Show();
+                    _feedbackService.ShowError("Please select a bean");
                     return;
                 }
                 
@@ -160,11 +158,10 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 await _shotService.UpdateShotAsync(Props.ShotId.Value, updateDto);
                 
                 _feedbackService.HideLoading();
+                _feedbackService.ShowSuccess("Shot updated successfully");
                 
-                // Show success toast
-                var toast = CommunityToolkit.Maui.Alerts.Toast.Make("Shot updated successfully", CommunityToolkit.Maui.Core.ToastDuration.Short);
-                await toast.Show();
-                
+                // Small delay to allow toast to appear before navigation
+                await Task.Delay(500);
                 await Navigation.PopAsync();
             }
             // Add mode: Create new shot
@@ -173,8 +170,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 if (State.SelectedBeanId == null)
                 {
                     _feedbackService.HideLoading();
-                    var errorToast = CommunityToolkit.Maui.Alerts.Toast.Make("Please select a bean", CommunityToolkit.Maui.Core.ToastDuration.Short);
-                    await errorToast.Show();
+                    _feedbackService.ShowError("Please select a bean", "Choose a bean before logging your shot");
                     return;
                 }
 
@@ -200,10 +196,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 }
 
                 _feedbackService.HideLoading();
-                
-                // Show success toast
-                var toast = CommunityToolkit.Maui.Alerts.Toast.Make($"{State.DrinkType} shot logged successfully", CommunityToolkit.Maui.Core.ToastDuration.Short);
-                await toast.Show();
+                _feedbackService.ShowSuccess($"{State.DrinkType} shot logged successfully");
 
                 await LoadDataAsync();
             }
@@ -211,13 +204,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         catch (Exception ex)
         {
             _feedbackService.HideLoading();
-            
-            // Show error toast
-            var errorToast = CommunityToolkit.Maui.Alerts.Toast.Make(
-                Props.ShotId.HasValue ? "Failed to update shot" : "Failed to save shot", 
-                CommunityToolkit.Maui.Core.ToastDuration.Long);
-            await errorToast.Show();
-            
+            _feedbackService.ShowError(Props.ShotId.HasValue ? "Failed to update shot" : "Failed to save shot", "Please try again");
             SetState(s =>
             {
                 s.IsLoading = false;

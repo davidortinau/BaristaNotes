@@ -149,7 +149,7 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
                             Type = selectedType,
                             Notes = string.IsNullOrWhiteSpace(notesEditor.Text) ? null : notesEditor.Text
                         });
-                    
+
                     _feedbackService.HideLoading();
                     _feedbackService.ShowSuccess($"{nameEntry.Text} updated successfully");
                 }
@@ -162,7 +162,7 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
                             Type = selectedType,
                             Notes = string.IsNullOrWhiteSpace(notesEditor.Text) ? null : notesEditor.Text
                         });
-                    
+
                     _feedbackService.HideLoading();
                     _feedbackService.ShowSuccess($"{nameEntry.Text} added successfully");
                 }
@@ -305,7 +305,7 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
     async Task DeleteEquipment(EquipmentDto equipment)
     {
         _feedbackService.ShowLoading("Deleting equipment...");
-        
+
         try
         {
             await _equipmentService.DeleteEquipmentAsync(equipment.Id);

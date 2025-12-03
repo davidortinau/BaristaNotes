@@ -53,13 +53,17 @@ partial class EditShotPage : Component<EditShotPageState>
     
     protected override void OnMounted()
     {
+        System.Diagnostics.Debug.WriteLine($"[EditShotPage] OnMounted called, _shotId = {_shotId}");
+        
         if (_shotId > 0)
         {
             State.ShotId = _shotId;
+            System.Diagnostics.Debug.WriteLine($"[EditShotPage] Starting LoadShotData for ID: {_shotId}");
             _ = LoadShotData();
         }
         else
         {
+            System.Diagnostics.Debug.WriteLine($"[EditShotPage] Invalid shotId: {_shotId}");
             _feedbackService.ShowError("Invalid shot ID");
             _ = Microsoft.Maui.Controls.Application.Current?.MainPage?.Navigation.PopAsync();
         }
@@ -73,11 +77,18 @@ partial class EditShotPage : Component<EditShotPageState>
         {
             SetState(s => s.IsLoading = true);
             
+            System.Diagnostics.Debug.WriteLine($"[EditShotPage] Loading shot ID: {State.ShotId}");
+            
             var shot = await _shotService.GetShotByIdAsync(State.ShotId);
+            
+            System.Diagnostics.Debug.WriteLine($"[EditShotPage] Shot loaded: {shot != null}");
+            
             if (shot == null)
             {
+                System.Diagnostics.Debug.WriteLine($"[EditShotPage] Shot is null");
+                SetState(s => s.IsLoading = false);
                 _feedbackService.ShowError("Shot not found");
-                await Navigation.PopAsync();
+                await Microsoft.Maui.Controls.Application.Current?.MainPage?.Navigation.PopAsync();
                 return;
             }
             
@@ -95,11 +106,16 @@ partial class EditShotPage : Component<EditShotPageState>
                 s.Rating = shot.Rating;
                 s.DrinkType = shot.DrinkType;
             });
+            
+            System.Diagnostics.Debug.WriteLine($"[EditShotPage] State updated successfully");
         }
         catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[EditShotPage] Error loading shot: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[EditShotPage] Stack trace: {ex.StackTrace}");
+            SetState(s => s.IsLoading = false);
             _feedbackService.ShowError($"Error loading shot: {ex.Message}");
-            await Navigation.PopAsync();
+            await Microsoft.Maui.Controls.Application.Current?.MainPage?.Navigation.PopAsync();
         }
     }
     

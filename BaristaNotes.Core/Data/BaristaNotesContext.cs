@@ -83,6 +83,7 @@ public class BaristaNotesContext : DbContext
             entity.Property(e => e.DrinkType).IsRequired().HasMaxLength(50);
             entity.Property(e => e.ActualTime).HasPrecision(5, 2);
             entity.Property(e => e.ActualOutput).HasPrecision(5, 2);
+            entity.Property(e => e.PreinfusionTime).HasPrecision(5, 2);
             entity.Property(e => e.SyncId).IsRequired();
             entity.Property(e => e.LastModifiedAt).IsRequired();
             entity.Property(e => e.IsDeleted).IsRequired().HasDefaultValue(false);

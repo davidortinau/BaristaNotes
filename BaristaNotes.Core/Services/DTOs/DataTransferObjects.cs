@@ -20,6 +20,7 @@ public record ShotRecordDto
     
     public decimal? ActualTime { get; init; }
     public decimal? ActualOutput { get; init; }
+    public decimal? PreinfusionTime { get; init; }
     
     public int? Rating { get; init; }
 }
@@ -43,6 +44,7 @@ public record CreateShotDto
     
     public decimal? ActualTime { get; init; }
     public decimal? ActualOutput { get; init; }
+    public decimal? PreinfusionTime { get; init; }
     
     public int? Rating { get; init; }
 }
@@ -61,6 +63,18 @@ public record UpdateShotDto
     public int? BeanId { get; init; }
     
     /// <summary>
+    /// User who pulled the shot (barista).
+    /// Optional - null means no change to existing value.
+    /// </summary>
+    public int? MadeById { get; init; }
+    
+    /// <summary>
+    /// User the shot was made for (customer).
+    /// Optional - null means no change to existing value.
+    /// </summary>
+    public int? MadeForId { get; init; }
+    
+    /// <summary>
     /// Actual shot extraction time in seconds.
     /// Optional - null means no change to existing value.
     /// If provided, must be greater than 0 and less than 999.
@@ -73,6 +87,13 @@ public record UpdateShotDto
     /// If provided, must be greater than 0 and less than 200.
     /// </summary>
     public decimal? ActualOutput { get; init; }
+    
+    /// <summary>
+    /// Preinfusion time in seconds.
+    /// Optional - null means no change to existing value.
+    /// If provided, must be between 0 and 60.
+    /// </summary>
+    public decimal? PreinfusionTime { get; init; }
     
     /// <summary>
     /// Taste rating on 1-5 scale (1=dislike, 5=excellent).

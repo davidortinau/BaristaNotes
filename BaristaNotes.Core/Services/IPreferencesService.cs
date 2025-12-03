@@ -23,6 +23,21 @@ public interface IPreferencesService
     int? GetLastMadeForId();
     void SetLastMadeForId(int? madeForId);
     
+    decimal? GetLastDoseIn();
+    void SetLastDoseIn(decimal? doseIn);
+    
+    string? GetLastGrindSetting();
+    void SetLastGrindSetting(string? grindSetting);
+    
+    decimal? GetLastExpectedTime();
+    void SetLastExpectedTime(decimal? expectedTime);
+    
+    decimal? GetLastExpectedOutput();
+    void SetLastExpectedOutput(decimal? expectedOutput);
+    
+    decimal? GetLastPreinfusionTime();
+    void SetLastPreinfusionTime(decimal? preinfusionTime);
+    
     void ClearAll();
 }
 
@@ -32,5 +47,7 @@ public interface IPreferencesStore
     void Set(string key, string value);
     int Get(string key, int defaultValue);
     void Set(string key, int value);
+    double Get(string key, double defaultValue);
+    void Set(string key, double value);
     void Remove(string key);
 }

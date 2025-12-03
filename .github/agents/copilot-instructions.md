@@ -32,8 +32,8 @@ C# / .NET 10.0: Follow standard conventions
 
 ## Recent Changes
 - 001-shot-tracking: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+- 001-shot-tracking: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 - 001-shot-tracking: Added C# / .NET 9.0 + .NET MAUI 9.0, MauiReactor 4.x, Entity Framework Core 9.x, CommunityToolkit.Maui, UXDivers.Popups
-- 001-edit-delete-shots: Added C# .NET 10 (MAUI)
 
 
 <!-- MANUAL ADDITIONS START -->

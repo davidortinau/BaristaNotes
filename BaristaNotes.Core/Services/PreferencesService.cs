@@ -13,6 +13,11 @@ public class PreferencesService : IPreferencesService
     private const string KeyLastAccessoryIds = "last_accessory_ids";
     private const string KeyLastMadeById = "last_made_by_id";
     private const string KeyLastMadeForId = "last_made_for_id";
+    private const string KeyLastDoseIn = "last_dose_in";
+    private const string KeyLastGrindSetting = "last_grind_setting";
+    private const string KeyLastExpectedTime = "last_expected_time";
+    private const string KeyLastExpectedOutput = "last_expected_output";
+    private const string KeyLastPreinfusionTime = "last_preinfusion_time";
     
     public PreferencesService(IPreferencesStore store)
     {
@@ -82,6 +87,53 @@ public class PreferencesService : IPreferencesService
     public void SetLastMadeForId(int? madeForId)
         => _store.Set(KeyLastMadeForId, madeForId ?? -1);
     
+    public decimal? GetLastDoseIn()
+    {
+        var value = _store.Get(KeyLastDoseIn, -1.0);
+        return value == -1.0 ? null : (decimal)value;
+    }
+    
+    public void SetLastDoseIn(decimal? doseIn)
+        => _store.Set(KeyLastDoseIn, doseIn.HasValue ? (double)doseIn.Value : -1.0);
+    
+    public string? GetLastGrindSetting()
+        => _store.Get(KeyLastGrindSetting, null);
+    
+    public void SetLastGrindSetting(string? grindSetting)
+    {
+        if (grindSetting != null)
+            _store.Set(KeyLastGrindSetting, grindSetting);
+        else
+            _store.Remove(KeyLastGrindSetting);
+    }
+    
+    public decimal? GetLastExpectedTime()
+    {
+        var value = _store.Get(KeyLastExpectedTime, -1.0);
+        return value == -1.0 ? null : (decimal)value;
+    }
+    
+    public void SetLastExpectedTime(decimal? expectedTime)
+        => _store.Set(KeyLastExpectedTime, expectedTime.HasValue ? (double)expectedTime.Value : -1.0);
+    
+    public decimal? GetLastExpectedOutput()
+    {
+        var value = _store.Get(KeyLastExpectedOutput, -1.0);
+        return value == -1.0 ? null : (decimal)value;
+    }
+    
+    public void SetLastExpectedOutput(decimal? expectedOutput)
+        => _store.Set(KeyLastExpectedOutput, expectedOutput.HasValue ? (double)expectedOutput.Value : -1.0);
+    
+    public decimal? GetLastPreinfusionTime()
+    {
+        var value = _store.Get(KeyLastPreinfusionTime, -1.0);
+        return value == -1.0 ? null : (decimal)value;
+    }
+    
+    public void SetLastPreinfusionTime(decimal? preinfusionTime)
+        => _store.Set(KeyLastPreinfusionTime, preinfusionTime.HasValue ? (double)preinfusionTime.Value : -1.0);
+    
     public void ClearAll()
     {
         _store.Remove(KeyLastDrinkType);
@@ -91,5 +143,10 @@ public class PreferencesService : IPreferencesService
         _store.Remove(KeyLastAccessoryIds);
         _store.Remove(KeyLastMadeById);
         _store.Remove(KeyLastMadeForId);
+        _store.Remove(KeyLastDoseIn);
+        _store.Remove(KeyLastGrindSetting);
+        _store.Remove(KeyLastExpectedTime);
+        _store.Remove(KeyLastExpectedOutput);
+        _store.Remove(KeyLastPreinfusionTime);
     }
 }

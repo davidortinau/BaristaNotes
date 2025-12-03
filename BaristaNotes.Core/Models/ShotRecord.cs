@@ -22,6 +22,7 @@ public class ShotRecord
     // Actual results
     public decimal? ActualTime { get; set; }
     public decimal? ActualOutput { get; set; }
+    public decimal? PreinfusionTime { get; set; }
     
     // Rating
     public int? Rating { get; set; }

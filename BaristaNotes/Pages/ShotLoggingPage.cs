@@ -22,9 +22,18 @@ class ShotLoggingState
     public List<string> DrinkTypes { get; set; } = new() { "Espresso", "Americano", "Latte", "Cappuccino", "Flat White", "Cortado" };
     public bool IsLoading { get; set; }
     public string? ErrorMessage { get; set; }
+    
+    // Edit mode fields
+    public DateTimeOffset? Timestamp { get; set; }
+    public string? BeanName { get; set; }
 }
 
-partial class ShotLoggingPage : Component<ShotLoggingState>
+class ShotLoggingPageProps
+{
+    public int? ShotId { get; set; }
+}
+
+partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps>
 {
     [Inject]
     IShotService _shotService;
@@ -53,26 +62,63 @@ partial class ShotLoggingPage : Component<ShotLoggingState>
         try
         {
             var beans = await _beanService.GetAllActiveBeansAsync();
-            var lastShot = await _shotService.GetMostRecentShotAsync();
-
-            SetState(s =>
+            
+            // Edit mode: Load existing shot
+            if (Props.ShotId.HasValue)
             {
-                s.AvailableBeans = beans.ToList();
-                
-                if (lastShot != null)
+                var shot = await _shotService.GetShotByIdAsync(Props.ShotId.Value);
+                if (shot == null)
                 {
-                    s.DoseIn = lastShot.DoseIn;
-                    s.GrindSetting = lastShot.GrindSetting;
-                    s.ExpectedTime = lastShot.ExpectedTime;
-                    s.ExpectedOutput = lastShot.ExpectedOutput;
-                    s.DrinkType = lastShot.DrinkType;
-                    s.SelectedBeanId = lastShot.Bean?.Id;
-                    s.SelectedBeanIndex = lastShot.Bean != null ? s.AvailableBeans.FindIndex(b => b.Id == lastShot.Bean.Id) : -1;
-                    s.SelectedDrinkIndex = s.DrinkTypes.IndexOf(lastShot.DrinkType);
+                    _feedbackService.ShowError("Shot not found");
+                    await Navigation.PopAsync();
+                    return;
                 }
                 
-                s.IsLoading = false;
-            });
+                SetState(s =>
+                {
+                    s.AvailableBeans = beans.ToList();
+                    
+                    // Populate from existing shot
+                    s.Timestamp = shot.Timestamp;
+                    s.BeanName = shot.Bean?.Name;
+                    s.DoseIn = shot.DoseIn;
+                    s.GrindSetting = shot.GrindSetting;
+                    s.ExpectedTime = shot.ExpectedTime;
+                    s.ExpectedOutput = shot.ExpectedOutput;
+                    s.ActualTime = shot.ActualTime;
+                    s.ActualOutput = shot.ActualOutput;
+                    s.Rating = shot.Rating ?? 0;
+                    s.DrinkType = shot.DrinkType;
+                    s.SelectedBeanId = shot.Bean?.Id;
+                    s.SelectedBeanIndex = shot.Bean != null ? s.AvailableBeans.FindIndex(b => b.Id == shot.Bean.Id) : -1;
+                    s.SelectedDrinkIndex = s.DrinkTypes.IndexOf(shot.DrinkType);
+                    s.IsLoading = false;
+                });
+            }
+            // Add mode: Load last shot as template
+            else
+            {
+                var lastShot = await _shotService.GetMostRecentShotAsync();
+
+                SetState(s =>
+                {
+                    s.AvailableBeans = beans.ToList();
+                    
+                    if (lastShot != null)
+                    {
+                        s.DoseIn = lastShot.DoseIn;
+                        s.GrindSetting = lastShot.GrindSetting;
+                        s.ExpectedTime = lastShot.ExpectedTime;
+                        s.ExpectedOutput = lastShot.ExpectedOutput;
+                        s.DrinkType = lastShot.DrinkType;
+                        s.SelectedBeanId = lastShot.Bean?.Id;
+                        s.SelectedBeanIndex = lastShot.Bean != null ? s.AvailableBeans.FindIndex(b => b.Id == lastShot.Bean.Id) : -1;
+                        s.SelectedDrinkIndex = s.DrinkTypes.IndexOf(lastShot.DrinkType);
+                    }
+                    
+                    s.IsLoading = false;
+                });
+            }
         }
         catch (Exception ex)
         {
@@ -88,44 +134,67 @@ partial class ShotLoggingPage : Component<ShotLoggingState>
     {
         try
         {
-            if (State.SelectedBeanId == null)
+            _feedbackService.ShowLoading(Props.ShotId.HasValue ? "Updating shot..." : "Saving shot...");
+
+            // Edit mode: Update existing shot
+            if (Props.ShotId.HasValue)
             {
-                _feedbackService.ShowError("Please select a bean", "Choose a bean before logging your shot");
-                return;
+                var updateDto = new UpdateShotDto
+                {
+                    ActualTime = State.ActualTime,
+                    ActualOutput = State.ActualOutput,
+                    Rating = State.Rating > 0 ? State.Rating : null,
+                    DrinkType = State.DrinkType
+                };
+
+                await _shotService.UpdateShotAsync(Props.ShotId.Value, updateDto);
+                
+                _feedbackService.HideLoading();
+                _feedbackService.ShowSuccess("Shot updated successfully");
+                
+                await Navigation.PopAsync();
             }
-
-            _feedbackService.ShowLoading("Saving shot...");
-
-            var createDto = new CreateShotDto
+            // Add mode: Create new shot
+            else
             {
-                BeanId = State.SelectedBeanId.Value,
-                DoseIn = State.DoseIn,
-                GrindSetting = State.GrindSetting,
-                ExpectedTime = State.ExpectedTime,
-                ExpectedOutput = State.ExpectedOutput,
-                ActualTime = State.ActualTime,
-                ActualOutput = State.ActualOutput,
-                DrinkType = State.DrinkType,
-                Rating = State.Rating
-            };
+                if (State.SelectedBeanId == null)
+                {
+                    _feedbackService.HideLoading();
+                    _feedbackService.ShowError("Please select a bean", "Choose a bean before logging your shot");
+                    return;
+                }
 
-            await _shotService.CreateShotAsync(createDto);
+                var createDto = new CreateShotDto
+                {
+                    BeanId = State.SelectedBeanId.Value,
+                    DoseIn = State.DoseIn,
+                    GrindSetting = State.GrindSetting,
+                    ExpectedTime = State.ExpectedTime,
+                    ExpectedOutput = State.ExpectedOutput,
+                    ActualTime = State.ActualTime,
+                    ActualOutput = State.ActualOutput,
+                    DrinkType = State.DrinkType,
+                    Rating = State.Rating
+                };
 
-            _preferencesService.SetLastDrinkType(State.DrinkType);
-            if (State.SelectedBeanId.HasValue)
-            {
-                _preferencesService.SetLastBeanId(State.SelectedBeanId.Value);
+                await _shotService.CreateShotAsync(createDto);
+
+                _preferencesService.SetLastDrinkType(State.DrinkType);
+                if (State.SelectedBeanId.HasValue)
+                {
+                    _preferencesService.SetLastBeanId(State.SelectedBeanId.Value);
+                }
+
+                _feedbackService.HideLoading();
+                _feedbackService.ShowSuccess($"{State.DrinkType} shot logged successfully");
+
+                await LoadDataAsync();
             }
-
-            _feedbackService.HideLoading();
-            _feedbackService.ShowSuccess($"{State.DrinkType} shot logged successfully");
-
-            await LoadDataAsync();
         }
         catch (Exception ex)
         {
             _feedbackService.HideLoading();
-            _feedbackService.ShowError("Failed to save shot", "Please try again");
+            _feedbackService.ShowError(Props.ShotId.HasValue ? "Failed to update shot" : "Failed to save shot", "Please try again");
             SetState(s =>
             {
                 s.IsLoading = false;
@@ -138,7 +207,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState>
     {
         if (State.IsLoading && !State.AvailableBeans.Any())
         {
-            return ContentPage("New Shot",
+            return ContentPage(Props.ShotId.HasValue ? "Edit Shot" : "New Shot",
                 VStack(
                     ActivityIndicator()
                         .IsRunning(true),
@@ -150,7 +219,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState>
             );
         }
 
-        return ContentPage("New Shot",
+        return ContentPage(Props.ShotId.HasValue ? "Edit Shot" : "New Shot",
             ScrollView(
                 VStack(spacing: 16,
                     
@@ -162,28 +231,33 @@ partial class ShotLoggingPage : Component<ShotLoggingState>
                             .Margin(0, 8) :
                         null,
                     
-                    // Bean Picker
+                    // Bean - readonly in edit mode, picker in add mode
                     VStack(spacing: 4,
                         Label("Bean")
                             .FontSize(12)
                             .TextColor(Colors.Gray),
                         
-                        Picker()
-                            .Title("Select Bean")
-                            .ItemsSource(State.AvailableBeans.Select(b => b.Name).ToList())
-                            .SelectedIndex(State.SelectedBeanIndex)
-                            .OnSelectedIndexChanged(idx =>
-                            {
-                                if (idx >= 0 && idx < State.AvailableBeans.Count)
+                        Props.ShotId.HasValue
+                            ? (VisualNode)Label(State.BeanName ?? "Unknown Bean")
+                                .FontSize(16)
+                                .Padding(12, 15)
+                                .BackgroundColor(Color.FromArgb("#F5F5F5"))
+                            : Picker()
+                                .Title("Select Bean")
+                                .ItemsSource(State.AvailableBeans.Select(b => b.Name).ToList())
+                                .SelectedIndex(State.SelectedBeanIndex)
+                                .OnSelectedIndexChanged(idx =>
                                 {
-                                    SetState(s =>
+                                    if (idx >= 0 && idx < State.AvailableBeans.Count)
                                     {
-                                        s.SelectedBeanIndex = idx;
-                                        s.SelectedBeanId = State.AvailableBeans[idx].Id;
-                                    });
-                                }
-                            })
-                            .HeightRequest(50)
+                                        SetState(s =>
+                                        {
+                                            s.SelectedBeanIndex = idx;
+                                            s.SelectedBeanId = State.AvailableBeans[idx].Id;
+                                        });
+                                    }
+                                })
+                                .HeightRequest(50)
                     ),
 
                     // Dose In

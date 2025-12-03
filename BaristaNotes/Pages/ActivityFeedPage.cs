@@ -109,7 +109,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
     
     async void NavigateToEdit(int shotId)
     {
-        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<EditShotPageProps>("edit-shot", props => props.ShotId = shotId);
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingPageProps>("shot-logging", props => props.ShotId = shotId);
     }
     
     async Task ShowDeleteConfirmation(int shotId)

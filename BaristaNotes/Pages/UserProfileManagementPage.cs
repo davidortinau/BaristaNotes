@@ -1,5 +1,6 @@
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
+using BaristaNotes.Services;
 using MauiReactor;
 using The49MauiBottomSheet = The49.Maui.BottomSheet;
 using MauiControls = Microsoft.Maui.Controls;
@@ -17,6 +18,9 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 {
     [Inject]
     IUserProfileService _profileService;
+
+    [Inject]
+    IFeedbackService _feedbackService;
 
     private The49MauiBottomSheet.BottomSheet? _currentSheet;
 
@@ -109,13 +113,12 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
             // Validate
             if (string.IsNullOrWhiteSpace(nameEntry.Text))
             {
-                errorLabel.Text = "Profile name is required";
-                errorLabel.IsVisible = true;
+                _feedbackService.ShowError("Profile name is required", "Please enter a name for the profile");
                 return;
             }
 
+            _feedbackService.ShowLoading("Saving profile...");
             saveButton.IsEnabled = false;
-            saveButton.Text = "Saving...";
 
             try
             {
@@ -128,6 +131,9 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                             Name = nameEntry.Text,
                             AvatarPath = string.IsNullOrWhiteSpace(avatarEntry.Text) ? null : avatarEntry.Text
                         });
+                    
+                    _feedbackService.HideLoading();
+                    _feedbackService.ShowSuccess($"{nameEntry.Text} updated successfully");
                 }
                 else
                 {
@@ -137,6 +143,9 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                             Name = nameEntry.Text,
                             AvatarPath = string.IsNullOrWhiteSpace(avatarEntry.Text) ? null : avatarEntry.Text
                         });
+                    
+                    _feedbackService.HideLoading();
+                    _feedbackService.ShowSuccess($"{nameEntry.Text} created successfully");
                 }
 
                 await _currentSheet?.DismissAsync()!;
@@ -144,10 +153,9 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
             }
             catch (Exception ex)
             {
-                errorLabel.Text = ex.Message;
-                errorLabel.IsVisible = true;
+                _feedbackService.HideLoading();
+                _feedbackService.ShowError("Failed to save profile", "Please try again");
                 saveButton.IsEnabled = true;
-                saveButton.Text = "Save";
             }
         };
 
@@ -357,13 +365,19 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
     async Task DeleteProfile(UserProfileDto profile)
     {
+        _feedbackService.ShowLoading("Deleting profile...");
+        
         try
         {
             await _profileService.DeleteProfileAsync(profile.Id);
+            _feedbackService.HideLoading();
+            _feedbackService.ShowSuccess($"{profile.Name} deleted successfully");
             await LoadDataAsync();
         }
         catch (Exception ex)
         {
+            _feedbackService.HideLoading();
+            _feedbackService.ShowError("Failed to delete profile", "Please try again");
             SetState(s => s.ErrorMessage = ex.Message);
         }
     }

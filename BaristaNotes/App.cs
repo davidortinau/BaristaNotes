@@ -7,10 +7,9 @@ public class App : Component
 {
     public override VisualNode Render()
     {
-        return new Grid
-        {
+        return Grid(
             new AppShell(),
             new FeedbackOverlay()
-        };
+        );
     }
 }

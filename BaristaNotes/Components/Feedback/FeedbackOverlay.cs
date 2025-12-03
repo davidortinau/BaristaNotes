@@ -77,17 +77,15 @@ partial class FeedbackOverlay : Component<FeedbackOverlayState>
 
     public override VisualNode Render()
     {
-        return new Grid
-        {
+        return Grid(
             // Toast messages at top
-            new VStack(spacing: 8)
-            {
+            VStack(spacing: 8,
                 State.ActiveMessages.Select(msg =>
                     new ToastComponent()
                         .Message(msg)
                         .OnDismiss(OnToastDismiss)
                 ).ToArray()
-            }
+            )
             .VStart()
             .HCenter(),
 
@@ -96,6 +94,6 @@ partial class FeedbackOverlay : Component<FeedbackOverlayState>
                 ? new LoadingOverlay()
                     .Message(State.LoadingMessage ?? "Loading...")
                 : null
-        };
+        );
     }
 }

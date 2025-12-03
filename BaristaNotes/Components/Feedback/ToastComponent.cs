@@ -43,38 +43,35 @@ partial class ToastComponent : Component<ToastComponentState>
 
         var (bgColor, iconText) = GetThemeValues(_message.Type);
 
-        return new Frame
-        {
-            new VStack(spacing: 4)
-            {
-                new HStack(spacing: 8)
-                {
-                    new Label(iconText)
+        return Border(
+            VStack(spacing: 4,
+                HStack(spacing: 8,
+                    Label(iconText)
                         .FontSize(20)
                         .TextColor(Colors.White),
                     
-                    new VStack(spacing: 2)
-                    {
-                        new Label(_message.Message)
+                    VStack(spacing: 2,
+                        Label(_message.Message)
                             .FontSize(16)
                             .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
                             .TextColor(Colors.White)
                             .LineBreakMode(Microsoft.Maui.LineBreakMode.WordWrap),
                         
                         _message.RecoveryAction != null
-                            ? new Label(_message.RecoveryAction)
+                            ? Label(_message.RecoveryAction)
                                 .FontSize(14)
                                 .TextColor(new Color(255, 255, 255, 0.9f))
                                 .LineBreakMode(Microsoft.Maui.LineBreakMode.WordWrap)
                             : null
-                    }
-                }
-            }
+                    )
+                )
+            )
             .Padding(12)
-        }
+        )
         .BackgroundColor(bgColor)
-        .CornerRadius(12)
-        .HasShadow(true)
+        .Stroke(bgColor)
+        .StrokeThickness(1)
+        .Padding(12)
         .Margin(16)
         .MinimumHeightRequest(60)
         .OnTapped(Dismiss);

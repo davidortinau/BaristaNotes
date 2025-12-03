@@ -1,6 +1,7 @@
 using MauiReactor;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
+using BaristaNotes.Services;
 
 namespace BaristaNotes.Pages;
 
@@ -36,6 +37,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState>
 
     [Inject]
     IPreferencesService _preferencesService;
+
+    [Inject]
+    IFeedbackService _feedbackService;
 
     protected override void OnMounted()
     {
@@ -86,15 +90,11 @@ partial class ShotLoggingPage : Component<ShotLoggingState>
         {
             if (State.SelectedBeanId == null)
             {
-                SetState(s => s.ErrorMessage = "Please select a bean");
+                _feedbackService.ShowError("Please select a bean", "Choose a bean before logging your shot");
                 return;
             }
 
-            SetState(s =>
-            {
-                s.IsLoading = true;
-                s.ErrorMessage = null;
-            });
+            _feedbackService.ShowLoading("Saving shot...");
 
             var createDto = new CreateShotDto
             {
@@ -117,10 +117,15 @@ partial class ShotLoggingPage : Component<ShotLoggingState>
                 _preferencesService.SetLastBeanId(State.SelectedBeanId.Value);
             }
 
+            _feedbackService.HideLoading();
+            _feedbackService.ShowSuccess($"{State.DrinkType} shot logged successfully");
+
             await LoadDataAsync();
         }
         catch (Exception ex)
         {
+            _feedbackService.HideLoading();
+            _feedbackService.ShowError("Failed to save shot", "Please try again");
             SetState(s =>
             {
                 s.IsLoading = false;

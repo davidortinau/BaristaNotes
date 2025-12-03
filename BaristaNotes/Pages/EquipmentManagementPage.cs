@@ -1,6 +1,7 @@
 using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
+using BaristaNotes.Services;
 using MauiReactor;
 using The49MauiBottomSheet = The49.Maui.BottomSheet;
 using MauiControls = Microsoft.Maui.Controls;
@@ -18,6 +19,9 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
 {
     [Inject]
     IEquipmentService _equipmentService;
+
+    [Inject]
+    IFeedbackService _feedbackService;
 
     private The49MauiBottomSheet.BottomSheet? _currentSheet;
 
@@ -121,13 +125,12 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
             // Validate
             if (string.IsNullOrWhiteSpace(nameEntry.Text))
             {
-                errorLabel.Text = "Equipment name is required";
-                errorLabel.IsVisible = true;
+                _feedbackService.ShowError("Equipment name is required", "Please enter a name for your equipment");
                 return;
             }
 
+            _feedbackService.ShowLoading("Saving equipment...");
             saveButton.IsEnabled = false;
-            saveButton.Text = "Saving...";
 
             try
             {
@@ -143,6 +146,9 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
                             Type = selectedType,
                             Notes = string.IsNullOrWhiteSpace(notesEditor.Text) ? null : notesEditor.Text
                         });
+                    
+                    _feedbackService.HideLoading();
+                    _feedbackService.ShowSuccess($"{nameEntry.Text} updated successfully");
                 }
                 else
                 {
@@ -153,6 +159,9 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
                             Type = selectedType,
                             Notes = string.IsNullOrWhiteSpace(notesEditor.Text) ? null : notesEditor.Text
                         });
+                    
+                    _feedbackService.HideLoading();
+                    _feedbackService.ShowSuccess($"{nameEntry.Text} added successfully");
                 }
 
                 await _currentSheet?.DismissAsync()!;
@@ -160,10 +169,9 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
             }
             catch (Exception ex)
             {
-                errorLabel.Text = ex.Message;
-                errorLabel.IsVisible = true;
+                _feedbackService.HideLoading();
+                _feedbackService.ShowError("Failed to save equipment", "Please try again");
                 saveButton.IsEnabled = true;
-                saveButton.Text = "Save";
             }
         };
 
@@ -293,13 +301,19 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
 
     async Task DeleteEquipment(EquipmentDto equipment)
     {
+        _feedbackService.ShowLoading("Deleting equipment...");
+        
         try
         {
             await _equipmentService.DeleteEquipmentAsync(equipment.Id);
+            _feedbackService.HideLoading();
+            _feedbackService.ShowSuccess($"{equipment.Name} deleted successfully");
             await LoadDataAsync();
         }
         catch (Exception ex)
         {
+            _feedbackService.HideLoading();
+            _feedbackService.ShowError("Failed to delete equipment", "Please try again");
             SetState(s => s.ErrorMessage = ex.Message);
         }
     }

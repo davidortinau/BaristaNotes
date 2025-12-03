@@ -4,6 +4,9 @@ using BaristaNotes.Services;
 using MauiReactor;
 using The49MauiBottomSheet = The49.Maui.BottomSheet;
 using MauiControls = Microsoft.Maui.Controls;
+using UXDivers.Popups.Services;
+using UXDivers.Popups.Maui.Controls;
+using UXDivers.Popups;
 
 namespace BaristaNotes.Pages;
 
@@ -117,7 +120,6 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                 return;
             }
 
-            _feedbackService.ShowLoading("Saving profile...");
             saveButton.IsEnabled = false;
 
             try
@@ -131,8 +133,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                             Name = nameEntry.Text,
                             AvatarPath = string.IsNullOrWhiteSpace(avatarEntry.Text) ? null : avatarEntry.Text
                         });
-                    
-                    _feedbackService.HideLoading();
+
                     await _feedbackService.ShowSuccessAsync($"{nameEntry.Text} updated successfully");
                 }
                 else
@@ -143,9 +144,9 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                             Name = nameEntry.Text,
                             AvatarPath = string.IsNullOrWhiteSpace(avatarEntry.Text) ? null : avatarEntry.Text
                         });
-                    
-                    _feedbackService.HideLoading();
+
                     await _feedbackService.ShowSuccessAsync($"{nameEntry.Text} created successfully");
+
                 }
 
                 await _currentSheet?.DismissAsync()!;
@@ -153,7 +154,6 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
             }
             catch (Exception ex)
             {
-                _feedbackService.HideLoading();
                 await _feedbackService.ShowErrorAsync("Failed to save profile", "Please try again");
                 saveButton.IsEnabled = true;
             }
@@ -365,18 +365,18 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
     async Task DeleteProfile(UserProfileDto profile)
     {
-        _feedbackService.ShowLoading("Deleting profile...");
-        
+
+
         try
         {
             await _profileService.DeleteProfileAsync(profile.Id);
-            _feedbackService.HideLoading();
+
             await _feedbackService.ShowSuccessAsync($"{profile.Name} deleted successfully");
             await LoadDataAsync();
         }
         catch (Exception ex)
         {
-            _feedbackService.HideLoading();
+
             await _feedbackService.ShowErrorAsync("Failed to delete profile", "Please try again");
             SetState(s => s.ErrorMessage = ex.Message);
         }

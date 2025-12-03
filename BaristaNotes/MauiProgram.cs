@@ -21,14 +21,17 @@ public static class MauiProgram
 			.UseMauiReactorApp<App>(app =>
 			{
 				app.SetWindowsSpecificAssetsDirectory("Assets");
+				app.Resources.MergedDictionaries.Add(new UXDivers.Popups.Maui.Controls.DarkTheme());
+				app.Resources.MergedDictionaries.Add(new UXDivers.Popups.Maui.Controls.PopupStyles());
 			})
 			.UseUXDiversPopups()
 			.UseBottomSheet()
 			.UseMauiCommunityToolkit()
 			.ConfigureFonts(fonts =>
 			{
-				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+				fonts.AddFont("Manrope-Regular.ttf", "Manrope");
+				fonts.AddFont("Manrope-Semibold.ttf", "ManropeSemibold");
+				fonts.AddFont("MaterialSymbols.ttf", "MaterialSymbols");
 			});
 
 		// Register MauiReactor routes

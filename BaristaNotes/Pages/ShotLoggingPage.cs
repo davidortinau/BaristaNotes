@@ -22,7 +22,7 @@ class ShotLoggingState
     public List<string> DrinkTypes { get; set; } = new() { "Espresso", "Americano", "Latte", "Cappuccino", "Flat White", "Cortado" };
     public bool IsLoading { get; set; }
     public string? ErrorMessage { get; set; }
-    
+
     // Edit mode fields
     public DateTimeOffset? Timestamp { get; set; }
     public string? BeanName { get; set; }
@@ -62,7 +62,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         try
         {
             var beans = await _beanService.GetAllActiveBeansAsync();
-            
+
             // Edit mode: Load existing shot
             if (Props.ShotId.HasValue)
             {
@@ -73,11 +73,11 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     await Navigation.PopAsync();
                     return;
                 }
-                
+
                 SetState(s =>
                 {
                     s.AvailableBeans = beans.ToList();
-                    
+
                     // Populate from existing shot
                     s.Timestamp = shot.Timestamp;
                     s.BeanName = shot.Bean?.Name;
@@ -103,7 +103,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 SetState(s =>
                 {
                     s.AvailableBeans = beans.ToList();
-                    
+
                     if (lastShot != null)
                     {
                         s.DoseIn = lastShot.DoseIn;
@@ -115,7 +115,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         s.SelectedBeanIndex = lastShot.Bean != null ? s.AvailableBeans.FindIndex(b => b.Id == lastShot.Bean.Id) : -1;
                         s.SelectedDrinkIndex = s.DrinkTypes.IndexOf(lastShot.DrinkType);
                     }
-                    
+
                     s.IsLoading = false;
                 });
             }
@@ -134,18 +134,15 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     {
         try
         {
-            _feedbackService.ShowLoading(Props.ShotId.HasValue ? "Updating shot..." : "Saving shot...");
-
             // Edit mode: Update existing shot
             if (Props.ShotId.HasValue)
             {
                 if (State.SelectedBeanId == null)
                 {
-                    _feedbackService.HideLoading();
                     await _feedbackService.ShowErrorAsync("Please select a bean");
                     return;
                 }
-                
+
                 var updateDto = new UpdateShotDto
                 {
                     BeanId = State.SelectedBeanId.Value,
@@ -156,12 +153,11 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 };
 
                 await _shotService.UpdateShotAsync(Props.ShotId.Value, updateDto);
-                
-                _feedbackService.HideLoading();
+
                 System.Diagnostics.Debug.WriteLine("[ShotLoggingPage] About to call ShowSuccessAsync");
                 await _feedbackService.ShowSuccessAsync("Shot updated successfully");
                 System.Diagnostics.Debug.WriteLine("[ShotLoggingPage] ShowSuccessAsync completed");
-                
+
                 System.Diagnostics.Debug.WriteLine("[ShotLoggingPage] About to navigate back");
                 await Navigation.PopAsync();
                 System.Diagnostics.Debug.WriteLine("[ShotLoggingPage] Navigation completed");
@@ -171,7 +167,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             {
                 if (State.SelectedBeanId == null)
                 {
-                    _feedbackService.HideLoading();
+
                     await _feedbackService.ShowErrorAsync("Please select a bean", "Choose a bean before logging your shot");
                     return;
                 }
@@ -197,7 +193,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     _preferencesService.SetLastBeanId(State.SelectedBeanId.Value);
                 }
 
-                _feedbackService.HideLoading();
+
                 await _feedbackService.ShowSuccessAsync($"{State.DrinkType} shot logged successfully");
 
                 await LoadDataAsync();
@@ -205,7 +201,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         }
         catch (Exception ex)
         {
-            _feedbackService.HideLoading();
+
             await _feedbackService.ShowErrorAsync(Props.ShotId.HasValue ? "Failed to update shot" : "Failed to save shot", "Please try again");
             SetState(s =>
             {
@@ -234,7 +230,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         return ContentPage(Props.ShotId.HasValue ? "Edit Shot" : "New Shot",
             ScrollView(
                 VStack(spacing: 16,
-                    
+
                     // Error message
                     State.ErrorMessage != null ?
                         Label(State.ErrorMessage)
@@ -242,13 +238,13 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                             .FontSize(14)
                             .Margin(0, 8) :
                         null,
-                    
+
                     // Bean Picker - editable in all modes
                     VStack(spacing: 4,
                         Label("Bean")
                             .FontSize(12)
                             .TextColor(Colors.Gray),
-                        
+
                         Picker()
                             .Title("Select Bean")
                             .ItemsSource(State.AvailableBeans.Select(b => b.Name).ToList())
@@ -272,7 +268,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         Label("Dose In (g)")
                             .FontSize(12)
                             .TextColor(Colors.Gray),
-                        
+
                         Entry()
                             .Text(State.DoseIn.ToString("F1"))
                             .Keyboard(Microsoft.Maui.Keyboard.Numeric)
@@ -289,7 +285,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         Label("Grind Setting")
                             .FontSize(12)
                             .TextColor(Colors.Gray),
-                        
+
                         Entry()
                             .Text(State.GrindSetting)
                             .OnTextChanged(text => SetState(s => s.GrindSetting = text))
@@ -301,7 +297,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         Label("Expected Time (s)")
                             .FontSize(12)
                             .TextColor(Colors.Gray),
-                        
+
                         Entry()
                             .Text(State.ExpectedTime.ToString())
                             .Keyboard(Microsoft.Maui.Keyboard.Numeric)
@@ -318,7 +314,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         Label("Expected Output (g)")
                             .FontSize(12)
                             .TextColor(Colors.Gray),
-                        
+
                         Entry()
                             .Text(State.ExpectedOutput.ToString("F1"))
                             .Keyboard(Microsoft.Maui.Keyboard.Numeric)
@@ -335,7 +331,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         Label("Drink Type")
                             .FontSize(12)
                             .TextColor(Colors.Gray),
-                        
+
                         Picker()
                             .Title("Select Drink")
                             .ItemsSource(State.DrinkTypes)
@@ -359,7 +355,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         Label("Actual Time (s)")
                             .FontSize(12)
                             .TextColor(Colors.Gray),
-                        
+
                         Entry()
                             .Text(State.ActualTime?.ToString() ?? "")
                             .Keyboard(Microsoft.Maui.Keyboard.Numeric)
@@ -378,7 +374,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         Label("Actual Output (g)")
                             .FontSize(12)
                             .TextColor(Colors.Gray),
-                        
+
                         Entry()
                             .Text(State.ActualOutput?.ToString("F1") ?? "")
                             .Keyboard(Microsoft.Maui.Keyboard.Numeric)
@@ -397,7 +393,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         Label($"Rating: {State.Rating}/5")
                             .FontSize(12)
                             .TextColor(Colors.Gray),
-                        
+
                         Slider()
                             .Minimum(0)
                             .Maximum(5)

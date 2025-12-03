@@ -144,7 +144,6 @@ partial class BeanManagementPage : Component<BeanManagementState>
                 return;
             }
 
-            _feedbackService.ShowLoading("Saving bean...");
             saveButton.IsEnabled = false;
 
             try
@@ -165,8 +164,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
                             RoastDate = roastDate,
                             Notes = string.IsNullOrWhiteSpace(notesEditor.Text) ? null : notesEditor.Text
                         });
-                    
-                    _feedbackService.HideLoading();
+
                     await _feedbackService.ShowSuccessAsync($"{nameEntry.Text} updated successfully");
                 }
                 else
@@ -180,9 +178,8 @@ partial class BeanManagementPage : Component<BeanManagementState>
                             RoastDate = roastDate,
                             Notes = string.IsNullOrWhiteSpace(notesEditor.Text) ? null : notesEditor.Text
                         });
-                    
-                    _feedbackService.HideLoading();
-                    
+
+
                     if (result.Success)
                     {
                         await _feedbackService.ShowSuccessAsync(result.Message);
@@ -200,7 +197,6 @@ partial class BeanManagementPage : Component<BeanManagementState>
             }
             catch (Exception ex)
             {
-                _feedbackService.HideLoading();
                 await _feedbackService.ShowErrorAsync("Failed to save bean", "Please try again");
                 saveButton.IsEnabled = true;
             }

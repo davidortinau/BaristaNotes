@@ -9,8 +9,6 @@ public interface IFeedbackService
     Task ShowErrorAsync(string message, string? recoveryAction = null, int durationMs = 5000);
     Task ShowInfoAsync(string message, int durationMs = 3000);
     Task ShowWarningAsync(string message, int durationMs = 3000);
-    void ShowLoading(string message);
-    void HideLoading();
     IObservable<FeedbackMessage> FeedbackMessages { get; }
     IObservable<(bool IsLoading, string? Message)> LoadingState { get; }
 }

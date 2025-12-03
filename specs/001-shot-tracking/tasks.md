@@ -86,7 +86,7 @@ BaristaNotes uses a mobile + API architecture:
 - [X] T030 Implement LoadLastUsedShotValues in PreferencesService using Preferences.Get with null defaults
 - [X] T031 Implement ClearAllPreferences in PreferencesService using Preferences.Clear
 - [X] T032 Implement HasPreference in PreferencesService using Preferences.ContainsKey
-- [ ] T033 Register PreferencesService in DI container in `BaristaNotes/MauiProgram.cs`
+- [X] T033 Register PreferencesService in DI container in `BaristaNotes/MauiProgram.cs`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 

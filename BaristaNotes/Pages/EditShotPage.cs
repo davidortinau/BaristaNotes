@@ -3,9 +3,11 @@ using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Core.Services.Exceptions;
 using BaristaNotes.Services;
+using Microsoft.Maui.Controls;
 
 namespace BaristaNotes.Pages;
 
+[QueryProperty(nameof(ShotId), "shotId")]
 class EditShotPageState
 {
     public int ShotId { get; set; }
@@ -31,28 +33,39 @@ class EditShotPageState
 
 partial class EditShotPage : Component<EditShotPageState>
 {
+    private int _shotId;
+    
     [Inject]
     IShotService _shotService;
     
     [Inject]
     IFeedbackService _feedbackService;
     
+    public int ShotId
+    {
+        get => _shotId;
+        set
+        {
+            _shotId = value;
+            if (_shotId > 0 && !State.IsLoading)
+            {
+                SetState(s => s.ShotId = _shotId);
+                _ = LoadShotData();
+            }
+        }
+    }
+    
     protected override void OnMounted()
     {
-        // Get shotId from query parameter
-        var uri = Microsoft.Maui.Controls.Shell.Current.CurrentState.Location.ToString();
-        var queryString = uri.Contains("?") ? uri.Split('?')[1] : "";
-        var queryParams = System.Web.HttpUtility.ParseQueryString(queryString);
-        
-        if (int.TryParse(queryParams["shotId"], out var shotId))
+        if (_shotId > 0)
         {
-            State.ShotId = shotId;
+            State.ShotId = _shotId;
             _ = LoadShotData();
         }
         else
         {
             _feedbackService.ShowError("Invalid shot ID");
-            _ = Navigation.PopAsync();
+            _ = Microsoft.Maui.Controls.Application.Current?.MainPage?.Navigation.PopAsync();
         }
         
         base.OnMounted();

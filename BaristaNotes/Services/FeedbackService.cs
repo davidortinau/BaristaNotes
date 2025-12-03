@@ -19,7 +19,7 @@ public class FeedbackService : IFeedbackService
     public IObservable<FeedbackMessage> FeedbackMessages => _feedbackSubject;
     public IObservable<(bool IsLoading, string? Message)> LoadingState => _loadingSubject;
 
-    public void ShowSuccess(string message, int durationMs = 2000)
+    public async Task ShowSuccessAsync(string message, int durationMs = 2000)
     {
         ValidateMessage(message, durationMs);
         var feedbackMessage = new FeedbackMessage
@@ -30,10 +30,10 @@ public class FeedbackService : IFeedbackService
         };
 
         PublishMessage(feedbackMessage);
-        ShowToast(Color.FromArgb("#2D5016"), Color.FromArgb("#7CFC00"), "✓", message, durationMs);
+        await ShowToastAsync(Color.FromArgb("#2D5016"), Color.FromArgb("#7CFC00"), "✓", message, durationMs);
     }
 
-    public void ShowError(string message, string? recoveryAction = null, int durationMs = 5000)
+    public async Task ShowErrorAsync(string message, string? recoveryAction = null, int durationMs = 5000)
     {
         ValidateMessage(message, durationMs);
 
@@ -53,21 +53,21 @@ public class FeedbackService : IFeedbackService
         {
             _isShowingError = true;
             PublishMessage(errorMessage);
-            ShowToast(Color.FromArgb("#5C1A1A"), Color.FromArgb("#FF6B6B"), "✕", message, durationMs);
+            await ShowToastAsync(Color.FromArgb("#5C1A1A"), Color.FromArgb("#FF6B6B"), "✕", message, durationMs);
 
-            Task.Delay(durationMs).ContinueWith(_ =>
+            _ = Task.Delay(durationMs).ContinueWith(_ =>
             {
                 _isShowingError = false;
                 if (_errorQueue.Count > 0)
                 {
                     var nextError = _errorQueue.Dequeue();
-                    ShowError(nextError.Message, nextError.RecoveryAction, nextError.DurationMs);
+                    _ = ShowErrorAsync(nextError.Message, nextError.RecoveryAction, nextError.DurationMs);
                 }
             });
         }
     }
 
-    public void ShowInfo(string message, int durationMs = 3000)
+    public async Task ShowInfoAsync(string message, int durationMs = 3000)
     {
         ValidateMessage(message, durationMs);
         var feedbackMessage = new FeedbackMessage
@@ -78,10 +78,10 @@ public class FeedbackService : IFeedbackService
         };
 
         PublishMessage(feedbackMessage);
-        ShowToast(Color.FromArgb("#1A3A5C"), Color.FromArgb("#4A9EFF"), "ℹ", message, durationMs);
+        await ShowToastAsync(Color.FromArgb("#1A3A5C"), Color.FromArgb("#4A9EFF"), "ℹ", message, durationMs);
     }
 
-    public void ShowWarning(string message, int durationMs = 3000)
+    public async Task ShowWarningAsync(string message, int durationMs = 3000)
     {
         ValidateMessage(message, durationMs);
         var feedbackMessage = new FeedbackMessage
@@ -92,7 +92,7 @@ public class FeedbackService : IFeedbackService
         };
 
         PublishMessage(feedbackMessage);
-        ShowToast(Color.FromArgb("#5C4A1A"), Color.FromArgb("#FFB74A"), "⚠", message, durationMs);
+        await ShowToastAsync(Color.FromArgb("#5C4A1A"), Color.FromArgb("#FFB74A"), "⚠", message, durationMs);
     }
 
     public void ShowLoading(string message)
@@ -134,12 +134,15 @@ public class FeedbackService : IFeedbackService
         });
     }
 
-    private async void ShowToast(Color bgColor, Color iconColor, string icon, string message, int durationMs)
+    private async Task ShowToastAsync(Color bgColor, Color iconColor, string icon, string message, int durationMs)
     {
+        System.Diagnostics.Debug.WriteLine($"[FeedbackService] ShowToastAsync called: {message}");
+        
         await Application.Current!.Dispatcher.DispatchAsync(async () =>
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine($"[FeedbackService] Inside dispatcher, about to create popup");
                 // await AppShell.DisplayToastAsync(message);
 
                 var popup = new UXDivers.Popups.Maui.PopupPage
@@ -199,13 +202,18 @@ public class FeedbackService : IFeedbackService
 
                 // await IPopupService.Current.PushAsync(p);
 
+                System.Diagnostics.Debug.WriteLine($"[FeedbackService] About to push popup");
                 await IPopupService.Current.PushAsync(popup);
+                System.Diagnostics.Debug.WriteLine($"[FeedbackService] Popup pushed, waiting {durationMs}ms");
                 await Task.Delay(durationMs);
+                System.Diagnostics.Debug.WriteLine($"[FeedbackService] About to pop popup");
                 await IPopupService.Current.PopAsync();
+                System.Diagnostics.Debug.WriteLine($"[FeedbackService] Popup popped successfully");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to show toast: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[FeedbackService] Failed to show toast: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[FeedbackService] Stack trace: {ex.StackTrace}");
             }
         });
     }

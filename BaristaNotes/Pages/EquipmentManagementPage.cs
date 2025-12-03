@@ -127,7 +127,7 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
             // Validate
             if (string.IsNullOrWhiteSpace(nameEntry.Text))
             {
-                _feedbackService.ShowError("Equipment name is required", "Please enter a name for your equipment");
+                await _feedbackService.ShowErrorAsync("Equipment name is required", "Please enter a name for your equipment");
                 return;
             }
 
@@ -151,7 +151,7 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
                         });
 
                     _feedbackService.HideLoading();
-                    _feedbackService.ShowSuccess($"{nameEntry.Text} updated successfully");
+                    await _feedbackService.ShowSuccessAsync($"{nameEntry.Text} updated successfully");
                 }
                 else
                 {
@@ -164,7 +164,7 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
                         });
 
                     _feedbackService.HideLoading();
-                    _feedbackService.ShowSuccess($"{nameEntry.Text} added successfully");
+                    await _feedbackService.ShowSuccessAsync($"{nameEntry.Text} added successfully");
                 }
 
                 await _currentSheet?.DismissAsync()!;
@@ -173,7 +173,7 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
             catch (Exception ex)
             {
                 _feedbackService.HideLoading();
-                _feedbackService.ShowError("Failed to save equipment", "Please try again");
+                await _feedbackService.ShowErrorAsync("Failed to save equipment", "Please try again");
                 saveButton.IsEnabled = true;
             }
         };
@@ -310,13 +310,13 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
         {
             await _equipmentService.DeleteEquipmentAsync(equipment.Id);
             _feedbackService.HideLoading();
-            _feedbackService.ShowSuccess($"{equipment.Name} deleted successfully");
+            await _feedbackService.ShowSuccessAsync($"{equipment.Name} deleted successfully");
             await LoadDataAsync();
         }
         catch (Exception ex)
         {
             _feedbackService.HideLoading();
-            _feedbackService.ShowError("Failed to delete equipment", "Please try again");
+            await _feedbackService.ShowErrorAsync("Failed to delete equipment", "Please try again");
             SetState(s => s.ErrorMessage = ex.Message);
         }
     }

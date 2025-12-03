@@ -140,7 +140,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
             // Validate
             if (string.IsNullOrWhiteSpace(nameEntry.Text))
             {
-                _feedbackService.ShowError("Bean name is required", "Please enter a name for your coffee bean");
+                await _feedbackService.ShowErrorAsync("Bean name is required", "Please enter a name for your coffee bean");
                 return;
             }
 
@@ -167,7 +167,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
                         });
                     
                     _feedbackService.HideLoading();
-                    _feedbackService.ShowSuccess($"{nameEntry.Text} updated successfully");
+                    await _feedbackService.ShowSuccessAsync($"{nameEntry.Text} updated successfully");
                 }
                 else
                 {
@@ -185,11 +185,11 @@ partial class BeanManagementPage : Component<BeanManagementState>
                     
                     if (result.Success)
                     {
-                        _feedbackService.ShowSuccess(result.Message);
+                        await _feedbackService.ShowSuccessAsync(result.Message);
                     }
                     else
                     {
-                        _feedbackService.ShowError(result.ErrorMessage!, result.RecoveryAction);
+                        await _feedbackService.ShowErrorAsync(result.ErrorMessage!, result.RecoveryAction);
                         saveButton.IsEnabled = true;
                         return;
                     }
@@ -201,7 +201,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
             catch (Exception ex)
             {
                 _feedbackService.HideLoading();
-                _feedbackService.ShowError("Failed to save bean", "Please try again");
+                await _feedbackService.ShowErrorAsync("Failed to save bean", "Please try again");
                 saveButton.IsEnabled = true;
             }
         };

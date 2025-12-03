@@ -113,7 +113,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
             // Validate
             if (string.IsNullOrWhiteSpace(nameEntry.Text))
             {
-                _feedbackService.ShowError("Profile name is required", "Please enter a name for the profile");
+                await _feedbackService.ShowErrorAsync("Profile name is required", "Please enter a name for the profile");
                 return;
             }
 
@@ -133,7 +133,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                         });
                     
                     _feedbackService.HideLoading();
-                    _feedbackService.ShowSuccess($"{nameEntry.Text} updated successfully");
+                    await _feedbackService.ShowSuccessAsync($"{nameEntry.Text} updated successfully");
                 }
                 else
                 {
@@ -145,7 +145,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                         });
                     
                     _feedbackService.HideLoading();
-                    _feedbackService.ShowSuccess($"{nameEntry.Text} created successfully");
+                    await _feedbackService.ShowSuccessAsync($"{nameEntry.Text} created successfully");
                 }
 
                 await _currentSheet?.DismissAsync()!;
@@ -154,7 +154,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
             catch (Exception ex)
             {
                 _feedbackService.HideLoading();
-                _feedbackService.ShowError("Failed to save profile", "Please try again");
+                await _feedbackService.ShowErrorAsync("Failed to save profile", "Please try again");
                 saveButton.IsEnabled = true;
             }
         };
@@ -371,13 +371,13 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
         {
             await _profileService.DeleteProfileAsync(profile.Id);
             _feedbackService.HideLoading();
-            _feedbackService.ShowSuccess($"{profile.Name} deleted successfully");
+            await _feedbackService.ShowSuccessAsync($"{profile.Name} deleted successfully");
             await LoadDataAsync();
         }
         catch (Exception ex)
         {
             _feedbackService.HideLoading();
-            _feedbackService.ShowError("Failed to delete profile", "Please try again");
+            await _feedbackService.ShowErrorAsync("Failed to delete profile", "Please try again");
             SetState(s => s.ErrorMessage = ex.Message);
         }
     }

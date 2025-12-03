@@ -69,7 +69,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 var shot = await _shotService.GetShotByIdAsync(Props.ShotId.Value);
                 if (shot == null)
                 {
-                    _feedbackService.ShowError("Shot not found");
+                    await _feedbackService.ShowErrorAsync("Shot not found");
                     await Navigation.PopAsync();
                     return;
                 }
@@ -142,7 +142,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 if (State.SelectedBeanId == null)
                 {
                     _feedbackService.HideLoading();
-                    _feedbackService.ShowError("Please select a bean");
+                    await _feedbackService.ShowErrorAsync("Please select a bean");
                     return;
                 }
                 
@@ -158,11 +158,13 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 await _shotService.UpdateShotAsync(Props.ShotId.Value, updateDto);
                 
                 _feedbackService.HideLoading();
-                _feedbackService.ShowSuccess("Shot updated successfully");
+                System.Diagnostics.Debug.WriteLine("[ShotLoggingPage] About to call ShowSuccessAsync");
+                await _feedbackService.ShowSuccessAsync("Shot updated successfully");
+                System.Diagnostics.Debug.WriteLine("[ShotLoggingPage] ShowSuccessAsync completed");
                 
-                // Wait for toast to display (UXDivers popup shows for 2000ms)
-                await Task.Delay(2000);
+                System.Diagnostics.Debug.WriteLine("[ShotLoggingPage] About to navigate back");
                 await Navigation.PopAsync();
+                System.Diagnostics.Debug.WriteLine("[ShotLoggingPage] Navigation completed");
             }
             // Add mode: Create new shot
             else
@@ -170,7 +172,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 if (State.SelectedBeanId == null)
                 {
                     _feedbackService.HideLoading();
-                    _feedbackService.ShowError("Please select a bean", "Choose a bean before logging your shot");
+                    await _feedbackService.ShowErrorAsync("Please select a bean", "Choose a bean before logging your shot");
                     return;
                 }
 
@@ -196,7 +198,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 }
 
                 _feedbackService.HideLoading();
-                _feedbackService.ShowSuccess($"{State.DrinkType} shot logged successfully");
+                await _feedbackService.ShowSuccessAsync($"{State.DrinkType} shot logged successfully");
 
                 await LoadDataAsync();
             }
@@ -204,7 +206,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         catch (Exception ex)
         {
             _feedbackService.HideLoading();
-            _feedbackService.ShowError(Props.ShotId.HasValue ? "Failed to update shot" : "Failed to save shot", "Please try again");
+            await _feedbackService.ShowErrorAsync(Props.ShotId.HasValue ? "Failed to update shot" : "Failed to save shot", "Please try again");
             SetState(s =>
             {
                 s.IsLoading = false;

@@ -138,18 +138,18 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         try
         {
             await _shotService.DeleteShotAsync(shotId);
-            _feedbackService.ShowSuccess("Shot deleted");
+            await _feedbackService.ShowSuccessAsync("Shot deleted");
             
             // Refresh the list
             await LoadShotsAsync(isRefresh: true);
         }
         catch (EntityNotFoundException)
         {
-            _feedbackService.ShowError("Shot not found");
+            await _feedbackService.ShowErrorAsync("Shot not found");
         }
         catch (Exception ex)
         {
-            _feedbackService.ShowError($"Error deleting shot: {ex.Message}");
+            await _feedbackService.ShowErrorAsync($"Error deleting shot: {ex.Message}");
         }
         finally
         {

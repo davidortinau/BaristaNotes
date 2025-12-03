@@ -160,8 +160,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 _feedbackService.HideLoading();
                 _feedbackService.ShowSuccess("Shot updated successfully");
                 
-                // Small delay to allow toast to appear before navigation
-                await Task.Delay(500);
+                // Wait for toast to display (UXDivers popup shows for 2000ms)
+                await Task.Delay(2000);
                 await Navigation.PopAsync();
             }
             // Add mode: Create new shot

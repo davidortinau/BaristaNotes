@@ -212,7 +212,8 @@ partial class EditShotPage : Component<EditShotPageState, EditShotPageProps>
                     VStack(spacing: 4,
                         Label("Actual Time (seconds)")
                             .FontSize(14),
-                        Entry(State.ActualTimeText)
+                        Entry()
+                            .Text(State.ActualTimeText)
                             .Keyboard(Microsoft.Maui.Keyboard.Numeric)
                             .OnTextChanged((s, e) => SetState(state => state.ActualTimeText = e.NewTextValue))
                     ),
@@ -220,7 +221,8 @@ partial class EditShotPage : Component<EditShotPageState, EditShotPageProps>
                     VStack(spacing: 4,
                         Label("Actual Output (grams)")
                             .FontSize(14),
-                        Entry(State.ActualOutputText)
+                        Entry()
+                            .Text(State.ActualOutputText)
                             .Keyboard(Microsoft.Maui.Keyboard.Numeric)
                             .OnTextChanged((s, e) => SetState(state => state.ActualOutputText = e.NewTextValue))
                     ),
@@ -243,7 +245,8 @@ partial class EditShotPage : Component<EditShotPageState, EditShotPageProps>
                     VStack(spacing: 4,
                         Label("Drink Type")
                             .FontSize(14),
-                        Entry(State.DrinkType)
+                        Entry()
+                            .Text(State.DrinkType)
                             .Placeholder("e.g., Espresso, Latte, Americano")
                             .OnTextChanged((s, e) => SetState(state => state.DrinkType = e.NewTextValue))
                     ),

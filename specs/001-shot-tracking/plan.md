@@ -11,15 +11,21 @@
 
 ## Technical Context
 
-**Language/Version**: C# / .NET 10.0  
-**Primary Dependencies**: .NET MAUI 10.0.11, MauiReactor 4.0.3-beta, Entity Framework Core 10.0.0, UXDivers.Popups 0.9.0  
-**Storage**: SQLite via EF Core 10.0.0  
-**Testing**: xUnit (BaristaNotes.Tests project)  
-**Target Platform**: iOS 15+, Android 21+, Windows 10+, macOS Catalyst 15+  
-**Project Type**: Mobile cross-platform application  
-**Performance Goals**: Page load <2s (p95), API responses <500ms (p95), user interactions <100ms perceived response  
-**Constraints**: Mobile memory <200MB, offline-capable, battery-efficient background operations  
-**Scale/Scope**: Single-user local-first app, ~20 screens, expected user count <50 per installation
+<!--
+  ACTION REQUIRED: Replace the content in this section with the technical details
+  for the project. The structure here is presented in advisory capacity to guide
+  the iteration process.
+-->
+
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [single/web/mobile - determines source structure]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 
@@ -27,12 +33,12 @@
 
 All features must demonstrate alignment with constitutional principles:
 
-- [x] **Code Quality Standards**: Design enables single-responsibility components (PreferencesService for defaults, validators for business rules). No complexity violations. Standard MauiReactor patterns throughout.
-- [x] **Test-First Development**: Test scenarios defined in spec.md acceptance criteria, approved by stakeholder. Coverage target: 90% for new code (preferences + validation are critical paths). Tests written before implementation per TDD cycle.
-- [x] **User Experience Consistency**: Uses existing design system (Picker components, Entry styling consistent with ShotLoggingPage). WCAG 2.1 AA compliance via semantic properties, 44x44px touch targets, keyboard navigation. UXDivers.Popups for user feedback (NON-NEGOTIABLE).
-- [x] **Performance Requirements**: Targets defined - Preferences API <10ms, user query <50ms for 50 users, form pre-population <20ms total. No performance regressions anticipated. Instrumentation via existing logging.
+- [ ] **Code Quality Standards**: Does the design enable readable, maintainable, single-responsibility code? Are complexity points identified and justified?
+- [ ] **Test-First Development**: Are test scenarios defined, approved by stakeholders, and will be written before implementation begins? Coverage targets identified?
+- [ ] **User Experience Consistency**: Does the feature follow design system principles? Are accessibility requirements (WCAG 2.1 AA) and responsive design addressed?
+- [ ] **Performance Requirements**: Have performance targets been defined (response time, resource usage)? Is monitoring/instrumentation planned?
 
-**Violations requiring justification**: None. All constitutional principles met without exceptions.
+**Violations requiring justification**: If any principle cannot be met, document in "Complexity Tracking" section below with rationale and simpler alternatives considered.
 
 ## Project Structure
 

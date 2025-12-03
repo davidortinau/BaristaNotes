@@ -79,7 +79,11 @@ As a cafe owner, I want to filter shots by barista and customer, so I can analyz
 - **FR-007**: System MUST allow editing of maker, recipient, and preinfusion time on existing shot records
 - **FR-008**: System MUST validate preinfusion time input to ensure non-negative values
 - **FR-009**: System MUST display preinfusion time on shot records when present
+- **FR-014**: System MUST display the preinfusion time field in the shot logging form positioned below the extraction time field with consistent styling
 - **FR-010**: System MUST maintain maker and recipient associations even if the user profile is later deleted or deactivated
+- **FR-011**: System MUST remember the last-used maker, recipient, bean, machine, grinder, and other shot parameters using .NET MAUI Preferences API
+- **FR-012**: System MUST pre-populate the shot logging form with the last-used values on subsequent uses
+- **FR-013**: System MUST persist last-used preferences across app restarts
 
 ### Non-Functional Requirements (Constitution-Mandated)
 
@@ -116,6 +120,15 @@ As a cafe owner, I want to filter shots by barista and customer, so I can analyz
 - **UserProfile** (existing entity): 
   - Referenced by ShotRecord for maker and recipient associations
   - Can be associated with multiple shots as either maker or recipient
+
+## Clarifications
+
+### Session 2025-12-03
+
+- Q: How should the system remember last-used values for maker, recipient, bean, machine, etc. between sessions? → A: Use .NET MAUI Preferences API - no table or database needed
+- Q: What unit and data type should be used for preinfusion time to maintain consistency with other time-based metrics (ActualTime, ExpectedTime)? → A: Decimal seconds, same as other time fields
+- Q: Should preinfusion time be required or optional when logging a shot? → A: Optional, defaults to null/0
+- Q: Where should the preinfusion time field be displayed in the shot logging form? → A: Below extraction time, with same styling as other time fields
 
 ## Success Criteria *(mandatory)*
 

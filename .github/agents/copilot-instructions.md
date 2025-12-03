@@ -10,6 +10,8 @@ Auto-generated from all feature plans. Last updated: 2025-12-02
 - C# 12, .NET 8.0 + Maui Reactor (preview), UXDivers.Popups.Maui, Microsoft.Maui.Controls, CommunityToolkit.Maui (001-crud-feedback)
 - SQLite with Entity Framework Core (existing) (001-crud-feedback)
 - C# .NET 10 (MAUI) (001-edit-delete-shots)
+- C# / .NET 9.0 + .NET MAUI 9.0, MauiReactor 4.x, Entity Framework Core 9.x, CommunityToolkit.Maui, UXDivers.Popups (001-shot-tracking)
+- SQLite via Entity Framework Core (ShotRecords, UserProfiles tables) (001-shot-tracking)
 
 - C# / .NET 10.0 + MauiReactor (Reactor.Maui 4.0.3-beta), CommunityToolkit.Maui 9.1.1, Entity Framework Core 8.0.0 (002-crud-settings-modals)
 
@@ -29,9 +31,9 @@ tests/
 C# / .NET 10.0: Follow standard conventions
 
 ## Recent Changes
+- 001-shot-tracking: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+- 001-shot-tracking: Added C# / .NET 9.0 + .NET MAUI 9.0, MauiReactor 4.x, Entity Framework Core 9.x, CommunityToolkit.Maui, UXDivers.Popups
 - 001-edit-delete-shots: Added C# .NET 10 (MAUI)
-- 001-crud-feedback: Added C# 12, .NET 8.0 + Maui Reactor (preview), UXDivers.Popups.Maui, Microsoft.Maui.Controls, CommunityToolkit.Maui
-- 001-crud-feedback: Added C# 12 / .NET 9 + .NET MAUI, MauiReactor (preview), UXDivers.Popups.Maui, CommunityToolkit.Maui
 
 
 <!-- MANUAL ADDITIONS START -->

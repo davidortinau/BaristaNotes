@@ -1,7 +1,9 @@
 using MauiReactor;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
+using BaristaNotes.Core.Services.Exceptions;
 using BaristaNotes.Components;
+using BaristaNotes.Services;
 
 namespace BaristaNotes.Pages;
 
@@ -14,12 +16,16 @@ class ActivityFeedState
     public int PageIndex { get; set; } = 0;
     public int PageSize { get; set; } = 50;
     public bool HasMore { get; set; } = true;
+    public int? ShotToDelete { get; set; }
 }
 
 partial class ActivityFeedPage : Component<ActivityFeedState>
 {
     [Inject]
     IShotService _shotService;
+    
+    [Inject]
+    IFeedbackService _feedbackService;
 
     protected override void OnMounted()
     {
@@ -99,6 +105,56 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
     async Task NavigateToSettings()
     {
         await Microsoft.Maui.Controls.Shell.Current.GoToAsync("settings");
+    }
+    
+    async void NavigateToEdit(int shotId)
+    {
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync($"edit-shot?shotId={shotId}");
+    }
+    
+    async Task ShowDeleteConfirmation(int shotId)
+    {
+        SetState(s => s.ShotToDelete = shotId);
+        
+        var result = await Microsoft.Maui.Controls.Application.Current!.MainPage!.DisplayAlert(
+            "Delete Shot?",
+            "This action cannot be undone. Are you sure you want to delete this shot?",
+            "Delete",
+            "Cancel"
+        );
+        
+        if (result && State.ShotToDelete.HasValue)
+        {
+            await DeleteShot(State.ShotToDelete.Value);
+        }
+        else
+        {
+            SetState(s => s.ShotToDelete = null);
+        }
+    }
+    
+    async Task DeleteShot(int shotId)
+    {
+        try
+        {
+            await _shotService.DeleteShotAsync(shotId);
+            _feedbackService.ShowSuccess("Shot deleted");
+            
+            // Refresh the list
+            await LoadShotsAsync(isRefresh: true);
+        }
+        catch (EntityNotFoundException)
+        {
+            _feedbackService.ShowError("Shot not found");
+        }
+        catch (Exception ex)
+        {
+            _feedbackService.ShowError($"Error deleting shot: {ex.Message}");
+        }
+        finally
+        {
+            SetState(s => s.ShotToDelete = null);
+        }
     }
 
     public override VisualNode Render()
@@ -185,8 +241,21 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
 
         return CollectionView()
             .ItemsSource(State.ShotRecords, shot =>
-                new ShotRecordCard()
-                    .Shot(shot)
+                SwipeView(
+                    new ShotRecordCard()
+                        .Shot(shot)
+                )
+                .LeftItems(
+                [
+                    SwipeItem()
+                        .Text("Edit")
+                        .BackgroundColor(Colors.Blue)
+                        .OnInvoked(() => NavigateToEdit(shot.Id)),
+                    SwipeItem()
+                        .Text("Delete")
+                        .BackgroundColor(Colors.Red)
+                        .OnInvoked(async () => await ShowDeleteConfirmation(shot.Id))
+                ])
             )
             .RemainingItemsThreshold(5)
             .OnRemainingItemsThresholdReached(() =>

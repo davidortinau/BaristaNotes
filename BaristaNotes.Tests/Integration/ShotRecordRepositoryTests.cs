@@ -241,4 +241,159 @@ public class ShotRecordRepositoryTests : IDisposable
         // Assert
         Assert.Equal(4, count); // 5 shots - 1 deleted
     }
+    
+    [Fact]
+    public async Task UpdateAsync_SoftDeleteShot_PersistsIsDeletedFlag()
+    {
+        // Arrange
+        var shot = new ShotRecord
+        {
+            Timestamp = DateTimeOffset.Now,
+            DoseIn = 18,
+            GrindSetting = "5",
+            ExpectedTime = 30,
+            ExpectedOutput = 40,
+            DrinkType = "Espresso",
+            IsDeleted = false,
+            SyncId = Guid.NewGuid(),
+            LastModifiedAt = DateTimeOffset.Now
+        };
+        
+        var saved = await _repository.AddAsync(shot);
+        
+        // Act - Soft delete
+        saved.IsDeleted = true;
+        saved.LastModifiedAt = DateTimeOffset.Now;
+        await _repository.UpdateAsync(saved);
+        
+        // Assert - Shot still exists in DB but marked as deleted
+        var retrieved = await _context.ShotRecords
+            .IgnoreQueryFilters() // Bypass soft delete filter
+            .FirstOrDefaultAsync(s => s.Id == saved.Id);
+        
+        Assert.NotNull(retrieved);
+        Assert.True(retrieved.IsDeleted);
+    }
+    
+    [Fact]
+    public async Task GetHistoryAsync_ExcludesDeletedShots()
+    {
+        // Arrange
+        var activeShot = new ShotRecord
+        {
+            Timestamp = DateTimeOffset.Now,
+            DoseIn = 18,
+            GrindSetting = "5",
+            ExpectedTime = 30,
+            ExpectedOutput = 40,
+            DrinkType = "Espresso",
+            IsDeleted = false,
+            SyncId = Guid.NewGuid(),
+            LastModifiedAt = DateTimeOffset.Now
+        };
+        
+        var deletedShot = new ShotRecord
+        {
+            Timestamp = DateTimeOffset.Now.AddMinutes(-5),
+            DoseIn = 18,
+            GrindSetting = "5",
+            ExpectedTime = 30,
+            ExpectedOutput = 40,
+            DrinkType = "Latte",
+            IsDeleted = true,
+            SyncId = Guid.NewGuid(),
+            LastModifiedAt = DateTimeOffset.Now
+        };
+        
+        await _repository.AddAsync(activeShot);
+        await _repository.AddAsync(deletedShot);
+        
+        // Act
+        var result = await _repository.GetHistoryAsync(0, 10);
+        
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("Espresso", result[0].DrinkType);
+    }
+    
+    [Fact]
+    public async Task UpdateAsync_UpdatesEditableFields_PersistsChanges()
+    {
+        // Arrange
+        var shot = new ShotRecord
+        {
+            Timestamp = DateTimeOffset.Now,
+            DoseIn = 18,
+            GrindSetting = "5",
+            ExpectedTime = 30,
+            ExpectedOutput = 40,
+            DrinkType = "Espresso",
+            ActualTime = 25,
+            ActualOutput = 38,
+            Rating = 3,
+            IsDeleted = false,
+            SyncId = Guid.NewGuid(),
+            LastModifiedAt = DateTimeOffset.Now.AddHours(-1)
+        };
+        
+        var saved = await _repository.AddAsync(shot);
+        
+        // Act - Update editable fields
+        saved.ActualTime = 28.5m;
+        saved.ActualOutput = 42.0m;
+        saved.Rating = 5;
+        saved.DrinkType = "Latte";
+        saved.LastModifiedAt = DateTimeOffset.Now;
+        
+        await _repository.UpdateAsync(saved);
+        
+        // Assert - Changes persisted
+        var retrieved = await _repository.GetByIdAsync(saved.Id);
+        
+        Assert.NotNull(retrieved);
+        Assert.Equal(28.5m, retrieved.ActualTime);
+        Assert.Equal(42.0m, retrieved.ActualOutput);
+        Assert.Equal(5, retrieved.Rating);
+        Assert.Equal("Latte", retrieved.DrinkType);
+        Assert.True(retrieved.LastModifiedAt > DateTimeOffset.Now.AddMinutes(-1));
+    }
+    
+    [Fact]
+    public async Task UpdateAsync_UpdatePreservesImmutableFields()
+    {
+        // Arrange
+        var originalTimestamp = DateTimeOffset.Now.AddHours(-2);
+        var shot = new ShotRecord
+        {
+            Timestamp = originalTimestamp,
+            DoseIn = 18,
+            GrindSetting = "5",
+            ExpectedTime = 30,
+            ExpectedOutput = 40,
+            DrinkType = "Espresso",
+            ActualTime = 25,
+            IsDeleted = false,
+            SyncId = Guid.NewGuid(),
+            LastModifiedAt = DateTimeOffset.Now.AddHours(-1)
+        };
+        
+        var saved = await _repository.AddAsync(shot);
+        
+        // Act - Update editable fields only
+        saved.ActualTime = 28.5m;
+        saved.DrinkType = "Latte";
+        saved.LastModifiedAt = DateTimeOffset.Now;
+        
+        await _repository.UpdateAsync(saved);
+        
+        // Assert - Immutable fields unchanged
+        var retrieved = await _repository.GetByIdAsync(saved.Id);
+        
+        Assert.NotNull(retrieved);
+        Assert.Equal(originalTimestamp, retrieved.Timestamp);
+        Assert.Equal(18, retrieved.DoseIn);
+        Assert.Equal("5", retrieved.GrindSetting);
+        Assert.Equal(30, retrieved.ExpectedTime);
+        Assert.Equal(40, retrieved.ExpectedOutput);
+    }
 }

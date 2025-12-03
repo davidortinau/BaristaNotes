@@ -85,28 +85,21 @@ public class ShotService : IShotService
     
     public async Task<ShotRecordDto> UpdateShotAsync(int id, UpdateShotDto dto)
     {
+        ValidateUpdateShot(dto);
+        
         var shot = await _shotRepository.GetByIdAsync(id);
-        if (shot == null)
+        if (shot == null || shot.IsDeleted)
             throw new EntityNotFoundException(nameof(ShotRecord), id);
         
+        // Update only editable fields
         if (dto.ActualTime.HasValue)
             shot.ActualTime = dto.ActualTime.Value;
+        
         if (dto.ActualOutput.HasValue)
             shot.ActualOutput = dto.ActualOutput.Value;
-        if (dto.Rating.HasValue)
-            shot.Rating = dto.Rating.Value;
         
-        if (dto.DoseIn.HasValue)
-            shot.DoseIn = dto.DoseIn.Value;
-        if (dto.GrindSetting != null)
-            shot.GrindSetting = dto.GrindSetting;
-        if (dto.ExpectedTime.HasValue)
-            shot.ExpectedTime = dto.ExpectedTime.Value;
-        if (dto.ExpectedOutput.HasValue)
-            shot.ExpectedOutput = dto.ExpectedOutput.Value;
-        if (dto.DrinkType != null)
-            shot.DrinkType = dto.DrinkType;
-        
+        shot.Rating = dto.Rating; // Can be null
+        shot.DrinkType = dto.DrinkType;
         shot.LastModifiedAt = DateTimeOffset.Now;
         
         var updated = await _shotRepository.UpdateAsync(shot);
@@ -116,7 +109,7 @@ public class ShotService : IShotService
     public async Task DeleteShotAsync(int id)
     {
         var shot = await _shotRepository.GetByIdAsync(id);
-        if (shot == null)
+        if (shot == null || shot.IsDeleted)
             throw new EntityNotFoundException(nameof(ShotRecord), id);
         
         shot.IsDeleted = true;
@@ -273,6 +266,26 @@ public class ShotService : IShotService
         
         if (dto.Rating.HasValue && (dto.Rating < 1 || dto.Rating > 5))
             errors.Add(nameof(dto.Rating), new List<string> { "Rating must be between 1 and 5" });
+        
+        if (errors.Any())
+            throw new ValidationException(errors);
+    }
+    
+    private void ValidateUpdateShot(UpdateShotDto dto)
+    {
+        var errors = new Dictionary<string, List<string>>();
+        
+        if (dto.ActualTime.HasValue && (dto.ActualTime <= 0 || dto.ActualTime > 999))
+            errors.Add(nameof(dto.ActualTime), new List<string> { "Shot time must be between 0 and 999 seconds" });
+        
+        if (dto.ActualOutput.HasValue && (dto.ActualOutput <= 0 || dto.ActualOutput > 200))
+            errors.Add(nameof(dto.ActualOutput), new List<string> { "Output weight must be between 0 and 200 grams" });
+        
+        if (dto.Rating.HasValue && (dto.Rating < 1 || dto.Rating > 5))
+            errors.Add(nameof(dto.Rating), new List<string> { "Rating must be between 1 and 5 stars" });
+        
+        if (string.IsNullOrWhiteSpace(dto.DrinkType))
+            errors.Add(nameof(dto.DrinkType), new List<string> { "Drink type is required" });
         
         if (errors.Any())
             throw new ValidationException(errors);

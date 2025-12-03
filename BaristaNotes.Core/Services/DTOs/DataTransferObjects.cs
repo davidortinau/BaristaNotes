@@ -47,17 +47,39 @@ public record CreateShotDto
     public int? Rating { get; init; }
 }
 
+/// <summary>
+/// DTO for updating editable fields of a shot record.
+/// Only mutable fields included - immutable fields (timestamp, bean, grind settings, etc.) 
+/// are not included and will be preserved during update.
+/// </summary>
 public record UpdateShotDto
 {
+    /// <summary>
+    /// Actual shot extraction time in seconds.
+    /// Optional - null means no change to existing value.
+    /// If provided, must be greater than 0 and less than 999.
+    /// </summary>
     public decimal? ActualTime { get; init; }
+    
+    /// <summary>
+    /// Actual output weight in grams.
+    /// Optional - null means no change to existing value.
+    /// If provided, must be greater than 0 and less than 200.
+    /// </summary>
     public decimal? ActualOutput { get; init; }
+    
+    /// <summary>
+    /// Taste rating on 1-5 scale (1=dislike, 5=excellent).
+    /// Optional - null means no change to existing value.
+    /// If provided, must be between 1 and 5 inclusive.
+    /// </summary>
     public int? Rating { get; init; }
     
-    public decimal? DoseIn { get; init; }
-    public string? GrindSetting { get; init; }
-    public decimal? ExpectedTime { get; init; }
-    public decimal? ExpectedOutput { get; init; }
-    public string? DrinkType { get; init; }
+    /// <summary>
+    /// Type of drink made (e.g., "Espresso", "Latte", "Americano").
+    /// Required - cannot be null or empty.
+    /// </summary>
+    public string DrinkType { get; init; } = string.Empty;
 }
 
 public record EquipmentDto

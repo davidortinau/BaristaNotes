@@ -95,6 +95,13 @@ public class ShotService : IShotService
         if (dto.BeanId.HasValue)
             shot.BeanId = dto.BeanId.Value;
         
+        // Update maker/recipient if provided
+        if (dto.MadeById.HasValue)
+            shot.MadeById = dto.MadeById.Value;
+        
+        if (dto.MadeForId.HasValue)
+            shot.MadeForId = dto.MadeForId.Value;
+        
         // Update only editable fields
         if (dto.ActualTime.HasValue)
             shot.ActualTime = dto.ActualTime.Value;

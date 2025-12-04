@@ -26,6 +26,16 @@ public class MockPreferencesStore : IPreferencesStore
         _storage[key] = value;
     }
     
+    public double Get(string key, double defaultValue)
+    {
+        return _storage.TryGetValue(key, out var value) ? (double)value : defaultValue;
+    }
+    
+    public void Set(string key, double value)
+    {
+        _storage[key] = value;
+    }
+    
     public void Remove(string key)
     {
         _storage.Remove(key);

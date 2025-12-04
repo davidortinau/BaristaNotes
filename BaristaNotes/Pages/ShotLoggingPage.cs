@@ -26,6 +26,11 @@ class ShotLoggingState
     // Edit mode fields
     public DateTimeOffset? Timestamp { get; set; }
     public string? BeanName { get; set; }
+    
+    // User tracking fields
+    public List<UserProfileDto> AvailableUsers { get; set; } = new();
+    public UserProfileDto? SelectedMaker { get; set; }
+    public UserProfileDto? SelectedRecipient { get; set; }
 }
 
 class ShotLoggingPageProps
@@ -49,6 +54,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
     [Inject]
     IFeedbackService _feedbackService;
+    
+    [Inject]
+    IUserProfileService _userProfileService;
 
     protected override void OnMounted()
     {
@@ -62,6 +70,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         try
         {
             var beans = await _beanService.GetAllActiveBeansAsync();
+            var users = await _userProfileService.GetAllProfilesAsync();
 
             // Edit mode: Load existing shot
             if (Props.ShotId.HasValue)
@@ -77,6 +86,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 SetState(s =>
                 {
                     s.AvailableBeans = beans.ToList();
+                    s.AvailableUsers = users;
 
                     // Populate from existing shot
                     s.Timestamp = shot.Timestamp;
@@ -92,6 +102,11 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     s.SelectedBeanId = shot.Bean?.Id;
                     s.SelectedBeanIndex = shot.Bean != null ? s.AvailableBeans.FindIndex(b => b.Id == shot.Bean.Id) : -1;
                     s.SelectedDrinkIndex = s.DrinkTypes.IndexOf(shot.DrinkType);
+                    
+                    // Set maker/recipient from shot
+                    s.SelectedMaker = shot.MadeBy;
+                    s.SelectedRecipient = shot.MadeFor;
+                    
                     s.IsLoading = false;
                 });
             }
@@ -103,6 +118,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 SetState(s =>
                 {
                     s.AvailableBeans = beans.ToList();
+                    s.AvailableUsers = users;
 
                     if (lastShot != null)
                     {
@@ -114,6 +130,16 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         s.SelectedBeanId = lastShot.Bean?.Id;
                         s.SelectedBeanIndex = lastShot.Bean != null ? s.AvailableBeans.FindIndex(b => b.Id == lastShot.Bean.Id) : -1;
                         s.SelectedDrinkIndex = s.DrinkTypes.IndexOf(lastShot.DrinkType);
+                        
+                        // Load last-used maker/recipient from preferences
+                        var lastMakerId = _preferencesService.GetLastMadeById();
+                        var lastRecipientId = _preferencesService.GetLastMadeForId();
+                        
+                        if (lastMakerId.HasValue)
+                            s.SelectedMaker = users.FirstOrDefault(u => u.Id == lastMakerId.Value);
+                        
+                        if (lastRecipientId.HasValue)
+                            s.SelectedRecipient = users.FirstOrDefault(u => u.Id == lastRecipientId.Value);
                     }
 
                     s.IsLoading = false;
@@ -146,6 +172,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 var updateDto = new UpdateShotDto
                 {
                     BeanId = State.SelectedBeanId.Value,
+                    MadeById = State.SelectedMaker?.Id,
+                    MadeForId = State.SelectedRecipient?.Id,
                     ActualTime = State.ActualTime,
                     ActualOutput = State.ActualOutput,
                     Rating = State.Rating > 0 ? State.Rating : null,
@@ -175,6 +203,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 var createDto = new CreateShotDto
                 {
                     BeanId = State.SelectedBeanId.Value,
+                    MadeById = State.SelectedMaker?.Id,
+                    MadeForId = State.SelectedRecipient?.Id,
                     DoseIn = State.DoseIn,
                     GrindSetting = State.GrindSetting,
                     ExpectedTime = State.ExpectedTime,
@@ -258,6 +288,56 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                                         s.SelectedBeanIndex = idx;
                                         s.SelectedBeanId = State.AvailableBeans[idx].Id;
                                     });
+                                }
+                            })
+                            .HeightRequest(50)
+                    ),
+                    
+                    // Made By Picker
+                    VStack(spacing: 4,
+                        Label("Made By")
+                            .FontSize(12)
+                            .TextColor(Colors.Gray),
+
+                        Picker()
+                            .Title("Select Barista")
+                            .ItemsSource(State.AvailableUsers.Select(u => u.Name).ToList())
+                            .SelectedIndex(State.SelectedMaker != null ? 
+                                State.AvailableUsers.FindIndex(u => u.Id == State.SelectedMaker.Id) : -1)
+                            .OnSelectedIndexChanged(idx =>
+                            {
+                                if (idx >= 0 && idx < State.AvailableUsers.Count)
+                                {
+                                    SetState(s => s.SelectedMaker = State.AvailableUsers[idx]);
+                                }
+                                else
+                                {
+                                    SetState(s => s.SelectedMaker = null);
+                                }
+                            })
+                            .HeightRequest(50)
+                    ),
+                    
+                    // Made For Picker
+                    VStack(spacing: 4,
+                        Label("Made For")
+                            .FontSize(12)
+                            .TextColor(Colors.Gray),
+
+                        Picker()
+                            .Title("Select Customer")
+                            .ItemsSource(State.AvailableUsers.Select(u => u.Name).ToList())
+                            .SelectedIndex(State.SelectedRecipient != null ?
+                                State.AvailableUsers.FindIndex(u => u.Id == State.SelectedRecipient.Id) : -1)
+                            .OnSelectedIndexChanged(idx =>
+                            {
+                                if (idx >= 0 && idx < State.AvailableUsers.Count)
+                                {
+                                    SetState(s => s.SelectedRecipient = State.AvailableUsers[idx]);
+                                }
+                                else
+                                {
+                                    SetState(s => s.SelectedRecipient = null);
                                 }
                             })
                             .HeightRequest(50)

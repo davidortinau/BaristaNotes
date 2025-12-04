@@ -255,6 +255,18 @@ class ApplicationTheme : Theme
             .StrokeThickness(1)
             .StrokeShape(new RoundRectangle().CornerRadius(8))
             .Padding(12);
+        
+        // Button theme for secondary/cancel actions
+        ButtonStyles.Themes[ThemeKeys.SecondaryButton] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant)
+            .TextColor(IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)
+            .FontFamily("Manrope")
+            .FontSize(14)
+            .BorderWidth(0)
+            .CornerRadius(8)
+            .Padding(14, 10)
+            .MinimumHeightRequest(44)
+            .MinimumWidthRequest(44);
     }
 }
 
@@ -272,4 +284,7 @@ public static class ThemeKeys
     // Container styles
     public const string Card = nameof(Card);
     public const string CardVariant = nameof(CardVariant);
+    
+    // Button styles
+    public const string SecondaryButton = nameof(SecondaryButton);
 }

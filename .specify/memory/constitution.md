@@ -108,6 +108,22 @@ Application performance directly impacts user satisfaction and operational costs
 - **Asset Optimization**: All static assets minified, compressed, and served via CDN.
 - **Background Processing**: Long-running operations (>3s) MUST be async with progress indication.
 
+### Database Schema Management (NON-NEGOTIABLE)
+
+- **EF Core Migrations Only**: ALL database schema changes MUST be made using `dotnet ef migrations add` command. Manual SQL scripts or direct database modifications are PROHIBITED.
+- **Never Manually Modify Schema**: Do not add columns, tables, indexes, or constraints directly to the database or via manual SQL. This creates inconsistent state between the EF model and actual database.
+- **Migration Workflow**:
+  1. Update entity models in `*.Core/Models/`
+  2. Update `DbContext.OnModelCreating()` if needed
+  3. Run `dotnet ef migrations add MigrationName` from the Core project directory
+  4. Review the generated migration to ensure it only contains intended changes
+  5. Test migration with `dotnet ef database update` in development
+  6. Application startup calls `await db.Database.MigrateAsync()` to apply migrations automatically
+- **Migration Rollback**: Always test Down() migration in development to ensure it can be safely rolled back.
+- **Never Skip Migrations**: If database and model are out of sync, fix by creating proper migration, never by manually altering database.
+
+**Rationale**: Manual database changes bypass EF Core's change tracking, creating inconsistent state that causes runtime errors ("table already exists", "column not found"). EF migrations provide versioned, testable, rollback-able schema changes with full audit trail.
+
 ## Quality Gates
 
 ### Pre-Merge Requirements

@@ -1,6 +1,7 @@
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
+using BaristaNotes.Styles;
 using MauiReactor;
 using The49MauiBottomSheet = The49.Maui.BottomSheet;
 
@@ -71,28 +72,28 @@ partial class BeanManagementPage : Component<BeanManagementState>
         {
             Placeholder = "Bean name (required)",
             Text = bean?.Name ?? "",
-            BackgroundColor = Colors.White
+            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface
         };
 
         var roasterEntry = new MauiControls.Entry
         {
             Placeholder = "Roaster name",
             Text = bean?.Roaster ?? "",
-            BackgroundColor = Colors.White
+            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface
         };
 
         var originEntry = new MauiControls.Entry
         {
             Placeholder = "Country or region of origin",
             Text = bean?.Origin ?? "",
-            BackgroundColor = Colors.White
+            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface
         };
 
         var roastDatePicker = new MauiControls.DatePicker
         {
             MaximumDate = DateTime.Now,
             Date = bean?.RoastDate?.DateTime ?? DateTime.Now,
-            BackgroundColor = Colors.White
+            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface
         };
 
         var useRoastDate = new MauiControls.Switch
@@ -105,7 +106,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
             Placeholder = "Tasting notes, processing method, etc.",
             Text = bean?.Notes ?? "",
             HeightRequest = 80,
-            BackgroundColor = Colors.White
+            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface
         };
 
         var errorLabel = new MauiControls.Label
@@ -118,15 +119,15 @@ partial class BeanManagementPage : Component<BeanManagementState>
         var saveButton = new MauiControls.Button
         {
             Text = "Save",
-            BackgroundColor = Colors.Brown,
-            TextColor = Colors.White
+            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary,
+            TextColor = ApplicationTheme.IsLightTheme ? AppColors.Light.OnPrimary : AppColors.Dark.OnPrimary
         };
 
         var cancelButton = new MauiControls.Button
         {
             Text = "Cancel",
-            BackgroundColor = Colors.LightGray,
-            TextColor = Colors.Black
+            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant,
+            TextColor = ApplicationTheme.IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary
         };
 
         cancelButton.Clicked += async (s, e) =>
@@ -207,7 +208,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
             {
                 Spacing = 12,
                 Padding = new Thickness(20),
-                BackgroundColor = Colors.White,
+                BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface,
                 Children =
                 {
                     new MauiControls.Label
@@ -263,15 +264,15 @@ partial class BeanManagementPage : Component<BeanManagementState>
         var confirmButton = new MauiControls.Button
         {
             Text = "Delete",
-            BackgroundColor = Colors.Red,
-            TextColor = Colors.White
+            BackgroundColor = Colors.Red,  // Keep error red semantic
+            TextColor = ApplicationTheme.IsLightTheme ? AppColors.Light.OnPrimary : AppColors.Dark.OnPrimary
         };
 
         var cancelButton = new MauiControls.Button
         {
             Text = "Cancel",
-            BackgroundColor = Colors.LightGray,
-            TextColor = Colors.Black
+            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant,
+            TextColor = ApplicationTheme.IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary
         };
 
         cancelButton.Clicked += async (s, e) =>
@@ -289,7 +290,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
         {
             Spacing = 16,
             Padding = new Thickness(24),
-            BackgroundColor = Colors.White,
+            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface,
             Children =
             {
                 new MauiControls.HorizontalStackLayout
@@ -318,7 +319,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
                 {
                     Text = "Are you sure you want to delete this bean? Shot records using this bean will retain the historical reference.",
                     FontSize = 14,
-                    TextColor = Colors.Gray,
+                    TextColor = ApplicationTheme.IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary,
                     HorizontalTextAlignment = TextAlignment.Center
                 },
                 new MauiControls.HorizontalStackLayout
@@ -426,7 +427,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
                 .HCenter(),
             Label("Add your favorite coffee beans to track freshness and tasting notes")
                 .FontSize(16)
-                .TextColor(Colors.Gray)
+                .ThemeKey(ThemeKeys.SecondaryText)
                 .HCenter()
         )
         .VCenter()
@@ -445,17 +446,16 @@ partial class BeanManagementPage : Component<BeanManagementState>
                     bean.Roaster != null
                         ? Label($"🏭 {bean.Roaster}")
                             .FontSize(14)
-                            .TextColor(Colors.Gray)
+                            .ThemeKey(ThemeKeys.SecondaryText)
                         : null,
                     bean.Origin != null
                         ? Label($"🌍 {bean.Origin}")
                             .FontSize(14)
-                            .TextColor(Colors.Gray)
+                            .ThemeKey(ThemeKeys.SecondaryText)
                         : null,
                     bean.RoastDate.HasValue
                         ? Label($"📅 Roasted: {bean.RoastDate.Value:MMM d, yyyy}")
-                            .FontSize(12)
-                            .TextColor(Colors.DarkGray)
+                            .ThemeKey(ThemeKeys.MutedText)
                         : null
                 )
                 .GridColumn(0)
@@ -476,7 +476,6 @@ partial class BeanManagementPage : Component<BeanManagementState>
             .Padding(12)
         )
         .Margin(0, 4)
-        .Stroke(Colors.LightGray)
-        .BackgroundColor(Colors.White);
+        .ThemeKey(ThemeKeys.Card);
     }
 }

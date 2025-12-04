@@ -1,0 +1,8 @@
+REMOVE these task IDs (ViewModel tests - not needed in MVU):
+- T062, T063, T082, T083
+
+UPDATE these sections:
+User Story 2 - Remove ViewModel Layer tasks T066-T067, update UI tasks
+User Story 3 - Remove ViewModel Layer tasks T086-T087, T090, update UI tasks
+Phase 5 - Remove T102 ViewModel test task
+Phase 6 - Remove T104 ViewModel memory profiling mention

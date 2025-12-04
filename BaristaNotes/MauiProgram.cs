@@ -65,11 +65,11 @@ public static class MauiProgram
 
 		var app = builder.Build();
 
-		// Run migrations on startup
+		// Apply database migrations
 		using (var scope = app.Services.CreateScope())
 		{
 			var context = scope.ServiceProvider.GetRequiredService<BaristaNotesContext>();
-			context.Database.EnsureCreated();
+			context.Database.Migrate();
 		}
 
 		return app;

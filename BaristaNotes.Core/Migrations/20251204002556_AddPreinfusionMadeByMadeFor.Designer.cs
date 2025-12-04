@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BaristaNotes.Core.Migrations
 {
     [DbContext(typeof(BaristaNotesContext))]
-    [Migration("20251203235037_AddPreinfusionTime")]
-    partial class AddPreinfusionTime
+    [Migration("20251204002556_AddPreinfusionMadeByMadeFor")]
+    partial class AddPreinfusionMadeByMadeFor
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

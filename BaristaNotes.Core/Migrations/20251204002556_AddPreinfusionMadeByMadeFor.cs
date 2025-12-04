@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace BaristaNotes.Core.Migrations
 {
     /// <inheritdoc />
-    public partial class AddPreinfusionTime : Migration
+    public partial class AddPreinfusionMadeByMadeFor : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

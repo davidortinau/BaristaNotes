@@ -116,51 +116,51 @@ BaristaNotes uses a mobile + API architecture:
 
 #### Service Layer
 
-- [ ] T043 [US1] Update ShotService.CreateShotAsync to map MadeById and MadeForId from CreateShotDto in `BaristaNotes.Core/Services/ShotService.cs`
-- [ ] T044 [US1] Add FK validation in ShotService.CreateShotAsync to throw EntityNotFoundException if MadeById or MadeForId reference non-existent users in `BaristaNotes.Core/Services/ShotService.cs`
-- [ ] T045 [US1] Update ShotService.UpdateShotAsync to map and update MadeById and MadeForId in `BaristaNotes.Core/Services/ShotService.cs`
-- [ ] T046 [US1] Update ShotService.GetShotByIdAsync to include `.Include(s => s.MadeBy)` and `.Include(s => s.MadeFor)` in `BaristaNotes.Core/Services/ShotService.cs`
-- [ ] T047 [US1] Update ShotService.GetAllShotsAsync to include `.Include(s => s.MadeBy)` and `.Include(s => s.MadeFor)` in `BaristaNotes.Core/Services/ShotService.cs`
-- [ ] T048 [US1] Update ShotService MapToDto method to map MadeBy and MadeFor to SimpleUserDto in `BaristaNotes.Core/Services/ShotService.cs`
+- [X] T043 [US1] Update ShotService.CreateShotAsync to map MadeById and MadeForId from CreateShotDto in `BaristaNotes.Core/Services/ShotService.cs`
+- [X] T04- [ ] T044 [US1] Add FK validation in ShotService.CreateShotAsync to throw EntityNotFoundException if MadeById or MadeForId reference non-existent users in `BaristaNotes.Core/Services/ShotService.cs`
+- [X] T04- [ ] T045 [US1] Update ShotService.UpdateShotAsync to map and update MadeById and MadeForId in `BaristaNotes.Core/Services/ShotService.cs`
+- [X] T04- [ ] T046 [US1] Update ShotService.GetShotByIdAsync to include `.Include(s => s.MadeBy)` and `.Include(s => s.MadeFor)` in `BaristaNotes.Core/Services/ShotService.cs`
+- [X] T04- [ ] T047 [US1] Update ShotService.GetAllShotsAsync to include `.Include(s => s.MadeBy)` and `.Include(s => s.MadeFor)` in `BaristaNotes.Core/Services/ShotService.cs`
+- [X] T04- [ ] T048 [US1] Update ShotService MapToDto method to map MadeBy and MadeFor to SimpleUserDto in `BaristaNotes.Core/Services/ShotService.cs`
 
 #### UI Layer - ShotLoggingPage State
 
-- [ ] T049 [US1] Add `List<SimpleUserDto> Users` property to ShotLoggingPageState in `BaristaNotes/Pages/ShotLoggingPage.cs`
-- [ ] T050 [US1] Add `SimpleUserDto? SelectedMaker` property to ShotLoggingPageState in `BaristaNotes/Pages/ShotLoggingPage.cs`
-- [ ] T051 [US1] Add `SimpleUserDto? SelectedRecipient` property to ShotLoggingPageState in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T04- [ ] T049 [US1] Add `List<SimpleUserDto> Users` property to ShotLoggingPageState in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T050 [US1] Add `SimpleUserDto? SelectedMaker` property to ShotLoggingPageState in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T051 [US1] Add `SimpleUserDto? SelectedRecipient` property to ShotLoggingPageState in `BaristaNotes/Pages/ShotLoggingPage.cs`
 
 #### UI Layer - ShotLoggingPage Lifecycle
 
-- [ ] T052 [US1] Inject IUserService and IPreferencesService in ShotLoggingPage constructor in `BaristaNotes/Pages/ShotLoggingPage.cs`
-- [ ] T053 [US1] Load users via UserService.GetAllUsersAsync in OnMounted in `BaristaNotes/Pages/ShotLoggingPage.cs`
-- [ ] T054 [US1] Check if editing existing shot (Props.ShotId != null) in OnMounted in `BaristaNotes/Pages/ShotLoggingPage.cs`
-- [ ] T055 [US1] If new shot: load preferences via PreferencesService.LoadLastUsedShotValues and set SelectedMaker/SelectedRecipient based on IDs in OnMounted in `BaristaNotes/Pages/ShotLoggingPage.cs`
-- [ ] T056 [US1] If editing: load shot data via ShotService.GetShotByIdAsync and set SelectedMaker/SelectedRecipient from shot in OnMounted in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T052 [US1] Inject IUserService and IPreferencesService in ShotLoggingPage constructor in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T053 [US1] Load users via UserService.GetAllUsersAsync in OnMounted in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T054 [US1] Check if editing existing shot (Props.ShotId != null) in OnMounted in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T055 [US1] If new shot: load preferences via PreferencesService.LoadLastUsedShotValues and set SelectedMaker/SelectedRecipient based on IDs in OnMounted in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T056 [US1] If editing: load shot data via ShotService.GetShotByIdAsync and set SelectedMaker/SelectedRecipient from shot in OnMounted in `BaristaNotes/Pages/ShotLoggingPage.cs`
 
 #### UI Layer - ShotLoggingPage Form Controls
 
-- [ ] T057 [US1] Add "Made By" label and Picker control below bean selection in Render method in `BaristaNotes/Pages/ShotLoggingPage.cs`
-- [ ] T058 [US1] Configure "Made By" Picker with ItemsSource=State.Users, ItemDisplayBinding=user.Name, SelectedItem=State.SelectedMaker in `BaristaNotes/Pages/ShotLoggingPage.cs`
-- [ ] T059 [US1] Handle OnSelectedItemChanged for "Made By" Picker to update State.SelectedMaker in `BaristaNotes/Pages/ShotLoggingPage.cs`
-- [ ] T060 [US1] Add "Made For" label and Picker control below "Made By" in Render method in `BaristaNotes/Pages/ShotLoggingPage.cs`
-- [ ] T061 [US1] Configure "Made For" Picker with ItemsSource=State.Users, ItemDisplayBinding=user.Name, SelectedItem=State.SelectedRecipient in `BaristaNotes/Pages/ShotLoggingPage.cs`
-- [ ] T062 [US1] Handle OnSelectedItemChanged for "Made For" Picker to update State.SelectedRecipient in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T057 [US1] Add "Made By" label and Picker control below bean selection in Render method in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T058 [US1] Configure "Made By" Picker with ItemsSource=State.Users, ItemDisplayBinding=user.Name, SelectedItem=State.SelectedMaker in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T059 [US1] Handle OnSelectedItemChanged for "Made By" Picker to update State.SelectedMaker in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T060 [US1] Add "Made For" label and Picker control below "Made By" in Render method in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T061 [US1] Configure "Made For" Picker with ItemsSource=State.Users, ItemDisplayBinding=user.Name, SelectedItem=State.SelectedRecipient in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T062 [US1] Handle OnSelectedItemChanged for "Made For" Picker to update State.SelectedRecipient in `BaristaNotes/Pages/ShotLoggingPage.cs`
 
 #### UI Layer - ShotLoggingPage Save Logic
 
-- [ ] T063 [US1] Map State.SelectedMaker.Id to CreateShotDto.MadeById in save logic in `BaristaNotes/Pages/ShotLoggingPage.cs`
-- [ ] T064 [US1] Map State.SelectedRecipient.Id to CreateShotDto.MadeForId in save logic in `BaristaNotes/Pages/ShotLoggingPage.cs`
-- [ ] T065 [US1] Call PreferencesService.SaveLastUsedShotValues after successful ShotService.CreateShotAsync in `BaristaNotes/Pages/ShotLoggingPage.cs`
-- [ ] T066 [US1] Show success toast via FeedbackService.ShowToast after save (NON-NEGOTIABLE: must use UXDivers.Popups) in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T063 [US1] Map State.SelectedMaker.Id to CreateShotDto.MadeById in save logic in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T064 [US1] Map State.SelectedRecipient.Id to CreateShotDto.MadeForId in save logic in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T065 [US1] Call PreferencesService.SaveLastUsedShotValues after successful ShotService.CreateShotAsync in `BaristaNotes/Pages/ShotLoggingPage.cs`
+- [X] T066 [US1] Show success toast via FeedbackService.ShowToast after save (NON-NEGOTIABLE: must use UXDivers.Popups) in `BaristaNotes/Pages/ShotLoggingPage.cs`
 
 #### UI Layer - Activity Feed Display
 
-- [ ] T067 [US1] Add maker display section to ShotRecordCard: HStack with avatar image and "By: {name}" label in `BaristaNotes/Components/ShotRecordCard.cs`
-- [ ] T068 [US1] Use `.When(() => Props.Shot.MadeBy != null)` to conditionally render maker section in `BaristaNotes/Components/ShotRecordCard.cs`
-- [ ] T069 [US1] Add recipient display section to ShotRecordCard: HStack with avatar image and "For: {name}" label in `BaristaNotes/Components/ShotRecordCard.cs`
-- [ ] T070 [US1] Use `.When(() => Props.Shot.MadeFor != null)` to conditionally render recipient section in `BaristaNotes/Components/ShotRecordCard.cs`
-- [ ] T071 [US1] Style avatar images: 24x24px, AspectFill, RoundRectangle clip with 12px radius in `BaristaNotes/Components/ShotRecordCard.cs`
-- [ ] T072 [US1] Style maker/recipient labels: 12px font, Gray color, consistent spacing in `BaristaNotes/Components/ShotRecordCard.cs`
+- [X] T067 [US1] Add maker display section to ShotRecordCard: HStack with avatar image and "By: {name}" label in `BaristaNotes/Components/ShotRecordCard.cs`
+- [X] T068 [US1] Use `.When(() => Props.Shot.MadeBy != null)` to conditionally render maker section in `BaristaNotes/Components/ShotRecordCard.cs`
+- [X] T069 [US1] Add recipient display section to ShotRecordCard: HStack with avatar image and "For: {name}" label in `BaristaNotes/Components/ShotRecordCard.cs`
+- [X] T07- [ ] T070 [US1] Use `.When(() => Props.Shot.MadeFor != null)` to conditionally render recipient section in `BaristaNotes/Components/ShotRecordCard.cs`
+- [X] T07- [ ] T071 [US1] Style avatar images: 24x24px, AspectFill, RoundRectangle clip with 12px radius in `BaristaNotes/Components/ShotRecordCard.cs`
+- [X] T07- [ ] T072 [US1] Style maker/recipient labels: 12px font, Gray color, consistent spacing in `BaristaNotes/Components/ShotRecordCard.cs`
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently. Users can select maker/recipient, save shots, see them in activity feed, and preferences persist across app restarts.
 

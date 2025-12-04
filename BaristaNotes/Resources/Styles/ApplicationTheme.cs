@@ -225,5 +225,51 @@ class ApplicationTheme : Theme
             .Set(MauiControls.TabbedPage.BarTextColorProperty, IsLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary)
             .Set(MauiControls.TabbedPage.UnselectedTabColorProperty, IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)
             .Set(MauiControls.TabbedPage.SelectedTabColorProperty, IsLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary);
+
+        // Semantic theme keys for common patterns
+        
+        // Label themes for text hierarchy
+        LabelStyles.Themes[ThemeKeys.SecondaryText] = _ => _
+            .TextColor(IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)
+            .FontSize(14);
+        
+        LabelStyles.Themes[ThemeKeys.MutedText] = _ => _
+            .TextColor(IsLightTheme ? AppColors.Light.TextMuted : AppColors.Dark.TextMuted)
+            .FontSize(12);
+        
+        LabelStyles.Themes[ThemeKeys.Caption] = _ => _
+            .TextColor(IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)
+            .FontSize(12);
+        
+        // Border themes for cards and containers
+        BorderStyles.Themes[ThemeKeys.Card] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface)
+            .Stroke(IsLightTheme ? AppColors.Light.Outline : AppColors.Dark.Outline)
+            .StrokeThickness(1)
+            .StrokeShape(new RoundRectangle().CornerRadius(8))
+            .Padding(12);
+        
+        BorderStyles.Themes[ThemeKeys.CardVariant] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant)
+            .Stroke(IsLightTheme ? AppColors.Light.Outline : AppColors.Dark.Outline)
+            .StrokeThickness(1)
+            .StrokeShape(new RoundRectangle().CornerRadius(8))
+            .Padding(12);
     }
+}
+
+/// <summary>
+/// Theme key constants for semantic theming.
+/// Use with .ThemeKey(ThemeKeys.X) for consistent styling across the app.
+/// </summary>
+public static class ThemeKeys
+{
+    // Text styles
+    public const string SecondaryText = nameof(SecondaryText);
+    public const string MutedText = nameof(MutedText);
+    public const string Caption = nameof(Caption);
+    
+    // Container styles
+    public const string Card = nameof(Card);
+    public const string CardVariant = nameof(CardVariant);
 }

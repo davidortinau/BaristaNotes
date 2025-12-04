@@ -46,7 +46,7 @@ public class RatingControl : Component<RatingControlState>
             // Read-only star (no interaction)
             return Label(isFilled ? "★" : "☆")
                 .FontSize(32)
-                .TextColor(isFilled ? AppColors.Caramel : AppColors.SecondaryText)
+                .TextColor(isFilled ? AppColors.Light.Primary : AppColors.Light.TextSecondary)
                 .HCenter()
                 .VCenter();
         }
@@ -55,7 +55,7 @@ public class RatingControl : Component<RatingControlState>
         return new MauiReactor.Button()
             .Text(isFilled ? "★" : "☆")
             .FontSize(32)
-            .TextColor(isFilled ? AppColors.Caramel : AppColors.SecondaryText)
+            .TextColor(isFilled ? AppColors.Light.Primary : AppColors.Light.TextSecondary)
             .BackgroundColor(Colors.Transparent)
             .WidthRequest(40)
             .HeightRequest(40)

@@ -9,6 +9,8 @@ using BaristaNotes.Core.Services;
 using BaristaNotes.Infrastructure;
 using BaristaNotes.Services;
 using The49.Maui.BottomSheet;
+using Fonts;
+using BaristaNotes.Styles;
 
 namespace BaristaNotes;
 
@@ -20,6 +22,7 @@ public static class MauiProgram
 		builder
 			.UseMauiReactorApp<App>(app =>
 			{
+				app.UseTheme<ApplicationTheme>();
 				app.SetWindowsSpecificAssetsDirectory("Assets");
 				app.Resources.MergedDictionaries.Add(new UXDivers.Popups.Maui.Controls.DarkTheme());
 				app.Resources.MergedDictionaries.Add(new UXDivers.Popups.Maui.Controls.PopupStyles());
@@ -31,7 +34,7 @@ public static class MauiProgram
 			{
 				fonts.AddFont("Manrope-Regular.ttf", "Manrope");
 				fonts.AddFont("Manrope-Semibold.ttf", "ManropeSemibold");
-				fonts.AddFont("MaterialSymbols.ttf", "MaterialSymbols");
+				fonts.AddFont("MaterialSymbols.ttf", MaterialSymbolsFont.FontFamily);
 			});
 
 		// Register MauiReactor routes

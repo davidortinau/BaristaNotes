@@ -1,12 +1,7 @@
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
-using MauiReactor;
 using The49MauiBottomSheet = The49.Maui.BottomSheet;
-using MauiControls = Microsoft.Maui.Controls;
-using UXDivers.Popups.Services;
-using UXDivers.Popups.Maui.Controls;
-using UXDivers.Popups;
 
 namespace BaristaNotes.Pages;
 

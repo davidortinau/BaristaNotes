@@ -1,4 +1,4 @@
-namespace BaristaNotes.Theme;
+namespace BaristaNotes.Styles;
 
 public static class AppFontSizes
 {

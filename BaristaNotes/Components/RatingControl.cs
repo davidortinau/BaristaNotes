@@ -1,5 +1,4 @@
-using MauiReactor;
-using BaristaNotes.Theme;
+using BaristaNotes.Styles;
 
 namespace BaristaNotes.Components;
 
@@ -41,7 +40,7 @@ public class RatingControl : Component<RatingControlState>
     private VisualNode RenderStar(int index)
     {
         var isFilled = index <= _rating;
-        
+
         if (_isReadOnly)
         {
             // Read-only star (no interaction)

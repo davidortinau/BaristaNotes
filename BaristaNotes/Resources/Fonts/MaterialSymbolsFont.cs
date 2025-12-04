@@ -4,6 +4,7 @@ namespace Fonts
 {
 	public static class MaterialSymbolsFont
 	{
+		public const string FontFamily = "MaterialSymbols";
 		public const string Delete = "\ue872";
 		public const string Restore_from_trash = "\ue938";
 		public const string Delete_forever = "\ue92b";

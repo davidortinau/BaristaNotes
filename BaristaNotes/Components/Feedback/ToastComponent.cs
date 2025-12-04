@@ -1,6 +1,6 @@
 using MauiReactor;
 using BaristaNotes.Models;
-using BaristaNotes.Theme;
+using BaristaNotes.Styles;
 
 namespace BaristaNotes.Components.Feedback;
 
@@ -67,14 +67,14 @@ partial class ToastComponent : Component<ToastComponentState>
                     Label(iconText)
                         .FontSize(20)
                         .TextColor(Colors.White),
-                    
+
                     VStack(spacing: 2,
                         Label(_message.Message)
                             .FontSize(16)
                             .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
                             .TextColor(Colors.White)
                             .LineBreakMode(Microsoft.Maui.LineBreakMode.WordWrap),
-                        
+
                         _message.RecoveryAction != null
                             ? Label(_message.RecoveryAction)
                                 .FontSize(14)
@@ -98,7 +98,7 @@ partial class ToastComponent : Component<ToastComponentState>
     (Color bgColor, string iconText) GetThemeValues(FeedbackType type)
     {
         var isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
-        
+
         return type switch
         {
             FeedbackType.Success => (

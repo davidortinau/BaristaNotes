@@ -12,6 +12,7 @@ class BeanManagementState
     public List<BeanDto> Beans { get; set; } = new();
     public bool IsLoading { get; set; }
     public string? ErrorMessage { get; set; }
+    public AppTheme CurrentTheme { get; set; } = Application.Current?.RequestedTheme ?? AppTheme.Light;
 }
 
 partial class BeanManagementPage : Component<BeanManagementState>
@@ -27,8 +28,31 @@ partial class BeanManagementPage : Component<BeanManagementState>
     protected override void OnMounted()
     {
         base.OnMounted();
+        
+        // Subscribe to theme changes
+        if (Application.Current != null)
+        {
+            Application.Current.RequestedThemeChanged += OnThemeChanged;
+        }
+        
         SetState(s => s.IsLoading = true);
         _ = LoadDataAsync();
+    }
+
+    protected override void OnWillUnmount()
+    {
+        base.OnWillUnmount();
+        
+        // Unsubscribe from theme changes
+        if (Application.Current != null)
+        {
+            Application.Current.RequestedThemeChanged -= OnThemeChanged;
+        }
+    }
+
+    private void OnThemeChanged(object? sender, AppThemeChangedEventArgs e)
+    {
+        SetState(s => s.CurrentTheme = e.RequestedTheme);
     }
 
     async Task LoadDataAsync()
@@ -62,6 +86,15 @@ partial class BeanManagementPage : Component<BeanManagementState>
         await ShowBeanFormSheet(bean);
     }
 
+    // Helper methods for theme-aware colors
+    private bool IsLightTheme => State.CurrentTheme == AppTheme.Light;
+    private Color SurfaceColor => IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface;
+    private Color SurfaceVariantColor => IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
+    private Color PrimaryColor => IsLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary;
+    private Color OnPrimaryColor => IsLightTheme ? AppColors.Light.OnPrimary : AppColors.Dark.OnPrimary;
+    private Color TextPrimaryColor => IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+    private Color TextSecondaryColor => IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+
     async Task ShowBeanFormSheet(BeanDto? bean)
     {
         var page = ContainerPage;
@@ -72,28 +105,28 @@ partial class BeanManagementPage : Component<BeanManagementState>
         {
             Placeholder = "Bean name (required)",
             Text = bean?.Name ?? "",
-            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface
+            BackgroundColor = SurfaceColor
         };
 
         var roasterEntry = new MauiControls.Entry
         {
             Placeholder = "Roaster name",
             Text = bean?.Roaster ?? "",
-            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface
+            BackgroundColor = SurfaceColor
         };
 
         var originEntry = new MauiControls.Entry
         {
             Placeholder = "Country or region of origin",
             Text = bean?.Origin ?? "",
-            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface
+            BackgroundColor = SurfaceColor
         };
 
         var roastDatePicker = new MauiControls.DatePicker
         {
             MaximumDate = DateTime.Now,
             Date = bean?.RoastDate?.DateTime ?? DateTime.Now,
-            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface
+            BackgroundColor = SurfaceColor
         };
 
         var useRoastDate = new MauiControls.Switch
@@ -106,7 +139,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
             Placeholder = "Tasting notes, processing method, etc.",
             Text = bean?.Notes ?? "",
             HeightRequest = 80,
-            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface
+            BackgroundColor = SurfaceColor
         };
 
         var errorLabel = new MauiControls.Label
@@ -119,15 +152,15 @@ partial class BeanManagementPage : Component<BeanManagementState>
         var saveButton = new MauiControls.Button
         {
             Text = "Save",
-            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary,
-            TextColor = ApplicationTheme.IsLightTheme ? AppColors.Light.OnPrimary : AppColors.Dark.OnPrimary
+            BackgroundColor = PrimaryColor,
+            TextColor = OnPrimaryColor
         };
 
         var cancelButton = new MauiControls.Button
         {
             Text = "Cancel",
-            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant,
-            TextColor = ApplicationTheme.IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary
+            BackgroundColor = SurfaceVariantColor,
+            TextColor = TextPrimaryColor
         };
 
         cancelButton.Clicked += async (s, e) =>
@@ -208,7 +241,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
             {
                 Spacing = 12,
                 Padding = new Thickness(20),
-                BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface,
+                BackgroundColor = SurfaceColor,
                 Children =
                 {
                     new MauiControls.Label
@@ -265,14 +298,14 @@ partial class BeanManagementPage : Component<BeanManagementState>
         {
             Text = "Delete",
             BackgroundColor = Colors.Red,  // Keep error red semantic
-            TextColor = ApplicationTheme.IsLightTheme ? AppColors.Light.OnPrimary : AppColors.Dark.OnPrimary
+            TextColor = OnPrimaryColor
         };
 
         var cancelButton = new MauiControls.Button
         {
             Text = "Cancel",
-            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant,
-            TextColor = ApplicationTheme.IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary
+            BackgroundColor = SurfaceVariantColor,
+            TextColor = TextPrimaryColor
         };
 
         cancelButton.Clicked += async (s, e) =>
@@ -290,7 +323,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
         {
             Spacing = 16,
             Padding = new Thickness(24),
-            BackgroundColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface,
+            BackgroundColor = SurfaceColor,
             Children =
             {
                 new MauiControls.HorizontalStackLayout
@@ -319,7 +352,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
                 {
                     Text = "Are you sure you want to delete this bean? Shot records using this bean will retain the historical reference.",
                     FontSize = 14,
-                    TextColor = ApplicationTheme.IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary,
+                    TextColor = TextSecondaryColor,
                     HorizontalTextAlignment = TextAlignment.Center
                 },
                 new MauiControls.HorizontalStackLayout

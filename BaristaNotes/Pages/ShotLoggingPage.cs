@@ -554,9 +554,12 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         // Show profile image if available, otherwise show default icon
         if (user != null && !string.IsNullOrEmpty(user.AvatarPath))
         {
+            // Convert filename to full file path
+            var imagePath = System.IO.Path.Combine(FileSystem.AppDataDirectory, user.AvatarPath);
+            
             // User has a profile photo - display it
             return Border(
-                Image(user.AvatarPath)
+                Image(imagePath)
                     .Aspect(Aspect.AspectFill)
             )
             .StrokeShape(new RoundRectangle().CornerRadius(30))
@@ -594,7 +597,10 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             User = user,
             Name = user.Name,
             Icon = MaterialSymbolsFont.Account_circle,
-            AvatarPath = user.AvatarPath
+            // Convert filename to full path
+            AvatarPath = string.IsNullOrEmpty(user.AvatarPath) 
+                ? null 
+                : System.IO.Path.Combine(FileSystem.AppDataDirectory, user.AvatarPath)
         }).ToList();
 
         ListActionPopup? popup = null;

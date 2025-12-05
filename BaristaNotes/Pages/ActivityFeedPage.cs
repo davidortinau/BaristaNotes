@@ -4,6 +4,9 @@ using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Core.Services.Exceptions;
 using BaristaNotes.Components;
 using BaristaNotes.Services;
+using BaristaNotes.Styles;
+using UXDivers.Popups.Maui.Controls;
+using UXDivers.Popups.Services;
 
 namespace BaristaNotes.Pages;
 
@@ -23,7 +26,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
 {
     [Inject]
     IShotService _shotService;
-    
+
     [Inject]
     IFeedbackService _feedbackService;
 
@@ -106,40 +109,38 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
     {
         await Microsoft.Maui.Controls.Shell.Current.GoToAsync("settings");
     }
-    
+
     async void NavigateToEdit(int shotId)
     {
         await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingPageProps>("shot-logging", props => props.ShotId = shotId);
     }
-    
+
     async Task ShowDeleteConfirmation(int shotId)
     {
-        SetState(s => s.ShotToDelete = shotId);
-        
-        var result = await Microsoft.Maui.Controls.Application.Current!.MainPage!.DisplayAlert(
-            "Delete Shot?",
-            "This action cannot be undone. Are you sure you want to delete this shot?",
-            "Delete",
-            "Cancel"
-        );
-        
-        if (result && State.ShotToDelete.HasValue)
+        var popup = new SimpleActionPopup
         {
-            await DeleteShot(State.ShotToDelete.Value);
-        }
-        else
-        {
-            SetState(s => s.ShotToDelete = null);
-        }
+            Title = $"Delete Shot?",
+            Text = "This action cannot be undone.",
+            ActionButtonText = "Delete",
+            SecondaryActionButtonText = "Cancel",
+            ActionButtonCommand = new Command(async () =>
+            {
+                // Delete logic here
+                await DeleteShot(shotId);
+                await IPopupService.Current.PopAsync();
+            })
+        };
+
+        await IPopupService.Current.PushAsync(popup);
     }
-    
+
     async Task DeleteShot(int shotId)
     {
         try
         {
             await _shotService.DeleteShotAsync(shotId);
             await _feedbackService.ShowSuccessAsync("Shot deleted");
-            
+
             // Refresh the list
             await LoadShotsAsync(isRefresh: true);
         }
@@ -166,8 +167,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                 .OnClicked(async () => await NavigateToSettings()),
             Grid("Auto,*", "*",
                 Label("Shot History")
-                    .FontSize(24)
-                    .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
+                    .ThemeKey(ThemeKeys.Headline)
                     .Padding(16, 8)
                     .GridRow(0),
 
@@ -181,7 +181,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         )
         .OnAppearing(() => OnPageAppearing());
     }
-    
+
     void OnPageAppearing()
     {
         // Refresh data when returning from edit/delete
@@ -255,12 +255,10 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                 .LeftItems(
                 [
                     SwipeItem()
-                        .Text("Edit")
-                        .BackgroundColor(Colors.Blue)
+                        .IconImageSource(AppIcons.Edit)
                         .OnInvoked(() => NavigateToEdit(shot.Id)),
                     SwipeItem()
-                        .Text("Delete")
-                        .BackgroundColor(Colors.Red)
+                        .IconImageSource(AppIcons.Delete)
                         .OnInvoked(async () => await ShowDeleteConfirmation(shot.Id))
                 ])
             )

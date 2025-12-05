@@ -1,5 +1,6 @@
 using MauiReactor;
 using BaristaNotes.Core.Services.DTOs;
+using BaristaNotes.Styles;
 
 namespace BaristaNotes.Components;
 
@@ -20,29 +21,29 @@ partial class ShotRecordCard : Component
                     Label($"☕ {_shot.DrinkType}")
                         .FontSize(18)
                         .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold),
-                    
+
                     HStack(spacing: 4,
                         Label($"⭐ {_shot.Rating ?? 0}/5")
                             .FontSize(14)
                     )
                     .HEnd()
                 ),
-                
+
                 // User profiles (if available)
                 RenderUserProfiles(),
-                
+
                 // Bean info
                 Label(_shot.Bean?.Name ?? "Unknown Bean")
                     .FontSize(16),
-                
+
                 // Recipe details
                 Label($"{_shot.DoseIn}g in → {_shot.ActualOutput ?? _shot.ExpectedOutput}g out ({_shot.ActualTime ?? _shot.ExpectedTime}s)")
                     .FontSize(14)
                     .TextColor(Colors.Gray),
-                
+
                 // Equipment (if available)
                 RenderEquipment(),
-                
+
                 // Timestamp
                 Label(FormatTimestamp(_shot.Timestamp))
                     .FontSize(12)
@@ -50,9 +51,8 @@ partial class ShotRecordCard : Component
             )
             .Padding(12)
         )
-        .StrokeThickness(1)
-        .Stroke(Colors.LightGray)
-        .Margin(8);
+        .ThemeKey(ThemeKeys.CardBorder)
+        .Margin(16, 8);
     }
 
     VisualNode? RenderUserProfiles()
@@ -101,7 +101,7 @@ partial class ShotRecordCard : Component
             return timestamp.ToString("h:mm tt");
         if (diff.TotalDays < 7)
             return timestamp.ToString("ddd h:mm tt");
-        
+
         return timestamp.ToString("MMM d, h:mm tt");
     }
 }

@@ -11,6 +11,7 @@ using BaristaNotes.Services;
 using The49.Maui.BottomSheet;
 using Fonts;
 using BaristaNotes.Styles;
+using Microsoft.Maui.Handlers;
 
 namespace BaristaNotes;
 
@@ -26,6 +27,41 @@ public static class MauiProgram
 				app.SetWindowsSpecificAssetsDirectory("Assets");
 				app.Resources.MergedDictionaries.Add(new UXDivers.Popups.Maui.Controls.DarkTheme());
 				app.Resources.MergedDictionaries.Add(new UXDivers.Popups.Maui.Controls.PopupStyles());
+
+				// Add custom resources
+				var customResources = new ResourceDictionary
+				{
+					// Font Families
+					{ "IconsFontFamily", MaterialSymbolsFont.FontFamily },
+					{ "AppFontFamily", "Manrope" },
+					{ "AppSemiBoldFamily", "ManropeSemibold" },
+					
+					// UXDivers Popups Icon Overrides
+					{ "UXDPopupsCloseIconButton", MaterialSymbolsFont.Close },
+					{ "UXDPopupsCheckCircleIconButton", MaterialSymbolsFont.Check_circle },
+					
+					// Icon Colors
+					// { "IconOrange", Color.FromArgb("#FF7134") },
+					// { "IconMagenta", Color.FromArgb("#FF1AD9") },
+					// { "IconCyan", Color.FromArgb("#05D9FF") },
+					// { "IconGreen", Color.FromArgb("#2FFF74") },
+					// { "IconPurple", Color.FromArgb("#BD3BFF") },
+					// { "IconBlue", Color.FromArgb("#1C7BFF") },
+					// { "IconLime", Color.FromArgb("#C8FF01") },
+					// { "IconRed", Color.FromArgb("#FF0000") },
+					// { "IconDarkBlue", Color.FromArgb("#6422FF") },
+					{ "BackgroundColor", AppColors.Dark.SurfaceElevated },
+					{ "BackgroundSecondaryColor", AppColors.Dark.Surface },
+					{ "BackgroundTertiaryColor", Colors.Purple },
+					{ "PrimaryColor", AppColors.Dark.Primary },
+					{ "TextColor", AppColors.Dark.TextPrimary },
+					{ "PopupBorderColor", AppColors.Dark.Outline }
+				};
+				app.Resources.MergedDictionaries.Add(customResources);
+			})
+			.ConfigureMauiHandlers(handlers =>
+			{
+				ModifyEntrys();
 			})
 			.UseUXDiversPopups()
 			.UseBottomSheet()
@@ -33,7 +69,7 @@ public static class MauiProgram
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("Manrope-Regular.ttf", "Manrope");
-				fonts.AddFont("Manrope-Semibold.ttf", "ManropeSemibold");
+				fonts.AddFont("Manrope-SemiBold.ttf", "ManropeSemibold");
 				fonts.AddFont("MaterialSymbols.ttf", MaterialSymbolsFont.FontFamily);
 			});
 
@@ -61,12 +97,21 @@ public static class MauiProgram
 		builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 		builder.Services.AddSingleton<IPreferencesService, PreferencesService>();
 		builder.Services.AddSingleton<IFeedbackService, FeedbackService>();
+		builder.Services.AddSingleton<IThemeService, ThemeService>();
 
 #if DEBUG
 		builder.Logging.AddDebug();
 #endif
 
 		var app = builder.Build();
+
+		// Initialize theme service to load saved theme preference
+		var themeService = app.Services.GetRequiredService<IThemeService>();
+		Task.Run(async () =>
+		{
+			var savedMode = await themeService.GetThemeModeAsync();
+			await themeService.SetThemeModeAsync(savedMode);
+		}).Wait();
 
 		// Apply database migrations
 		using (var scope = app.Services.CreateScope())
@@ -76,6 +121,63 @@ public static class MauiProgram
 		}
 
 		return app;
+	}
+
+	private static void ModifyEntrys()
+	{
+#if IOS || MACCATALYST
+		EntryHandler.Mapper.AppendToMapping("NoBorder", (handler, view) =>
+		{
+			// Remove border
+			handler.PlatformView.BorderStyle = UIKit.UITextBorderStyle.None;
+
+			// Optional: transparent background
+			handler.PlatformView.BackgroundColor = UIKit.UIColor.Clear;
+
+			// Optional: add a tiny left padding so text isn't flush
+			handler.PlatformView.LeftView = new UIKit.UIView(new CoreGraphics.CGRect(0, 0, 4, 0));
+			handler.PlatformView.LeftViewMode = UIKit.UITextFieldViewMode.Always;
+		});
+
+		PickerHandler.Mapper.AppendToMapping("NoBorder", (handler, view) =>
+		{
+			// Remove border + make background transparent
+			handler.PlatformView.BorderStyle = UIKit.UITextBorderStyle.None;
+			handler.PlatformView.BackgroundColor = UIKit.UIColor.Clear;
+
+			// Optional: add a tiny left padding so text isn't flush to the edge
+			handler.PlatformView.LeftView = new UIKit.UIView(new CoreGraphics.CGRect(0, 0, 4, 0));
+			handler.PlatformView.LeftViewMode = UIKit.UITextFieldViewMode.Always;
+		});
+#endif
+
+#if ANDROID
+        EntryHandler.Mapper.AppendToMapping("NoUnderline", (handler, view) =>
+        {
+            // Remove background/underline + any focus tint
+            handler.PlatformView.Background = null;
+            handler.PlatformView.SetBackgroundColor(Android.Graphics.Color.Transparent);
+            handler.PlatformView.BackgroundTintList =
+                Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent);
+
+            // Optional: tweak padding so text isn't cramped
+            handler.PlatformView.SetPadding(0, handler.PlatformView.PaddingTop, 0, handler.PlatformView.PaddingBottom);
+        });
+
+        PickerHandler.Mapper.AppendToMapping("NoUnderline", (handler, view) =>
+        {
+            var pv = handler.PlatformView;
+
+            // Remove default underline / background & tints
+            pv.Background = null;
+            pv.SetBackgroundColor(Android.Graphics.Color.Transparent);
+            pv.BackgroundTintList =
+                Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent);
+
+            // Optional: tighten side padding so text aligns with other controls
+            pv.SetPadding(0, 0, 0, 0);
+        });
+#endif
 	}
 
 	private static void RegisterRoutes()

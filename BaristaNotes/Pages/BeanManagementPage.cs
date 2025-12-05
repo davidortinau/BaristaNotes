@@ -1,8 +1,12 @@
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
+using BaristaNotes.Styles;
+using BaristaNotes.Components;
+using BaristaNotes.Utilities;
 using MauiReactor;
-using The49MauiBottomSheet = The49.Maui.BottomSheet;
+using UXDivers.Popups.Maui.Controls;
+using UXDivers.Popups.Services;
 
 namespace BaristaNotes.Pages;
 
@@ -20,8 +24,6 @@ partial class BeanManagementPage : Component<BeanManagementState>
 
     [Inject]
     IFeedbackService _feedbackService;
-
-    private The49MauiBottomSheet.BottomSheet? _currentSheet;
 
     protected override void OnMounted()
     {
@@ -53,291 +55,55 @@ partial class BeanManagementPage : Component<BeanManagementState>
 
     async Task ShowAddBeanSheet()
     {
-        await ShowBeanFormSheet(null);
+        await BottomSheetManager.ShowAsync(
+            () => new BeanFormSheet()
+                .Bean(null)
+                .OnSave(bean => OnBeanSaved(bean))
+                .OnCancel(() => _ = BottomSheetManager.DismissAsync()),
+            sheet =>
+            {
+                sheet.HasBackdrop = true;
+                sheet.HasHandle = true;
+                sheet.CornerRadius = 12;
+            });
     }
 
     async Task ShowEditBeanSheet(BeanDto bean)
     {
-        await ShowBeanFormSheet(bean);
+        await BottomSheetManager.ShowAsync(
+            () => new BeanFormSheet()
+                .Bean(bean)
+                .OnSave(b => OnBeanSaved(b))
+                .OnCancel(() => _ = BottomSheetManager.DismissAsync()),
+            sheet => sheet.HasBackdrop = true);
     }
 
-    async Task ShowBeanFormSheet(BeanDto? bean)
+    void OnBeanSaved(BeanDto beanDto)
     {
-        var page = ContainerPage;
-        if (page?.Window == null) return;
-
-        // Create form fields
-        var nameEntry = new MauiControls.Entry
+        _ = Task.Run(async () =>
         {
-            Placeholder = "Bean name (required)",
-            Text = bean?.Name ?? "",
-            BackgroundColor = Colors.White
-        };
-
-        var roasterEntry = new MauiControls.Entry
-        {
-            Placeholder = "Roaster name",
-            Text = bean?.Roaster ?? "",
-            BackgroundColor = Colors.White
-        };
-
-        var originEntry = new MauiControls.Entry
-        {
-            Placeholder = "Country or region of origin",
-            Text = bean?.Origin ?? "",
-            BackgroundColor = Colors.White
-        };
-
-        var roastDatePicker = new MauiControls.DatePicker
-        {
-            MaximumDate = DateTime.Now,
-            Date = bean?.RoastDate?.DateTime ?? DateTime.Now,
-            BackgroundColor = Colors.White
-        };
-
-        var useRoastDate = new MauiControls.Switch
-        {
-            IsToggled = bean?.RoastDate != null
-        };
-
-        var notesEditor = new MauiControls.Editor
-        {
-            Placeholder = "Tasting notes, processing method, etc.",
-            Text = bean?.Notes ?? "",
-            HeightRequest = 80,
-            BackgroundColor = Colors.White
-        };
-
-        var errorLabel = new MauiControls.Label
-        {
-            TextColor = Colors.Red,
-            FontSize = 12,
-            IsVisible = false
-        };
-
-        var saveButton = new MauiControls.Button
-        {
-            Text = "Save",
-            BackgroundColor = Colors.Brown,
-            TextColor = Colors.White
-        };
-
-        var cancelButton = new MauiControls.Button
-        {
-            Text = "Cancel",
-            BackgroundColor = Colors.LightGray,
-            TextColor = Colors.Black
-        };
-
-        cancelButton.Clicked += async (s, e) =>
-        {
-            await _currentSheet?.DismissAsync()!;
-        };
-
-        saveButton.Clicked += async (s, e) =>
-        {
-            // Validate
-            if (string.IsNullOrWhiteSpace(nameEntry.Text))
-            {
-                await _feedbackService.ShowErrorAsync("Bean name is required", "Please enter a name for your coffee bean");
-                return;
-            }
-
-            saveButton.IsEnabled = false;
-
-            try
-            {
-                DateTimeOffset? roastDate = useRoastDate.IsToggled && roastDatePicker.Date.HasValue
-                    ? new DateTimeOffset(roastDatePicker.Date.Value)
-                    : null;
-
-                if (bean != null)
-                {
-                    await _beanService.UpdateBeanAsync(
-                        bean.Id,
-                        new UpdateBeanDto
-                        {
-                            Name = nameEntry.Text,
-                            Roaster = string.IsNullOrWhiteSpace(roasterEntry.Text) ? null : roasterEntry.Text,
-                            Origin = string.IsNullOrWhiteSpace(originEntry.Text) ? null : originEntry.Text,
-                            RoastDate = roastDate,
-                            Notes = string.IsNullOrWhiteSpace(notesEditor.Text) ? null : notesEditor.Text
-                        });
-
-                    await _feedbackService.ShowSuccessAsync($"{nameEntry.Text} updated successfully");
-                }
-                else
-                {
-                    var result = await _beanService.CreateBeanAsync(
-                        new CreateBeanDto
-                        {
-                            Name = nameEntry.Text,
-                            Roaster = string.IsNullOrWhiteSpace(roasterEntry.Text) ? null : roasterEntry.Text,
-                            Origin = string.IsNullOrWhiteSpace(originEntry.Text) ? null : originEntry.Text,
-                            RoastDate = roastDate,
-                            Notes = string.IsNullOrWhiteSpace(notesEditor.Text) ? null : notesEditor.Text
-                        });
-
-
-                    if (result.Success)
-                    {
-                        await _feedbackService.ShowSuccessAsync(result.Message);
-                    }
-                    else
-                    {
-                        await _feedbackService.ShowErrorAsync(result.ErrorMessage!, result.RecoveryAction);
-                        saveButton.IsEnabled = true;
-                        return;
-                    }
-                }
-
-                await _currentSheet?.DismissAsync()!;
-                await LoadDataAsync();
-            }
-            catch (Exception ex)
-            {
-                await _feedbackService.ShowErrorAsync("Failed to save bean", "Please try again");
-                saveButton.IsEnabled = true;
-            }
-        };
-
-        var formContent = new MauiControls.ScrollView
-        {
-            Content = new MauiControls.VerticalStackLayout
-            {
-                Spacing = 12,
-                Padding = new Thickness(20),
-                BackgroundColor = Colors.White,
-                Children =
-                {
-                    new MauiControls.Label
-                    {
-                        Text = bean != null ? "Edit Bean" : "Add Bean",
-                        FontSize = 20,
-                        FontAttributes = MauiControls.FontAttributes.Bold
-                    },
-                    new MauiControls.Label { Text = "Name *", FontSize = 14 },
-                    nameEntry,
-                    new MauiControls.Label { Text = "Roaster", FontSize = 14 },
-                    roasterEntry,
-                    new MauiControls.Label { Text = "Origin", FontSize = 14 },
-                    originEntry,
-                    new MauiControls.HorizontalStackLayout
-                    {
-                        Spacing = 8,
-                        Children =
-                        {
-                            new MauiControls.Label { Text = "Track Roast Date", FontSize = 14, VerticalOptions = MauiControls.LayoutOptions.Center },
-                            useRoastDate
-                        }
-                    },
-                    roastDatePicker,
-                    new MauiControls.Label { Text = "Notes", FontSize = 14 },
-                    notesEditor,
-                    errorLabel,
-                    new MauiControls.HorizontalStackLayout
-                    {
-                        Spacing = 12,
-                        HorizontalOptions = MauiControls.LayoutOptions.End,
-                        Children = { cancelButton, saveButton }
-                    }
-                }
-            }
-        };
-
-        _currentSheet = new The49MauiBottomSheet.BottomSheet
-        {
-            HasHandle = true,
-            IsCancelable = true,
-            Content = formContent
-        };
-
-        await _currentSheet.ShowAsync(page.Window);
+            await BottomSheetManager.DismissAsync();
+            await LoadDataAsync();
+        });
     }
 
     async Task ShowDeleteConfirmation(BeanDto bean)
     {
-        var page = ContainerPage;
-        if (page?.Window == null) return;
-
-        var confirmButton = new MauiControls.Button
+        var popup = new SimpleActionPopup
         {
-            Text = "Delete",
-            BackgroundColor = Colors.Red,
-            TextColor = Colors.White
-        };
-
-        var cancelButton = new MauiControls.Button
-        {
-            Text = "Cancel",
-            BackgroundColor = Colors.LightGray,
-            TextColor = Colors.Black
-        };
-
-        cancelButton.Clicked += async (s, e) =>
-        {
-            await _currentSheet?.DismissAsync()!;
-        };
-
-        confirmButton.Clicked += async (s, e) =>
-        {
-            await _currentSheet?.DismissAsync()!;
-            await DeleteBean(bean);
-        };
-
-        var confirmContent = new MauiControls.VerticalStackLayout
-        {
-            Spacing = 16,
-            Padding = new Thickness(24),
-            BackgroundColor = Colors.White,
-            Children =
+            Title = $"Delete \"{bean.Name}\"?",
+            Text = "This action cannot be undone.",
+            ActionButtonText = "Delete",
+            SecondaryActionButtonText = "Cancel",
+            ActionButtonCommand = new Command(async () =>
             {
-                new MauiControls.HorizontalStackLayout
-                {
-                    Spacing = 8,
-                    Children =
-                    {
-                        new MauiControls.Label { Text = "⚠️", FontSize = 24 },
-                        new MauiControls.Label
-                        {
-                            Text = "Delete Bean",
-                            FontSize = 20,
-                            FontAttributes = MauiControls.FontAttributes.Bold,
-                            TextColor = Colors.Red
-                        }
-                    }
-                },
-                new MauiControls.Label
-                {
-                    Text = $"\"{bean.Name}\"",
-                    FontSize = 16,
-                    FontAttributes = MauiControls.FontAttributes.Bold,
-                    HorizontalTextAlignment = TextAlignment.Center
-                },
-                new MauiControls.Label
-                {
-                    Text = "Are you sure you want to delete this bean? Shot records using this bean will retain the historical reference.",
-                    FontSize = 14,
-                    TextColor = Colors.Gray,
-                    HorizontalTextAlignment = TextAlignment.Center
-                },
-                new MauiControls.HorizontalStackLayout
-                {
-                    Spacing = 12,
-                    HorizontalOptions = MauiControls.LayoutOptions.Center,
-                    Children = { cancelButton, confirmButton }
-                }
-            }
+                await DeleteBean(bean);
+                await IPopupService.Current.PopAsync();
+            })
         };
 
-        _currentSheet = new The49MauiBottomSheet.BottomSheet
-        {
-            HasHandle = true,
-            IsCancelable = true,
-            Content = confirmContent
-        };
+        await IPopupService.Current.PushAsync(popup);
 
-        await _currentSheet.ShowAsync(page.Window);
     }
 
     async Task DeleteBean(BeanDto bean)
@@ -399,8 +165,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
                 .OnClicked(async () => await ShowAddBeanSheet()),
             Grid("Auto,*", "*",
                 Label("Beans")
-                    .FontSize(24)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .ThemeKey(ThemeKeys.SubHeadline)
                     .Padding(16, 8)
                     .GridRow(0),
 
@@ -426,7 +191,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
                 .HCenter(),
             Label("Add your favorite coffee beans to track freshness and tasting notes")
                 .FontSize(16)
-                .TextColor(Colors.Gray)
+                .ThemeKey(ThemeKeys.SecondaryText)
                 .HCenter()
         )
         .VCenter()
@@ -440,22 +205,20 @@ partial class BeanManagementPage : Component<BeanManagementState>
             Grid("Auto", "*,Auto",
                 VStack(spacing: 4,
                     Label(bean.Name)
-                        .FontSize(18)
-                        .FontAttributes(MauiControls.FontAttributes.Bold),
+                        .ThemeKey(ThemeKeys.CardTitle),
                     bean.Roaster != null
                         ? Label($"🏭 {bean.Roaster}")
                             .FontSize(14)
-                            .TextColor(Colors.Gray)
+                            .ThemeKey(ThemeKeys.SecondaryText)
                         : null,
                     bean.Origin != null
                         ? Label($"🌍 {bean.Origin}")
                             .FontSize(14)
-                            .TextColor(Colors.Gray)
+                            .ThemeKey(ThemeKeys.SecondaryText)
                         : null,
                     bean.RoastDate.HasValue
                         ? Label($"📅 Roasted: {bean.RoastDate.Value:MMM d, yyyy}")
-                            .FontSize(12)
-                            .TextColor(Colors.DarkGray)
+                            .ThemeKey(ThemeKeys.MutedText)
                         : null
                 )
                 .GridColumn(0)
@@ -476,7 +239,6 @@ partial class BeanManagementPage : Component<BeanManagementState>
             .Padding(12)
         )
         .Margin(0, 4)
-        .Stroke(Colors.LightGray)
-        .BackgroundColor(Colors.White);
+        .ThemeKey(ThemeKeys.Card);
     }
 }

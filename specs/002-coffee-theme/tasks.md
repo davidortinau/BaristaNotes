@@ -74,21 +74,21 @@ BaristaNotes uses a mobile + API architecture:
 
 - [ ] T008 [US1] Write color contrast validation tests in BaristaNotes.Tests/Unit/Services/ColorContrastTests.cs for Light mode: TextPrimary on Background (≥4.5:1), TextSecondary on Background (≥4.5:1), OnPrimary on Primary (≥4.5:1)
 - [ ] T009 [US1] Write color contrast validation tests in BaristaNotes.Tests/Unit/Services/ColorContrastTests.cs for Dark mode: TextPrimary on Background (≥4.5:1), TextSecondary on Background (≥4.5:1), OnPrimary on Primary (≥4.5:1)
-- [ ] T010 [US1] Replace existing AppColors class in BaristaNotes/Resources/Styles/AppColors.cs with coffee-themed semantic tokens: Light.Background (#D2BCA5), Light.Surface (#FCEFE1), Light.SurfaceVariant (#ECDAC4), Light.SurfaceElevated (#FFF7EC), Light.Primary (#86543F), Light.OnPrimary (#F8F6F4), Light.TextPrimary (#352B23), Light.TextSecondary (#7C7067), Light.TextMuted (#A38F7D), Light.Outline (#D7C5B2)
-- [ ] T011 [US1] Add Dark mode nested class in BaristaNotes/Resources/Styles/AppColors.cs with tokens: Dark.Background (#48362E), Dark.Surface (#48362E), Dark.SurfaceVariant (#7D5A45), Dark.SurfaceElevated (#B3A291), Dark.Primary (#86543F), Dark.OnPrimary (#F8F6F4), Dark.TextPrimary (#F8F6F4), Dark.TextSecondary (#C5BFBB), Dark.TextMuted (#A19085), Dark.Outline (#5A463B)
-- [ ] T012 [US1] Keep existing semantic colors in AppColors.cs (Success #4CAF50, Warning #FFA726, Error #EF5350, Info #42A5F5) as they work in both themes
+- [X] T010 [US1] Replace existing AppColors class in BaristaNotes/Resources/Styles/AppColors.cs with coffee-themed semantic tokens: Light.Background (#D2BCA5), Light.Surface (#FCEFE1), Light.SurfaceVariant (#ECDAC4), Light.SurfaceElevated (#FFF7EC), Light.Primary (#86543F), Light.OnPrimary (#F8F6F4), Light.TextPrimary (#352B23), Light.TextSecondary (#7C7067), Light.TextMuted (#A38F7D), Light.Outline (#D7C5B2)
+- [X] T011 [US1] Add Dark mode nested class in BaristaNotes/Resources/Styles/AppColors.cs with tokens: Dark.Background (#48362E), Dark.Surface (#48362E), Dark.SurfaceVariant (#7D5A45), Dark.SurfaceElevated (#B3A291), Dark.Primary (#86543F), Dark.OnPrimary (#F8F6F4), Dark.TextPrimary (#F8F6F4), Dark.TextSecondary (#C5BFBB), Dark.TextMuted (#A19085), Dark.Outline (#5A463B)
+- [X] T012 [US1] Keep existing semantic colors in AppColors.cs (Success #4CAF50, Warning #FFA726, Error #EF5350, Info #42A5F5) as they work in both themes
 - [ ] T013 [US1] Run ColorContrastTests to verify all text/background combinations meet WCAG AA requirements (should pass if colors match spec)
 
 ### ApplicationTheme Update (Apply Coffee Colors)
 
-- [ ] T014 [US1] Update ApplicationTheme.OnApply() in BaristaNotes/Resources/Styles/ApplicationTheme.cs to replace all hardcoded purple/gray colors with conditional coffee colors: `IsLightTheme ? AppColors.Light.X : AppColors.Dark.X`
-- [ ] T015 [US1] Update ButtonStyles.Default in ApplicationTheme.cs to use Primary for background and OnPrimary for text color
-- [ ] T016 [US1] Update LabelStyles.Default in ApplicationTheme.cs to use TextPrimary for color
-- [ ] T017 [US1] Update PageStyles.Default in ApplicationTheme.cs to use Background for background color
-- [ ] T018 [US1] Update BorderStyles.Default in ApplicationTheme.cs to use Outline for stroke color
-- [ ] T019 [US1] Update EntryStyles.Default, EditorStyles.Default, SearchBarStyles.Default in ApplicationTheme.cs to use TextPrimary for text and TextMuted for placeholder
-- [ ] T020 [US1] Update ShellStyles.Default in ApplicationTheme.cs to use Background, Primary, and TextPrimary colors
-- [ ] T021 [US1] Create cached Brush properties in ApplicationTheme.cs: PrimaryBrush, BackgroundBrush, SurfaceBrush (initialized in OnApply to avoid allocations)
+- [X] T014 [US1] Update ApplicationTheme.OnApply() in BaristaNotes/Resources/Styles/ApplicationTheme.cs to replace all hardcoded purple/gray colors with conditional coffee colors: `IsLightTheme ? AppColors.Light.X : AppColors.Dark.X`
+- [X] T015 [US1] Update ButtonStyles.Default in ApplicationTheme.cs to use Primary for background and OnPrimary for text color
+- [X] T016 [US1] Update LabelStyles.Default in ApplicationTheme.cs to use TextPrimary for color
+- [X] T017 [US1] Update PageStyles.Default in ApplicationTheme.cs to use Background for background color
+- [X] T018 [US1] Update BorderStyles.Default in ApplicationTheme.cs to use Outline for stroke color
+- [X] T019 [US1] Update EntryStyles.Default, EditorStyles.Default, SearchBarStyles.Default in ApplicationTheme.cs to use TextPrimary for text and TextMuted for placeholder
+- [X] T020 [US1] Update ShellStyles.Default in ApplicationTheme.cs to use Background, Primary, and TextPrimary colors
+- [X] T021 [US1] Create cached Brush properties in ApplicationTheme.cs: PrimaryBrush, BackgroundBrush, SurfaceBrush (initialized in OnApply to avoid allocations)
 
 ### Visual Verification on All Pages
 

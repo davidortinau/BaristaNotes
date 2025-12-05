@@ -15,21 +15,22 @@ public class CircularAvatar : Component
     
     public override VisualNode Render()
     {
-        return new Frame
-        {
-            new Image()
+        // Use a Border with rounded corners to clip the image in a circle
+        return Border(
+            new MauiReactor.Image()
                 .Source(_imagePath ?? "default_avatar.png")
                 .Aspect(Aspect.AspectFill)
                 .WidthRequest(_size)
                 .HeightRequest(_size)
                 .AutomationId("ProfileAvatarImage")
-        }
+        )
         .WidthRequest(_size)
         .HeightRequest(_size)
-        .CornerRadius(_size / 2)
-        .IsClippedToBounds(true)
-        .HasShadow(false)
+        .StrokeThickness(2)
+        .Stroke(Colors.LightGray)
+        .BackgroundColor(Colors.Transparent)
         .Padding(0)
+        .Margin(8)
         .AutomationId("ProfileAvatarFrame");
     }
 }

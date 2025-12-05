@@ -134,7 +134,7 @@ Polish Phase (T035-T042)
 - [x] T015 [US1] Create ProfileImagePicker component in BaristaNotes/Components/ProfileImagePicker.cs with state management
 - [x] T016 [US1] Add "Change Photo" button to ProfileImagePicker component with PickImageAsync handler
 - [x] T017 [US1] Implement image display logic in ProfileImagePicker to show selected image or default placeholder
-- [ ] T018 [US1] Integrate ProfileImagePicker into UserProfileManagementPage.cs in BaristaNotes/Pages/ (TODO: Requires UI refactoring)
+- [x] T018 [US1] Integrate ProfileImagePicker into UserProfileManagementPage.cs in BaristaNotes/Pages/
 
 ---
 

@@ -33,12 +33,12 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
             
             new HStack(spacing: 10)
             {
-                new Button("Change Photo")
+                new MauiReactor.Button("Change Photo")
                     .OnClicked(PickImageAsync)
                     .AutomationId("ChangePhotoButton"),
                 
                 State.ImagePath != null
-                    ? new Button("Remove")
+                    ? new MauiReactor.Button("Remove")
                         .OnClicked(RemoveImageAsync)
                         .AutomationId("RemovePhotoButton")
                     : null
@@ -46,13 +46,13 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
             .HCenter(),
             
             State.IsLoading
-                ? new ActivityIndicator()
+                ? new MauiReactor.ActivityIndicator()
                     .IsRunning(true)
                     .AutomationId("ImageLoadingIndicator")
                 : null,
             
             State.ErrorMessage != null
-                ? new Label(State.ErrorMessage)
+                ? new MauiReactor.Label(State.ErrorMessage)
                     .TextColor(Colors.Red)
                     .AutomationId("ImageErrorMessage")
                 : null
@@ -63,7 +63,11 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
     {
         try
         {
-            SetState(s => s.IsLoading = true, s => s.ErrorMessage = null);
+            SetState(s => 
+            {
+                s.IsLoading = true;
+                s.ErrorMessage = null;
+            });
             
             var stream = await _imagePickerService.PickImageAsync();
             if (stream == null)

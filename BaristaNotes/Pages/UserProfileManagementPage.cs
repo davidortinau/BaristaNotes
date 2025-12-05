@@ -1,6 +1,7 @@
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
+using BaristaNotes.Styles;
 using The49MauiBottomSheet = The49.Maui.BottomSheet;
 
 namespace BaristaNotes.Pages;
@@ -465,11 +466,9 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
             Grid("Auto", "*,Auto",
                 VStack(spacing: 4,
                     Label(profile.Name)
-                        .FontSize(18)
-                        .FontAttributes(MauiControls.FontAttributes.Bold),
+                        .ThemeKey(ThemeKeys.CardTitle),
                     Label($"Created: {profile.CreatedAt:MMM d, yyyy}")
-                        .FontSize(12)
-                        .TextColor(Colors.Gray)
+                        .ThemeKey(ThemeKeys.CardSubtitle)
                 )
                 .GridColumn(0)
                 .VCenter(),
@@ -489,7 +488,6 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
             .Padding(12)
         )
         .Margin(0, 4)
-        .Stroke(Colors.LightGray)
-        .BackgroundColor(Colors.White);
+        .ThemeKey(ThemeKeys.CardBorder);
     }
 }

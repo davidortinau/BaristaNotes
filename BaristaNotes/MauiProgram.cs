@@ -61,12 +61,21 @@ public static class MauiProgram
 		builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 		builder.Services.AddSingleton<IPreferencesService, PreferencesService>();
 		builder.Services.AddSingleton<IFeedbackService, FeedbackService>();
+		builder.Services.AddSingleton<IThemeService, ThemeService>();
 
 #if DEBUG
 		builder.Logging.AddDebug();
 #endif
 
 		var app = builder.Build();
+		
+		// Initialize theme service to load saved theme preference
+		var themeService = app.Services.GetRequiredService<IThemeService>();
+		Task.Run(async () =>
+		{
+			var savedMode = await themeService.GetThemeModeAsync();
+			await themeService.SetThemeModeAsync(savedMode);
+		}).Wait();
 
 		// Apply database migrations
 		using (var scope = app.Services.CreateScope())

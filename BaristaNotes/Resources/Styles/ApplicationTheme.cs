@@ -9,13 +9,13 @@ class ApplicationTheme : Theme
     private static Brush? _primaryBrush;
     private static Brush? _surfaceBrush;
     private static Brush? _backgroundBrush;
-    
+
     public static Brush PrimaryBrush => _primaryBrush ??= new SolidColorBrush(
         IsLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary);
-    
+
     public static Brush SurfaceBrush => _surfaceBrush ??= new SolidColorBrush(
         IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface);
-    
+
     public static Brush BackgroundBrush => _backgroundBrush ??= new SolidColorBrush(
         IsLightTheme ? AppColors.Light.Background : AppColors.Dark.Background);
 
@@ -25,7 +25,7 @@ class ApplicationTheme : Theme
         _primaryBrush = null;
         _surfaceBrush = null;
         _backgroundBrush = null;
-        
+
         ActivityIndicatorStyles.Default = _ =>
             _.Color(IsLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary);
 
@@ -105,17 +105,82 @@ class ApplicationTheme : Theme
             .FontSize(14)
             .VisualState("CommonStates", "Disable", MauiControls.Label.TextColorProperty, IsLightTheme ? AppColors.Light.TextMuted : AppColors.Dark.TextMuted);
 
-        LabelStyles.Themes["Headline"] = _ => _
+        // Label Theme Keys
+        LabelStyles.Themes[ThemeKeys.Headline] = _ => _
             .TextColor(IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)
             .FontSize(32)
-            .HorizontalOptions(LayoutOptions.Center)
-            .HorizontalTextAlignment(TextAlignment.Center);
+            .FontFamily("ManropeSemibold")
+            .HorizontalOptions(LayoutOptions.Start)
+            .HorizontalTextAlignment(TextAlignment.Start);
 
-        LabelStyles.Themes["SubHeadline"] = _ => _
+        LabelStyles.Themes[ThemeKeys.SubHeadline] = _ => _
             .TextColor(IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)
             .FontSize(24)
-            .HorizontalOptions(LayoutOptions.Center)
-            .HorizontalTextAlignment(TextAlignment.Center);
+            .HorizontalOptions(LayoutOptions.Start)
+            .HorizontalTextAlignment(TextAlignment.Start);
+
+        LabelStyles.Themes[ThemeKeys.SecondaryText] = _ => _
+            .TextColor(IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)
+            .FontSize(14);
+
+        LabelStyles.Themes[ThemeKeys.MutedText] = _ => _
+            .TextColor(IsLightTheme ? AppColors.Light.TextMuted : AppColors.Dark.TextMuted)
+            .FontSize(12);
+
+        LabelStyles.Themes[ThemeKeys.CardTitle] = _ => _
+            .TextColor(IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)
+            .FontSize(16)
+            .FontAttributes(FontAttributes.Bold);
+
+        LabelStyles.Themes[ThemeKeys.CardSubtitle] = _ => _
+            .TextColor(IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)
+            .FontSize(14);
+
+        // Border Theme Keys
+        BorderStyles.Themes[ThemeKeys.Card] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface)
+            .Stroke(IsLightTheme ? AppColors.Light.Outline : AppColors.Dark.Outline)
+            .StrokeThickness(0)
+            .StrokeShape(new RoundRectangle().CornerRadius(12))
+            .Padding(16);
+
+        BorderStyles.Themes[ThemeKeys.CardVariant] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant)
+            .Stroke(IsLightTheme ? AppColors.Light.Outline : AppColors.Dark.Outline)
+            .StrokeThickness(0)
+            .StrokeShape(new RoundRectangle().CornerRadius(12))
+            .Padding(16);
+
+        BorderStyles.Themes[ThemeKeys.InputBorder] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant)
+            .Stroke(IsLightTheme ? AppColors.Light.Outline : AppColors.Dark.Outline)
+            .StrokeThickness(1)
+            .StrokeShape(new RoundRectangle().CornerRadius(8))
+            .Padding(12);
+
+        // Button Theme Keys
+        ButtonStyles.Themes[ThemeKeys.SecondaryButton] = _ => _
+            .TextColor(IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)
+            .BackgroundColor(IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant)
+            .FontFamily("Manrope")
+            .FontSize(14)
+            .BorderWidth(0)
+            .CornerRadius(8)
+            .Padding(14, 10)
+            .MinimumHeightRequest(44);
+
+        ButtonStyles.Themes[ThemeKeys.DangerButton] = _ => _
+            .TextColor(IsLightTheme ? AppColors.Light.OnPrimary : AppColors.Dark.OnPrimary)
+            .BackgroundColor(AppColors.Error)
+            .FontFamily("Manrope")
+            .FontSize(14)
+            .BorderWidth(0)
+            .CornerRadius(8)
+            .Padding(14, 10)
+            .MinimumHeightRequest(44);
+
+        ContentPageStyles.Default = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.Background : AppColors.Dark.Background);
 
         PickerStyles.Default = _ => _
             .TextColor(IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)
@@ -227,20 +292,28 @@ class ApplicationTheme : Theme
             .Set(MauiControls.TabbedPage.SelectedTabColorProperty, IsLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary);
 
         // Semantic theme keys for common patterns
-        
+
         // Label themes for text hierarchy
+        LabelStyles.Themes[ThemeKeys.TextSecondary] = _ => _
+            .TextColor(IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)
+            .FontSize(14);
+
         LabelStyles.Themes[ThemeKeys.SecondaryText] = _ => _
             .TextColor(IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)
             .FontSize(14);
-        
+
         LabelStyles.Themes[ThemeKeys.MutedText] = _ => _
             .TextColor(IsLightTheme ? AppColors.Light.TextMuted : AppColors.Dark.TextMuted)
             .FontSize(12);
-        
+
         LabelStyles.Themes[ThemeKeys.Caption] = _ => _
             .TextColor(IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)
             .FontSize(12);
-        
+
+        LabelStyles.Themes[ThemeKeys.PrimaryText] = _ => _
+            .TextColor(IsLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary)
+            .FontSize(14);
+
         // Border themes for cards and containers
         BorderStyles.Themes[ThemeKeys.Card] = _ => _
             .BackgroundColor(IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface)
@@ -248,14 +321,27 @@ class ApplicationTheme : Theme
             .StrokeThickness(1)
             .StrokeShape(new RoundRectangle().CornerRadius(8))
             .Padding(12);
-        
+
+        BorderStyles.Themes[ThemeKeys.CardBorder] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface)
+            .Stroke(IsLightTheme ? AppColors.Light.Outline : AppColors.Dark.Outline)
+            .StrokeThickness(1)
+            .StrokeShape(new RoundRectangle().CornerRadius(8));
+
+        BorderStyles.Themes[ThemeKeys.SelectedCard] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant)
+            .Stroke(IsLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary)
+            .StrokeThickness(2)
+            .StrokeShape(new RoundRectangle().CornerRadius(8))
+            .Padding(12);
+
         BorderStyles.Themes[ThemeKeys.CardVariant] = _ => _
             .BackgroundColor(IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant)
             .Stroke(IsLightTheme ? AppColors.Light.Outline : AppColors.Dark.Outline)
             .StrokeThickness(1)
             .StrokeShape(new RoundRectangle().CornerRadius(8))
             .Padding(12);
-        
+
         // Button theme for secondary/cancel actions
         ButtonStyles.Themes[ThemeKeys.SecondaryButton] = _ => _
             .BackgroundColor(IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant)
@@ -268,23 +354,4 @@ class ApplicationTheme : Theme
             .MinimumHeightRequest(44)
             .MinimumWidthRequest(44);
     }
-}
-
-/// <summary>
-/// Theme key constants for semantic theming.
-/// Use with .ThemeKey(ThemeKeys.X) for consistent styling across the app.
-/// </summary>
-public static class ThemeKeys
-{
-    // Text styles
-    public const string SecondaryText = nameof(SecondaryText);
-    public const string MutedText = nameof(MutedText);
-    public const string Caption = nameof(Caption);
-    
-    // Container styles
-    public const string Card = nameof(Card);
-    public const string CardVariant = nameof(CardVariant);
-    
-    // Button styles
-    public const string SecondaryButton = nameof(SecondaryButton);
 }

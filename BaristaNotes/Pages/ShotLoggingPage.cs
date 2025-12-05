@@ -2,6 +2,7 @@ using MauiReactor;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
+using BaristaNotes.Styles;
 
 namespace BaristaNotes.Pages;
 
@@ -26,7 +27,7 @@ class ShotLoggingState
     // Edit mode fields
     public DateTimeOffset? Timestamp { get; set; }
     public string? BeanName { get; set; }
-    
+
     // User tracking fields
     public List<UserProfileDto> AvailableUsers { get; set; } = new();
     public UserProfileDto? SelectedMaker { get; set; }
@@ -54,7 +55,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
     [Inject]
     IFeedbackService _feedbackService;
-    
+
     [Inject]
     IUserProfileService _userProfileService;
 
@@ -102,11 +103,11 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     s.SelectedBeanId = shot.Bean?.Id;
                     s.SelectedBeanIndex = shot.Bean != null ? s.AvailableBeans.FindIndex(b => b.Id == shot.Bean.Id) : -1;
                     s.SelectedDrinkIndex = s.DrinkTypes.IndexOf(shot.DrinkType);
-                    
+
                     // Set maker/recipient from shot
                     s.SelectedMaker = shot.MadeBy;
                     s.SelectedRecipient = shot.MadeFor;
-                    
+
                     s.IsLoading = false;
                 });
             }
@@ -130,14 +131,14 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         s.SelectedBeanId = lastShot.Bean?.Id;
                         s.SelectedBeanIndex = lastShot.Bean != null ? s.AvailableBeans.FindIndex(b => b.Id == lastShot.Bean.Id) : -1;
                         s.SelectedDrinkIndex = s.DrinkTypes.IndexOf(lastShot.DrinkType);
-                        
+
                         // Load last-used maker/recipient from preferences
                         var lastMakerId = _preferencesService.GetLastMadeById();
                         var lastRecipientId = _preferencesService.GetLastMadeForId();
-                        
+
                         if (lastMakerId.HasValue)
                             s.SelectedMaker = users.FirstOrDefault(u => u.Id == lastMakerId.Value);
-                        
+
                         if (lastRecipientId.HasValue)
                             s.SelectedRecipient = users.FirstOrDefault(u => u.Id == lastRecipientId.Value);
                     }
@@ -272,8 +273,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     // Bean Picker - editable in all modes
                     VStack(spacing: 4,
                         Label("Bean")
-                            .FontSize(12)
-                            .TextColor(Colors.Gray),
+                            .ThemeKey(ThemeKeys.Caption),
 
                         Picker()
                             .Title("Select Bean")
@@ -292,17 +292,16 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                             })
                             .HeightRequest(50)
                     ),
-                    
+
                     // Made By Picker
                     VStack(spacing: 4,
                         Label("Made By")
-                            .FontSize(12)
-                            .TextColor(Colors.Gray),
+                            .ThemeKey(ThemeKeys.Caption),
 
                         Picker()
                             .Title("Select Barista")
                             .ItemsSource(State.AvailableUsers.Select(u => u.Name).ToList())
-                            .SelectedIndex(State.SelectedMaker != null ? 
+                            .SelectedIndex(State.SelectedMaker != null ?
                                 State.AvailableUsers.FindIndex(u => u.Id == State.SelectedMaker.Id) : -1)
                             .OnSelectedIndexChanged(idx =>
                             {
@@ -317,12 +316,11 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                             })
                             .HeightRequest(50)
                     ),
-                    
+
                     // Made For Picker
                     VStack(spacing: 4,
                         Label("Made For")
-                            .FontSize(12)
-                            .TextColor(Colors.Gray),
+                            .ThemeKey(ThemeKeys.Caption),
 
                         Picker()
                             .Title("Select Customer")
@@ -346,8 +344,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     // Dose In
                     VStack(spacing: 4,
                         Label("Dose In (g)")
-                            .FontSize(12)
-                            .TextColor(Colors.Gray),
+                            .ThemeKey(ThemeKeys.Caption),
 
                         Entry()
                             .Text(State.DoseIn.ToString("F1"))
@@ -363,8 +360,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     // Grind Setting
                     VStack(spacing: 4,
                         Label("Grind Setting")
-                            .FontSize(12)
-                            .TextColor(Colors.Gray),
+                            .ThemeKey(ThemeKeys.Caption),
 
                         Entry()
                             .Text(State.GrindSetting)
@@ -375,8 +371,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     // Expected Time
                     VStack(spacing: 4,
                         Label("Expected Time (s)")
-                            .FontSize(12)
-                            .TextColor(Colors.Gray),
+                            .ThemeKey(ThemeKeys.Caption),
 
                         Entry()
                             .Text(State.ExpectedTime.ToString())
@@ -392,8 +387,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     // Expected Output
                     VStack(spacing: 4,
                         Label("Expected Output (g)")
-                            .FontSize(12)
-                            .TextColor(Colors.Gray),
+                            .ThemeKey(ThemeKeys.Caption),
 
                         Entry()
                             .Text(State.ExpectedOutput.ToString("F1"))
@@ -409,8 +403,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     // Drink Type
                     VStack(spacing: 4,
                         Label("Drink Type")
-                            .FontSize(12)
-                            .TextColor(Colors.Gray),
+                            .ThemeKey(ThemeKeys.Caption),
 
                         Picker()
                             .Title("Select Drink")
@@ -433,8 +426,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     // Actual Time
                     VStack(spacing: 4,
                         Label("Actual Time (s)")
-                            .FontSize(12)
-                            .TextColor(Colors.Gray),
+                            .ThemeKey(ThemeKeys.Caption),
 
                         Entry()
                             .Text(State.ActualTime?.ToString() ?? "")
@@ -452,8 +444,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     // Actual Output
                     VStack(spacing: 4,
                         Label("Actual Output (g)")
-                            .FontSize(12)
-                            .TextColor(Colors.Gray),
+                            .ThemeKey(ThemeKeys.Caption),
 
                         Entry()
                             .Text(State.ActualOutput?.ToString("F1") ?? "")
@@ -471,8 +462,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     // Rating
                     VStack(spacing: 4,
                         Label($"Rating: {State.Rating}/5")
-                            .FontSize(12)
-                            .TextColor(Colors.Gray),
+                            .ThemeKey(ThemeKeys.Caption),
 
                         Slider()
                             .Minimum(0)

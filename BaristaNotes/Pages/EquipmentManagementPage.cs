@@ -2,6 +2,9 @@ using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
+using BaristaNotes.Styles;
+using UXDivers.Popups.Maui.Controls;
+using UXDivers.Popups.Services;
 using The49MauiBottomSheet = The49.Maui.BottomSheet;
 
 namespace BaristaNotes.Pages;
@@ -216,87 +219,21 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
 
     async Task ShowDeleteConfirmation(EquipmentDto equipment)
     {
-        var page = ContainerPage;
-        if (page?.Window == null) return;
-
-        var confirmButton = new MauiControls.Button
+        var popup = new SimpleActionPopup
         {
-            Text = "Delete",
-            BackgroundColor = Colors.Red,
-            TextColor = Colors.White
-        };
-
-        var cancelButton = new MauiControls.Button
-        {
-            Text = "Cancel",
-            BackgroundColor = Colors.LightGray,
-            TextColor = Colors.Black
-        };
-
-        cancelButton.Clicked += async (s, e) =>
-        {
-            await _currentSheet?.DismissAsync()!;
-        };
-
-        confirmButton.Clicked += async (s, e) =>
-        {
-            await _currentSheet?.DismissAsync()!;
-            await DeleteEquipment(equipment);
-        };
-
-        var confirmContent = new MauiControls.VerticalStackLayout
-        {
-            Spacing = 16,
-            Padding = new Thickness(24),
-            BackgroundColor = Colors.White,
-            Children =
+            Title = $"Delete \"{equipment.Name}\"?",
+            Text = "This action cannot be undone.",
+            ActionButtonText = "Delete",
+            SecondaryActionButtonText = "Cancel",
+            ActionButtonCommand = new Command(async () =>
             {
-                new MauiControls.HorizontalStackLayout
-                {
-                    Spacing = 8,
-                    Children =
-                    {
-                        new MauiControls.Label { Text = "⚠️", FontSize = 24 },
-                        new MauiControls.Label
-                        {
-                            Text = "Delete Equipment",
-                            FontSize = 20,
-                            FontAttributes = MauiControls.FontAttributes.Bold,
-                            TextColor = Colors.Red
-                        }
-                    }
-                },
-                new MauiControls.Label
-                {
-                    Text = $"\"{equipment.Name}\"",
-                    FontSize = 16,
-                    FontAttributes = MauiControls.FontAttributes.Bold,
-                    HorizontalTextAlignment = TextAlignment.Center
-                },
-                new MauiControls.Label
-                {
-                    Text = "Are you sure you want to delete this equipment? This action cannot be undone.",
-                    FontSize = 14,
-                    TextColor = Colors.Gray,
-                    HorizontalTextAlignment = TextAlignment.Center
-                },
-                new MauiControls.HorizontalStackLayout
-                {
-                    Spacing = 12,
-                    HorizontalOptions = MauiControls.LayoutOptions.Center,
-                    Children = { cancelButton, confirmButton }
-                }
-            }
+                // Delete logic here
+                await DeleteEquipment(equipment);
+                await IPopupService.Current.PopAsync();
+            })
         };
 
-        _currentSheet = new The49MauiBottomSheet.BottomSheet
-        {
-            HasHandle = true,
-            IsCancelable = true,
-            Content = confirmContent
-        };
-
-        await _currentSheet.ShowAsync(page.Window);
+        await IPopupService.Current.PushAsync(popup);
     }
 
     async Task DeleteEquipment(EquipmentDto equipment)
@@ -356,7 +293,8 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
         }
 
         return ContentPage("Equipment",
-            ToolbarItem("+ Add")
+            ToolbarItem()
+                .IconImageSource(AppIcons.Add)
                 .Order(MauiControls.ToolbarItemOrder.Primary)
                 .Priority(0)
                 .OnClicked(async () => await ShowAddEquipmentSheet()),
@@ -404,31 +342,34 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
             Grid("Auto", "*,Auto",
                 VStack(spacing: 4,
                     Label(equipment.Name)
-                        .FontSize(18)
-                        .FontAttributes(MauiControls.FontAttributes.Bold),
+                        .ThemeKey(ThemeKeys.CardTitle),
                     Label(equipment.Type.ToString())
-                        .FontSize(14)
-                        .TextColor(Colors.Gray)
+                        .ThemeKey(ThemeKeys.CardSubtitle)
                 )
                 .GridColumn(0)
                 .VCenter(),
 
                 // Action buttons
-                HStack(spacing: 8,
-                    Button("✏️")
+                HStack(
+                    ImageButton()
+                        .Source(AppIcons.Edit)
+                        .Aspect(Aspect.Center)
                         .BackgroundColor(Colors.Transparent)
                         .OnClicked(async () => await ShowEditEquipmentSheet(equipment)),
-                    Button("🗑️")
+                    ImageButton()
+                        .Source(AppIcons.Delete)
+                        .Aspect(Aspect.Center)
                         .BackgroundColor(Colors.Transparent)
                         .OnClicked(async () => await ShowDeleteConfirmation(equipment))
                 )
+                .Spacing(AppSpacing.XS)
                 .GridColumn(1)
                 .VCenter()
+                .HEnd()
             )
             .Padding(12)
         )
         .Margin(0, 4)
-        .Stroke(Colors.LightGray)
-        .BackgroundColor(Colors.White);
+        .ThemeKey(ThemeKeys.CardBorder);
     }
 }

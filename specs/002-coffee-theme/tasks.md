@@ -36,9 +36,9 @@ BaristaNotes uses a mobile + API architecture:
 
 **Purpose**: Project structure validation and dependency verification
 
-- [ ] T001 Verify BaristaNotes, BaristaNotes.Core, and BaristaNotes.Tests projects build successfully
-- [ ] T002 Verify MauiReactor, Microsoft.Maui.Graphics, and Preferences API dependencies are available
-- [ ] T003 [P] Review existing ApplicationTheme.cs in BaristaNotes/Resources/Styles/ to understand MauiReactor Theme pattern
+- [X] T001 Verify BaristaNotes, BaristaNotes.Core, and BaristaNotes.Tests projects build successfully
+- [X] T002 Verify MauiReactor, Microsoft.Maui.Graphics, and Preferences API dependencies are available
+- [X] T003 [P] Review existing ApplicationTheme.cs in BaristaNotes/Resources/Styles/ to understand MauiReactor Theme pattern
 
 **Checkpoint**: Environment validated - ready for foundational work
 
@@ -52,8 +52,8 @@ BaristaNotes uses a mobile + API architecture:
 
 ### ThemeMode Enum and Contracts
 
-- [ ] T004 Create ThemeMode enum in BaristaNotes/Services/ThemeMode.cs with values: Light, Dark, System
-- [ ] T005 Create IThemeService interface in BaristaNotes/Services/IThemeService.cs with CurrentMode, CurrentTheme properties and GetThemeModeAsync, SetThemeModeAsync, ApplyTheme methods
+- [X] T004 Create ThemeMode enum in BaristaNotes/Services/ThemeMode.cs with values: Light, Dark, System
+- [X] T005 Create IThemeService interface in BaristaNotes/Services/IThemeService.cs with CurrentMode, CurrentTheme properties and GetThemeModeAsync, SetThemeModeAsync, ApplyTheme methods
 
 ### Color Contrast Validation Utility
 
@@ -120,27 +120,27 @@ BaristaNotes uses a mobile + API architecture:
 - [ ] T034 [US2] Write ThemeService test: SetThemeModeAsync calls ApplyTheme to immediately reflect change
 - [ ] T035 [US2] Write ThemeService test: ApplyTheme resolves correct AppTheme for each ThemeMode (Light→Light, Dark→Dark, System→Application.Current.RequestedTheme)
 - [ ] T036 [US2] Write ThemeService test: System theme change event triggers ApplyTheme only when CurrentMode is System
-- [ ] T037 [US2] Implement ThemeService class in BaristaNotes/Services/ThemeService.cs with constructor injecting IPreferencesService
-- [ ] T038 [US2] Implement ThemeService.GetThemeModeAsync reading "AppThemeMode" from Preferences API, defaulting to System if missing
-- [ ] T039 [US2] Implement ThemeService.SetThemeModeAsync saving mode as string to preferences, updating CurrentMode property, and calling ApplyTheme
-- [ ] T040 [US2] Implement ThemeService.ApplyTheme resolving effective AppTheme and setting Application.Current.UserAppTheme
-- [ ] T041 [US2] Implement ThemeService constructor subscribing to Application.Current.RequestedThemeChanged event
-- [ ] T042 [US2] Implement OnSystemThemeChanged event handler in ThemeService checking if CurrentMode is System before calling ApplyTheme
+- [X] T037 [US2] Implement ThemeService class in BaristaNotes/Services/ThemeService.cs with constructor injecting IPreferencesStore
+- [X] T038 [US2] Implement ThemeService.GetThemeModeAsync reading "AppThemeMode" from Preferences API, defaulting to System if missing
+- [X] T039 [US2] Implement ThemeService.SetThemeModeAsync saving mode as string to preferences, updating CurrentMode property, and calling ApplyTheme
+- [X] T040 [US2] Implement ThemeService.ApplyTheme resolving effective AppTheme and setting Application.Current.UserAppTheme
+- [X] T041 [US2] Implement ThemeService constructor subscribing to Application.Current.RequestedThemeChanged event
+- [X] T042 [US2] Implement OnSystemThemeChanged event handler in ThemeService checking if CurrentMode is System before calling ApplyTheme
 - [ ] T043 [US2] Run ThemeServiceTests to verify all 7 test cases pass
 
 ### Dependency Injection Registration
 
-- [ ] T044 [US2] Register ThemeService as singleton in MauiProgram.cs: `builder.Services.AddSingleton<IThemeService, ThemeService>()`
-- [ ] T045 [US2] Initialize ThemeService on app startup in MauiProgram.cs to load saved theme preference
+- [X] T044 [US2] Register ThemeService as singleton in MauiProgram.cs: `builder.Services.AddSingleton<IThemeService, ThemeService>()`
+- [X] T045 [US2] Initialize ThemeService on app startup in MauiProgram.cs to load saved theme preference
 
 ### Theme Selection UI in Settings Page
 
-- [ ] T046 [US2] Add theme selection section to SettingsPage.cs with Label("Theme") header
-- [ ] T047 [US2] Add VStack with 3 theme option buttons in SettingsPage.cs: "Light", "Dark", "System" with visual indicators showing current selection
-- [ ] T048 [US2] Inject IThemeService into SettingsPage.cs using `[Inject]` attribute
-- [ ] T049 [US2] Implement OnThemeSelected handler in SettingsPage.cs calling `await _themeService.SetThemeModeAsync(selectedMode)`
-- [ ] T050 [US2] Update SettingsPage state to highlight current theme option based on `_themeService.CurrentMode`
-- [ ] T051 [US2] Add visual feedback (check mark or highlighted background) to selected theme option in SettingsPage.cs
+- [X] T046 [US2] Add theme selection section to SettingsPage.cs with Label("Appearance") header
+- [X] T047 [US2] Add VStack with 3 theme option buttons in SettingsPage.cs: "Light", "Dark", "System" with visual indicators showing current selection
+- [X] T048 [US2] Inject IThemeService into SettingsPage.cs using `[Inject]` attribute
+- [X] T049 [US2] Implement OnThemeSelected handler in SettingsPage.cs calling `await _themeService.SetThemeModeAsync(selectedMode)`
+- [X] T050 [US2] Update SettingsPage state to highlight current theme option based on `_themeService.CurrentMode`
+- [X] T051 [US2] Add visual feedback (check mark or highlighted background) to selected theme option in SettingsPage.cs
 
 ### Integration Testing
 

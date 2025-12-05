@@ -42,7 +42,7 @@ partial class BeanFormSheet : Component<BeanFormState>
     protected override void OnMounted()
     {
         base.OnMounted();
-        
+
         if (_bean != null)
         {
             SetState(s =>
@@ -62,25 +62,24 @@ partial class BeanFormSheet : Component<BeanFormState>
         return ScrollView(
             VStack(spacing: 12,
                 Label(_bean != null ? "Edit Bean" : "Add Bean")
-                    .FontSize(20)
-                    .FontAttributes(MauiControls.FontAttributes.Bold),
+                    .ThemeKey(ThemeKeys.SubHeadline),
 
                 Label("Name *")
-                    .FontSize(14),
+                    .ThemeKey(ThemeKeys.SecondaryText),
                 Entry()
                     .Placeholder("Bean name (required)")
                     .Text(State.Name)
                     .OnTextChanged(text => SetState(s => s.Name = text)),
 
                 Label("Roaster")
-                    .FontSize(14),
+                    .ThemeKey(ThemeKeys.SecondaryText),
                 Entry()
                     .Placeholder("Roaster name")
                     .Text(State.Roaster)
                     .OnTextChanged(text => SetState(s => s.Roaster = text)),
 
                 Label("Origin")
-                    .FontSize(14),
+                    .ThemeKey(ThemeKeys.SecondaryText),
                 Entry()
                     .Placeholder("Country or region of origin")
                     .Text(State.Origin)
@@ -88,14 +87,14 @@ partial class BeanFormSheet : Component<BeanFormState>
 
                 HStack(spacing: 8,
                     Label("Track Roast Date")
-                        .FontSize(14)
+                        .ThemeKey(ThemeKeys.SecondaryText)
                         .VCenter(),
                     Switch()
                         .IsToggled(State.TrackRoastDate)
                         .OnToggled(args => SetState(s => s.TrackRoastDate = args.Value))
                 ),
 
-                State.TrackRoastDate 
+                State.TrackRoastDate
                     ? DatePicker()
                         .MaximumDate(DateTime.Now)
                         .Date(State.RoastDate)
@@ -103,7 +102,7 @@ partial class BeanFormSheet : Component<BeanFormState>
                     : null,
 
                 Label("Notes")
-                    .FontSize(14),
+                    .ThemeKey(ThemeKeys.SecondaryText),
                 Editor()
                     .Placeholder("Tasting notes, processing method, etc.")
                     .Text(State.Notes)
@@ -113,18 +112,19 @@ partial class BeanFormSheet : Component<BeanFormState>
                 State.ErrorMessage != null
                     ? Label(State.ErrorMessage)
                         .FontSize(12)
-                        .TextColor(Colors.Red)
+                        .TextColor(AppColors.Error)
                     : null,
 
                 HStack(spacing: 12,
                     Button("Cancel")
-                        .ThemeKey("SecondaryButton")
+                        .ThemeKey(ThemeKeys.SecondaryButton)
                         .OnClicked(() => _onCancel?.Invoke()),
                     Button("Save")
                         .OnClicked(OnSaveClicked)
                 )
                 .HEnd()
             )
+
             .Padding(20)
             .Spacing(12)
         );

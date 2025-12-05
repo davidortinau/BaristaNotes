@@ -5,6 +5,8 @@ using BaristaNotes.Styles;
 using BaristaNotes.Components;
 using BaristaNotes.Utilities;
 using MauiReactor;
+using UXDivers.Popups.Maui.Controls;
+using UXDivers.Popups.Services;
 
 namespace BaristaNotes.Pages;
 
@@ -87,40 +89,21 @@ partial class BeanManagementPage : Component<BeanManagementState>
 
     async Task ShowDeleteConfirmation(BeanDto bean)
     {
-        await BottomSheetManager.ShowAsync(
-            () => VStack(spacing: 16,
-                HStack(spacing: 8,
-                    Label("⚠️")
-                        .FontSize(24),
-                    Label("Delete Bean")
-                        .ThemeKey(ThemeKeys.SubHeadline)
-                ),
-                Label($"\"{bean.Name}\"")
-                    .FontSize(16)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .HCenter(),
-                Label("Are you sure you want to delete this bean? Shot records using this bean will retain the historical reference.")
-                    .FontSize(14)
-                    .ThemeKey(ThemeKeys.SecondaryText)
-                    .HCenter(),
-                HStack(spacing: 12,
-                    Button("Cancel")
-                        .ThemeKey(ThemeKeys.SecondaryButton)
-                        .OnClicked(async () => await BottomSheetManager.DismissAsync()),
-                    Button("Delete")
-                        .ThemeKey(ThemeKeys.DangerButton)
-                        .OnClicked(async () => await OnDeleteConfirmed(bean))
-                )
-                .HCenter()
-            )
-            .Padding(24),
-            sheet => sheet.HasBackdrop = true);
-    }
+        var popup = new SimpleActionPopup
+        {
+            Title = $"Delete \"{bean.Name}\"?",
+            Text = "This action cannot be undone.",
+            ActionButtonText = "Delete",
+            SecondaryActionButtonText = "Cancel",
+            ActionButtonCommand = new Command(async () =>
+            {
+                await DeleteBean(bean);
+                await IPopupService.Current.PopAsync();
+            })
+        };
 
-    async Task OnDeleteConfirmed(BeanDto bean)
-    {
-        await BottomSheetManager.DismissAsync();
-        await DeleteBean(bean);
+        await IPopupService.Current.PushAsync(popup);
+
     }
 
     async Task DeleteBean(BeanDto bean)

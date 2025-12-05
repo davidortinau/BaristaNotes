@@ -4,6 +4,9 @@ using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using BaristaNotes.Utilities;
+using Fonts;
+using UXDivers.Popups.Maui.Controls;
+using UXDivers.Popups.Services;
 
 namespace BaristaNotes.Pages;
 
@@ -62,13 +65,68 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
     async Task ShowProfileFormSheet(UserProfileDto? profile)
     {
-        await BottomSheetManager.ShowAsync(
-            () => new UserProfileFormComponent(
-                profile,
-                _profileService,
-                _feedbackService,
-                () => _ = LoadDataAsync()),
-            sheet => sheet.HasBackdrop = true);
+        var fields = new List<FormField>
+        {
+            new FormField
+            {
+                Placeholder = "Name",
+                Value = profile?.Name,
+                Icon = MaterialSymbolsFont.Person,
+                IconColor = AppColors.Dark.TextPrimary
+            },
+            new FormField
+            {
+                Placeholder = "Avatar URL",
+                Value = profile?.AvatarPath,
+                Icon = MaterialSymbolsFont.Photo,
+                IconColor = AppColors.Dark.TextPrimary
+            }
+        };
+
+        var popup = new FormPopup
+        {
+            Title = profile == null ? "Add Profile" : "Edit Profile",
+            // Text = "",
+            Items = fields,
+            ActionButtonText = "Save",
+            // SecondaryActionText = "Secondary Action Text",
+            SecondaryActionLinkText = "Cancel"
+
+        };
+
+        List<string?>? result = await IPopupService.Current.PushAsync(popup);
+
+        if (result != null && result.Count >= 2)
+        {
+            string? name = result[0];
+            string? avatar = result[1];
+            // Process login
+
+            if (profile != null)
+            {
+                await _profileService.UpdateProfileAsync(
+                    profile.Id,
+                    new UpdateUserProfileDto
+                    {
+                        Name = name,
+                        AvatarPath = string.IsNullOrWhiteSpace(avatar) ? null : avatar
+                    });
+
+                await _feedbackService.ShowSuccessAsync($"{name} updated successfully");
+            }
+            else
+            {
+                await _profileService.CreateProfileAsync(
+                    new CreateUserProfileDto
+                    {
+                        Name = name,
+                        AvatarPath = string.IsNullOrWhiteSpace(avatar) ? null : avatar
+                    });
+
+                await _feedbackService.ShowSuccessAsync($"{name} created successfully");
+            }
+            await LoadDataAsync();
+        }
     }
 
     async Task ShowDeleteConfirmation(UserProfileDto profile)
@@ -82,11 +140,21 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
             return;
         }
 
-        await BottomSheetManager.ShowAsync(
-            () => new DeleteProfileConfirmationComponent(
-                profile,
-                () => _ = DeleteProfile(profile)),
-            sheet => sheet.HasBackdrop = true);
+        var popup = new SimpleActionPopup
+        {
+            Title = $"Delete \"{profile.Name}\"?",
+            Text = "This action cannot be undone.",
+            ActionButtonText = "Delete",
+            SecondaryActionButtonText = "Cancel",
+            ActionButtonCommand = new Command(async () =>
+            {
+                // Delete logic here
+                DeleteProfile(profile);
+                await IPopupService.Current.PopAsync();
+            })
+        };
+
+        await IPopupService.Current.PushAsync(popup);
     }
 
     async Task ShowLastProfileWarning()
@@ -98,8 +166,6 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
     async Task DeleteProfile(UserProfileDto profile)
     {
-
-
         try
         {
             await _profileService.DeleteProfileAsync(profile.Id);
@@ -211,16 +277,22 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                 .VCenter(),
 
                 // Action buttons
-                HStack(spacing: 8,
-                    Button("✏️")
+                HStack(
+                    ImageButton()
+                        .Source(AppIcons.Edit)
+                        .Aspect(Aspect.Center)
                         .BackgroundColor(Colors.Transparent)
                         .OnClicked(async () => await ShowEditProfileSheet(profile)),
-                    Button("🗑️")
+                    ImageButton()
+                        .Source(AppIcons.Delete)
+                        .Aspect(Aspect.Center)
                         .BackgroundColor(Colors.Transparent)
                         .OnClicked(async () => await ShowDeleteConfirmation(profile))
                 )
+                .Spacing(AppSpacing.XS)
                 .GridColumn(1)
                 .VCenter()
+                .HEnd()
             )
             .Padding(12)
         )

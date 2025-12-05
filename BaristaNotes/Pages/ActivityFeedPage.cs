@@ -5,6 +5,8 @@ using BaristaNotes.Core.Services.Exceptions;
 using BaristaNotes.Components;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
+using UXDivers.Popups.Maui.Controls;
+using UXDivers.Popups.Services;
 
 namespace BaristaNotes.Pages;
 
@@ -115,23 +117,21 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
 
     async Task ShowDeleteConfirmation(int shotId)
     {
-        SetState(s => s.ShotToDelete = shotId);
-
-        var result = await Microsoft.Maui.Controls.Application.Current!.MainPage!.DisplayAlert(
-            "Delete Shot?",
-            "This action cannot be undone. Are you sure you want to delete this shot?",
-            "Delete",
-            "Cancel"
-        );
-
-        if (result && State.ShotToDelete.HasValue)
+        var popup = new SimpleActionPopup
         {
-            await DeleteShot(State.ShotToDelete.Value);
-        }
-        else
-        {
-            SetState(s => s.ShotToDelete = null);
-        }
+            Title = $"Delete Shot?",
+            Text = "This action cannot be undone.",
+            ActionButtonText = "Delete",
+            SecondaryActionButtonText = "Cancel",
+            ActionButtonCommand = new Command(async () =>
+            {
+                // Delete logic here
+                await DeleteShot(shotId);
+                await IPopupService.Current.PopAsync();
+            })
+        };
+
+        await IPopupService.Current.PushAsync(popup);
     }
 
     async Task DeleteShot(int shotId)
@@ -255,12 +255,10 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                 .LeftItems(
                 [
                     SwipeItem()
-                        .Text("Edit")
-                        .BackgroundColor(Colors.Blue)
+                        .IconImageSource(AppIcons.Edit)
                         .OnInvoked(() => NavigateToEdit(shot.Id)),
                     SwipeItem()
-                        .Text("Delete")
-                        .BackgroundColor(Colors.Red)
+                        .IconImageSource(AppIcons.Delete)
                         .OnInvoked(async () => await ShowDeleteConfirmation(shot.Id))
                 ])
             )

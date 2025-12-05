@@ -3,6 +3,7 @@ using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
+using BaristaNotes.Components.FormFields;
 
 namespace BaristaNotes.Pages;
 
@@ -270,206 +271,154 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                             .Margin(0, 8) :
                         null,
 
-                    // Bean Picker - editable in all modes
-                    VStack(spacing: 4,
-                        Label("Bean")
-                            .ThemeKey(ThemeKeys.Caption),
-
-                        Picker()
-                            .Title("Select Bean")
-                            .ItemsSource(State.AvailableBeans.Select(b => b.Name).ToList())
-                            .SelectedIndex(State.SelectedBeanIndex)
-                            .OnSelectedIndexChanged(idx =>
+                    // Bean Picker
+                    new FormPickerField()
+                        .Label("Bean")
+                        .Title("Select Bean")
+                        .ItemsSource(State.AvailableBeans.Select(b => b.Name).ToList())
+                        .SelectedIndex(State.SelectedBeanIndex)
+                        .OnSelectedIndexChanged(idx =>
+                        {
+                            if (idx >= 0 && idx < State.AvailableBeans.Count)
                             {
-                                if (idx >= 0 && idx < State.AvailableBeans.Count)
+                                SetState(s =>
                                 {
-                                    SetState(s =>
-                                    {
-                                        s.SelectedBeanIndex = idx;
-                                        s.SelectedBeanId = State.AvailableBeans[idx].Id;
-                                    });
-                                }
-                            })
-                            .HeightRequest(50)
-                    ),
+                                    s.SelectedBeanIndex = idx;
+                                    s.SelectedBeanId = State.AvailableBeans[idx].Id;
+                                });
+                            }
+                        }),
 
                     // Made By Picker
-                    VStack(spacing: 4,
-                        Label("Made By")
-                            .ThemeKey(ThemeKeys.Caption),
-
-                        Picker()
-                            .Title("Select Barista")
-                            .ItemsSource(State.AvailableUsers.Select(u => u.Name).ToList())
-                            .SelectedIndex(State.SelectedMaker != null ?
-                                State.AvailableUsers.FindIndex(u => u.Id == State.SelectedMaker.Id) : -1)
-                            .OnSelectedIndexChanged(idx =>
+                    new FormPickerField()
+                        .Label("Made By")
+                        .Title("Select Barista")
+                        .ItemsSource(State.AvailableUsers.Select(u => u.Name).ToList())
+                        .SelectedIndex(State.SelectedMaker != null ?
+                            State.AvailableUsers.FindIndex(u => u.Id == State.SelectedMaker.Id) : -1)
+                        .OnSelectedIndexChanged(idx =>
+                        {
+                            if (idx >= 0 && idx < State.AvailableUsers.Count)
                             {
-                                if (idx >= 0 && idx < State.AvailableUsers.Count)
-                                {
-                                    SetState(s => s.SelectedMaker = State.AvailableUsers[idx]);
-                                }
-                                else
-                                {
-                                    SetState(s => s.SelectedMaker = null);
-                                }
-                            })
-                            .HeightRequest(50)
-                    ),
+                                SetState(s => s.SelectedMaker = State.AvailableUsers[idx]);
+                            }
+                            else
+                            {
+                                SetState(s => s.SelectedMaker = null);
+                            }
+                        }),
 
                     // Made For Picker
-                    VStack(spacing: 4,
-                        Label("Made For")
-                            .ThemeKey(ThemeKeys.Caption),
-
-                        Picker()
-                            .Title("Select Customer")
-                            .ItemsSource(State.AvailableUsers.Select(u => u.Name).ToList())
-                            .SelectedIndex(State.SelectedRecipient != null ?
-                                State.AvailableUsers.FindIndex(u => u.Id == State.SelectedRecipient.Id) : -1)
-                            .OnSelectedIndexChanged(idx =>
+                    new FormPickerField()
+                        .Label("Made For")
+                        .Title("Select Customer")
+                        .ItemsSource(State.AvailableUsers.Select(u => u.Name).ToList())
+                        .SelectedIndex(State.SelectedRecipient != null ?
+                            State.AvailableUsers.FindIndex(u => u.Id == State.SelectedRecipient.Id) : -1)
+                        .OnSelectedIndexChanged(idx =>
+                        {
+                            if (idx >= 0 && idx < State.AvailableUsers.Count)
                             {
-                                if (idx >= 0 && idx < State.AvailableUsers.Count)
-                                {
-                                    SetState(s => s.SelectedRecipient = State.AvailableUsers[idx]);
-                                }
-                                else
-                                {
-                                    SetState(s => s.SelectedRecipient = null);
-                                }
-                            })
-                            .HeightRequest(50)
-                    ),
+                                SetState(s => s.SelectedRecipient = State.AvailableUsers[idx]);
+                            }
+                            else
+                            {
+                                SetState(s => s.SelectedRecipient = null);
+                            }
+                        }),
 
                     // Dose In
-                    VStack(spacing: 4,
-                        Label("Dose In (g)")
-                            .ThemeKey(ThemeKeys.Caption),
-
-                        Entry()
-                            .Text(State.DoseIn.ToString("F1"))
-                            .Keyboard(Microsoft.Maui.Keyboard.Numeric)
-                            .OnTextChanged(text =>
-                            {
-                                if (decimal.TryParse(text, out var val))
-                                    SetState(s => s.DoseIn = val);
-                            })
-                            .HeightRequest(50)
-                    ),
+                    new FormEntryField()
+                        .Label("Dose In (g)")
+                        .Text(State.DoseIn.ToString("F1"))
+                        .Keyboard(Microsoft.Maui.Keyboard.Numeric)
+                        .OnTextChanged(text =>
+                        {
+                            if (decimal.TryParse(text, out var val))
+                                SetState(s => s.DoseIn = val);
+                        }),
 
                     // Grind Setting
-                    VStack(spacing: 4,
-                        Label("Grind Setting")
-                            .ThemeKey(ThemeKeys.Caption),
-
-                        Entry()
-                            .Text(State.GrindSetting)
-                            .OnTextChanged(text => SetState(s => s.GrindSetting = text))
-                            .HeightRequest(50)
-                    ),
+                    new FormEntryField()
+                        .Label("Grind Setting")
+                        .Text(State.GrindSetting)
+                        .OnTextChanged(text => SetState(s => s.GrindSetting = text)),
 
                     // Expected Time
-                    VStack(spacing: 4,
-                        Label("Expected Time (s)")
-                            .ThemeKey(ThemeKeys.Caption),
-
-                        Entry()
-                            .Text(State.ExpectedTime.ToString())
-                            .Keyboard(Microsoft.Maui.Keyboard.Numeric)
-                            .OnTextChanged(text =>
-                            {
-                                if (decimal.TryParse(text, out var val))
-                                    SetState(s => s.ExpectedTime = val);
-                            })
-                            .HeightRequest(50)
-                    ),
+                    new FormEntryField()
+                        .Label("Expected Time (s)")
+                        .Text(State.ExpectedTime.ToString())
+                        .Keyboard(Microsoft.Maui.Keyboard.Numeric)
+                        .OnTextChanged(text =>
+                        {
+                            if (decimal.TryParse(text, out var val))
+                                SetState(s => s.ExpectedTime = val);
+                        }),
 
                     // Expected Output
-                    VStack(spacing: 4,
-                        Label("Expected Output (g)")
-                            .ThemeKey(ThemeKeys.Caption),
-
-                        Entry()
-                            .Text(State.ExpectedOutput.ToString("F1"))
-                            .Keyboard(Microsoft.Maui.Keyboard.Numeric)
-                            .OnTextChanged(text =>
-                            {
-                                if (decimal.TryParse(text, out var val))
-                                    SetState(s => s.ExpectedOutput = val);
-                            })
-                            .HeightRequest(50)
-                    ),
+                    new FormEntryField()
+                        .Label("Expected Output (g)")
+                        .Text(State.ExpectedOutput.ToString("F1"))
+                        .Keyboard(Microsoft.Maui.Keyboard.Numeric)
+                        .OnTextChanged(text =>
+                        {
+                            if (decimal.TryParse(text, out var val))
+                                SetState(s => s.ExpectedOutput = val);
+                        }),
 
                     // Drink Type
-                    VStack(spacing: 4,
-                        Label("Drink Type")
-                            .ThemeKey(ThemeKeys.Caption),
-
-                        Picker()
-                            .Title("Select Drink")
-                            .ItemsSource(State.DrinkTypes)
-                            .SelectedIndex(State.SelectedDrinkIndex)
-                            .OnSelectedIndexChanged(idx =>
+                    new FormPickerField()
+                        .Label("Drink Type")
+                        .Title("Select Drink")
+                        .ItemsSource(State.DrinkTypes)
+                        .SelectedIndex(State.SelectedDrinkIndex)
+                        .OnSelectedIndexChanged(idx =>
+                        {
+                            if (idx >= 0 && idx < State.DrinkTypes.Count)
                             {
-                                if (idx >= 0 && idx < State.DrinkTypes.Count)
+                                SetState(s =>
                                 {
-                                    SetState(s =>
-                                    {
-                                        s.SelectedDrinkIndex = idx;
-                                        s.DrinkType = State.DrinkTypes[idx];
-                                    });
-                                }
-                            })
-                            .HeightRequest(50)
-                    ),
+                                    s.SelectedDrinkIndex = idx;
+                                    s.DrinkType = State.DrinkTypes[idx];
+                                });
+                            }
+                        }),
 
                     // Actual Time
-                    VStack(spacing: 4,
-                        Label("Actual Time (s)")
-                            .ThemeKey(ThemeKeys.Caption),
-
-                        Entry()
-                            .Text(State.ActualTime?.ToString() ?? "")
-                            .Keyboard(Microsoft.Maui.Keyboard.Numeric)
-                            .OnTextChanged(text =>
-                            {
-                                if (string.IsNullOrWhiteSpace(text))
-                                    SetState(s => s.ActualTime = null);
-                                else if (decimal.TryParse(text, out var val))
-                                    SetState(s => s.ActualTime = val);
-                            })
-                            .HeightRequest(50)
-                    ),
+                    new FormEntryField()
+                        .Label("Actual Time (s)")
+                        .Text(State.ActualTime?.ToString() ?? "")
+                        .Placeholder("Optional")
+                        .Keyboard(Microsoft.Maui.Keyboard.Numeric)
+                        .OnTextChanged(text =>
+                        {
+                            if (string.IsNullOrWhiteSpace(text))
+                                SetState(s => s.ActualTime = null);
+                            else if (decimal.TryParse(text, out var val))
+                                SetState(s => s.ActualTime = val);
+                        }),
 
                     // Actual Output
-                    VStack(spacing: 4,
-                        Label("Actual Output (g)")
-                            .ThemeKey(ThemeKeys.Caption),
-
-                        Entry()
-                            .Text(State.ActualOutput?.ToString("F1") ?? "")
-                            .Keyboard(Microsoft.Maui.Keyboard.Numeric)
-                            .OnTextChanged(text =>
-                            {
-                                if (string.IsNullOrWhiteSpace(text))
-                                    SetState(s => s.ActualOutput = null);
-                                else if (decimal.TryParse(text, out var val))
-                                    SetState(s => s.ActualOutput = val);
-                            })
-                            .HeightRequest(50)
-                    ),
+                    new FormEntryField()
+                        .Label("Actual Output (g)")
+                        .Text(State.ActualOutput?.ToString("F1") ?? "")
+                        .Placeholder("Optional")
+                        .Keyboard(Microsoft.Maui.Keyboard.Numeric)
+                        .OnTextChanged(text =>
+                        {
+                            if (string.IsNullOrWhiteSpace(text))
+                                SetState(s => s.ActualOutput = null);
+                            else if (decimal.TryParse(text, out var val))
+                                SetState(s => s.ActualOutput = val);
+                        }),
 
                     // Rating
-                    VStack(spacing: 4,
-                        Label($"Rating: {State.Rating}/5")
-                            .ThemeKey(ThemeKeys.Caption),
-
-                        Slider()
-                            .Minimum(0)
-                            .Maximum(5)
-                            .Value(State.Rating)
-                            .OnValueChanged(val => SetState(s => s.Rating = (int)val))
-                    ),
+                    new FormSliderField()
+                        .Label($"Rating: {State.Rating}/5")
+                        .Minimum(0)
+                        .Maximum(5)
+                        .Value(State.Rating)
+                        .OnValueChanged(val => SetState(s => s.Rating = (int)val)),
 
                     // Save Button
                     Button("Save Shot")

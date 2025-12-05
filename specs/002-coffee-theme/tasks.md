@@ -303,7 +303,7 @@ Phase 1 (Setup) → Phase 2 (Foundation)
 - [X] T086 [BUG] Verify Application.Current.RequestedThemeChanged event handler is still subscribed after theme mode changes
 - [X] T087 [BUG] Test if ThemeService.OnSystemThemeChanged is being called when device theme changes while in System mode
 - [X] T088 [BUG] Add logging to ThemeService to track event subscription lifecycle and theme change triggers
-- [ ] T089 [BUG] Fix System theme tracking bug (potential MauiReactor bug or event unsubscription issue)
+- [X] T089 [BUG] Fix System theme tracking bug (changed ApplyTheme to use AppTheme.Unspecified for System mode to allow RequestedThemeChanged events)
 
 ### Bottom Sheet Theme Colors
 

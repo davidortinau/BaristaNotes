@@ -11,10 +11,19 @@ public class ThemeService : IThemeService
 
     public ThemeMode CurrentMode => _currentMode;
 
-    public AppTheme CurrentTheme =>
-        _currentMode == ThemeMode.System
-            ? Application.Current?.RequestedTheme ?? AppTheme.Light
-            : _currentMode == ThemeMode.Dark ? AppTheme.Dark : AppTheme.Light;
+    public AppTheme CurrentTheme
+    {
+        get
+        {
+            return _currentMode switch
+            {
+                ThemeMode.Light => AppTheme.Light,
+                ThemeMode.Dark => AppTheme.Dark,
+                ThemeMode.System => Application.Current?.RequestedTheme ?? AppTheme.Light,
+                _ => AppTheme.Light
+            };
+        }
+    }
 
     public ThemeService(IPreferencesStore preferencesStore)
     {
@@ -51,12 +60,14 @@ public class ThemeService : IThemeService
     {
         if (Application.Current == null) return;
 
+        // When System mode, use Unspecified to let system control the theme
+        // This allows RequestedThemeChanged events to fire properly
         var targetTheme = _currentMode switch
         {
             ThemeMode.Light => AppTheme.Light,
             ThemeMode.Dark => AppTheme.Dark,
-            ThemeMode.System => Application.Current.RequestedTheme,
-            _ => AppTheme.Light
+            ThemeMode.System => AppTheme.Unspecified, // Let system control theme
+            _ => AppTheme.Unspecified
         };
 
         System.Diagnostics.Debug.WriteLine($"[ThemeService] ApplyTheme: CurrentMode={_currentMode}, TargetTheme={targetTheme}, SystemTheme={Application.Current.RequestedTheme}");

@@ -16,7 +16,6 @@ class UserProfileManagementState
     public List<UserProfileDto> Profiles { get; set; } = new();
     public bool IsLoading { get; set; }
     public string? ErrorMessage { get; set; }
-    public int? SelectedProfileId { get; set; }
 }
 
 partial class UserProfileManagementPage : Component<UserProfileManagementState>
@@ -26,12 +25,6 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
     [Inject]
     IFeedbackService _feedbackService;
-    
-    [Inject]
-    IImagePickerService _imagePickerService;
-    
-    [Inject]
-    IImageProcessingService _imageProcessingService;
 
     protected override void OnMounted()
     {
@@ -68,8 +61,13 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
     async Task ShowEditProfileSheet(UserProfileDto profile)
     {
-        // Show profile detail with image picker
-        SetState(s => s.SelectedProfileId = profile.Id);
+        // Navigate to profile detail page
+        var navigationParameter = new ShellNavigationQueryParameters
+        {
+            { "profileId", profile.Id }
+        };
+        
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync("profile-detail", navigationParameter);
     }
     
     async Task ShowProfileFormSheet(UserProfileDto? profile)
@@ -197,16 +195,6 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
     public override VisualNode Render()
     {
-        // If a profile is selected, show detail view
-        if (State.SelectedProfileId.HasValue)
-        {
-            var profile = State.Profiles.FirstOrDefault(p => p.Id == State.SelectedProfileId.Value);
-            if (profile != null)
-            {
-                return RenderProfileDetailPage(profile);
-            }
-        }
-        
         if (State.IsLoading)
         {
             return ContentPage("Profiles",
@@ -322,76 +310,5 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
         )
         .Margin(0, 4)
         .ThemeKey(ThemeKeys.CardBorder);
-    }
-    
-    VisualNode RenderProfileDetailPage(UserProfileDto profile)
-    {
-        return ContentPage(
-            ToolbarItem("Back")
-                .Order(MauiControls.ToolbarItemOrder.Primary)
-                .Priority(0)
-                .OnClicked(() => SetState(s => s.SelectedProfileId = null)),
-            ScrollView(
-                VStack(spacing: 24,
-                    // Profile image picker section
-                    VStack(spacing: 16,
-                        Label("Profile Picture")
-                            .FontSize(20)
-                            .FontAttributes(MauiControls.FontAttributes.Bold)
-                            .Padding(16, 16, 16, 0),
-                        new ProfileImagePicker(
-                            profile.Id,
-                            _imagePickerService,
-                            _profileService
-                        )
-                    )
-                    .Padding(16, 0),
-                    
-                    // Profile details section
-                    VStack(spacing: 16,
-                        Label("Profile Details")
-                            .FontSize(20)
-                            .FontAttributes(MauiControls.FontAttributes.Bold)
-                            .Padding(16, 0),
-                        
-                        Border(
-                            VStack(spacing: 12,
-                                HStack(spacing: 12,
-                                    Label("Name:")
-                                        .FontAttributes(MauiControls.FontAttributes.Bold)
-                                        .WidthRequest(80),
-                                    Label(profile.Name)
-                                ),
-                                HStack(spacing: 12,
-                                    Label("Created:")
-                                        .FontAttributes(MauiControls.FontAttributes.Bold)
-                                        .WidthRequest(80),
-                                    Label(profile.CreatedAt.ToString("MMM d, yyyy"))
-                                )
-                            )
-                            .Padding(16)
-                        )
-                        .ThemeKey(ThemeKeys.CardBorder)
-                    )
-                    .Padding(16, 0),
-                    
-                    // Action buttons
-                    VStack(spacing: 12,
-                        Button("Edit Name")
-                            .OnClicked(async () => await ShowProfileFormSheetLegacy(profile))
-                            .Margin(16, 0),
-                        Button("Delete Profile")
-                            .OnClicked(async () => 
-                            {
-                                await ShowDeleteConfirmation(profile);
-                                SetState(s => s.SelectedProfileId = null);
-                            })
-                            .Margin(16, 0)
-                            .BackgroundColor(Colors.Red)
-                    )
-                )
-                .Padding(0, 16)
-            )
-        ).Title($"{profile.Name}'s Profile");
     }
 }

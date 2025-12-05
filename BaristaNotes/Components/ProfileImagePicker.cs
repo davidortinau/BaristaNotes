@@ -80,25 +80,42 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
             
             if (result.Success)
             {
-                await LoadProfileImage();
+                // Force reload of image path and refresh component
+                var newPath = await _userProfileService.GetProfileImagePathAsync(_profileId);
+                SetState(s => 
+                {
+                    s.ImagePath = newPath;
+                    s.IsLoading = false;
+                });
+                
+                // Force component invalidation to refresh the image
+                Invalidate();
             }
             else
             {
-                SetState(s => s.ErrorMessage = result.ErrorMessage);
+                SetState(s => 
+                {
+                    s.ErrorMessage = result.ErrorMessage;
+                    s.IsLoading = false;
+                });
             }
         }
         catch (PermissionException)
         {
-            SetState(s => s.ErrorMessage = "Photo library permission denied");
+            SetState(s => 
+            {
+                s.ErrorMessage = "Photo library permission denied";
+                s.IsLoading = false;
+            });
         }
         catch (Exception ex)
         {
-            SetState(s => s.ErrorMessage = "Failed to update image");
+            SetState(s => 
+            {
+                s.ErrorMessage = "Failed to update image";
+                s.IsLoading = false;
+            });
             Console.WriteLine($"Error: {ex.Message}");
-        }
-        finally
-        {
-            SetState(s => s.IsLoading = false);
         }
     }
     
@@ -108,17 +125,32 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
         {
             SetState(s => s.IsLoading = true);
             
-            await _userProfileService.RemoveProfileImageAsync(_profileId);
-            await LoadProfileImage();
+            var removed = await _userProfileService.RemoveProfileImageAsync(_profileId);
+            
+            if (removed)
+            {
+                SetState(s => 
+                {
+                    s.ImagePath = null;
+                    s.IsLoading = false;
+                });
+                
+                // Force component invalidation to refresh the image
+                Invalidate();
+            }
+            else
+            {
+                SetState(s => s.IsLoading = false);
+            }
         }
         catch (Exception ex)
         {
-            SetState(s => s.ErrorMessage = "Failed to remove image");
+            SetState(s => 
+            {
+                s.ErrorMessage = "Failed to remove image";
+                s.IsLoading = false;
+            });
             Console.WriteLine($"Error: {ex.Message}");
-        }
-        finally
-        {
-            SetState(s => s.IsLoading = false);
         }
     }
     

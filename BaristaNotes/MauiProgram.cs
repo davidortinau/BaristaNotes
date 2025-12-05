@@ -193,6 +193,7 @@ public static class MauiProgram
 		MauiReactor.Routing.RegisterRoute<Pages.EquipmentManagementPage>("equipment");
 		MauiReactor.Routing.RegisterRoute<Pages.BeanManagementPage>("beans");
 		MauiReactor.Routing.RegisterRoute<Pages.UserProfileManagementPage>("profiles");
+		MauiReactor.Routing.RegisterRoute<Pages.ProfileDetailPage>("profile-detail");
 		MauiReactor.Routing.RegisterRoute<Pages.ShotLoggingPage>("shot-logging");
 	}
 }

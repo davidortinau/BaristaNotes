@@ -14,11 +14,13 @@ class ProfileFormPageState
     public string? ErrorMessage { get; set; }
 }
 
-[QueryProperty(nameof(ProfileId), "profileId")]
-partial class ProfileFormPage : Component<ProfileFormPageState>
+class ProfileFormPageProps
 {
     public int? ProfileId { get; set; }
-    
+}
+
+partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageProps>
+{
     [Inject]
     IUserProfileService _profileService;
     
@@ -32,20 +34,21 @@ partial class ProfileFormPage : Component<ProfileFormPageState>
     {
         base.OnMounted();
         
-        // If ProfileId is set, load the profile data
-        if (ProfileId.HasValue && ProfileId.Value > 0)
+        // If ProfileId is set via props, load the profile data
+        if (Props.ProfileId.HasValue && Props.ProfileId.Value > 0)
         {
+            SetState(s => s.ProfileId = Props.ProfileId);
             _ = LoadProfileAsync();
         }
     }
     
     async Task LoadProfileAsync()
     {
-        if (!ProfileId.HasValue || ProfileId.Value <= 0) return;
+        if (!State.ProfileId.HasValue || State.ProfileId.Value <= 0) return;
         
         try
         {
-            var profile = await _profileService.GetProfileByIdAsync(ProfileId.Value);
+            var profile = await _profileService.GetProfileByIdAsync(State.ProfileId.Value);
             
             SetState(s =>
             {
@@ -138,7 +141,9 @@ partial class ProfileFormPage : Component<ProfileFormPageState>
     public override VisualNode Render()
     {
         var isEditMode = State.ProfileId.HasValue && State.ProfileId.Value > 0;
-        var title = isEditMode ? $"Edit {State.Name}" : "Add Profile";
+        var title = isEditMode 
+            ? (string.IsNullOrEmpty(State.Name) ? "Edit Profile" : $"Edit {State.Name}") 
+            : "Add Profile";
         
         return ContentPage(
             ScrollView(

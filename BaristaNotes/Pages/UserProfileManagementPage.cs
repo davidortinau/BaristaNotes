@@ -57,18 +57,13 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
     async Task ShowAddProfileSheet()
     {
         // Navigate to profile form page (no profileId = add mode)
-        await Microsoft.Maui.Controls.Shell.Current.GoToAsync("profile-form");
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ProfileFormPageProps>("profile-form", props => props.ProfileId = null);
     }
 
     async Task ShowEditProfileSheet(UserProfileDto profile)
     {
         // Navigate to profile form page with profileId (edit mode)
-        var navigationParameter = new ShellNavigationQueryParameters
-        {
-            { "profileId", profile.Id }
-        };
-        
-        await Microsoft.Maui.Controls.Shell.Current.GoToAsync("profile-form", navigationParameter);
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ProfileFormPageProps>("profile-form", props => props.ProfileId = profile.Id);
     }
     
     async Task ShowDeleteConfirmation(UserProfileDto profile)

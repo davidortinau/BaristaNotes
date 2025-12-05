@@ -34,7 +34,25 @@ partial class ProfileDetailPage : Component<ProfileDetailPageState>
     protected override void OnMounted()
     {
         base.OnMounted();
-        _ = LoadProfileAsync();
+        
+        // Load profile when component mounts
+        // ProfileId should be set via QueryProperty before OnMounted
+        if (ProfileId > 0)
+        {
+            _ = LoadProfileAsync();
+        }
+        else
+        {
+            // If ProfileId is 0, try again after a short delay
+            // (QueryProperty might not be set yet)
+            Task.Delay(100).ContinueWith(_ => 
+            {
+                if (ProfileId > 0 && State.Profile == null)
+                {
+                    _ = LoadProfileAsync();
+                }
+            });
+        }
     }
     
     async Task LoadProfileAsync()
@@ -133,20 +151,7 @@ partial class ProfileDetailPage : Component<ProfileDetailPageState>
     
     public override VisualNode Render()
     {
-        if (State.IsLoading || State.Profile == null)
-        {
-            return ContentPage("Profile",
-                VStack(
-                    ActivityIndicator()
-                        .IsRunning(true)
-                        .VCenter()
-                        .HCenter()
-                )
-                .VCenter()
-                .HCenter()
-            );
-        }
-        
+        // Show error state if there's an error
         if (!string.IsNullOrEmpty(State.ErrorMessage))
         {
             return ContentPage("Profile",
@@ -167,6 +172,20 @@ partial class ProfileDetailPage : Component<ProfileDetailPageState>
                 .VCenter()
                 .HCenter()
                 .Spacing(16)
+            );
+        }
+        
+        // Show profile content (even if still loading, but hide details until loaded)
+        if (State.Profile == null)
+        {
+            // Still loading profile data, show spinner in content area
+            return ContentPage("Profile",
+                VStack(
+                    ActivityIndicator()
+                        .IsRunning(true)
+                        .VCenter()
+                )
+                .VCenter()
             );
         }
         

@@ -14,6 +14,7 @@ Auto-generated from all feature plans. Last updated: 2025-12-02
 - SQLite via Entity Framework Core (ShotRecords, UserProfiles tables) (001-shot-tracking)
 - C# 13 / .NET 10 + .NET MAUI 10.0, MauiReactor (Theme system), Microsoft.Maui.Graphics (Color APIs), Microsoft.Maui.Essentials (Preferences API for theme persistence) (002-coffee-theme)
 - MAUI Preferences API for theme mode persistence (key-value storage in platform-specific secure storage) (002-coffee-theme)
+- C# 12 / .NET 10.0 (003-profile-image-picker)
 
 - C# / .NET 10.0 + MauiReactor (Reactor.Maui 4.0.3-beta), CommunityToolkit.Maui 9.1.1, Entity Framework Core 8.0.0 (002-crud-settings-modals)
 
@@ -33,8 +34,8 @@ tests/
 C# / .NET 10.0: Follow standard conventions
 
 ## Recent Changes
+- 003-profile-image-picker: Added C# 12 / .NET 10.0
 - 002-coffee-theme: Added C# 13 / .NET 10 + .NET MAUI 10.0, MauiReactor (Theme system), Microsoft.Maui.Graphics (Color APIs), Microsoft.Maui.Essentials (Preferences API for theme persistence)
-- 001-shot-tracking: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 - 001-shot-tracking: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 
 

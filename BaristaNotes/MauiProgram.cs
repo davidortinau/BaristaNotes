@@ -33,7 +33,7 @@ public static class MauiProgram
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("Manrope-Regular.ttf", "Manrope");
-				fonts.AddFont("Manrope-Semibold.ttf", "ManropeSemibold");
+				fonts.AddFont("Manrope-SemiBold.ttf", "ManropeSemibold");
 				fonts.AddFont("MaterialSymbols.ttf", MaterialSymbolsFont.FontFamily);
 			});
 
@@ -68,7 +68,7 @@ public static class MauiProgram
 #endif
 
 		var app = builder.Build();
-		
+
 		// Initialize theme service to load saved theme preference
 		var themeService = app.Services.GetRequiredService<IThemeService>();
 		Task.Run(async () =>

@@ -309,15 +309,17 @@ Phase 1 (Setup) → Phase 2 (Foundation)
 
 - [X] T090 [BUG] Verify EquipmentFormBottomSheet component applies theme colors using ThemeKey() instead of hardcoded colors
 - [X] T091 [BUG] Verify UserProfileFormBottomSheet component applies theme colors using ThemeKey() instead of hardcoded colors
-- [ ] T092 [BUG] Test all bottom sheets (Equipment, Beans, UserProfile) in both light and dark modes to verify proper theme application
-- [ ] T093 [BUG] Ensure all bottom sheet components recreate on theme change or use reactive theme bindings
+- [X] T092 [BUG] Test all bottom sheets (Equipment, Beans, UserProfile) in both light and dark modes to verify proper theme application
+- [X] T093 [BUG] Ensure all bottom sheet components recreate on theme change or use reactive theme bindings
 
 ### AppIcons Theme Reactivity
 
 - [X] T094 [BUG] Investigate why AppIcons (edit, delete) on EquipmentManagementPage don't change color between light and dark modes
 - [X] T095 [BUG] Review AppIcons implementation to determine if colors are hardcoded or using theme keys
 - [X] T096 [BUG] Update AppIcons to use theme-aware colors (e.g., ThemeKey for icon color or ApplicationTheme color properties)
-- [ ] T097 [BUG] Verify AppIcons update color immediately when theme changes across all pages using them
-- [ ] T098 [BUG] Test AppIcons in light mode (should use TextPrimary #352B23) and dark mode (should use TextPrimary #F8F6F4)
+- [X] T097 [BUG] Verify AppIcons update color immediately when theme changes across all pages using them
+- [X] T098 [BUG] Test AppIcons in light mode (should use TextPrimary #352B23) and dark mode (should use TextPrimary #F8F6F4)
+
+**Checkpoint**: All Phase 7 bug fixes implemented - Bottom sheets use proper theme colors, AppIcons react to theme changes, system theme tracking has debug logging
 
 **Checkpoint**: All theme reactivity bugs fixed - System theme tracking works, bottom sheets use correct colors, AppIcons react to theme changes

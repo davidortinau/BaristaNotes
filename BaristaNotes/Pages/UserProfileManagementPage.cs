@@ -1,3 +1,4 @@
+using BaristaNotes.Components;
 using BaristaNotes.Components.Forms;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
@@ -55,80 +56,16 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
     async Task ShowAddProfileSheet()
     {
-        await ShowProfileFormSheet(null);
+        // Navigate to profile form page (no profileId = add mode)
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ProfileFormPageProps>("profile-form", props => props.ProfileId = null);
     }
 
     async Task ShowEditProfileSheet(UserProfileDto profile)
     {
-        await ShowProfileFormSheet(profile);
+        // Navigate to profile form page with profileId (edit mode)
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ProfileFormPageProps>("profile-form", props => props.ProfileId = profile.Id);
     }
-
-    async Task ShowProfileFormSheet(UserProfileDto? profile)
-    {
-        var fields = new List<FormField>
-        {
-            new FormField
-            {
-                Placeholder = "Name",
-                Value = profile?.Name,
-                Icon = MaterialSymbolsFont.Person,
-                IconColor = AppColors.Dark.TextPrimary
-            },
-            new FormField
-            {
-                Placeholder = "Avatar URL",
-                Value = profile?.AvatarPath,
-                Icon = MaterialSymbolsFont.Photo,
-                IconColor = AppColors.Dark.TextPrimary
-            }
-        };
-
-        var popup = new FormPopup
-        {
-            Title = profile == null ? "Add Profile" : "Edit Profile",
-            // Text = "",
-            Items = fields,
-            ActionButtonText = "Save",
-            // SecondaryActionText = "Secondary Action Text",
-            SecondaryActionLinkText = "Cancel"
-
-        };
-
-        List<string?>? result = await IPopupService.Current.PushAsync(popup);
-
-        if (result != null && result.Count >= 2)
-        {
-            string? name = result[0];
-            string? avatar = result[1];
-            // Process login
-
-            if (profile != null)
-            {
-                await _profileService.UpdateProfileAsync(
-                    profile.Id,
-                    new UpdateUserProfileDto
-                    {
-                        Name = name,
-                        AvatarPath = string.IsNullOrWhiteSpace(avatar) ? null : avatar
-                    });
-
-                await _feedbackService.ShowSuccessAsync($"{name} updated successfully");
-            }
-            else
-            {
-                await _profileService.CreateProfileAsync(
-                    new CreateUserProfileDto
-                    {
-                        Name = name,
-                        AvatarPath = string.IsNullOrWhiteSpace(avatar) ? null : avatar
-                    });
-
-                await _feedbackService.ShowSuccessAsync($"{name} created successfully");
-            }
-            await LoadDataAsync();
-        }
-    }
-
+    
     async Task ShowDeleteConfirmation(UserProfileDto profile)
     {
         // Check if this is the last profile - prevent deletion

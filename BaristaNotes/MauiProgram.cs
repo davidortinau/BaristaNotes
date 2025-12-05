@@ -12,6 +12,7 @@ using The49.Maui.BottomSheet;
 using Fonts;
 using BaristaNotes.Styles;
 using Microsoft.Maui.Handlers;
+using Syncfusion.Maui.Core.Hosting;
 
 namespace BaristaNotes;
 
@@ -66,6 +67,7 @@ public static class MauiProgram
 			.UseUXDiversPopups()
 			.UseBottomSheet()
 			.UseMauiCommunityToolkit()
+			.ConfigureSyncfusionCore()
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("Manrope-Regular.ttf", "Manrope");

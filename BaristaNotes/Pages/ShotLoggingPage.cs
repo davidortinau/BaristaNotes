@@ -4,6 +4,7 @@ using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using BaristaNotes.Components.FormFields;
+using BaristaNotes.Components;
 
 namespace BaristaNotes.Pages;
 
@@ -271,6 +272,17 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                             .Margin(0, 8) :
                         null,
 
+                    // In/Out Gauges in 2-column grid
+                    RenderDoseGauges(),
+
+                    new FormSliderField()
+                        .Label($"Time: {State.ActualTime?.ToString("F0") ?? "0"}s")
+                        .Minimum(0)
+                        .Maximum(60)
+                        .Value((double)(State.ActualTime ?? 0))
+                        .OnValueChanged(val => SetState(s => s.ActualTime = (decimal)val)),
+
+
                     // Bean Picker
                     new FormPickerField()
                         .Label("Bean")
@@ -327,17 +339,6 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                             }
                         }),
 
-                    // Dose In
-                    new FormEntryField()
-                        .Label("Dose In (g)")
-                        .Text(State.DoseIn.ToString("F1"))
-                        .Keyboard(Microsoft.Maui.Keyboard.Numeric)
-                        .OnTextChanged(text =>
-                        {
-                            if (decimal.TryParse(text, out var val))
-                                SetState(s => s.DoseIn = val);
-                        }),
-
                     // Grind Setting
                     new FormEntryField()
                         .Label("Grind Setting")
@@ -384,33 +385,6 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                             }
                         }),
 
-                    // Actual Time
-                    new FormEntryField()
-                        .Label("Actual Time (s)")
-                        .Text(State.ActualTime?.ToString() ?? "")
-                        .Placeholder("Optional")
-                        .Keyboard(Microsoft.Maui.Keyboard.Numeric)
-                        .OnTextChanged(text =>
-                        {
-                            if (string.IsNullOrWhiteSpace(text))
-                                SetState(s => s.ActualTime = null);
-                            else if (decimal.TryParse(text, out var val))
-                                SetState(s => s.ActualTime = val);
-                        }),
-
-                    // Actual Output
-                    new FormEntryField()
-                        .Label("Actual Output (g)")
-                        .Text(State.ActualOutput?.ToString("F1") ?? "")
-                        .Placeholder("Optional")
-                        .Keyboard(Microsoft.Maui.Keyboard.Numeric)
-                        .OnTextChanged(text =>
-                        {
-                            if (string.IsNullOrWhiteSpace(text))
-                                SetState(s => s.ActualOutput = null);
-                            else if (decimal.TryParse(text, out var val))
-                                SetState(s => s.ActualOutput = val);
-                        }),
 
                     // Rating
                     new FormSliderField()
@@ -430,5 +404,131 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 .Padding(16)
             )
         );
+    }
+
+    VisualNode RenderDoseGauges()
+    {
+        var isLightTheme = Application.Current?.RequestedTheme == AppTheme.Light;
+        var primaryColor = AppColors.Light.Primary;
+        var textColor = isLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+        var secondaryTextColor = isLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+        var surfaceColor = isLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
+
+        return Grid("Auto", "*, *",
+            // In Gauge (left column)
+            VStack(spacing: 4,
+                RenderSingleGauge(
+                    value: (double)State.DoseIn,
+                    min: 15,
+                    max: 20,
+                    primaryColor: primaryColor,
+                    textColor: textColor,
+                    secondaryTextColor: secondaryTextColor,
+                    surfaceColor: surfaceColor,
+                    onValueChanged: val => SetState(st => st.DoseIn = (decimal)val)
+                ),
+                Label("In")
+                    .FontSize(14)
+                    .TextColor(secondaryTextColor)
+                    .HCenter()
+            ).GridColumn(0),
+
+            // Out Gauge (right column)
+            VStack(spacing: 4,
+                RenderSingleGauge(
+                    value: (double)(State.ActualOutput ?? 0),
+                    min: 25,
+                    max: 50,
+                    primaryColor: primaryColor,
+                    textColor: textColor,
+                    secondaryTextColor: secondaryTextColor,
+                    surfaceColor: surfaceColor,
+                    onValueChanged: val => SetState(st => st.ActualOutput = (decimal)val)
+                ),
+                Label("Out")
+                    .FontSize(14)
+                    .TextColor(secondaryTextColor)
+                    .HCenter()
+            ).GridColumn(1)
+        );
+    }
+
+    VisualNode RenderSingleGauge(
+        double value,
+        double min,
+        double max,
+        Color primaryColor,
+        Color textColor,
+        Color secondaryTextColor,
+        Color surfaceColor,
+        Action<double> onValueChanged)
+    {
+        return Grid(
+            new SfRadialGauge()
+                .HeightRequest(160)
+                .WidthRequest(160)
+                .BackgroundColor(Colors.Transparent)
+                .WithAxis(
+                    new RadialAxis()
+                        .Minimum(min)
+                        .Maximum(max)
+                        .Interval((max - min) / 5)
+                        .MinorTicksPerInterval(1)
+                        .ShowLabels(true)
+                        .ShowTicks(false)
+                        .RadiusFactor(0.8)
+                        .LabelFormat("0")
+                        .AxisLabelStyle(new Syncfusion.Maui.Gauges.GaugeLabelStyle
+                        {
+                            TextColor = secondaryTextColor,
+                            FontSize = 10
+                        })
+                        .AxisLineStyle(new Syncfusion.Maui.Gauges.RadialLineStyle
+                        {
+                            Fill = new SolidColorBrush(surfaceColor),
+                            Thickness = 20,
+                            CornerStyle = Syncfusion.Maui.Gauges.CornerStyle.BothCurve
+                        })
+                        .WithPointers(
+                            new RangePointer()
+                                .Value(value)
+                                .CornerStyle(Syncfusion.Maui.Gauges.CornerStyle.BothCurve)
+                                .PointerWidth(20)
+                                .Fill(new SolidColorBrush(primaryColor)),
+
+                            new ShapePointer()
+                                .Value(value)
+                                .IsInteractive(true)
+                                .StepFrequency(0.1)
+                                .ShapeType(Syncfusion.Maui.Gauges.ShapeType.Circle)
+                                .ShapeHeight(28)
+                                .ShapeWidth(28)
+                                .Fill(new SolidColorBrush(primaryColor))
+                                .HasShadow(true)
+                                .Offset(0)
+                                .OnValueChanged((s, e) =>
+                                {
+                                    if (e is Syncfusion.Maui.Gauges.ValueChangedEventArgs syncArgs)
+                                    {
+                                        var roundedValue = Math.Round(syncArgs.Value, 1);
+                                        onValueChanged(roundedValue);
+                                    }
+                                })
+                        )
+                ),
+
+            // Overlay center labels
+            VStack(spacing: 0,
+                Label(value.ToString("F1"))
+                    .FontSize(20)
+                    .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
+                    .TextColor(textColor)
+                    .HCenter(),
+                Label("g")
+                    .FontSize(9)
+                    .TextColor(secondaryTextColor)
+                    .HCenter()
+            ).VCenter().HCenter().TranslationY(10)
+        ).HeightRequest(160).WidthRequest(160).HCenter();
     }
 }

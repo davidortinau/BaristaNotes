@@ -551,24 +551,39 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         var isLightTheme = Application.Current?.RequestedTheme == AppTheme.Light;
         var textColor = isLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
 
-        // If user has an avatar image, use it; otherwise show default icon
-        // For now, we always show the icon since avatar picker is deferred
-        return Border(
-            Grid(
-                // Default person icon
-                Label(MaterialSymbolsFont.Account_circle)
-                    .FontFamily(MaterialSymbolsFont.FontFamily)
-                    .FontSize(36)
-                    .TextColor(user != null ? textColor : iconColor)
-                    .HCenter()
-                    .VCenter()
+        // Show profile image if available, otherwise show default icon
+        if (user != null && !string.IsNullOrEmpty(user.AvatarPath))
+        {
+            // User has a profile photo - display it
+            return Border(
+                Image(user.AvatarPath)
+                    .Aspect(Aspect.AspectFill)
             )
-        )
-        .StrokeShape(new RoundRectangle().CornerRadius(30))
-        .BackgroundColor(backgroundColor)
-        .HeightRequest(60)
-        .WidthRequest(60)
-        .OnTapped(onTapped);
+            .StrokeShape(new RoundRectangle().CornerRadius(30))
+            .BackgroundColor(backgroundColor)
+            .HeightRequest(60)
+            .WidthRequest(60)
+            .OnTapped(onTapped);
+        }
+        else
+        {
+            // No profile photo - show default person icon
+            return Border(
+                Grid(
+                    Label(MaterialSymbolsFont.Account_circle)
+                        .FontFamily(MaterialSymbolsFont.FontFamily)
+                        .FontSize(36)
+                        .TextColor(user != null ? textColor : iconColor)
+                        .HCenter()
+                        .VCenter()
+                )
+            )
+            .StrokeShape(new RoundRectangle().CornerRadius(30))
+            .BackgroundColor(backgroundColor)
+            .HeightRequest(60)
+            .WidthRequest(60)
+            .OnTapped(onTapped);
+        }
     }
 
     async Task ShowUserSelectionPopup(string title, Action<UserProfileDto> onSelected)
@@ -578,7 +593,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         {
             User = user,
             Name = user.Name,
-            Icon = MaterialSymbolsFont.Account_circle
+            Icon = MaterialSymbolsFont.Account_circle,
+            AvatarPath = user.AvatarPath
         }).ToList();
 
         ListActionPopup? popup = null;
@@ -607,13 +623,44 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 };
                 layout.GestureRecognizers.Add(tapGesture);
 
+                // Avatar container - conditionally show image or icon
+                var avatarContainer = new Microsoft.Maui.Controls.Border
+                {
+                    StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 20 },
+                    HeightRequest = 40,
+                    WidthRequest = 40,
+                    VerticalOptions = LayoutOptions.Center
+                };
+
+                // Bind to determine if we show image or icon
+                var avatarPathBinding = new Microsoft.Maui.Controls.Binding("AvatarPath");
+                avatarContainer.SetBinding(Microsoft.Maui.Controls.BindableObject.BindingContextProperty, ".");
+                
+                // Create both image and icon, we'll show one based on AvatarPath
+                var avatarImage = new Microsoft.Maui.Controls.Image
+                {
+                    Aspect = Aspect.AspectFill,
+                    HeightRequest = 40,
+                    WidthRequest = 40
+                };
+                avatarImage.SetBinding(Microsoft.Maui.Controls.Image.SourceProperty, "AvatarPath");
+                avatarImage.SetBinding(Microsoft.Maui.Controls.Image.IsVisibleProperty, new Microsoft.Maui.Controls.Binding("AvatarPath", converter: new NotNullOrEmptyConverter()));
+
                 var icon = new Microsoft.Maui.Controls.Label
                 {
                     FontFamily = MaterialSymbolsFont.FontFamily,
-                    FontSize = 24,
+                    FontSize = 32,
+                    HorizontalOptions = LayoutOptions.Center,
                     VerticalOptions = LayoutOptions.Center
                 };
                 icon.SetBinding(Microsoft.Maui.Controls.Label.TextProperty, "Icon");
+                icon.SetBinding(Microsoft.Maui.Controls.Label.IsVisibleProperty, new Microsoft.Maui.Controls.Binding("AvatarPath", converter: new NullOrEmptyConverter()));
+
+                var avatarGrid = new Microsoft.Maui.Controls.Grid();
+                avatarGrid.Children.Add(avatarImage);
+                avatarGrid.Children.Add(icon);
+                
+                avatarContainer.Content = avatarGrid;
 
                 var label = new Microsoft.Maui.Controls.Label
                 {
@@ -622,7 +669,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 };
                 label.SetBinding(Microsoft.Maui.Controls.Label.TextProperty, "Name");
 
-                layout.Children.Add(icon);
+                layout.Children.Add(avatarContainer);
                 layout.Children.Add(label);
 
                 return layout;
@@ -638,5 +685,34 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         public UserProfileDto User { get; set; } = null!;
         public string Name { get; set; } = string.Empty;
         public string Icon { get; set; } = string.Empty;
+        public string? AvatarPath { get; set; }
+    }
+
+    // Converter to check if string is null or empty
+    class NullOrEmptyConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            return value == null || (value is string str && string.IsNullOrEmpty(str));
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    // Converter to check if string is NOT null or empty
+    class NotNullOrEmptyConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            return value != null && value is string str && !string.IsNullOrEmpty(str);
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -1,10 +1,14 @@
 using MauiReactor;
+using MauiReactor.Shapes;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using BaristaNotes.Components.FormFields;
 using BaristaNotes.Components;
+using UXDivers.Popups.Maui.Controls;
+using UXDivers.Popups.Services;
+using Fonts;
 
 namespace BaristaNotes.Pages;
 
@@ -282,6 +286,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         .Value((double)(State.ActualTime ?? 0))
                         .OnValueChanged(val => SetState(s => s.ActualTime = (decimal)val)),
 
+                    // User Selection Row (Made By -> Made For)
+                    RenderUserSelectionRow(),
 
                     // Bean Picker
                     new FormPickerField()
@@ -298,44 +304,6 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                                     s.SelectedBeanIndex = idx;
                                     s.SelectedBeanId = State.AvailableBeans[idx].Id;
                                 });
-                            }
-                        }),
-
-                    // Made By Picker
-                    new FormPickerField()
-                        .Label("Made By")
-                        .Title("Select Barista")
-                        .ItemsSource(State.AvailableUsers.Select(u => u.Name).ToList())
-                        .SelectedIndex(State.SelectedMaker != null ?
-                            State.AvailableUsers.FindIndex(u => u.Id == State.SelectedMaker.Id) : -1)
-                        .OnSelectedIndexChanged(idx =>
-                        {
-                            if (idx >= 0 && idx < State.AvailableUsers.Count)
-                            {
-                                SetState(s => s.SelectedMaker = State.AvailableUsers[idx]);
-                            }
-                            else
-                            {
-                                SetState(s => s.SelectedMaker = null);
-                            }
-                        }),
-
-                    // Made For Picker
-                    new FormPickerField()
-                        .Label("Made For")
-                        .Title("Select Customer")
-                        .ItemsSource(State.AvailableUsers.Select(u => u.Name).ToList())
-                        .SelectedIndex(State.SelectedRecipient != null ?
-                            State.AvailableUsers.FindIndex(u => u.Id == State.SelectedRecipient.Id) : -1)
-                        .OnSelectedIndexChanged(idx =>
-                        {
-                            if (idx >= 0 && idx < State.AvailableUsers.Count)
-                            {
-                                SetState(s => s.SelectedRecipient = State.AvailableUsers[idx]);
-                            }
-                            else
-                            {
-                                SetState(s => s.SelectedRecipient = null);
                             }
                         }),
 
@@ -530,5 +498,145 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .HCenter()
             ).VCenter().HCenter().TranslationY(10)
         ).HeightRequest(160).WidthRequest(160).HCenter();
+    }
+
+    VisualNode RenderUserSelectionRow()
+    {
+        var isLightTheme = Application.Current?.RequestedTheme == AppTheme.Light;
+        var primaryColor = AppColors.Light.Primary;
+        var surfaceColor = isLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
+        var textColor = isLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+        var secondaryTextColor = isLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+
+        return HStack(spacing: 16,
+            // Made By avatar
+            VStack(spacing: 4,
+                RenderUserAvatar(
+                    user: State.SelectedMaker,
+                    backgroundColor: surfaceColor,
+                    iconColor: secondaryTextColor,
+                    onTapped: () => _ = ShowUserSelectionPopup("Made By", user => SetState(s => s.SelectedMaker = user))
+                ),
+                Label("Made by")
+                    .FontSize(12)
+                    .TextColor(secondaryTextColor)
+                    .HCenter()
+            ),
+
+            // Arrow
+            Label(MaterialSymbolsFont.Arrow_forward)
+                .FontFamily(MaterialSymbolsFont.FontFamily)
+                .FontSize(24)
+                .TextColor(secondaryTextColor)
+                .VCenter(),
+
+            // Made For avatar
+            VStack(spacing: 4,
+                RenderUserAvatar(
+                    user: State.SelectedRecipient,
+                    backgroundColor: surfaceColor,
+                    iconColor: secondaryTextColor,
+                    onTapped: () => _ = ShowUserSelectionPopup("Made For", user => SetState(s => s.SelectedRecipient = user))
+                ),
+                Label("For")
+                    .FontSize(12)
+                    .TextColor(secondaryTextColor)
+                    .HCenter()
+            )
+        ).HCenter();
+    }
+
+    VisualNode RenderUserAvatar(UserProfileDto? user, Color backgroundColor, Color iconColor, Action onTapped)
+    {
+        var isLightTheme = Application.Current?.RequestedTheme == AppTheme.Light;
+        var textColor = isLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+
+        // If user has an avatar image, use it; otherwise show default icon
+        // For now, we always show the icon since avatar picker is deferred
+        return Border(
+            Grid(
+                // Default person icon
+                Label(MaterialSymbolsFont.Account_circle)
+                    .FontFamily(MaterialSymbolsFont.FontFamily)
+                    .FontSize(36)
+                    .TextColor(user != null ? textColor : iconColor)
+                    .HCenter()
+                    .VCenter()
+            )
+        )
+        .StrokeShape(new RoundRectangle().CornerRadius(30))
+        .BackgroundColor(backgroundColor)
+        .HeightRequest(60)
+        .WidthRequest(60)
+        .OnTapped(onTapped);
+    }
+
+    async Task ShowUserSelectionPopup(string title, Action<UserProfileDto> onSelected)
+    {
+        // Create a simple wrapper class for display
+        var userItems = State.AvailableUsers.Select(user => new UserSelectionItem
+        {
+            User = user,
+            Name = user.Name,
+            Icon = MaterialSymbolsFont.Account_circle
+        }).ToList();
+
+        ListActionPopup? popup = null;
+        popup = new ListActionPopup
+        {
+            Title = title,
+            ShowActionButton = false,
+            ItemsSource = userItems,
+            ItemDataTemplate = new Microsoft.Maui.Controls.DataTemplate(() =>
+            {
+                var tapGesture = new Microsoft.Maui.Controls.TapGestureRecognizer();
+                tapGesture.SetBinding(Microsoft.Maui.Controls.TapGestureRecognizer.CommandParameterProperty, ".");
+                tapGesture.Tapped += async (s, e) =>
+                {
+                    if (e is Microsoft.Maui.Controls.TappedEventArgs args && args.Parameter is UserSelectionItem item)
+                    {
+                        onSelected(item.User);
+                        await IPopupService.Current.PopAsync();
+                    }
+                };
+
+                var layout = new Microsoft.Maui.Controls.HorizontalStackLayout
+                {
+                    Spacing = 12,
+                    Padding = new Thickness(0, 8)
+                };
+                layout.GestureRecognizers.Add(tapGesture);
+
+                var icon = new Microsoft.Maui.Controls.Label
+                {
+                    FontFamily = MaterialSymbolsFont.FontFamily,
+                    FontSize = 24,
+                    VerticalOptions = LayoutOptions.Center
+                };
+                icon.SetBinding(Microsoft.Maui.Controls.Label.TextProperty, "Icon");
+
+                var label = new Microsoft.Maui.Controls.Label
+                {
+                    FontSize = 16,
+                    VerticalOptions = LayoutOptions.Center
+                };
+                label.SetBinding(Microsoft.Maui.Controls.Label.TextProperty, "Name");
+
+                layout.Children.Add(icon);
+                layout.Children.Add(label);
+
+                return layout;
+            })
+        };
+
+        await IPopupService.Current.PushAsync(popup);
+    }
+
+    // Helper class for user selection display
+    class UserSelectionItem
+    {
+        public UserProfileDto User { get; set; } = null!;
+        public string Name { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
     }
 }

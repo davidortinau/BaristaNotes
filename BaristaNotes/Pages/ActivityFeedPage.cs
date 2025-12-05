@@ -177,7 +177,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                 .IsRefreshing(State.IsRefreshing)
                 .OnRefreshing(async () => await LoadShotsAsync(isRefresh: true))
                 .GridRow(1)
-            )
+            ).SafeAreaEdges(SafeAreaEdges.None)
         )
         .OnAppearing(() => OnPageAppearing());
     }
@@ -255,9 +255,11 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                 .LeftItems(
                 [
                     SwipeItem()
+                        .BackgroundColor(Colors.Transparent)
                         .IconImageSource(AppIcons.Edit)
                         .OnInvoked(() => NavigateToEdit(shot.Id)),
                     SwipeItem()
+                        .BackgroundColor(Colors.Transparent)
                         .IconImageSource(AppIcons.Delete)
                         .OnInvoked(async () => await ShowDeleteConfirmation(shot.Id))
                 ])
@@ -269,6 +271,9 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                 {
                     _ = LoadMoreShotsAsync();
                 }
-            });
+            })
+            .Footer(
+                ContentView().HeightRequest(80)
+            );
     }
 }

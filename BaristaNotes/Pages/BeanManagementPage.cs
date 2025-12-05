@@ -78,13 +78,51 @@ partial class BeanManagementPage : Component<BeanManagementState>
             sheet => sheet.HasBackdrop = true);
     }
 
-    void OnBeanSaved(BeanDto beanDto)
+    async void OnBeanSaved(BeanDto beanDto)
     {
-        _ = Task.Run(async () =>
+        try
         {
+            if (beanDto.Id == 0)
+            {
+                // Create new bean
+                var createDto = new CreateBeanDto
+                {
+                    Name = beanDto.Name,
+                    Roaster = beanDto.Roaster,
+                    RoastDate = beanDto.RoastDate,
+                    Origin = beanDto.Origin,
+                    Notes = beanDto.Notes
+                };
+                var result = await _beanService.CreateBeanAsync(createDto);
+                if (!result.Success)
+                {
+                    await _feedbackService.ShowErrorAsync(result.ErrorMessage ?? "Failed to create bean");
+                    return;
+                }
+                await _feedbackService.ShowSuccessAsync("Bean created successfully");
+            }
+            else
+            {
+                // Update existing bean
+                var updateDto = new UpdateBeanDto
+                {
+                    Name = beanDto.Name,
+                    Roaster = beanDto.Roaster,
+                    RoastDate = beanDto.RoastDate,
+                    Origin = beanDto.Origin,
+                    Notes = beanDto.Notes
+                };
+                await _beanService.UpdateBeanAsync(beanDto.Id, updateDto);
+                await _feedbackService.ShowSuccessAsync("Bean updated successfully");
+            }
+
             await BottomSheetManager.DismissAsync();
             await LoadDataAsync();
-        });
+        }
+        catch (Exception ex)
+        {
+            await _feedbackService.ShowErrorAsync(ex.Message);
+        }
     }
 
     async Task ShowDeleteConfirmation(BeanDto bean)

@@ -11,12 +11,14 @@ namespace BaristaNotes.Tests.Unit.Services;
 public class UserProfileServiceTests
 {
     private readonly Mock<IUserProfileRepository> _mockRepository;
+    private readonly Mock<IImageProcessingService> _mockImageProcessing;
     private readonly UserProfileService _service;
 
     public UserProfileServiceTests()
     {
         _mockRepository = new Mock<IUserProfileRepository>();
-        _service = new UserProfileService(_mockRepository.Object);
+        _mockImageProcessing = new Mock<IImageProcessingService>();
+        _service = new UserProfileService(_mockRepository.Object, _mockImageProcessing.Object);
     }
 
     [Fact]

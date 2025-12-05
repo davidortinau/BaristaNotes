@@ -78,9 +78,9 @@ Polish Phase (T035-T042)
 
 ### Tasks
 
-- [ ] T001 Create ImageValidationResult enum in BaristaNotes.Core/Services/ImageValidationResult.cs
-- [ ] T002 Create ProfileImageUpdateResult DTO in BaristaNotes.Core/Services/DTOs/ProfileImageUpdateResult.cs
-- [ ] T003 [P] Add default avatar placeholder image to BaristaNotes/Resources/Images/default_avatar.png
+- [x] T001 Create ImageValidationResult enum in BaristaNotes.Core/Services/ImageValidationResult.cs
+- [x] T002 Create ProfileImageUpdateResult DTO in BaristaNotes.Core/Services/DTOs/ProfileImageUpdateResult.cs
+- [x] T003 [P] Add default avatar placeholder image to BaristaNotes/Resources/Images/default_avatar.png
 
 ---
 
@@ -92,11 +92,11 @@ Polish Phase (T035-T042)
 
 ### Tasks
 
-- [ ] T004 Create IImagePickerService interface in BaristaNotes.Core/Services/IImagePickerService.cs
-- [ ] T005 [P] Create IImageProcessingService interface in BaristaNotes.Core/Services/IImageProcessingService.cs
-- [ ] T006 [P] Extend IUserProfileService interface with image methods in BaristaNotes.Core/Services/IUserProfileService.cs
-- [ ] T007 Register IMediaPicker singleton in BaristaNotes/MauiProgram.cs
-- [ ] T008 [P] Configure iOS photo library permission in BaristaNotes/Platforms/iOS/Info.plist
+- [x] T004 Create IImagePickerService interface in BaristaNotes.Core/Services/IImagePickerService.cs
+- [x] T005 [P] Create IImageProcessingService interface in BaristaNotes.Core/Services/IImageProcessingService.cs
+- [x] T006 [P] Extend IUserProfileService interface with image methods in BaristaNotes.Core/Services/IUserProfileService.cs
+- [x] T007 Register IMediaPicker singleton in BaristaNotes/MauiProgram.cs
+- [x] T008 [P] Configure iOS photo library permission in BaristaNotes/Platforms/iOS/Info.plist
 
 ---
 
@@ -119,22 +119,22 @@ Polish Phase (T035-T042)
 
 #### Test Setup (TDD)
 
-- [ ] T009 [US1] Create ImagePickerServiceTests.cs in BaristaNotes.Tests/Unit/Services/ with test for PickImageAsync returning stream
-- [ ] T010 [P] [US1] Add test in ImagePickerServiceTests.cs for user cancellation returning null
-- [ ] T011 [P] [US1] Add test in ImagePickerServiceTests.cs verifying MediaPickerOptions (MaxWidth=400, MaxHeight=400, Quality=85)
+- [x] T009 [US1] Create ImagePickerServiceTests.cs in BaristaNotes.Tests/Unit/Services/ with test for PickImageAsync returning stream
+- [x] T010 [P] [US1] Add test in ImagePickerServiceTests.cs for user cancellation returning null
+- [x] T011 [P] [US1] Add test in ImagePickerServiceTests.cs verifying MediaPickerOptions (MaxWidth=400, MaxHeight=400, Quality=85)
 
 #### Service Implementation
 
-- [ ] T012 [US1] Implement ImagePickerService class in BaristaNotes.Core/Services/ImagePickerService.cs using IMediaPicker
-- [ ] T013 [US1] Register IImagePickerService as singleton in BaristaNotes/MauiProgram.cs
+- [x] T012 [US1] Implement ImagePickerService class in BaristaNotes.Core/Services/ImagePickerService.cs using IMediaPicker
+- [x] T013 [US1] Register IImagePickerService as singleton in BaristaNotes/MauiProgram.cs
 
 #### UI Components
 
-- [ ] T014 [P] [US1] Create CircularAvatar component in BaristaNotes/Components/CircularAvatar.cs with Frame and Image controls
-- [ ] T015 [US1] Create ProfileImagePicker component in BaristaNotes/Components/ProfileImagePicker.cs with state management
-- [ ] T016 [US1] Add "Change Photo" button to ProfileImagePicker component with PickImageAsync handler
-- [ ] T017 [US1] Implement image display logic in ProfileImagePicker to show selected image or default placeholder
-- [ ] T018 [US1] Integrate ProfileImagePicker into UserProfileManagementPage.cs in BaristaNotes/Pages/
+- [x] T014 [P] [US1] Create CircularAvatar component in BaristaNotes/Components/CircularAvatar.cs with Frame and Image controls
+- [x] T015 [US1] Create ProfileImagePicker component in BaristaNotes/Components/ProfileImagePicker.cs with state management
+- [x] T016 [US1] Add "Change Photo" button to ProfileImagePicker component with PickImageAsync handler
+- [x] T017 [US1] Implement image display logic in ProfileImagePicker to show selected image or default placeholder
+- [ ] T018 [US1] Integrate ProfileImagePicker into UserProfileManagementPage.cs in BaristaNotes/Pages/ (TODO: Requires UI refactoring)
 
 ---
 
@@ -158,15 +158,15 @@ Polish Phase (T035-T042)
 
 #### Test Setup (TDD)
 
-- [ ] T019 [US2] Create ImageProcessingServiceTests.cs in BaristaNotes.Tests/Unit/Services/ with validation tests
-- [ ] T020 [P] [US2] Add test for ValidateImageAsync with valid image (300x300, 200KB) returning Valid
-- [ ] T021 [P] [US2] Add test for ValidateImageAsync with oversized image (500x500) returning DimensionsTooLarge
-- [ ] T022 [P] [US2] Add test for ValidateImageAsync with large file (2MB) returning TooLarge
+- [x] T019 [US2] Create ImageProcessingServiceTests.cs in BaristaNotes.Tests/Unit/Services/ with validation tests
+- [x] T020 [P] [US2] Add test for ValidateImageAsync with valid image (300x300, 200KB) returning Valid
+- [x] T021 [P] [US2] Add test for ValidateImageAsync with oversized image (500x500) returning DimensionsTooLarge
+- [x] T022 [P] [US2] Add test for ValidateImageAsync with large file (2MB) returning TooLarge
 
 #### Service Implementation
 
-- [ ] T023 [US2] Implement ImageProcessingService class in BaristaNotes.Core/Services/ImageProcessingService.cs with ValidateImageAsync
-- [ ] T024 [US2] Register IImageProcessingService as singleton in BaristaNotes/MauiProgram.cs
+- [x] T023 [US2] Implement ImageProcessingService class in BaristaNotes.Core/Services/ImageProcessingService.cs with ValidateImageAsync
+- [x] T024 [US2] Register IImageProcessingService as singleton in BaristaNotes/MauiProgram.cs
 
 ---
 
@@ -190,13 +190,13 @@ Polish Phase (T035-T042)
 
 #### Test Setup (TDD)
 
-- [ ] T025 [US3] Create UserProfileServiceImageTests.cs in BaristaNotes.Tests/Unit/Services/ for UpdateProfileImageAsync
-- [ ] T026 [P] [US3] Add test for UpdateProfileImageAsync with valid image updating database
+- [x] T025 [US3] Create UserProfileServiceImageTests.cs in BaristaNotes.Tests/Unit/Services/ for UpdateProfileImageAsync
+- [x] T026 [P] [US3] Add test for UpdateProfileImageAsync with valid image updating database
 
 #### Service Implementation
 
-- [ ] T027 [US3] Implement SaveImageAsync and GetImagePath in ImageProcessingService in BaristaNotes.Core/Services/ImageProcessingService.cs
-- [ ] T028 [US3] Implement UpdateProfileImageAsync in UserProfileService in BaristaNotes.Core/Services/UserProfileService.cs
+- [x] T027 [US3] Implement SaveImageAsync and GetImagePath in ImageProcessingService in BaristaNotes.Core/Services/ImageProcessingService.cs
+- [x] T028 [US3] Implement UpdateProfileImageAsync in UserProfileService in BaristaNotes.Core/Services/UserProfileService.cs
 
 ---
 
@@ -221,18 +221,18 @@ Polish Phase (T035-T042)
 
 #### Test Setup (TDD)
 
-- [ ] T029 [US4] Add test in ImageProcessingServiceTests.cs for DeleteImageAsync with existing file
-- [ ] T030 [P] [US4] Add test in ImageProcessingServiceTests.cs for DeleteImageAsync with non-existing file
-- [ ] T031 [P] [US4] Add test in UserProfileServiceImageTests.cs for RemoveProfileImageAsync
+- [x] T029 [US4] Add test in ImageProcessingServiceTests.cs for DeleteImageAsync with existing file
+- [x] T030 [P] [US4] Add test in ImageProcessingServiceTests.cs for DeleteImageAsync with non-existing file
+- [x] T031 [P] [US4] Add test in UserProfileServiceImageTests.cs for RemoveProfileImageAsync
 
 #### Service Implementation
 
-- [ ] T032 [US4] Implement DeleteImageAsync and ImageExists in ImageProcessingService in BaristaNotes.Core/Services/ImageProcessingService.cs
-- [ ] T033 [US4] Implement RemoveProfileImageAsync and GetProfileImagePathAsync in UserProfileService in BaristaNotes.Core/Services/UserProfileService.cs
+- [x] T032 [US4] Implement DeleteImageAsync and ImageExists in ImageProcessingService in BaristaNotes.Core/Services/ImageProcessingService.cs
+- [x] T033 [US4] Implement RemoveProfileImageAsync and GetProfileImagePathAsync in UserProfileService in BaristaNotes.Core/Services/UserProfileService.cs
 
 #### UI Implementation
 
-- [ ] T034 [US4] Add "Remove" button to ProfileImagePicker component with RemoveImageAsync handler in BaristaNotes/Components/ProfileImagePicker.cs
+- [x] T034 [US4] Add "Remove" button to ProfileImagePicker component with RemoveImageAsync handler in BaristaNotes/Components/ProfileImagePicker.cs
 
 ---
 
@@ -246,20 +246,20 @@ Polish Phase (T035-T042)
 
 #### Integration Testing
 
-- [ ] T035 Create UserProfileImageTests.cs in BaristaNotes.Tests/Integration/ for end-to-end image flow
-- [ ] T036 [P] Add integration test for image selection, save, and database persistence
-- [ ] T037 [P] Add integration test for image removal and cleanup
+- [ ] T035 Create UserProfileImageTests.cs in BaristaNotes.Tests/Integration/ for end-to-end image flow (TODO: Requires integration test infrastructure)
+- [ ] T036 [P] Add integration test for image selection, save, and database persistence (TODO: Requires integration test infrastructure)
+- [ ] T037 [P] Add integration test for image removal and cleanup (TODO: Requires integration test infrastructure)
 
 #### Error Handling & UX
 
-- [ ] T038 Add error message display to ProfileImagePicker for validation failures in BaristaNotes/Components/ProfileImagePicker.cs
-- [ ] T039 [P] Add loading indicator (ActivityIndicator) during image processing in ProfileImagePicker component
-- [ ] T040 [P] Add permission denied error handling with user-friendly message in ProfileImagePicker component
+- [x] T038 Add error message display to ProfileImagePicker for validation failures in BaristaNotes/Components/ProfileImagePicker.cs
+- [x] T039 [P] Add loading indicator (ActivityIndicator) during image processing in ProfileImagePicker component
+- [x] T040 [P] Add permission denied error handling with user-friendly message in ProfileImagePicker component
 
 #### Platform Configuration
 
-- [ ] T041 Configure Android READ_EXTERNAL_STORAGE permission (if needed for Android <13) in BaristaNotes/Platforms/Android/AndroidManifest.xml
-- [ ] T042 [P] Add semantic descriptions for accessibility to CircularAvatar and ProfileImagePicker components in BaristaNotes/Components/
+- [x] T041 Configure Android READ_EXTERNAL_STORAGE permission (if needed for Android <13) in BaristaNotes/Platforms/Android/AndroidManifest.xml
+- [x] T042 [P] Add semantic descriptions for accessibility to CircularAvatar and ProfileImagePicker components in BaristaNotes/Components/
 
 ---
 

@@ -100,6 +100,11 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IPreferencesService, PreferencesService>();
 		builder.Services.AddSingleton<IFeedbackService, FeedbackService>();
 		builder.Services.AddSingleton<IThemeService, ThemeService>();
+		
+		// Image services
+		builder.Services.AddSingleton<Microsoft.Maui.Media.IMediaPicker>(Microsoft.Maui.Media.MediaPicker.Default);
+		builder.Services.AddSingleton<IImagePickerService, ImagePickerService>();
+		builder.Services.AddSingleton<IImageProcessingService, ImageProcessingService>();
 
 #if DEBUG
 		builder.Logging.AddDebug();

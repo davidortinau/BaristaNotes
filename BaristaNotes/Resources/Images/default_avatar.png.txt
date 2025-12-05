@@ -1,0 +1,3 @@
+# Placeholder for default avatar image
+# This file indicates where the default_avatar.png should be placed
+# The actual image file should be added manually or via asset pipeline

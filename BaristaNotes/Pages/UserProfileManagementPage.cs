@@ -1,8 +1,9 @@
+using BaristaNotes.Components.Forms;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
-using The49MauiBottomSheet = The49.Maui.BottomSheet;
+using BaristaNotes.Utilities;
 
 namespace BaristaNotes.Pages;
 
@@ -20,8 +21,6 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
     [Inject]
     IFeedbackService _feedbackService;
-
-    private The49MauiBottomSheet.BottomSheet? _currentSheet;
 
     protected override void OnMounted()
     {
@@ -63,146 +62,17 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
     async Task ShowProfileFormSheet(UserProfileDto? profile)
     {
-        var page = ContainerPage;
-        if (page?.Window == null) return;
-
-        // Create form fields
-        var nameEntry = new MauiControls.Entry
-        {
-            Placeholder = "Profile name (required)",
-            Text = profile?.Name ?? "",
-            BackgroundColor = Colors.White
-        };
-
-        var avatarEntry = new MauiControls.Entry
-        {
-            Placeholder = "Avatar path or URL (optional)",
-            Text = profile?.AvatarPath ?? "",
-            BackgroundColor = Colors.White
-        };
-
-        var errorLabel = new MauiControls.Label
-        {
-            TextColor = Colors.Red,
-            FontSize = 12,
-            IsVisible = false
-        };
-
-        var saveButton = new MauiControls.Button
-        {
-            Text = "Save",
-            BackgroundColor = Colors.Purple,
-            TextColor = Colors.White
-        };
-
-        var cancelButton = new MauiControls.Button
-        {
-            Text = "Cancel",
-            BackgroundColor = Colors.LightGray,
-            TextColor = Colors.Black
-        };
-
-        cancelButton.Clicked += async (s, e) =>
-        {
-            await _currentSheet?.DismissAsync()!;
-        };
-
-        saveButton.Clicked += async (s, e) =>
-        {
-            // Validate
-            if (string.IsNullOrWhiteSpace(nameEntry.Text))
-            {
-                await _feedbackService.ShowErrorAsync("Profile name is required", "Please enter a name for the profile");
-                return;
-            }
-
-            saveButton.IsEnabled = false;
-
-            try
-            {
-                if (profile != null)
-                {
-                    await _profileService.UpdateProfileAsync(
-                        profile.Id,
-                        new UpdateUserProfileDto
-                        {
-                            Name = nameEntry.Text,
-                            AvatarPath = string.IsNullOrWhiteSpace(avatarEntry.Text) ? null : avatarEntry.Text
-                        });
-
-                    await _feedbackService.ShowSuccessAsync($"{nameEntry.Text} updated successfully");
-                }
-                else
-                {
-                    await _profileService.CreateProfileAsync(
-                        new CreateUserProfileDto
-                        {
-                            Name = nameEntry.Text,
-                            AvatarPath = string.IsNullOrWhiteSpace(avatarEntry.Text) ? null : avatarEntry.Text
-                        });
-
-                    await _feedbackService.ShowSuccessAsync($"{nameEntry.Text} created successfully");
-
-                }
-
-                await _currentSheet?.DismissAsync()!;
-                await LoadDataAsync();
-            }
-            catch (Exception ex)
-            {
-                await _feedbackService.ShowErrorAsync("Failed to save profile", "Please try again");
-                saveButton.IsEnabled = true;
-            }
-        };
-
-        var formContent = new MauiControls.VerticalStackLayout
-        {
-            Spacing = 16,
-            Padding = new Thickness(20),
-            BackgroundColor = Colors.White,
-            Children =
-            {
-                new MauiControls.Label
-                {
-                    Text = profile != null ? "Edit Profile" : "Add Profile",
-                    FontSize = 20,
-                    FontAttributes = MauiControls.FontAttributes.Bold
-                },
-                new MauiControls.Label { Text = "Name *", FontSize = 14 },
-                nameEntry,
-                new MauiControls.Label { Text = "Avatar", FontSize = 14 },
-                avatarEntry,
-                new MauiControls.Label
-                {
-                    Text = "💡 Profiles let you track shots for different users or coffee preferences",
-                    FontSize = 12,
-                    TextColor = Colors.Gray
-                },
-                errorLabel,
-                new MauiControls.HorizontalStackLayout
-                {
-                    Spacing = 12,
-                    HorizontalOptions = MauiControls.LayoutOptions.End,
-                    Children = { cancelButton, saveButton }
-                }
-            }
-        };
-
-        _currentSheet = new The49MauiBottomSheet.BottomSheet
-        {
-            HasHandle = true,
-            IsCancelable = true,
-            Content = formContent
-        };
-
-        await _currentSheet.ShowAsync(page.Window);
+        await BottomSheetManager.ShowAsync(
+            () => new UserProfileFormComponent(
+                profile,
+                _profileService,
+                _feedbackService,
+                () => _ = LoadDataAsync()),
+            sheet => sheet.HasBackdrop = true);
     }
 
     async Task ShowDeleteConfirmation(UserProfileDto profile)
     {
-        var page = ContainerPage;
-        if (page?.Window == null) return;
-
         // Check if this is the last profile - prevent deletion
         var isLastProfile = State.Profiles.Count <= 1;
 
@@ -212,151 +82,18 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
             return;
         }
 
-        var confirmButton = new MauiControls.Button
-        {
-            Text = "Delete",
-            BackgroundColor = Colors.Red,
-            TextColor = Colors.White
-        };
-
-        var cancelButton = new MauiControls.Button
-        {
-            Text = "Cancel",
-            BackgroundColor = Colors.LightGray,
-            TextColor = Colors.Black
-        };
-
-        cancelButton.Clicked += async (s, e) =>
-        {
-            await _currentSheet?.DismissAsync()!;
-        };
-
-        confirmButton.Clicked += async (s, e) =>
-        {
-            await _currentSheet?.DismissAsync()!;
-            await DeleteProfile(profile);
-        };
-
-        var confirmContent = new MauiControls.VerticalStackLayout
-        {
-            Spacing = 16,
-            Padding = new Thickness(24),
-            BackgroundColor = Colors.White,
-            Children =
-            {
-                new MauiControls.HorizontalStackLayout
-                {
-                    Spacing = 8,
-                    Children =
-                    {
-                        new MauiControls.Label { Text = "⚠️", FontSize = 24 },
-                        new MauiControls.Label
-                        {
-                            Text = "Delete Profile",
-                            FontSize = 20,
-                            FontAttributes = MauiControls.FontAttributes.Bold,
-                            TextColor = Colors.Red
-                        }
-                    }
-                },
-                new MauiControls.Label
-                {
-                    Text = $"\"{profile.Name}\"",
-                    FontSize = 16,
-                    FontAttributes = MauiControls.FontAttributes.Bold,
-                    HorizontalTextAlignment = TextAlignment.Center
-                },
-                new MauiControls.Label
-                {
-                    Text = "Are you sure you want to delete this profile? Shot records associated with this profile will retain the historical reference.",
-                    FontSize = 14,
-                    TextColor = Colors.Gray,
-                    HorizontalTextAlignment = TextAlignment.Center
-                },
-                new MauiControls.HorizontalStackLayout
-                {
-                    Spacing = 12,
-                    HorizontalOptions = MauiControls.LayoutOptions.Center,
-                    Children = { cancelButton, confirmButton }
-                }
-            }
-        };
-
-        _currentSheet = new The49MauiBottomSheet.BottomSheet
-        {
-            HasHandle = true,
-            IsCancelable = true,
-            Content = confirmContent
-        };
-
-        await _currentSheet.ShowAsync(page.Window);
+        await BottomSheetManager.ShowAsync(
+            () => new DeleteProfileConfirmationComponent(
+                profile,
+                () => _ = DeleteProfile(profile)),
+            sheet => sheet.HasBackdrop = true);
     }
 
     async Task ShowLastProfileWarning()
     {
-        var page = ContainerPage;
-        if (page?.Window == null) return;
-
-        var okButton = new MauiControls.Button
-        {
-            Text = "OK",
-            BackgroundColor = Colors.Purple,
-            TextColor = Colors.White
-        };
-
-        okButton.Clicked += async (s, e) =>
-        {
-            await _currentSheet?.DismissAsync()!;
-        };
-
-        var warningContent = new MauiControls.VerticalStackLayout
-        {
-            Spacing = 16,
-            Padding = new Thickness(24),
-            BackgroundColor = Colors.White,
-            Children =
-            {
-                new MauiControls.HorizontalStackLayout
-                {
-                    Spacing = 8,
-                    HorizontalOptions = MauiControls.LayoutOptions.Center,
-                    Children =
-                    {
-                        new MauiControls.Label { Text = "🚫", FontSize = 24 },
-                        new MauiControls.Label
-                        {
-                            Text = "Cannot Delete",
-                            FontSize = 20,
-                            FontAttributes = MauiControls.FontAttributes.Bold
-                        }
-                    }
-                },
-                new MauiControls.Label
-                {
-                    Text = "This is your last profile. You must have at least one profile to log shots.",
-                    FontSize = 14,
-                    TextColor = Colors.Gray,
-                    HorizontalTextAlignment = TextAlignment.Center
-                },
-                new MauiControls.Label
-                {
-                    Text = "💡 Create another profile first if you want to delete this one.",
-                    FontSize = 12,
-                    TextColor = Colors.DarkGray,
-                    HorizontalTextAlignment = TextAlignment.Center
-                },
-                okButton
-            }
-        };
-
-        _currentSheet = new The49MauiBottomSheet.BottomSheet
-        {
-            HasHandle = true,
-            IsCancelable = true,
-            Content = warningContent
-        };
-
-        await _currentSheet.ShowAsync(page.Window);
+        await BottomSheetManager.ShowAsync(
+            () => new LastProfileWarningComponent(),
+            sheet => sheet.HasBackdrop = true);
     }
 
     async Task DeleteProfile(UserProfileDto profile)

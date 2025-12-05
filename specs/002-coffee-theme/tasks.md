@@ -290,3 +290,34 @@ Phase 1 (Setup) → Phase 2 (Foundation)
 **Performance Targets**: Theme switch <300ms, persistence <100ms, system detection <500ms (all validated in Phase 5)
 
 **Quality Gates**: All tests pass (30 test tasks), WCAG AA contrast validated, static analysis clean, 80% coverage
+
+---
+
+## Phase 7: Bug Fixes (Visual Theme Issues)
+
+**Purpose**: Fix discovered theme reactivity and styling issues
+
+### System Theme Tracking Issue
+
+- [X] T085 [BUG] Investigate why app stops responding to system theme changes after user selects "System" theme following Light or Dark selection
+- [X] T086 [BUG] Verify Application.Current.RequestedThemeChanged event handler is still subscribed after theme mode changes
+- [X] T087 [BUG] Test if ThemeService.OnSystemThemeChanged is being called when device theme changes while in System mode
+- [X] T088 [BUG] Add logging to ThemeService to track event subscription lifecycle and theme change triggers
+- [ ] T089 [BUG] Fix System theme tracking bug (potential MauiReactor bug or event unsubscription issue)
+
+### Bottom Sheet Theme Colors
+
+- [X] T090 [BUG] Verify EquipmentFormBottomSheet component applies theme colors using ThemeKey() instead of hardcoded colors
+- [X] T091 [BUG] Verify UserProfileFormBottomSheet component applies theme colors using ThemeKey() instead of hardcoded colors
+- [ ] T092 [BUG] Test all bottom sheets (Equipment, Beans, UserProfile) in both light and dark modes to verify proper theme application
+- [ ] T093 [BUG] Ensure all bottom sheet components recreate on theme change or use reactive theme bindings
+
+### AppIcons Theme Reactivity
+
+- [X] T094 [BUG] Investigate why AppIcons (edit, delete) on EquipmentManagementPage don't change color between light and dark modes
+- [X] T095 [BUG] Review AppIcons implementation to determine if colors are hardcoded or using theme keys
+- [X] T096 [BUG] Update AppIcons to use theme-aware colors (e.g., ThemeKey for icon color or ApplicationTheme color properties)
+- [ ] T097 [BUG] Verify AppIcons update color immediately when theme changes across all pages using them
+- [ ] T098 [BUG] Test AppIcons in light mode (should use TextPrimary #352B23) and dark mode (should use TextPrimary #F8F6F4)
+
+**Checkpoint**: All theme reactivity bugs fixed - System theme tracking works, bottom sheets use correct colors, AppIcons react to theme changes

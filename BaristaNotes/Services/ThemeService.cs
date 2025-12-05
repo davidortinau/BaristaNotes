@@ -24,6 +24,7 @@ public class ThemeService : IThemeService
         if (Application.Current != null)
         {
             Application.Current.RequestedThemeChanged += OnSystemThemeChanged;
+            System.Diagnostics.Debug.WriteLine($"[ThemeService] Subscribed to RequestedThemeChanged event");
         }
     }
 
@@ -39,6 +40,7 @@ public class ThemeService : IThemeService
 
     public Task SetThemeModeAsync(ThemeMode mode)
     {
+        System.Diagnostics.Debug.WriteLine($"[ThemeService] SetThemeModeAsync called with mode: {mode}");
         _currentMode = mode;
         _preferencesStore.Set(ThemeModeKey, mode.ToString());
         ApplyTheme();
@@ -57,15 +59,23 @@ public class ThemeService : IThemeService
             _ => AppTheme.Light
         };
 
+        System.Diagnostics.Debug.WriteLine($"[ThemeService] ApplyTheme: CurrentMode={_currentMode}, TargetTheme={targetTheme}, SystemTheme={Application.Current.RequestedTheme}");
         Application.Current.UserAppTheme = targetTheme;
     }
 
     private void OnSystemThemeChanged(object? sender, AppThemeChangedEventArgs e)
     {
+        System.Diagnostics.Debug.WriteLine($"[ThemeService] OnSystemThemeChanged fired: NewTheme={e.RequestedTheme}, CurrentMode={_currentMode}");
+        
         // Only react to system theme changes if we're in System mode
         if (_currentMode == ThemeMode.System)
         {
+            System.Diagnostics.Debug.WriteLine($"[ThemeService] Applying theme because CurrentMode is System");
             ApplyTheme();
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine($"[ThemeService] Ignoring system theme change because CurrentMode is {_currentMode}");
         }
     }
 }

@@ -1,11 +1,12 @@
+using BaristaNotes.Components.Forms;
 using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
+using BaristaNotes.Utilities;
 using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups.Services;
-using The49MauiBottomSheet = The49.Maui.BottomSheet;
 
 namespace BaristaNotes.Pages;
 
@@ -23,8 +24,6 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
 
     [Inject]
     IFeedbackService _feedbackService;
-
-    private The49MauiBottomSheet.BottomSheet? _currentSheet;
 
     protected override void OnMounted()
     {
@@ -66,155 +65,13 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
 
     async Task ShowEquipmentFormSheet(EquipmentDto? equipment)
     {
-        var page = ContainerPage;
-        if (page?.Window == null) return;
-
-        // Create form fields
-        var nameEntry = new MauiControls.Entry
-        {
-            Placeholder = "Equipment name",
-            Text = equipment?.Name ?? "",
-            BackgroundColor = Colors.White
-        };
-
-        var typePicker = new MauiControls.Picker
-        {
-            Title = "Select type"
-        };
-        var equipmentTypes = Enum.GetValues<EquipmentType>().ToList();
-        foreach (var type in equipmentTypes)
-        {
-            typePicker.Items.Add(type.ToString());
-        }
-        // Find the index of the current type in the list (not the enum value)
-        typePicker.SelectedIndex = equipment != null ? equipmentTypes.IndexOf(equipment.Type) : 0;
-
-        var notesEditor = new MauiControls.Editor
-        {
-            Placeholder = "Optional notes",
-            Text = equipment?.Notes ?? "",
-            HeightRequest = 100,
-            BackgroundColor = Colors.White
-        };
-
-        var errorLabel = new MauiControls.Label
-        {
-            TextColor = Colors.Red,
-            FontSize = 12,
-            IsVisible = false
-        };
-
-        var saveButton = new MauiControls.Button
-        {
-            Text = "Save",
-            BackgroundColor = Colors.Blue,
-            TextColor = Colors.White
-        };
-
-        var cancelButton = new MauiControls.Button
-        {
-            Text = "Cancel",
-            BackgroundColor = Colors.LightGray,
-            TextColor = Colors.Black
-        };
-
-        cancelButton.Clicked += async (s, e) =>
-        {
-            await _currentSheet?.DismissAsync()!;
-        };
-
-        saveButton.Clicked += async (s, e) =>
-        {
-            // Validate
-            if (string.IsNullOrWhiteSpace(nameEntry.Text))
-            {
-                await _feedbackService.ShowErrorAsync("Equipment name is required", "Please enter a name for your equipment");
-                return;
-            }
-
-            saveButton.IsEnabled = false;
-
-            try
-            {
-                // Get the actual enum value from the list, not by casting the index
-                var selectedType = equipmentTypes[typePicker.SelectedIndex];
-
-                if (equipment != null)
-                {
-                    await _equipmentService.UpdateEquipmentAsync(
-                        equipment.Id,
-                        new UpdateEquipmentDto
-                        {
-                            Name = nameEntry.Text,
-                            Type = selectedType,
-                            Notes = string.IsNullOrWhiteSpace(notesEditor.Text) ? null : notesEditor.Text
-                        });
-
-
-                    await _feedbackService.ShowSuccessAsync($"{nameEntry.Text} updated successfully");
-                }
-                else
-                {
-                    await _equipmentService.CreateEquipmentAsync(
-                        new CreateEquipmentDto
-                        {
-                            Name = nameEntry.Text,
-                            Type = selectedType,
-                            Notes = string.IsNullOrWhiteSpace(notesEditor.Text) ? null : notesEditor.Text
-                        });
-
-
-                    await _feedbackService.ShowSuccessAsync($"{nameEntry.Text} added successfully");
-                }
-
-                await _currentSheet?.DismissAsync()!;
-                await LoadDataAsync();
-            }
-            catch (Exception ex)
-            {
-
-                await _feedbackService.ShowErrorAsync("Failed to save equipment", "Please try again");
-                saveButton.IsEnabled = true;
-            }
-        };
-
-        var formContent = new MauiControls.VerticalStackLayout
-        {
-            Spacing = 16,
-            Padding = new Thickness(20),
-            BackgroundColor = Colors.White,
-            Children =
-            {
-                new MauiControls.Label
-                {
-                    Text = equipment != null ? "Edit Equipment" : "Add Equipment",
-                    FontSize = 20,
-                    FontAttributes = MauiControls.FontAttributes.Bold
-                },
-                new MauiControls.Label { Text = "Name *", FontSize = 14 },
-                nameEntry,
-                new MauiControls.Label { Text = "Type *", FontSize = 14 },
-                typePicker,
-                new MauiControls.Label { Text = "Notes", FontSize = 14 },
-                notesEditor,
-                errorLabel,
-                new MauiControls.HorizontalStackLayout
-                {
-                    Spacing = 12,
-                    HorizontalOptions = MauiControls.LayoutOptions.End,
-                    Children = { cancelButton, saveButton }
-                }
-            }
-        };
-
-        _currentSheet = new The49MauiBottomSheet.BottomSheet
-        {
-            HasHandle = true,
-            IsCancelable = true,
-            Content = formContent
-        };
-
-        await _currentSheet.ShowAsync(page.Window);
+        await BottomSheetManager.ShowAsync(
+            () => new EquipmentFormComponent(
+                equipment,
+                _equipmentService,
+                _feedbackService,
+                () => _ = LoadDataAsync()),
+            sheet => sheet.HasBackdrop = true);
     }
 
     async Task ShowDeleteConfirmation(EquipmentDto equipment)

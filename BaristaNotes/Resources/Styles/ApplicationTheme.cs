@@ -353,5 +353,43 @@ class ApplicationTheme : Theme
             .Padding(14, 10)
             .MinimumHeightRequest(44)
             .MinimumWidthRequest(44);
+
+        ButtonStyles.Themes[ThemeKeys.PrimaryButton] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary)
+            .TextColor(IsLightTheme ? AppColors.Light.OnPrimary : AppColors.Dark.OnPrimary)
+            .FontFamily("Manrope")
+            .FontSize(14)
+            .BorderWidth(0)
+            .CornerRadius(8)
+            .Padding(14, 10)
+            .MinimumHeightRequest(44)
+            .MinimumWidthRequest(44);
+
+        // Form-specific themes
+        LabelStyles.Themes[ThemeKeys.FormTitle] = _ => _
+            .TextColor(IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)
+            .FontSize(20)
+            .FontAttributes(MauiControls.FontAttributes.Bold);
+
+        LabelStyles.Themes[ThemeKeys.FormLabel] = _ => _
+            .TextColor(IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)
+            .FontSize(14);
+
+        EntryStyles.Themes[ThemeKeys.Entry] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant)
+            .TextColor(IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)
+            .PlaceholderColor(IsLightTheme ? AppColors.Light.TextMuted : AppColors.Dark.TextMuted);
+
+        EditorStyles.Themes[ThemeKeys.Entry] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant)
+            .TextColor(IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)
+            .PlaceholderColor(IsLightTheme ? AppColors.Light.TextMuted : AppColors.Dark.TextMuted);
+
+        PickerStyles.Themes[ThemeKeys.Entry] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant)
+            .TextColor(IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary);
+
+        BorderStyles.Themes[ThemeKeys.BottomSheet] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface);
     }
 }

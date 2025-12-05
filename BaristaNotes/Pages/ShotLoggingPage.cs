@@ -289,6 +289,29 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     // User Selection Row (Made By -> Made For)
                     RenderUserSelectionRow(),
 
+                    // Rating
+                    new FormSliderField()
+                        .Label($"Rating: {State.Rating}/5")
+                        .Minimum(0)
+                        .Maximum(5)
+                        .Value(State.Rating)
+                        .OnValueChanged(val => SetState(s => s.Rating = (int)val)),
+
+                    // Save Button
+                    Button("Save Shot")
+                        .IsEnabled(!State.IsLoading)
+                        .OnClicked(async () => await SaveShotAsync())
+                        .HeightRequest(50)
+                        .Margin(0, 16),
+
+                    BoxView()
+                        .HorizontalOptions(LayoutOptions.Fill)
+                        .HeightRequest(1),
+
+                    Label()
+                        .Text("Additional Details")
+                        .ThemeKey(ThemeKeys.MutedText),
+
                     // Bean Picker
                     new FormPickerField()
                         .Label("Bean")
@@ -351,23 +374,10 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                                     s.DrinkType = State.DrinkTypes[idx];
                                 });
                             }
-                        }),
+                        })
 
 
-                    // Rating
-                    new FormSliderField()
-                        .Label($"Rating: {State.Rating}/5")
-                        .Minimum(0)
-                        .Maximum(5)
-                        .Value(State.Rating)
-                        .OnValueChanged(val => SetState(s => s.Rating = (int)val)),
 
-                    // Save Button
-                    Button("Save Shot")
-                        .IsEnabled(!State.IsLoading)
-                        .OnClicked(async () => await SaveShotAsync())
-                        .HeightRequest(50)
-                        .Margin(0, 16)
                 )
                 .Padding(16)
             )
@@ -556,7 +566,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         {
             // Convert filename to full file path
             var imagePath = System.IO.Path.Combine(FileSystem.AppDataDirectory, user.AvatarPath);
-            
+
             // User has a profile photo - display it
             return Border(
                 Image(imagePath)
@@ -598,8 +608,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             Name = user.Name,
             Icon = MaterialSymbolsFont.Account_circle,
             // Convert filename to full path
-            AvatarPath = string.IsNullOrEmpty(user.AvatarPath) 
-                ? null 
+            AvatarPath = string.IsNullOrEmpty(user.AvatarPath)
+                ? null
                 : System.IO.Path.Combine(FileSystem.AppDataDirectory, user.AvatarPath)
         }).ToList();
 
@@ -641,7 +651,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 // Bind to determine if we show image or icon
                 var avatarPathBinding = new Microsoft.Maui.Controls.Binding("AvatarPath");
                 avatarContainer.SetBinding(Microsoft.Maui.Controls.BindableObject.BindingContextProperty, ".");
-                
+
                 // Create both image and icon, we'll show one based on AvatarPath
                 var avatarImage = new Microsoft.Maui.Controls.Image
                 {
@@ -657,7 +667,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     FontFamily = MaterialSymbolsFont.FontFamily,
                     FontSize = 32,
                     HorizontalOptions = LayoutOptions.Center,
-                    VerticalOptions = LayoutOptions.Center
+                    VerticalOptions = LayoutOptions.Center,
+                    TextColor = Colors.White
                 };
                 icon.SetBinding(Microsoft.Maui.Controls.Label.TextProperty, "Icon");
                 icon.SetBinding(Microsoft.Maui.Controls.Label.IsVisibleProperty, new Microsoft.Maui.Controls.Binding("AvatarPath", converter: new NullOrEmptyConverter()));
@@ -665,13 +676,14 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 var avatarGrid = new Microsoft.Maui.Controls.Grid();
                 avatarGrid.Children.Add(avatarImage);
                 avatarGrid.Children.Add(icon);
-                
+
                 avatarContainer.Content = avatarGrid;
 
                 var label = new Microsoft.Maui.Controls.Label
                 {
                     FontSize = 16,
-                    VerticalOptions = LayoutOptions.Center
+                    VerticalOptions = LayoutOptions.Center,
+                    TextColor = Colors.White
                 };
                 label.SetBinding(Microsoft.Maui.Controls.Label.TextProperty, "Name");
 

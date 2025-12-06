@@ -195,38 +195,26 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
 
     VisualNode RenderEquipmentItem(EquipmentDto equipment)
     {
-        return Border(
-            Grid("Auto", "*,Auto",
+        return SwipeView(
+            Border(
                 VStack(spacing: 4,
                     Label(equipment.Name)
                         .ThemeKey(ThemeKeys.CardTitle),
                     Label(equipment.Type.ToString())
                         .ThemeKey(ThemeKeys.CardSubtitle)
                 )
-                .GridColumn(0)
-                .VCenter(),
-
-                // Action buttons
-                HStack(
-                    ImageButton()
-                        .Source(AppIcons.Edit)
-                        .Aspect(Aspect.Center)
-                        .BackgroundColor(Colors.Transparent)
-                        .OnClicked(async () => await ShowEditEquipmentSheet(equipment)),
-                    ImageButton()
-                        .Source(AppIcons.Delete)
-                        .Aspect(Aspect.Center)
-                        .BackgroundColor(Colors.Transparent)
-                        .OnClicked(async () => await ShowDeleteConfirmation(equipment))
-                )
-                .Spacing(AppSpacing.XS)
-                .GridColumn(1)
-                .VCenter()
-                .HEnd()
+                .Padding(12)
             )
-            .Padding(12)
+            .ThemeKey(ThemeKeys.CardBorder)
+            .OnTapped(async () => await ShowEditEquipmentSheet(equipment))
         )
-        .Margin(0, 4)
-        .ThemeKey(ThemeKeys.CardBorder);
+        .LeftItems(
+        [
+            SwipeItem()
+                .BackgroundColor(Colors.Transparent)
+                .IconImageSource(AppIcons.Delete)
+                .OnInvoked(async () => await ShowDeleteConfirmation(equipment))
+        ])
+        .Margin(0, 4);
     }
 }

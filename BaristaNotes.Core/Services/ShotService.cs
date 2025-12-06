@@ -9,7 +9,7 @@ public class ShotService : IShotService
 {
     private readonly IShotRecordRepository _shotRepository;
     private readonly IPreferencesService _preferences;
-    
+
     public ShotService(
         IShotRecordRepository shotRepository,
         IPreferencesService preferences)
@@ -17,17 +17,17 @@ public class ShotService : IShotService
         _shotRepository = shotRepository;
         _preferences = preferences;
     }
-    
+
     public async Task<ShotRecordDto?> GetMostRecentShotAsync()
     {
         var shot = await _shotRepository.GetMostRecentAsync();
         return shot == null ? null : MapToDto(shot);
     }
-    
+
     public async Task<ShotRecordDto> CreateShotAsync(CreateShotDto dto)
     {
         ValidateCreateShot(dto);
-        
+
         var shot = new ShotRecord
         {
             Timestamp = dto.Timestamp ?? DateTimeOffset.Now,
@@ -47,9 +47,9 @@ public class ShotService : IShotService
             SyncId = Guid.NewGuid(),
             LastModifiedAt = DateTimeOffset.Now
         };
-        
+
         var created = await _shotRepository.AddAsync(shot);
-        
+
         // Save accessories if provided
         if (dto.AccessoryIds.Any())
         {
@@ -63,7 +63,7 @@ public class ShotService : IShotService
             }
             await _shotRepository.UpdateAsync(created);
         }
-        
+
         // Remember selections
         _preferences.SetLastDrinkType(dto.DrinkType);
         if (dto.BeanId.HasValue)
@@ -78,61 +78,61 @@ public class ShotService : IShotService
             _preferences.SetLastMadeById(dto.MadeById.Value);
         if (dto.MadeForId.HasValue)
             _preferences.SetLastMadeForId(dto.MadeForId.Value);
-        
+
         // Reload with relationships
         return MapToDto(await _shotRepository.GetByIdAsync(created.Id) ?? created);
     }
-    
+
     public async Task<ShotRecordDto> UpdateShotAsync(int id, UpdateShotDto dto)
     {
         ValidateUpdateShot(dto);
-        
+
         var shot = await _shotRepository.GetByIdAsync(id);
         if (shot == null || shot.IsDeleted)
             throw new EntityNotFoundException(nameof(ShotRecord), id);
-        
+
         // Update bean if provided
         if (dto.BeanId.HasValue)
             shot.BeanId = dto.BeanId.Value;
-        
+
         // Update maker/recipient if provided
         if (dto.MadeById.HasValue)
             shot.MadeById = dto.MadeById.Value;
-        
+
         if (dto.MadeForId.HasValue)
             shot.MadeForId = dto.MadeForId.Value;
-        
+
         // Update only editable fields
         if (dto.ActualTime.HasValue)
             shot.ActualTime = dto.ActualTime.Value;
-        
+
         if (dto.ActualOutput.HasValue)
             shot.ActualOutput = dto.ActualOutput.Value;
-        
+
         shot.Rating = dto.Rating; // Can be null
         shot.DrinkType = dto.DrinkType;
         shot.LastModifiedAt = DateTimeOffset.Now;
-        
+
         var updated = await _shotRepository.UpdateAsync(shot);
         return MapToDto(updated);
     }
-    
+
     public async Task DeleteShotAsync(int id)
     {
         var shot = await _shotRepository.GetByIdAsync(id);
         if (shot == null || shot.IsDeleted)
             throw new EntityNotFoundException(nameof(ShotRecord), id);
-        
+
         shot.IsDeleted = true;
         shot.LastModifiedAt = DateTimeOffset.Now;
         await _shotRepository.UpdateAsync(shot);
     }
-    
+
     public async Task<PagedResult<ShotRecordDto>> GetShotHistoryAsync(int pageIndex, int pageSize)
     {
         var shots = await _shotRepository.GetHistoryAsync(pageIndex, pageSize);
         var totalCount = await _shotRepository.GetTotalCountAsync();
-        
+
         return new PagedResult<ShotRecordDto>
         {
             Items = shots.Select(MapToDto).ToList(),
@@ -141,12 +141,12 @@ public class ShotService : IShotService
             PageSize = pageSize
         };
     }
-    
+
     public async Task<PagedResult<ShotRecordDto>> GetShotHistoryByUserAsync(int userProfileId, int pageIndex, int pageSize)
     {
         var shots = await _shotRepository.GetByUserAsync(userProfileId, pageIndex, pageSize);
         var totalCount = await _shotRepository.GetTotalCountAsync();
-        
+
         return new PagedResult<ShotRecordDto>
         {
             Items = shots.Select(MapToDto).ToList(),
@@ -155,12 +155,12 @@ public class ShotService : IShotService
             PageSize = pageSize
         };
     }
-    
+
     public async Task<PagedResult<ShotRecordDto>> GetShotHistoryByBeanAsync(int beanId, int pageIndex, int pageSize)
     {
         var shots = await _shotRepository.GetByBeanAsync(beanId, pageIndex, pageSize);
         var totalCount = await _shotRepository.GetTotalCountAsync();
-        
+
         return new PagedResult<ShotRecordDto>
         {
             Items = shots.Select(MapToDto).ToList(),
@@ -169,12 +169,12 @@ public class ShotService : IShotService
             PageSize = pageSize
         };
     }
-    
+
     public async Task<PagedResult<ShotRecordDto>> GetShotHistoryByEquipmentAsync(int equipmentId, int pageIndex, int pageSize)
     {
         var shots = await _shotRepository.GetByEquipmentAsync(equipmentId, pageIndex, pageSize);
         var totalCount = await _shotRepository.GetTotalCountAsync();
-        
+
         return new PagedResult<ShotRecordDto>
         {
             Items = shots.Select(MapToDto).ToList(),
@@ -183,13 +183,24 @@ public class ShotService : IShotService
             PageSize = pageSize
         };
     }
-    
+
     public async Task<ShotRecordDto?> GetShotByIdAsync(int id)
     {
         var shot = await _shotRepository.GetByIdAsync(id);
         return shot == null ? null : MapToDto(shot);
     }
-    
+
+    public async Task<ShotRecordDto?> GetBestRatedShotByBeanAsync(int beanId)
+    {
+        var shots = await _shotRepository.GetByBeanAsync(beanId, 0, 100);
+        var bestShot = shots
+            .Where(s => s.Rating.HasValue)
+            .OrderByDescending(s => s.Rating)
+            .ThenByDescending(s => s.Timestamp)
+            .FirstOrDefault();
+        return bestShot == null ? null : MapToDto(bestShot);
+    }
+
     private ShotRecordDto MapToDto(ShotRecord shot) => new()
     {
         Id = shot.Id,
@@ -255,49 +266,49 @@ public class ShotService : IShotService
         ActualOutput = shot.ActualOutput,
         Rating = shot.Rating
     };
-    
+
     private void ValidateCreateShot(CreateShotDto dto)
     {
         var errors = new Dictionary<string, List<string>>();
-        
+
         if (dto.DoseIn < 5 || dto.DoseIn > 30)
             errors.Add(nameof(dto.DoseIn), new List<string> { "Dose must be between 5 and 30 grams" });
-        
+
         if (dto.ExpectedTime < 10 || dto.ExpectedTime > 60)
             errors.Add(nameof(dto.ExpectedTime), new List<string> { "Expected time must be between 10 and 60 seconds" });
-        
+
         if (dto.ExpectedOutput < 10 || dto.ExpectedOutput > 100)
             errors.Add(nameof(dto.ExpectedOutput), new List<string> { "Expected output must be between 10 and 100 grams" });
-        
+
         if (string.IsNullOrWhiteSpace(dto.GrindSetting))
             errors.Add(nameof(dto.GrindSetting), new List<string> { "Grind setting is required" });
-        
+
         if (string.IsNullOrWhiteSpace(dto.DrinkType))
             errors.Add(nameof(dto.DrinkType), new List<string> { "Drink type is required" });
-        
+
         if (dto.Rating.HasValue && (dto.Rating < 1 || dto.Rating > 5))
             errors.Add(nameof(dto.Rating), new List<string> { "Rating must be between 1 and 5" });
-        
+
         if (errors.Any())
             throw new ValidationException(errors);
     }
-    
+
     private void ValidateUpdateShot(UpdateShotDto dto)
     {
         var errors = new Dictionary<string, List<string>>();
-        
+
         if (dto.ActualTime.HasValue && (dto.ActualTime <= 0 || dto.ActualTime > 999))
             errors.Add(nameof(dto.ActualTime), new List<string> { "Shot time must be between 0 and 999 seconds" });
-        
+
         if (dto.ActualOutput.HasValue && (dto.ActualOutput <= 0 || dto.ActualOutput > 200))
             errors.Add(nameof(dto.ActualOutput), new List<string> { "Output weight must be between 0 and 200 grams" });
-        
+
         if (dto.Rating.HasValue && (dto.Rating < 1 || dto.Rating > 5))
             errors.Add(nameof(dto.Rating), new List<string> { "Rating must be between 1 and 5 stars" });
-        
+
         if (string.IsNullOrWhiteSpace(dto.DrinkType))
             errors.Add(nameof(dto.DrinkType), new List<string> { "Drink type is required" });
-        
+
         if (errors.Any())
             throw new ValidationException(errors);
     }

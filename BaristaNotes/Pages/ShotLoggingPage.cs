@@ -21,7 +21,7 @@ class ShotLoggingState
     public string DrinkType { get; set; } = "Espresso";
     public decimal? ActualTime { get; set; }
     public decimal? ActualOutput { get; set; }
-    public int Rating { get; set; }
+    public int Rating { get; set; } = 2;
     public int? SelectedBeanId { get; set; }
     public int SelectedBeanIndex { get; set; } = -1;
     public int SelectedDrinkIndex { get; set; } = 0;
@@ -163,6 +163,38 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         }
     }
 
+    async Task LoadBestShotSettingsAsync(int beanId)
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"[ShotLoggingPage] LoadBestShotSettingsAsync called for beanId: {beanId}");
+            var bestShot = await _shotService.GetBestRatedShotByBeanAsync(beanId);
+
+            if (bestShot != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ShotLoggingPage] Found best shot: DoseIn={bestShot.DoseIn}, GrindSetting={bestShot.GrindSetting}, ExpectedOutput={bestShot.ExpectedOutput}, ExpectedTime={bestShot.ExpectedTime}");
+                SetState(s =>
+                {
+                    s.DoseIn = bestShot.DoseIn;
+                    s.ExpectedOutput = bestShot.ExpectedOutput;
+                    s.ExpectedTime = bestShot.ExpectedTime;
+                    s.GrindSetting = bestShot.GrindSetting;
+                });
+                await _feedbackService.ShowSuccessAsync("Loaded settings from your best rated shot");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[ShotLoggingPage] No rated shots found for beanId: {beanId}");
+                await _feedbackService.ShowSuccessAsync("No rated shots found for this bean");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ShotLoggingPage] Error loading best shot settings: {ex.Message}");
+            await _feedbackService.ShowErrorAsync("Failed to load shot settings");
+        }
+    }
+
     async Task SaveShotAsync()
     {
         try
@@ -290,12 +322,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     RenderUserSelectionRow(),
 
                     // Rating
-                    new FormSliderField()
-                        .Label($"Rating: {State.Rating}/5")
-                        .Minimum(0)
-                        .Maximum(5)
-                        .Value(State.Rating)
-                        .OnValueChanged(val => SetState(s => s.Rating = (int)val)),
+                    RenderRatingSelector(),
 
                     // Save Button
                     Button("Save Shot")
@@ -322,11 +349,13 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         {
                             if (idx >= 0 && idx < State.AvailableBeans.Count)
                             {
+                                var beanId = State.AvailableBeans[idx].Id;
                                 SetState(s =>
                                 {
                                     s.SelectedBeanIndex = idx;
-                                    s.SelectedBeanId = State.AvailableBeans[idx].Id;
+                                    s.SelectedBeanId = beanId;
                                 });
+                                _ = LoadBestShotSettingsAsync(beanId);
                             }
                         }),
 
@@ -405,9 +434,10 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     surfaceColor: surfaceColor,
                     onValueChanged: val => SetState(st => st.DoseIn = (decimal)val)
                 ),
-                Label("In")
-                    .FontSize(14)
-                    .TextColor(secondaryTextColor)
+                Label()
+                    .Text("u")
+                    .FontFamily("coffee-icons")
+                    .FontSize(24)
                     .HCenter()
             ).GridColumn(0),
 
@@ -423,9 +453,10 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     surfaceColor: surfaceColor,
                     onValueChanged: val => SetState(st => st.ActualOutput = (decimal)val)
                 ),
-                Label("Out")
-                    .FontSize(14)
-                    .TextColor(secondaryTextColor)
+                Label()
+                    .Text("t")
+                    .FontFamily("coffee-icons")
+                    .FontSize(24)
                     .HCenter()
             ).GridColumn(1)
         );
@@ -553,6 +584,45 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .TextColor(secondaryTextColor)
                     .HCenter()
             )
+        ).HCenter();
+    }
+
+    VisualNode RenderRatingSelector()
+    {
+        var isLightTheme = Application.Current?.RequestedTheme == AppTheme.Light;
+        var primaryColor = isLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary;
+        var surfaceColor = isLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
+        var textColor = isLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+        var mutedColor = isLightTheme ? AppColors.Light.TextMuted : AppColors.Dark.TextMuted;
+
+        // Sentiment icons for ratings 0-4
+        var ratingIcons = new[]
+        {
+            MaterialSymbolsFont.Sentiment_very_dissatisfied,
+            MaterialSymbolsFont.Sentiment_dissatisfied,
+            MaterialSymbolsFont.Sentiment_neutral,
+            MaterialSymbolsFont.Sentiment_satisfied,
+            MaterialSymbolsFont.Sentiment_very_satisfied
+        };
+
+        return HStack(spacing: 8,
+            ratingIcons.Select((icon, index) =>
+                Border(
+                    Label(icon)
+                        .FontFamily(MaterialSymbolsFont.FontFamily)
+                        .FontSize(32)
+                        .TextColor(State.Rating == index ? primaryColor : mutedColor)
+                        .HCenter()
+                        .VCenter()
+                )
+                // .StrokeShape(new RoundRectangle().CornerRadius(8))
+                // .BackgroundColor(State.Rating == index ? surfaceColor : Colors.Transparent)
+                // .Stroke(State.Rating == index ? primaryColor : Colors.Transparent)
+                // .StrokeThickness(State.Rating == index ? 1 : 0)
+                .HeightRequest(48)
+                .WidthRequest(48)
+                .OnTapped(() => SetState(s => s.Rating = index))
+            ).ToArray()
         ).HCenter();
     }
 

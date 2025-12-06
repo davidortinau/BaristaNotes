@@ -291,20 +291,12 @@ class ApplicationTheme : Theme
             .Set(MauiControls.TabbedPage.UnselectedTabColorProperty, IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)
             .Set(MauiControls.TabbedPage.SelectedTabColorProperty, IsLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary);
 
-        // Semantic theme keys for common patterns
+        // Additional semantic theme keys
 
         // Label themes for text hierarchy
         LabelStyles.Themes[ThemeKeys.TextSecondary] = _ => _
             .TextColor(IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)
             .FontSize(14);
-
-        LabelStyles.Themes[ThemeKeys.SecondaryText] = _ => _
-            .TextColor(IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)
-            .FontSize(14);
-
-        LabelStyles.Themes[ThemeKeys.MutedText] = _ => _
-            .TextColor(IsLightTheme ? AppColors.Light.TextMuted : AppColors.Dark.TextMuted)
-            .FontSize(12);
 
         LabelStyles.Themes[ThemeKeys.Caption] = _ => _
             .TextColor(IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)
@@ -315,13 +307,6 @@ class ApplicationTheme : Theme
             .FontSize(14);
 
         // Border themes for cards and containers
-        BorderStyles.Themes[ThemeKeys.Card] = _ => _
-            .BackgroundColor(IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface)
-            .Stroke(IsLightTheme ? AppColors.Light.Outline : AppColors.Dark.Outline)
-            .StrokeThickness(1)
-            .StrokeShape(new RoundRectangle().CornerRadius(8))
-            .Padding(12);
-
         BorderStyles.Themes[ThemeKeys.CardBorder] = _ => _
             .BackgroundColor(IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface)
             .Stroke(IsLightTheme ? AppColors.Light.Outline : AppColors.Dark.Outline)
@@ -335,25 +320,7 @@ class ApplicationTheme : Theme
             .StrokeShape(new RoundRectangle().CornerRadius(8))
             .Padding(12);
 
-        BorderStyles.Themes[ThemeKeys.CardVariant] = _ => _
-            .BackgroundColor(IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant)
-            .Stroke(IsLightTheme ? AppColors.Light.Outline : AppColors.Dark.Outline)
-            .StrokeThickness(1)
-            .StrokeShape(new RoundRectangle().CornerRadius(8))
-            .Padding(12);
-
-        // Button theme for secondary/cancel actions
-        ButtonStyles.Themes[ThemeKeys.SecondaryButton] = _ => _
-            .BackgroundColor(IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant)
-            .TextColor(IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)
-            .FontFamily("Manrope")
-            .FontSize(14)
-            .BorderWidth(0)
-            .CornerRadius(8)
-            .Padding(14, 10)
-            .MinimumHeightRequest(44)
-            .MinimumWidthRequest(44);
-
+        // Button themes
         ButtonStyles.Themes[ThemeKeys.PrimaryButton] = _ => _
             .BackgroundColor(IsLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary)
             .TextColor(IsLightTheme ? AppColors.Light.OnPrimary : AppColors.Dark.OnPrimary)

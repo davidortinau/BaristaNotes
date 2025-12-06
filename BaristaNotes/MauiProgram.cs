@@ -73,6 +73,7 @@ public static class MauiProgram
 				fonts.AddFont("Manrope-Regular.ttf", "Manrope");
 				fonts.AddFont("Manrope-SemiBold.ttf", "ManropeSemibold");
 				fonts.AddFont("MaterialSymbols.ttf", MaterialSymbolsFont.FontFamily);
+				fonts.AddFont("coffee-icons.ttf", "coffee-icons");
 			});
 
 		// Register MauiReactor routes
@@ -100,7 +101,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IPreferencesService, PreferencesService>();
 		builder.Services.AddSingleton<IFeedbackService, FeedbackService>();
 		builder.Services.AddSingleton<IThemeService, ThemeService>();
-		
+
 		// Image services
 		builder.Services.AddSingleton<Microsoft.Maui.Media.IMediaPicker>(Microsoft.Maui.Media.MediaPicker.Default);
 		builder.Services.AddSingleton<IImagePickerService, ImagePickerService>();
@@ -192,6 +193,7 @@ public static class MauiProgram
 		MauiReactor.Routing.RegisterRoute<Pages.SettingsPage>("settings");
 		MauiReactor.Routing.RegisterRoute<Pages.EquipmentManagementPage>("equipment");
 		MauiReactor.Routing.RegisterRoute<Pages.BeanManagementPage>("beans");
+		MauiReactor.Routing.RegisterRoute<Pages.BeanDetailPage>("bean-detail");
 		MauiReactor.Routing.RegisterRoute<Pages.UserProfileManagementPage>("profiles");
 		MauiReactor.Routing.RegisterRoute<Pages.ProfileFormPage>("profile-form");
 		MauiReactor.Routing.RegisterRoute<Pages.ShotLoggingPage>("shot-logging");

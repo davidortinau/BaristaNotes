@@ -65,7 +65,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
         // Navigate to profile form page with profileId (edit mode)
         await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ProfileFormPageProps>("profile-form", props => props.ProfileId = profile.Id);
     }
-    
+
     async Task ShowDeleteConfirmation(UserProfileDto profile)
     {
         // Check if this is the last profile - prevent deletion
@@ -202,38 +202,26 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
     VisualNode RenderProfileItem(UserProfileDto profile)
     {
-        return Border(
-            Grid("Auto", "*,Auto",
+        return SwipeView(
+            Border(
                 VStack(spacing: 4,
                     Label(profile.Name)
                         .ThemeKey(ThemeKeys.CardTitle),
                     Label($"Created: {profile.CreatedAt:MMM d, yyyy}")
                         .ThemeKey(ThemeKeys.CardSubtitle)
                 )
-                .GridColumn(0)
-                .VCenter(),
-
-                // Action buttons
-                HStack(
-                    ImageButton()
-                        .Source(AppIcons.Edit)
-                        .Aspect(Aspect.Center)
-                        .BackgroundColor(Colors.Transparent)
-                        .OnClicked(async () => await ShowEditProfileSheet(profile)),
-                    ImageButton()
-                        .Source(AppIcons.Delete)
-                        .Aspect(Aspect.Center)
-                        .BackgroundColor(Colors.Transparent)
-                        .OnClicked(async () => await ShowDeleteConfirmation(profile))
-                )
-                .Spacing(AppSpacing.XS)
-                .GridColumn(1)
-                .VCenter()
-                .HEnd()
+                .Padding(12)
             )
-            .Padding(12)
+            .ThemeKey(ThemeKeys.CardBorder)
+            .OnTapped(async () => await ShowEditProfileSheet(profile))
         )
-        .Margin(0, 4)
-        .ThemeKey(ThemeKeys.CardBorder);
+        .LeftItems(
+        [
+            SwipeItem()
+                .BackgroundColor(Colors.Transparent)
+                .IconImageSource(AppIcons.Delete)
+                .OnInvoked(async () => await ShowDeleteConfirmation(profile))
+        ])
+        .Margin(0, 4);
     }
 }

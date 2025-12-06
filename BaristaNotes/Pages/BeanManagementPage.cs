@@ -2,11 +2,7 @@ using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
-using BaristaNotes.Components;
-using BaristaNotes.Utilities;
 using MauiReactor;
-using UXDivers.Popups.Maui.Controls;
-using UXDivers.Popups.Services;
 
 namespace BaristaNotes.Pages;
 
@@ -53,108 +49,17 @@ partial class BeanManagementPage : Component<BeanManagementState>
         }
     }
 
-    async Task ShowAddBeanSheet()
+    async Task NavigateToAddBean()
     {
-        await BottomSheetManager.ShowAsync(
-            () => new BeanFormSheet()
-                .Bean(null)
-                .OnSave(bean => OnBeanSaved(bean))
-                .OnCancel(() => _ = BottomSheetManager.DismissAsync()),
-            sheet =>
-            {
-                sheet.HasBackdrop = true;
-                sheet.HasHandle = true;
-                sheet.CornerRadius = 12;
-            });
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync("bean-detail");
     }
 
-    async Task ShowEditBeanSheet(BeanDto bean)
+    async void NavigateToEditBean(BeanDto bean)
     {
-        await BottomSheetManager.ShowAsync(
-            () => new BeanFormSheet()
-                .Bean(bean)
-                .OnSave(b => OnBeanSaved(b))
-                .OnCancel(() => _ = BottomSheetManager.DismissAsync()),
-            sheet => sheet.HasBackdrop = true);
-    }
-
-    async void OnBeanSaved(BeanDto beanDto)
-    {
-        try
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<BeanDetailPageProps>("bean-detail", props =>
         {
-            if (beanDto.Id == 0)
-            {
-                // Create new bean
-                var createDto = new CreateBeanDto
-                {
-                    Name = beanDto.Name,
-                    Roaster = beanDto.Roaster,
-                    RoastDate = beanDto.RoastDate,
-                    Origin = beanDto.Origin,
-                    Notes = beanDto.Notes
-                };
-                var result = await _beanService.CreateBeanAsync(createDto);
-                if (!result.Success)
-                {
-                    await _feedbackService.ShowErrorAsync(result.ErrorMessage ?? "Failed to create bean");
-                    return;
-                }
-                await _feedbackService.ShowSuccessAsync("Bean created successfully");
-            }
-            else
-            {
-                // Update existing bean
-                var updateDto = new UpdateBeanDto
-                {
-                    Name = beanDto.Name,
-                    Roaster = beanDto.Roaster,
-                    RoastDate = beanDto.RoastDate,
-                    Origin = beanDto.Origin,
-                    Notes = beanDto.Notes
-                };
-                await _beanService.UpdateBeanAsync(beanDto.Id, updateDto);
-                await _feedbackService.ShowSuccessAsync("Bean updated successfully");
-            }
-
-            await BottomSheetManager.DismissAsync();
-            await LoadDataAsync();
-        }
-        catch (Exception ex)
-        {
-            await _feedbackService.ShowErrorAsync(ex.Message);
-        }
-    }
-
-    async Task ShowDeleteConfirmation(BeanDto bean)
-    {
-        var popup = new SimpleActionPopup
-        {
-            Title = $"Delete \"{bean.Name}\"?",
-            Text = "This action cannot be undone.",
-            ActionButtonText = "Delete",
-            SecondaryActionButtonText = "Cancel",
-            ActionButtonCommand = new Command(async () =>
-            {
-                await DeleteBean(bean);
-                await IPopupService.Current.PopAsync();
-            })
-        };
-
-        await IPopupService.Current.PushAsync(popup);
-
-    }
-
-    async Task DeleteBean(BeanDto bean)
-    {
-        try
-        {
-            await _beanService.DeleteBeanAsync(bean.Id);
-            await LoadDataAsync();
-        }
-        catch (Exception ex)
-        {
-            SetState(s => s.ErrorMessage = ex.Message);
-        }
+            props.BeanId = bean.Id;
+        });
     }
 
     public override VisualNode Render()
@@ -170,7 +75,8 @@ partial class BeanManagementPage : Component<BeanManagementState>
                 )
                 .VCenter()
                 .HCenter()
-            ).Title("Beans");
+            ).Title("Beans")
+            .OnAppearing(() => OnPageAppearing());
         }
 
         if (!string.IsNullOrEmpty(State.ErrorMessage))
@@ -193,14 +99,15 @@ partial class BeanManagementPage : Component<BeanManagementState>
                 .VCenter()
                 .HCenter()
                 .Spacing(16)
-            ).Title("Beans");
+            ).Title("Beans")
+            .OnAppearing(() => OnPageAppearing());
         }
 
         return ContentPage(
             ToolbarItem("+ Add")
                 .Order(MauiControls.ToolbarItemOrder.Primary)
                 .Priority(0)
-                .OnClicked(async () => await ShowAddBeanSheet()),
+                .OnClicked(async () => await NavigateToAddBean()),
             Grid("Auto,*", "*",
                 Label("Beans")
                     .ThemeKey(ThemeKeys.SubHeadline)
@@ -215,7 +122,14 @@ partial class BeanManagementPage : Component<BeanManagementState>
                         .Margin(16, 0)
                         .GridRow(1)
             )
-        ).Title("Beans");
+        ).Title("Beans")
+        .OnAppearing(() => OnPageAppearing());
+    }
+
+    void OnPageAppearing()
+    {
+        // Refresh data when returning from detail page
+        _ = LoadDataAsync();
     }
 
     VisualNode RenderEmptyState()
@@ -240,43 +154,28 @@ partial class BeanManagementPage : Component<BeanManagementState>
     VisualNode RenderBeanItem(BeanDto bean)
     {
         return Border(
-            Grid("Auto", "*,Auto",
-                VStack(spacing: 4,
-                    Label(bean.Name)
-                        .ThemeKey(ThemeKeys.CardTitle),
-                    bean.Roaster != null
-                        ? Label($"🏭 {bean.Roaster}")
-                            .FontSize(14)
-                            .ThemeKey(ThemeKeys.SecondaryText)
-                        : null,
-                    bean.Origin != null
-                        ? Label($"🌍 {bean.Origin}")
-                            .FontSize(14)
-                            .ThemeKey(ThemeKeys.SecondaryText)
-                        : null,
-                    bean.RoastDate.HasValue
-                        ? Label($"📅 Roasted: {bean.RoastDate.Value:MMM d, yyyy}")
-                            .ThemeKey(ThemeKeys.MutedText)
-                        : null
-                )
-                .GridColumn(0)
-                .VCenter(),
-
-                // Action buttons
-                HStack(spacing: 8,
-                    Button("✏️")
-                        .BackgroundColor(Colors.Transparent)
-                        .OnClicked(async () => await ShowEditBeanSheet(bean)),
-                    Button("🗑️")
-                        .BackgroundColor(Colors.Transparent)
-                        .OnClicked(async () => await ShowDeleteConfirmation(bean))
-                )
-                .GridColumn(1)
-                .VCenter()
+            VStack(spacing: 4,
+                Label(bean.Name)
+                    .ThemeKey(ThemeKeys.CardTitle),
+                bean.Roaster != null
+                    ? Label($"🏭 {bean.Roaster}")
+                        .FontSize(14)
+                        .ThemeKey(ThemeKeys.SecondaryText)
+                    : null,
+                bean.Origin != null
+                    ? Label($"🌍 {bean.Origin}")
+                        .FontSize(14)
+                        .ThemeKey(ThemeKeys.SecondaryText)
+                    : null,
+                bean.RoastDate.HasValue
+                    ? Label($"📅 Roasted: {bean.RoastDate.Value:MMM d, yyyy}")
+                        .ThemeKey(ThemeKeys.MutedText)
+                    : null
             )
             .Padding(12)
         )
-        .Margin(0, 4)
-        .ThemeKey(ThemeKeys.Card);
+        .ThemeKey(ThemeKeys.Card)
+        .OnTapped(() => NavigateToEditBean(bean))
+        .Margin(0, 4);
     }
 }

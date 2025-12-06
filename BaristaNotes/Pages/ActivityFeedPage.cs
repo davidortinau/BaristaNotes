@@ -249,15 +249,15 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         return CollectionView()
             .ItemsSource(State.ShotRecords, shot =>
                 SwipeView(
-                    new ShotRecordCard()
-                        .Shot(shot)
+                    Border(
+                        new ShotRecordCard()
+                            .Shot(shot)
+                    )
+                    .StrokeThickness(0)
+                    .OnTapped(() => NavigateToEdit(shot.Id))
                 )
                 .LeftItems(
                 [
-                    SwipeItem()
-                        .BackgroundColor(Colors.Transparent)
-                        .IconImageSource(AppIcons.Edit)
-                        .OnInvoked(() => NavigateToEdit(shot.Id)),
                     SwipeItem()
                         .BackgroundColor(Colors.Transparent)
                         .IconImageSource(AppIcons.Delete)

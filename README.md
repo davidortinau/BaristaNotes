@@ -374,14 +374,9 @@ Please ensure:
 - [C# 12 Language Features](https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/csharp-12)
 - [.NET 10 Release Notes](https://github.com/dotnet/core/tree/main/release-notes/10.0)
 
-### Related Projects
-
-- [Coffee Compass](https://github.com/davidortinau/CoffeeCompass) - Another coffee tracking app example
-- [WeatherTwentyOne](https://github.com/davidortinau/WeatherTwentyOne) - MAUI weather app sample
-
 ## License
 
-[Add your license here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 

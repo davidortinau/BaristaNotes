@@ -3,6 +3,7 @@ using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using BaristaNotes.Components;
+using BaristaNotes.Components.FormFields;
 using MauiReactor;
 
 namespace BaristaNotes.Pages;
@@ -319,40 +320,30 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
     VisualNode RenderForm()
     {
         var isEditMode = State.BeanId.HasValue && State.BeanId.Value > 0;
+        var isLightTheme = Application.Current?.RequestedTheme == AppTheme.Light;
+        var backgroundColor = isLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
 
         return VStack(spacing: 16,
             // Name field
-            Label("Name *").ThemeKey(ThemeKeys.SecondaryText),
-            Border(
-                Entry()
-                    .Placeholder("Bean name (required)")
-                    .Text(State.Name)
-                    .OnTextChanged(text => SetState(s => s.Name = text))
-            )
-            .Padding(8)
-            .ThemeKey(ThemeKeys.CardBorder),
+            new FormEntryField()
+                .Label("Name *")
+                .Placeholder("Bean name (required)")
+                .Text(State.Name)
+                .OnTextChanged(text => SetState(s => s.Name = text)),
 
             // Roaster field
-            Label("Roaster").ThemeKey(ThemeKeys.SecondaryText),
-            Border(
-                Entry()
-                    .Placeholder("Roaster name")
-                    .Text(State.Roaster)
-                    .OnTextChanged(text => SetState(s => s.Roaster = text))
-            )
-            .Padding(8)
-            .ThemeKey(ThemeKeys.CardBorder),
+            new FormEntryField()
+                .Label("Roaster")
+                .Placeholder("Roaster name")
+                .Text(State.Roaster)
+                .OnTextChanged(text => SetState(s => s.Roaster = text)),
 
             // Origin field
-            Label("Origin").ThemeKey(ThemeKeys.SecondaryText),
-            Border(
-                Entry()
-                    .Placeholder("Country or region of origin")
-                    .Text(State.Origin)
-                    .OnTextChanged(text => SetState(s => s.Origin = text))
-            )
-            .Padding(8)
-            .ThemeKey(ThemeKeys.CardBorder),
+            new FormEntryField()
+                .Label("Origin")
+                .Placeholder("Country or region of origin")
+                .Text(State.Origin)
+                .OnTextChanged(text => SetState(s => s.Origin = text)),
 
             // Roast date toggle
             HStack(spacing: 8,
@@ -371,16 +362,12 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 : null,
 
             // Notes field
-            Label("Notes").ThemeKey(ThemeKeys.SecondaryText),
-            Border(
-                Editor()
-                    .Placeholder("Tasting notes, processing method, etc.")
-                    .Text(State.Notes)
-                    .HeightRequest(100)
-                    .OnTextChanged(text => SetState(s => s.Notes = text))
-            )
-            .Padding(8)
-            .ThemeKey(ThemeKeys.CardBorder),
+            new FormEditorField()
+                .Label("Notes")
+                .Placeholder("Tasting notes, processing method, etc.")
+                .Text(State.Notes)
+                .HeightRequest(100)
+                .OnTextChanged(text => SetState(s => s.Notes = text)),
 
             // Error message
             State.ErrorMessage != null

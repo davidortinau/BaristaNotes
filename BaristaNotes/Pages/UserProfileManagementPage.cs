@@ -54,6 +54,12 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
         }
     }
 
+    void OnPageAppearing()
+    {
+        // Refresh data when returning from detail page
+        _ = LoadDataAsync();
+    }
+
     async Task ShowAddProfileSheet()
     {
         // Navigate to profile form page (no profileId = add mode)
@@ -131,7 +137,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                 )
                 .VCenter()
                 .HCenter()
-            );
+            ).OnAppearing(() => OnPageAppearing());
         }
 
         if (!string.IsNullOrEmpty(State.ErrorMessage))
@@ -154,7 +160,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                 .VCenter()
                 .HCenter()
                 .Spacing(16)
-            );
+            ).OnAppearing(() => OnPageAppearing());
         }
 
         return ContentPage(
@@ -178,7 +184,8 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                         .Margin(16, 0)
                         .GridRow(1)
             )
-        ).Title("Profiles");
+        ).Title("Profiles")
+        .OnAppearing(() => OnPageAppearing());
     }
 
     VisualNode RenderEmptyState()

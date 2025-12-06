@@ -2,6 +2,7 @@ using MauiReactor;
 using MauiReactor.Shapes;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
+using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using BaristaNotes.Components.FormFields;
@@ -38,6 +39,12 @@ class ShotLoggingState
     public List<UserProfileDto> AvailableUsers { get; set; } = new();
     public UserProfileDto? SelectedMaker { get; set; }
     public UserProfileDto? SelectedRecipient { get; set; }
+
+    // Equipment tracking fields
+    public List<EquipmentDto> AvailableEquipment { get; set; } = new();
+    public int? SelectedMachineId { get; set; }
+    public int? SelectedGrinderId { get; set; }
+    public List<int> SelectedAccessoryIds { get; set; } = new();
 }
 
 class ShotLoggingPageProps
@@ -72,12 +79,19 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         _ = LoadDataAsync();
     }
 
+    void OnPageAppearing()
+    {
+        // Reload data when tab becomes visible (handles new beans added from Settings)
+        _ = LoadDataAsync();
+    }
+
     async Task LoadDataAsync()
     {
         try
         {
             var beans = await _beanService.GetAllActiveBeansAsync();
             var users = await _userProfileService.GetAllProfilesAsync();
+            var equipment = await _equipmentService.GetAllActiveEquipmentAsync();
 
             // Edit mode: Load existing shot
             if (Props.ShotId.HasValue)
@@ -94,6 +108,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 {
                     s.AvailableBeans = beans.ToList();
                     s.AvailableUsers = users;
+                    s.AvailableEquipment = equipment.ToList();
 
                     // Populate from existing shot
                     s.Timestamp = shot.Timestamp;
@@ -114,6 +129,11 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     s.SelectedMaker = shot.MadeBy;
                     s.SelectedRecipient = shot.MadeFor;
 
+                    // Set equipment from shot
+                    s.SelectedMachineId = shot.Machine?.Id;
+                    s.SelectedGrinderId = shot.Grinder?.Id;
+                    s.SelectedAccessoryIds = shot.Accessories?.Select(a => a.Id).ToList() ?? new();
+
                     s.IsLoading = false;
                 });
             }
@@ -126,6 +146,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 {
                     s.AvailableBeans = beans.ToList();
                     s.AvailableUsers = users;
+                    s.AvailableEquipment = equipment.ToList();
 
                     if (lastShot != null)
                     {
@@ -148,6 +169,11 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         if (lastRecipientId.HasValue)
                             s.SelectedRecipient = users.FirstOrDefault(u => u.Id == lastRecipientId.Value);
                     }
+
+                    // Load last-used equipment from preferences (always, even without lastShot)
+                    s.SelectedMachineId = _preferencesService.GetLastMachineId();
+                    s.SelectedGrinderId = _preferencesService.GetLastGrinderId();
+                    s.SelectedAccessoryIds = _preferencesService.GetLastAccessoryIds();
 
                     s.IsLoading = false;
                 });
@@ -242,6 +268,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 var createDto = new CreateShotDto
                 {
                     BeanId = State.SelectedBeanId.Value,
+                    MachineId = State.SelectedMachineId,
+                    GrinderId = State.SelectedGrinderId,
+                    AccessoryIds = State.SelectedAccessoryIds,
                     MadeById = State.SelectedMaker?.Id,
                     MadeForId = State.SelectedRecipient?.Id,
                     DoseIn = State.DoseIn,
@@ -262,6 +291,10 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     _preferencesService.SetLastBeanId(State.SelectedBeanId.Value);
                 }
 
+                // Save last-used equipment to preferences
+                _preferencesService.SetLastMachineId(State.SelectedMachineId);
+                _preferencesService.SetLastGrinderId(State.SelectedGrinderId);
+                _preferencesService.SetLastAccessoryIds(State.SelectedAccessoryIds);
 
                 await _feedbackService.ShowSuccessAsync($"{State.DrinkType} shot logged successfully");
 
@@ -293,7 +326,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 )
                 .VCenter()
                 .HCenter()
-            );
+            )
+            .OnAppearing(() => OnPageAppearing());
         }
 
         return ContentPage(Props.ShotId.HasValue ? "Edit Shot" : "New Shot",
@@ -410,7 +444,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 )
                 .Padding(16)
             )
-        );
+        )
+        .OnAppearing(() => OnPageAppearing());
     }
 
     VisualNode RenderDoseGauges()
@@ -421,7 +456,12 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         var secondaryTextColor = isLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
         var surfaceColor = isLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
 
-        return Grid("Auto", "*, *",
+        // Count selected equipment for badge
+        var selectedCount = (State.SelectedMachineId.HasValue ? 1 : 0) +
+                           (State.SelectedGrinderId.HasValue ? 1 : 0) +
+                           State.SelectedAccessoryIds.Count;
+
+        return Grid("Auto", "*, Auto, *",
             // In Gauge (left column)
             VStack(spacing: 4,
                 RenderSingleGauge(
@@ -437,9 +477,47 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 Label()
                     .Text("u")
                     .FontFamily("coffee-icons")
+                    .TextColor(secondaryTextColor)
                     .FontSize(24)
                     .HCenter()
             ).GridColumn(0),
+
+            // Equipment button (center column)
+            VStack(spacing: 4,
+                Grid(
+                    Border(
+                        Label()
+                            .Text("s") // Machine icon from coffee-icons font
+                            .FontFamily("coffee-icons")
+                            .FontSize(32)
+                            .TextColor(selectedCount > 0 ? primaryColor : secondaryTextColor)
+                            .HCenter()
+                            .VCenter()
+                    )
+                    .StrokeShape(new RoundRectangle().CornerRadius(25))
+                    .BackgroundColor(surfaceColor)
+                    .HeightRequest(50)
+                    .WidthRequest(50)
+                    .OnTapped(() => _ = ShowEquipmentSelectionPopup()),
+
+                    // Badge showing count of selected equipment
+                    selectedCount > 0 ?
+                        Border(
+                            Label(selectedCount.ToString())
+                                .FontSize(10)
+                                .TextColor(Colors.White)
+                                .HCenter()
+                                .VCenter()
+                        )
+                        .StrokeShape(new RoundRectangle().CornerRadius(8))
+                        .BackgroundColor(primaryColor)
+                        .HeightRequest(16)
+                        .WidthRequest(16)
+                        .HEnd()
+                        .VStart()
+                        .Margin(0, -4, -4, 0) : null
+                )
+            ).GridColumn(1).VCenter(),
 
             // Out Gauge (right column)
             VStack(spacing: 4,
@@ -458,7 +536,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .FontFamily("coffee-icons")
                     .FontSize(24)
                     .HCenter()
-            ).GridColumn(1)
+            ).GridColumn(2)
         );
     }
 
@@ -619,6 +697,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 // .BackgroundColor(State.Rating == index ? surfaceColor : Colors.Transparent)
                 // .Stroke(State.Rating == index ? primaryColor : Colors.Transparent)
                 // .StrokeThickness(State.Rating == index ? 1 : 0)
+                .StrokeThickness(0)
                 .HeightRequest(48)
                 .WidthRequest(48)
                 .OnTapped(() => SetState(s => s.Rating = index))
@@ -767,6 +846,162 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         await IPopupService.Current.PushAsync(popup);
     }
 
+    async Task ShowEquipmentSelectionPopup()
+    {
+        // Close any existing popup first
+        try { await IPopupService.Current.PopAsync(); } catch { }
+
+        // Group equipment by type with display names
+        var typeDisplayNames = new Dictionary<EquipmentType, string>
+        {
+            { EquipmentType.Machine, "Machines" },
+            { EquipmentType.Grinder, "Grinders" },
+            { EquipmentType.Tamper, "Tampers" },
+            { EquipmentType.PuckScreen, "Puck Screens" },
+            { EquipmentType.Other, "Other" }
+        };
+
+        // Build grouped equipment items for display
+        var equipmentItems = State.AvailableEquipment
+            .OrderBy(e => e.Type)
+            .ThenBy(e => e.Name)
+            .Select(e => new EquipmentSelectionItem
+            {
+                Equipment = e,
+                Name = e.Name,
+                GroupName = typeDisplayNames.GetValueOrDefault(e.Type, "Other"),
+                IsSelected = IsEquipmentSelected(e)
+            })
+            .ToList();
+
+        if (!equipmentItems.Any())
+        {
+            await _feedbackService.ShowErrorAsync("No equipment available", "Add equipment in Settings first");
+            return;
+        }
+
+        var popup = new ListActionPopup
+        {
+            Title = "Select Equipment",
+            ActionButtonText = "Done",
+            ShowActionButton = true,
+            ItemsSource = equipmentItems,
+            ItemDataTemplate = new Microsoft.Maui.Controls.DataTemplate(() =>
+            {
+                var tapGesture = new Microsoft.Maui.Controls.TapGestureRecognizer();
+                tapGesture.SetBinding(Microsoft.Maui.Controls.TapGestureRecognizer.CommandParameterProperty, ".");
+                tapGesture.Tapped += (s, e) =>
+                {
+                    if (e is Microsoft.Maui.Controls.TappedEventArgs args && args.Parameter is EquipmentSelectionItem item)
+                    {
+                        ToggleEquipmentSelection(item.Equipment);
+                    }
+                };
+
+                var layout = new Microsoft.Maui.Controls.HorizontalStackLayout
+                {
+                    Spacing = 12,
+                    Padding = new Thickness(0, 8)
+                };
+                layout.GestureRecognizers.Add(tapGesture);
+
+                // Checkbox icon
+                var checkIcon = new Microsoft.Maui.Controls.Label
+                {
+                    FontFamily = MaterialSymbolsFont.FontFamily,
+                    FontSize = 24,
+                    VerticalOptions = LayoutOptions.Center
+                };
+                checkIcon.SetBinding(Microsoft.Maui.Controls.Label.TextProperty, 
+                    new Microsoft.Maui.Controls.Binding("IsSelected", converter: new BoolToCheckIconConverter()));
+                checkIcon.SetBinding(Microsoft.Maui.Controls.Label.TextColorProperty,
+                    new Microsoft.Maui.Controls.Binding("IsSelected", converter: new BoolToCheckColorConverter()));
+
+                // Equipment name
+                var nameLabel = new Microsoft.Maui.Controls.Label
+                {
+                    FontSize = 16,
+                    VerticalOptions = LayoutOptions.Center,
+                    TextColor = Colors.White
+                };
+                nameLabel.SetBinding(Microsoft.Maui.Controls.Label.TextProperty, "Name");
+
+                // Group name (smaller, secondary)
+                var groupLabel = new Microsoft.Maui.Controls.Label
+                {
+                    FontSize = 12,
+                    VerticalOptions = LayoutOptions.Center,
+                    TextColor = Colors.Gray
+                };
+                groupLabel.SetBinding(Microsoft.Maui.Controls.Label.TextProperty, "GroupName");
+
+                var textStack = new Microsoft.Maui.Controls.VerticalStackLayout { Spacing = 2 };
+                textStack.Children.Add(nameLabel);
+                textStack.Children.Add(groupLabel);
+
+                layout.Children.Add(checkIcon);
+                layout.Children.Add(textStack);
+
+                return layout;
+            })
+        };
+
+        await IPopupService.Current.PushAsync(popup);
+    }
+
+    bool IsEquipmentSelected(EquipmentDto equipment)
+    {
+        return equipment.Type switch
+        {
+            EquipmentType.Machine => State.SelectedMachineId == equipment.Id,
+            EquipmentType.Grinder => State.SelectedGrinderId == equipment.Id,
+            _ => State.SelectedAccessoryIds.Contains(equipment.Id)
+        };
+    }
+
+    void ToggleEquipmentSelection(EquipmentDto equipment)
+    {
+        SetState(s =>
+        {
+            switch (equipment.Type)
+            {
+                case EquipmentType.Machine:
+                    // Toggle: if already selected, deselect; otherwise select this one
+                    s.SelectedMachineId = s.SelectedMachineId == equipment.Id ? null : equipment.Id;
+                    break;
+
+                case EquipmentType.Grinder:
+                    s.SelectedGrinderId = s.SelectedGrinderId == equipment.Id ? null : equipment.Id;
+                    break;
+
+                case EquipmentType.Tamper:
+                case EquipmentType.PuckScreen:
+                case EquipmentType.Other:
+                    // For accessories, only one per type
+                    var existingOfSameType = s.AvailableEquipment
+                        .Where(e => e.Type == equipment.Type && s.SelectedAccessoryIds.Contains(e.Id))
+                        .Select(e => e.Id)
+                        .ToList();
+
+                    // Remove any existing selection of the same type
+                    foreach (var id in existingOfSameType)
+                    {
+                        s.SelectedAccessoryIds.Remove(id);
+                    }
+
+                    // If we didn't just deselect this item, add it
+                    if (!existingOfSameType.Contains(equipment.Id))
+                    {
+                        s.SelectedAccessoryIds.Add(equipment.Id);
+                    }
+                    break;
+            }
+        });
+
+        // Re-show the popup with updated selections
+        _ = ShowEquipmentSelectionPopup();
+    }
+
     // Helper class for user selection display
     class UserSelectionItem
     {
@@ -774,6 +1009,47 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         public string Name { get; set; } = string.Empty;
         public string Icon { get; set; } = string.Empty;
         public string? AvatarPath { get; set; }
+    }
+
+    // Helper class for equipment selection display
+    class EquipmentSelectionItem
+    {
+        public EquipmentDto Equipment { get; set; } = null!;
+        public string Name { get; set; } = string.Empty;
+        public string GroupName { get; set; } = string.Empty;
+        public bool IsSelected { get; set; }
+    }
+
+    // Converter to show check icon based on selection state
+    class BoolToCheckIconConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            return value is bool isSelected && isSelected 
+                ? MaterialSymbolsFont.Check_circle 
+                : MaterialSymbolsFont.Radio_button_unchecked;
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    // Converter to show check color based on selection state
+    class BoolToCheckColorConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            return value is bool isSelected && isSelected 
+                ? AppColors.Light.Primary 
+                : Colors.Gray;
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     // Converter to check if string is null or empty

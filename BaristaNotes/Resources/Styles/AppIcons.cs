@@ -22,6 +22,14 @@ public static class AppIcons
         Color = IconColor
     };
 
+    public static FontImageSource Settings => new()
+    {
+        FontFamily = MaterialSymbolsFont.FontFamily,
+        Glyph = MaterialSymbolsFont.Settings,
+        Size = 32,
+        Color = IconColor
+    };
+
     public static FontImageSource Edit => new()
     {
         FontFamily = MaterialSymbolsFont.FontFamily,

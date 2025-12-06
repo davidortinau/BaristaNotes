@@ -8,7 +8,7 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
     private readonly int _profileId;
     private readonly IImagePickerService _imagePickerService;
     private readonly IUserProfileService _userProfileService;
-    
+
     public ProfileImagePicker(
         int profileId,
         IImagePickerService imagePickerService,
@@ -18,39 +18,39 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
         _imagePickerService = imagePickerService;
         _userProfileService = userProfileService;
     }
-    
+
     protected override void OnMounted()
     {
         base.OnMounted();
-        LoadProfileImage();
+        _ = LoadProfileImageAsync();
     }
-    
+
     public override VisualNode Render()
     {
         return new VStack(spacing: 10)
         {
             new CircularAvatar(State.ImagePath, 120),
-            
+
             new HStack(spacing: 10)
             {
                 new MauiReactor.Button("Change Photo")
-                    .OnClicked(PickImageAsync)
+                    .OnClicked(async () => await PickImageAsync())
                     .AutomationId("ChangePhotoButton"),
-                
+
                 State.ImagePath != null
                     ? new MauiReactor.Button("Remove")
-                        .OnClicked(RemoveImageAsync)
+                        .OnClicked(async () => await RemoveImageAsync())
                         .AutomationId("RemovePhotoButton")
                     : null
             }
             .HCenter(),
-            
+
             State.IsLoading
                 ? new MauiReactor.ActivityIndicator()
                     .IsRunning(true)
                     .AutomationId("ImageLoadingIndicator")
                 : null,
-            
+
             State.ErrorMessage != null
                 ? new MauiReactor.Label(State.ErrorMessage)
                     .TextColor(Colors.Red)
@@ -58,51 +58,61 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
                 : null
         };
     }
-    
-    private async void PickImageAsync()
+
+    private async Task PickImageAsync()
     {
         try
         {
-            SetState(s => 
+            SetState(s =>
             {
                 s.IsLoading = true;
                 s.ErrorMessage = null;
             });
-            
-            var stream = await _imagePickerService.PickImageAsync();
-            if (stream == null)
+
+            Stream? stream = null;
+            try
             {
-                SetState(s => s.IsLoading = false);
-                return; // User cancelled
-            }
-            
-            var result = await _userProfileService.UpdateProfileImageAsync(_profileId, stream);
-            
-            if (result.Success)
-            {
-                // Force reload of image path and refresh component
-                var newPath = await _userProfileService.GetProfileImagePathAsync(_profileId);
-                SetState(s => 
+                stream = await _imagePickerService.PickImageAsync();
+                if (stream == null)
                 {
-                    s.ImagePath = newPath;
-                    s.IsLoading = false;
-                });
-                
-                // Force component invalidation to refresh the image
-                Invalidate();
-            }
-            else
-            {
-                SetState(s => 
+                    SetState(s => s.IsLoading = false);
+                    return; // User cancelled
+                }
+
+                var result = await _userProfileService.UpdateProfileImageAsync(_profileId, stream);
+
+                if (result.Success)
                 {
-                    s.ErrorMessage = result.ErrorMessage;
-                    s.IsLoading = false;
-                });
+                    // Force reload of image path and refresh component
+                    var newPath = await _userProfileService.GetProfileImagePathAsync(_profileId);
+
+                    SetState(s =>
+                    {
+                        s.ImagePath = newPath;
+                        s.IsLoading = false;
+                    });
+
+                    // Force component invalidation to refresh the image
+                    Invalidate();
+                }
+                else
+                {
+                    SetState(s =>
+                    {
+                        s.ErrorMessage = result.ErrorMessage;
+                        s.IsLoading = false;
+                    });
+                }
+            }
+            finally
+            {
+                // Always dispose the stream to prevent resource leaks
+                stream?.Dispose();
             }
         }
         catch (PermissionException)
         {
-            SetState(s => 
+            SetState(s =>
             {
                 s.ErrorMessage = "Photo library permission denied";
                 s.IsLoading = false;
@@ -110,7 +120,7 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
         }
         catch (Exception ex)
         {
-            SetState(s => 
+            SetState(s =>
             {
                 s.ErrorMessage = "Failed to update image";
                 s.IsLoading = false;
@@ -118,23 +128,23 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
             Console.WriteLine($"Error: {ex.Message}");
         }
     }
-    
-    private async void RemoveImageAsync()
+
+    private async Task RemoveImageAsync()
     {
         try
         {
             SetState(s => s.IsLoading = true);
-            
+
             var removed = await _userProfileService.RemoveProfileImageAsync(_profileId);
-            
+
             if (removed)
             {
-                SetState(s => 
+                SetState(s =>
                 {
                     s.ImagePath = null;
                     s.IsLoading = false;
                 });
-                
+
                 // Force component invalidation to refresh the image
                 Invalidate();
             }
@@ -145,7 +155,7 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
         }
         catch (Exception ex)
         {
-            SetState(s => 
+            SetState(s =>
             {
                 s.ErrorMessage = "Failed to remove image";
                 s.IsLoading = false;
@@ -153,8 +163,8 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
             Console.WriteLine($"Error: {ex.Message}");
         }
     }
-    
-    private async Task LoadProfileImage()
+
+    private async Task LoadProfileImageAsync()
     {
         var path = await _userProfileService.GetProfileImagePathAsync(_profileId);
         SetState(s => s.ImagePath = path);

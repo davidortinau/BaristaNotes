@@ -1,6 +1,7 @@
 using MauiReactor;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Styles;
+using Fonts;
 
 namespace BaristaNotes.Components;
 
@@ -8,6 +9,16 @@ partial class ShotRecordCard : Component
 {
     [Prop]
     ShotRecordDto? _shot;
+
+    // Sentiment icons for ratings 0-4 (matching ShotLoggingPage)
+    private static readonly string[] RatingIcons = new[]
+    {
+        MaterialSymbolsFont.Sentiment_very_dissatisfied,
+        MaterialSymbolsFont.Sentiment_dissatisfied,
+        MaterialSymbolsFont.Sentiment_neutral,
+        MaterialSymbolsFont.Sentiment_satisfied,
+        MaterialSymbolsFont.Sentiment_very_satisfied
+    };
 
     public override VisualNode Render()
     {
@@ -22,11 +33,7 @@ partial class ShotRecordCard : Component
                         .FontSize(18)
                         .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold),
 
-                    HStack(spacing: 4,
-                        Label($"⭐ {_shot.Rating ?? 0}/5")
-                            .FontSize(14)
-                    )
-                    .HEnd()
+                    RenderRating()
                 ),
 
                 // User profiles (if available)
@@ -53,6 +60,19 @@ partial class ShotRecordCard : Component
         )
         .ThemeKey(ThemeKeys.CardBorder)
         .Margin(16, 8);
+    }
+
+    VisualNode RenderRating()
+    {
+        var rating = _shot?.Rating ?? 0;
+        // Clamp rating to valid index range (0-4)
+        var ratingIndex = Math.Clamp(rating, 0, 4);
+        var icon = RatingIcons[ratingIndex];
+
+        return Label(icon)
+            .FontFamily(MaterialSymbolsFont.FontFamily)
+            .FontSize(24)
+            .TextColor(AppColors.Light.Primary);
     }
 
     VisualNode? RenderUserProfiles()

@@ -20,7 +20,13 @@ public class AppShell : Component
                 ShellContent("Activity")
                     .Icon(AppIcons.Feed)
                     .Route("history")
-                    .RenderContent(() => new ActivityFeedPage())
+                    .RenderContent(() => new ActivityFeedPage()),
+
+
+ShellContent("Settings")
+                    .Icon(AppIcons.Settings)
+                    .Route("settings")
+                    .RenderContent(() => new SettingsPage())
             )
         );
     }

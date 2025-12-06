@@ -22,7 +22,7 @@
 		<ApplicationTitle>BaristaNotes</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.companyname.baristanotes</ApplicationId>
+		<ApplicationId>com.simplyprofound.baristanotes</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>

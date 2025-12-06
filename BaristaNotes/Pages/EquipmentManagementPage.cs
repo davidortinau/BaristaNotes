@@ -1,10 +1,8 @@
-using BaristaNotes.Components.Forms;
 using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
-using BaristaNotes.Utilities;
 using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups.Services;
 
@@ -32,6 +30,18 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
         _ = LoadDataAsync();
     }
 
+    protected override void OnPropsChanged()
+    {
+        base.OnPropsChanged();
+        _ = LoadDataAsync();
+    }
+
+    void OnPageAppearing()
+    {
+        // Reload data when returning from detail page
+        _ = LoadDataAsync();
+    }
+
     async Task LoadDataAsync()
     {
         try
@@ -53,39 +63,30 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
         }
     }
 
-    async Task ShowAddEquipmentSheet()
+    async Task NavigateToAddEquipment()
     {
-        await ShowEquipmentFormSheet(null);
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync("equipment-detail");
     }
 
-    async Task ShowEditEquipmentSheet(EquipmentDto equipment)
+    async void NavigateToEditEquipment(EquipmentDto equipment)
     {
-        await ShowEquipmentFormSheet(equipment);
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<EquipmentDetailPageProps>("equipment-detail", props =>
+        {
+            props.EquipmentId = equipment.Id;
+        });
     }
 
-    async Task ShowEquipmentFormSheet(EquipmentDto? equipment)
-    {
-        await BottomSheetManager.ShowAsync(
-            () => new EquipmentFormComponent(
-                equipment,
-                _equipmentService,
-                _feedbackService,
-                () => _ = LoadDataAsync()),
-            sheet => sheet.HasBackdrop = true);
-    }
-
-    async Task ShowDeleteConfirmation(EquipmentDto equipment)
+    async Task ShowArchiveConfirmation(EquipmentDto equipment)
     {
         var popup = new SimpleActionPopup
         {
-            Title = $"Delete \"{equipment.Name}\"?",
-            Text = "This action cannot be undone.",
-            ActionButtonText = "Delete",
+            Title = $"Archive \"{equipment.Name}\"?",
+            Text = "It will no longer appear in your equipment list.",
+            ActionButtonText = "Archive",
             SecondaryActionButtonText = "Cancel",
             ActionButtonCommand = new Command(async () =>
             {
-                // Delete logic here
-                await DeleteEquipment(equipment);
+                await ArchiveEquipment(equipment);
                 await IPopupService.Current.PopAsync();
             })
         };
@@ -93,19 +94,17 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
         await IPopupService.Current.PushAsync(popup);
     }
 
-    async Task DeleteEquipment(EquipmentDto equipment)
+    async Task ArchiveEquipment(EquipmentDto equipment)
     {
         try
         {
-            await _equipmentService.DeleteEquipmentAsync(equipment.Id);
-
-            await _feedbackService.ShowSuccessAsync($"{equipment.Name} deleted successfully");
+            await _equipmentService.ArchiveEquipmentAsync(equipment.Id);
+            await _feedbackService.ShowSuccessAsync($"{equipment.Name} archived");
             await LoadDataAsync();
         }
         catch (Exception ex)
         {
-
-            await _feedbackService.ShowErrorAsync("Failed to delete equipment", "Please try again");
+            await _feedbackService.ShowErrorAsync("Failed to archive equipment", "Please try again");
             SetState(s => s.ErrorMessage = ex.Message);
         }
     }
@@ -123,7 +122,8 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
                 )
                 .VCenter()
                 .HCenter()
-            );
+            )
+            .OnAppearing(() => OnPageAppearing());
         }
 
         if (!string.IsNullOrEmpty(State.ErrorMessage))
@@ -146,7 +146,8 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
                 .VCenter()
                 .HCenter()
                 .Spacing(16)
-            );
+            )
+            .OnAppearing(() => OnPageAppearing());
         }
 
         return ContentPage("Equipment",
@@ -154,7 +155,7 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
                 .IconImageSource(AppIcons.Add)
                 .Order(MauiControls.ToolbarItemOrder.Primary)
                 .Priority(0)
-                .OnClicked(async () => await ShowAddEquipmentSheet()),
+                .OnClicked(async () => await NavigateToAddEquipment()),
             Grid("Auto,*", "*",
                 // Header with Add button
                 Label("Equipment")
@@ -171,7 +172,8 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
                         .Margin(16, 0)
                         .GridRow(1)
             )
-        );
+        )
+        .OnAppearing(() => OnPageAppearing());
     }
 
     VisualNode RenderEmptyState()
@@ -206,14 +208,14 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
                 .Padding(12)
             )
             .ThemeKey(ThemeKeys.CardBorder)
-            .OnTapped(async () => await ShowEditEquipmentSheet(equipment))
+            .OnTapped(() => NavigateToEditEquipment(equipment))
         )
         .LeftItems(
         [
             SwipeItem()
                 .BackgroundColor(Colors.Transparent)
                 .IconImageSource(AppIcons.Delete)
-                .OnInvoked(async () => await ShowDeleteConfirmation(equipment))
+                .OnInvoked(async () => await ShowArchiveConfirmation(equipment))
         ])
         .Margin(0, 4);
     }

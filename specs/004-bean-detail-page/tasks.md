@@ -121,11 +121,11 @@
 **Purpose**: Final cleanup and quality verification
 
 - [X] T030 [P] Remove unused BeanFormSheet.cs import from BeanManagementPage if present in BaristaNotes/Pages/BeanManagementPage.cs
-- [ ] T031 [P] Verify page load performance (<2s) by testing with existing bean with shots
-- [ ] T032 [P] Verify shot history pagination works with bean having >20 shots
+- [X] T031 [P] Verify page load performance (<2s) by testing with existing bean with shots
+- [X] T032 [P] Verify shot history pagination works with bean having >20 shots
 - [X] T033 Code cleanup - remove any unused methods or dead code in BaristaNotes/Pages/BeanManagementPage.cs
-- [ ] T034 Run quickstart.md validation checklist
-- [ ] T035 Constitution compliance verification (all 4 principles checked)
+- [X] T034 Run quickstart.md validation checklist
+- [X] T035 Constitution compliance verification (all 4 principles checked)
 
 ---
 

@@ -912,7 +912,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     FontSize = 24,
                     VerticalOptions = LayoutOptions.Center
                 };
-                checkIcon.SetBinding(Microsoft.Maui.Controls.Label.TextProperty, 
+                checkIcon.SetBinding(Microsoft.Maui.Controls.Label.TextProperty,
                     new Microsoft.Maui.Controls.Binding("IsSelected", converter: new BoolToCheckIconConverter()));
                 checkIcon.SetBinding(Microsoft.Maui.Controls.Label.TextColorProperty,
                     new Microsoft.Maui.Controls.Binding("IsSelected", converter: new BoolToCheckColorConverter()));
@@ -1025,8 +1025,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     {
         public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
         {
-            return value is bool isSelected && isSelected 
-                ? MaterialSymbolsFont.Check_circle 
+            return value is bool isSelected && isSelected
+                ? MaterialSymbolsFont.Check_circle
                 : MaterialSymbolsFont.Radio_button_unchecked;
         }
 
@@ -1041,8 +1041,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     {
         public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
         {
-            return value is bool isSelected && isSelected 
-                ? AppColors.Light.Primary 
+            return value is bool isSelected && isSelected
+                ? AppColors.Light.Primary
                 : Colors.Gray;
         }
 

@@ -1,6 +1,8 @@
 using MauiReactor;
+using MauiReactor.Shapes;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
+using Fonts;
 
 namespace BaristaNotes.Pages;
 
@@ -37,17 +39,13 @@ partial class SettingsPage : Component<SettingsPageState>
                         .ThemeKey(ThemeKeys.TextSecondary)
                         .Padding(16, 16, 16, 8),
 
-                    // Theme selection
-                    Border(
-                        VStack(spacing: 12,
-                            RenderThemeOption(ThemeMode.Light, "☀️", "Light", "Always use light theme"),
-                            RenderThemeOption(ThemeMode.Dark, "🌙", "Dark", "Always use dark theme"),
-                            RenderThemeOption(ThemeMode.System, "⚙️", "System", "Follow device theme")
-                        )
-                        .Padding(16)
+                    // Theme selection - horizontal compact
+                    HStack(spacing: 8,
+                        RenderThemeOption(ThemeMode.Light, MaterialSymbolsFont.Light_mode, "Light"),
+                        RenderThemeOption(ThemeMode.Dark, MaterialSymbolsFont.Dark_mode, "Dark"),
+                        RenderThemeOption(ThemeMode.System, MaterialSymbolsFont.Brightness_auto, "Auto")
                     )
-                    .ThemeKey(ThemeKeys.CardBorder)
-                    .Margin(16, 0),
+                    .Padding(16, 0),
 
                     // Manage section header
                     Label("Manage")
@@ -96,34 +94,32 @@ partial class SettingsPage : Component<SettingsPageState>
         );
     }
 
-    VisualNode RenderThemeOption(ThemeMode mode, string emoji, string title, string description)
+    VisualNode RenderThemeOption(ThemeMode mode, string icon, string title)
     {
         var isSelected = State.CurrentThemeMode == mode;
+        var isLightTheme = ApplicationTheme.IsLightTheme;
+        var primaryColor = isLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary;
+        var surfaceColor = isLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
+        var textColor = isLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
 
         return Border(
-            Grid("*", "Auto,*,Auto",
-                Label(emoji)
+            VStack(spacing: 4,
+                Label(icon)
+                    .FontFamily(MaterialSymbolsFont.FontFamily)
                     .FontSize(24)
-                    .VCenter(),
-                VStack(spacing: 4,
-                    Label(title)
-                        .FontSize(16)
-                        .FontAttributes(isSelected ? Microsoft.Maui.Controls.FontAttributes.Bold : Microsoft.Maui.Controls.FontAttributes.None),
-                    Label(description)
-                        .ThemeKey(ThemeKeys.TextSecondary)
-                )
-                .VCenter()
-                .GridColumn(1),
-                Label(isSelected ? "✓" : "")
-                    .FontSize(20)
-                    .ThemeKey(ThemeKeys.PrimaryText)
-                    .GridColumn(2)
-                    .VCenter()
+                    .TextColor(isSelected ? primaryColor : textColor)
+                    .HCenter(),
+                Label(title)
+                    .FontSize(12)
+                    .TextColor(isSelected ? primaryColor : textColor)
+                    .HCenter()
             )
-            .ColumnSpacing(AppSpacing.L)
-            .Padding(12)
+            .Padding(16, 8)
         )
-        .ThemeKey(isSelected ? ThemeKeys.SelectedCard : ThemeKeys.Card)
+        .StrokeShape(new RoundRectangle().CornerRadius(8))
+        .BackgroundColor(isSelected ? primaryColor.WithAlpha(0.15f) : surfaceColor)
+        .Stroke(isSelected ? primaryColor : Colors.Transparent)
+        .StrokeThickness(isSelected ? 2 : 0)
         .OnTapped(async () => await OnThemeSelected(mode));
     }
 

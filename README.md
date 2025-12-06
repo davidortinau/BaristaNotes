@@ -2,6 +2,8 @@
 
 A modern espresso shot tracking application built with .NET MAUI and MauiReactor, demonstrating declarative UI patterns and offline-first architecture for mobile development.
 
+![screenshots of the mobile app](docs/screenshots/Dribbble.png)
+
 ## Overview
 
 BaristaNotes helps coffee enthusiasts track and analyze their espresso shots. Built as an educational project, it showcases modern .NET MAUI development patterns, reactive UI architecture, and offline-first data persistence strategies.

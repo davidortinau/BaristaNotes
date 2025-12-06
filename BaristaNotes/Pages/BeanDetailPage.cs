@@ -4,6 +4,7 @@ using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using BaristaNotes.Components;
 using BaristaNotes.Components.FormFields;
+using Fonts;
 using MauiReactor;
 
 namespace BaristaNotes.Pages;
@@ -452,7 +453,10 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
     VisualNode RenderEmptyShots()
     {
         return VStack(spacing: 12,
-            Label("📋").FontSize(48).HCenter(),
+            Label(MaterialSymbolsFont.Assignment)
+                .FontFamily(MaterialSymbolsFont.FontFamily)
+                .FontSize(48)
+                .HCenter(),
             Label("No shots recorded with this bean yet")
                 .ThemeKey(ThemeKeys.SecondaryText)
                 .HCenter()

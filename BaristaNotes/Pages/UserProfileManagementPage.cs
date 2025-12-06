@@ -144,7 +144,8 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
         {
             return ContentPage("Profiles",
                 VStack(
-                    Label("⚠️")
+                    Label(MaterialSymbolsFont.Warning)
+                        .FontFamily(MaterialSymbolsFont.FontFamily)
                         .FontSize(48)
                         .HCenter(),
                     Label(State.ErrorMessage)
@@ -191,7 +192,8 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
     VisualNode RenderEmptyState()
     {
         return VStack(spacing: 12,
-            Label("👤")
+            Label(MaterialSymbolsFont.Person)
+                .FontFamily(MaterialSymbolsFont.FontFamily)
                 .FontSize(64)
                 .HCenter(),
             Label("No Profiles Yet")

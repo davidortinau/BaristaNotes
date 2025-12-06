@@ -5,6 +5,7 @@ using BaristaNotes.Core.Services.Exceptions;
 using BaristaNotes.Components;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
+using Fonts;
 using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups.Services;
 
@@ -219,7 +220,8 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         if (!State.ShotRecords.Any())
         {
             return VStack(spacing: 12,
-                Label("☕")
+                Label(MaterialSymbolsFont.Coffee)
+                    .FontFamily(MaterialSymbolsFont.FontFamily)
                     .FontSize(64)
                     .HCenter(),
 

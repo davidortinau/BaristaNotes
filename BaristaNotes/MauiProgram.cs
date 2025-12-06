@@ -51,7 +51,7 @@ public static class MauiProgram
 					// { "IconLime", Color.FromArgb("#C8FF01") },
 					// { "IconRed", Color.FromArgb("#FF0000") },
 					// { "IconDarkBlue", Color.FromArgb("#6422FF") },
-					{ "BackgroundColor", AppColors.Dark.SurfaceElevated },
+					{ "BackgroundColor", AppColors.Dark.Surface },
 					{ "BackgroundSecondaryColor", AppColors.Dark.Surface },
 					{ "BackgroundTertiaryColor", Colors.Purple },
 					{ "PrimaryColor", AppColors.Dark.Primary },

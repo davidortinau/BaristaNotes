@@ -3,6 +3,7 @@ using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
+using Fonts;
 using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups.Services;
 
@@ -130,7 +131,8 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
         {
             return ContentPage("Equipment",
                 VStack(
-                    Label("⚠️")
+                    Label(MaterialSymbolsFont.Warning)
+                        .FontFamily(MaterialSymbolsFont.FontFamily)
                         .FontSize(48)
                         .HCenter(),
                     Label(State.ErrorMessage)
@@ -179,7 +181,8 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
     VisualNode RenderEmptyState()
     {
         return VStack(spacing: 12,
-            Label("🛠️")
+            Label(MaterialSymbolsFont.Build)
+                .FontFamily(MaterialSymbolsFont.FontFamily)
                 .FontSize(64)
                 .HCenter(),
             Label("No Equipment Yet")

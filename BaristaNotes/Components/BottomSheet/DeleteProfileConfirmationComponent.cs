@@ -1,6 +1,7 @@
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Styles;
 using BaristaNotes.Utilities;
+using Fonts;
 
 namespace BaristaNotes.Components.Forms;
 
@@ -29,7 +30,8 @@ partial class DeleteProfileConfirmationComponent : Component
     public override VisualNode Render()
         => VStack(spacing: 16,
             HStack(spacing: 8,
-                Label("⚠️")
+                Label(MaterialSymbolsFont.Warning)
+                    .FontFamily(MaterialSymbolsFont.FontFamily)
                     .FontSize(24),
                 Label("Delete Profile")
                     .FontSize(20)

@@ -29,9 +29,14 @@ partial class ShotRecordCard : Component
             VStack(spacing: 8,
                 // Header: Drink type and rating
                 HStack(spacing: 12,
-                    Label($"☕ {_shot.DrinkType}")
-                        .FontSize(18)
-                        .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold),
+                    HStack(spacing: 4,
+                        Label(MaterialSymbolsFont.Coffee)
+                            .FontFamily(MaterialSymbolsFont.FontFamily)
+                            .FontSize(18),
+                        Label(_shot.DrinkType)
+                            .FontSize(18)
+                            .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
+                    ),
 
                     RenderRating()
                 ),

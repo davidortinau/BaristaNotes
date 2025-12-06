@@ -154,6 +154,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         s.GrindSetting = lastShot.GrindSetting;
                         s.ExpectedTime = lastShot.ExpectedTime;
                         s.ExpectedOutput = lastShot.ExpectedOutput;
+                        s.ActualTime = lastShot.ActualTime;
+                        s.ActualOutput = lastShot.ActualOutput;
+                        s.Rating = lastShot.Rating ?? 2;
                         s.DrinkType = lastShot.DrinkType;
                         s.SelectedBeanId = lastShot.Bean?.Id;
                         s.SelectedBeanIndex = lastShot.Bean != null ? s.AvailableBeans.FindIndex(b => b.Id == lastShot.Bean.Id) : -1;
@@ -359,7 +362,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     RenderRatingSelector(),
 
                     // Save Button
-                    Button("Save Shot")
+                    Button("Add Shot")
                         .IsEnabled(!State.IsLoading)
                         .OnClicked(async () => await SaveShotAsync())
                         .HeightRequest(50)

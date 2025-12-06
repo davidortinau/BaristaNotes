@@ -2,6 +2,7 @@ using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
+using Fonts;
 using MauiReactor;
 
 namespace BaristaNotes.Pages;
@@ -83,7 +84,8 @@ partial class BeanManagementPage : Component<BeanManagementState>
         {
             return ContentPage(
                 VStack(
-                    Label("⚠️")
+                    Label(MaterialSymbolsFont.Warning)
+                        .FontFamily(MaterialSymbolsFont.FontFamily)
                         .FontSize(48)
                         .HCenter(),
                     Label(State.ErrorMessage)
@@ -135,7 +137,8 @@ partial class BeanManagementPage : Component<BeanManagementState>
     VisualNode RenderEmptyState()
     {
         return VStack(spacing: 12,
-            Label("☕")
+            Label(MaterialSymbolsFont.Coffee)
+                .FontFamily(MaterialSymbolsFont.FontFamily)
                 .FontSize(64)
                 .HCenter(),
             Label("No Beans Yet")
@@ -158,23 +161,41 @@ partial class BeanManagementPage : Component<BeanManagementState>
                 Label(bean.Name)
                     .ThemeKey(ThemeKeys.CardTitle),
                 bean.Roaster != null
-                    ? Label($"🏭 {bean.Roaster}")
-                        .FontSize(14)
-                        .ThemeKey(ThemeKeys.SecondaryText)
+                    ? HStack(spacing: 4,
+                        Label(MaterialSymbolsFont.Factory)
+                            .FontFamily(MaterialSymbolsFont.FontFamily)
+                            .FontSize(14)
+                            .ThemeKey(ThemeKeys.SecondaryText),
+                        Label(bean.Roaster)
+                            .FontSize(14)
+                            .ThemeKey(ThemeKeys.SecondaryText)
+                      )
                     : null,
                 bean.Origin != null
-                    ? Label($"🌍 {bean.Origin}")
-                        .FontSize(14)
-                        .ThemeKey(ThemeKeys.SecondaryText)
+                    ? HStack(spacing: 4,
+                        Label(MaterialSymbolsFont.Globe)
+                            .FontFamily(MaterialSymbolsFont.FontFamily)
+                            .FontSize(14)
+                            .ThemeKey(ThemeKeys.SecondaryText),
+                        Label(bean.Origin)
+                            .FontSize(14)
+                            .ThemeKey(ThemeKeys.SecondaryText)
+                      )
                     : null,
                 bean.RoastDate.HasValue
-                    ? Label($"📅 Roasted: {bean.RoastDate.Value:MMM d, yyyy}")
-                        .ThemeKey(ThemeKeys.MutedText)
+                    ? HStack(spacing: 4,
+                        Label(MaterialSymbolsFont.Calendar_today)
+                            .FontFamily(MaterialSymbolsFont.FontFamily)
+                            .FontSize(12)
+                            .ThemeKey(ThemeKeys.MutedText),
+                        Label($"Roasted: {bean.RoastDate.Value:MMM d, yyyy}")
+                            .ThemeKey(ThemeKeys.MutedText)
+                      )
                     : null
             )
             .Padding(12)
         )
-        .ThemeKey(ThemeKeys.Card)
+        .ThemeKey(ThemeKeys.CardBorder)
         .OnTapped(() => NavigateToEditBean(bean))
         .Margin(0, 4);
     }

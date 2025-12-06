@@ -5,7 +5,7 @@ namespace BaristaNotes.Styles;
 public static class AppIcons
 {
     private static Color IconColor => ApplicationTheme.IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
-    
+
     public static FontImageSource CoffeeCup => new()
     {
         FontFamily = MaterialSymbolsFont.FontFamily,
@@ -18,6 +18,14 @@ public static class AppIcons
     {
         FontFamily = MaterialSymbolsFont.FontFamily,
         Glyph = MaterialSymbolsFont.Feed,
+        Size = 32,
+        Color = IconColor
+    };
+
+    public static FontImageSource Settings => new()
+    {
+        FontFamily = MaterialSymbolsFont.FontFamily,
+        Glyph = MaterialSymbolsFont.Settings,
         Size = 32,
         Color = IconColor
     };

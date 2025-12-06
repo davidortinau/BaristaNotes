@@ -105,11 +105,6 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         await LoadShotsAsync();
     }
 
-    async Task NavigateToSettings()
-    {
-        await Microsoft.Maui.Controls.Shell.Current.GoToAsync("settings");
-    }
-
     async void NavigateToEdit(int shotId)
     {
         await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingPageProps>("shot-logging", props => props.ShotId = shotId);
@@ -161,10 +156,6 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
     public override VisualNode Render()
     {
         return ContentPage("Shot History",
-            ToolbarItem("Settings")
-                .Order(Microsoft.Maui.Controls.ToolbarItemOrder.Primary)
-                .Priority(0)
-                .OnClicked(async () => await NavigateToSettings()),
             Grid("Auto,*", "*",
                 Label("Shot History")
                     .ThemeKey(ThemeKeys.Headline)
@@ -249,15 +240,15 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         return CollectionView()
             .ItemsSource(State.ShotRecords, shot =>
                 SwipeView(
-                    new ShotRecordCard()
-                        .Shot(shot)
+                    Border(
+                        new ShotRecordCard()
+                            .Shot(shot)
+                    )
+                    .StrokeThickness(0)
+                    .OnTapped(() => NavigateToEdit(shot.Id))
                 )
                 .LeftItems(
                 [
-                    SwipeItem()
-                        .BackgroundColor(Colors.Transparent)
-                        .IconImageSource(AppIcons.Edit)
-                        .OnInvoked(() => NavigateToEdit(shot.Id)),
                     SwipeItem()
                         .BackgroundColor(Colors.Transparent)
                         .IconImageSource(AppIcons.Delete)

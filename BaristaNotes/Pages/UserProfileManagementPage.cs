@@ -54,6 +54,12 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
         }
     }
 
+    void OnPageAppearing()
+    {
+        // Refresh data when returning from detail page
+        _ = LoadDataAsync();
+    }
+
     async Task ShowAddProfileSheet()
     {
         // Navigate to profile form page (no profileId = add mode)
@@ -65,7 +71,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
         // Navigate to profile form page with profileId (edit mode)
         await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ProfileFormPageProps>("profile-form", props => props.ProfileId = profile.Id);
     }
-    
+
     async Task ShowDeleteConfirmation(UserProfileDto profile)
     {
         // Check if this is the last profile - prevent deletion
@@ -131,7 +137,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                 )
                 .VCenter()
                 .HCenter()
-            );
+            ).OnAppearing(() => OnPageAppearing());
         }
 
         if (!string.IsNullOrEmpty(State.ErrorMessage))
@@ -154,7 +160,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                 .VCenter()
                 .HCenter()
                 .Spacing(16)
-            );
+            ).OnAppearing(() => OnPageAppearing());
         }
 
         return ContentPage(
@@ -178,7 +184,8 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                         .Margin(16, 0)
                         .GridRow(1)
             )
-        ).Title("Profiles");
+        ).Title("Profiles")
+        .OnAppearing(() => OnPageAppearing());
     }
 
     VisualNode RenderEmptyState()
@@ -202,38 +209,26 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
     VisualNode RenderProfileItem(UserProfileDto profile)
     {
-        return Border(
-            Grid("Auto", "*,Auto",
+        return SwipeView(
+            Border(
                 VStack(spacing: 4,
                     Label(profile.Name)
                         .ThemeKey(ThemeKeys.CardTitle),
                     Label($"Created: {profile.CreatedAt:MMM d, yyyy}")
                         .ThemeKey(ThemeKeys.CardSubtitle)
                 )
-                .GridColumn(0)
-                .VCenter(),
-
-                // Action buttons
-                HStack(
-                    ImageButton()
-                        .Source(AppIcons.Edit)
-                        .Aspect(Aspect.Center)
-                        .BackgroundColor(Colors.Transparent)
-                        .OnClicked(async () => await ShowEditProfileSheet(profile)),
-                    ImageButton()
-                        .Source(AppIcons.Delete)
-                        .Aspect(Aspect.Center)
-                        .BackgroundColor(Colors.Transparent)
-                        .OnClicked(async () => await ShowDeleteConfirmation(profile))
-                )
-                .Spacing(AppSpacing.XS)
-                .GridColumn(1)
-                .VCenter()
-                .HEnd()
+                .Padding(12)
             )
-            .Padding(12)
+            .ThemeKey(ThemeKeys.CardBorder)
+            .OnTapped(async () => await ShowEditProfileSheet(profile))
         )
-        .Margin(0, 4)
-        .ThemeKey(ThemeKeys.CardBorder);
+        .LeftItems(
+        [
+            SwipeItem()
+                .BackgroundColor(Colors.Transparent)
+                .IconImageSource(AppIcons.Delete)
+                .OnInvoked(async () => await ShowDeleteConfirmation(profile))
+        ])
+        .Margin(0, 4);
     }
 }

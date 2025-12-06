@@ -10,17 +10,23 @@ public class AppShell : Component
     {
         return Shell(
             TabBar(
+                // Shot Log remains as the second tab
+                ShellContent("New Shot")
+                    .Icon(AppIcons.CoffeeCup)
+                    .Route("shots")
+                    .RenderContent(() => new ShotLoggingPage()),
+
                 // Activity Feed is now the primary tab
                 ShellContent("Activity")
                     .Icon(AppIcons.Feed)
                     .Route("history")
                     .RenderContent(() => new ActivityFeedPage()),
 
-                // Shot Log remains as the second tab
-                ShellContent("New Shot")
-                    .Icon(AppIcons.CoffeeCup)
-                    .Route("shots")
-                    .RenderContent(() => new ShotLoggingPage())
+
+ShellContent("Settings")
+                    .Icon(AppIcons.Settings)
+                    .Route("settings")
+                    .RenderContent(() => new SettingsPage())
             )
         );
     }

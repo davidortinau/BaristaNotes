@@ -38,18 +38,18 @@ partial class DeleteProfileConfirmationComponent : Component
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .TextColor(AppColors.Error)
             ),
-            
+
             Label($"\"{_profile.Name}\"")
                 .FontSize(16)
                 .FontAttributes(MauiControls.FontAttributes.Bold)
                 .HorizontalTextAlignment(TextAlignment.Center)
                 .ThemeKey(ThemeKeys.PrimaryText),
-            
+
             Label("Are you sure you want to delete this profile? Shot records associated with this profile will retain the historical reference.")
                 .FontSize(14)
                 .HorizontalTextAlignment(TextAlignment.Center)
                 .ThemeKey(ThemeKeys.SecondaryText),
-            
+
             HStack(spacing: 12,
                 Button("Cancel")
                     .OnClicked(CancelAsync)

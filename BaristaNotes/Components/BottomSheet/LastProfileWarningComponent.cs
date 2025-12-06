@@ -23,12 +23,12 @@ partial class LastProfileWarningComponent : Component
                     .ThemeKey(ThemeKeys.PrimaryText)
             )
             .HCenter(),
-            
+
             Label("This is your last profile. You must have at least one profile to log shots.")
                 .FontSize(14)
                 .HorizontalTextAlignment(TextAlignment.Center)
                 .ThemeKey(ThemeKeys.SecondaryText),
-            
+
             HStack(spacing: 4,
                 Label(MaterialSymbolsFont.Lightbulb)
                     .FontFamily(MaterialSymbolsFont.FontFamily)
@@ -39,7 +39,7 @@ partial class LastProfileWarningComponent : Component
                     .ThemeKey(ThemeKeys.MutedText)
             )
             .HCenter(),
-            
+
             Button("OK")
                 .OnClicked(CloseAsync)
                 .ThemeKey(ThemeKeys.PrimaryButton)

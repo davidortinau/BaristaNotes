@@ -63,8 +63,7 @@ partial class ShotRecordCard : Component
             )
             .Padding(12)
         )
-        .ThemeKey(ThemeKeys.CardBorder)
-        .Margin(16, 8);
+        .ThemeKey(ThemeKeys.CardBorder);
     }
 
     VisualNode RenderRating()

@@ -4,6 +4,13 @@ namespace BaristaNotes.Styles;
 
 public static class AppIcons
 {
+    public static FontImageSource EspressoMachine => new()
+    {
+        FontFamily = "coffee-icons",
+        Glyph = "s",// Machine icon from coffee-icons font
+        Size = 64,
+        Color = IconColor
+    };
     private static Color IconColor => ApplicationTheme.IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
 
     public static FontImageSource CoffeeCup => new()

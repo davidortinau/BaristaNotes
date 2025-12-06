@@ -131,8 +131,7 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
         {
             return ContentPage("Equipment",
                 VStack(
-                    Label(MaterialSymbolsFont.Warning)
-                        .FontFamily(MaterialSymbolsFont.FontFamily)
+                    Label("⚠️")
                         .FontSize(48)
                         .HCenter(),
                     Label(State.ErrorMessage)
@@ -153,27 +152,15 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
         }
 
         return ContentPage("Equipment",
-            ToolbarItem()
-                .IconImageSource(AppIcons.Add)
+            ToolbarItem("+ Add")
                 .Order(MauiControls.ToolbarItemOrder.Primary)
                 .Priority(0)
                 .OnClicked(async () => await NavigateToAddEquipment()),
-            Grid("Auto,*", "*",
-                // Header with Add button
-                Label("Equipment")
-                    .FontSize(24)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .Padding(16, 8)
-                    .GridRow(0),
-
-                // Equipment list
-                State.Equipment.Count == 0
-                    ? RenderEmptyState().GridRow(1)
-                    : CollectionView()
-                        .ItemsSource(State.Equipment, RenderEquipmentItem)
-                        .Margin(16, 0)
-                        .GridRow(1)
-            )
+            State.Equipment.Count == 0
+                ? RenderEmptyState()
+                : CollectionView()
+                    .ItemsSource(State.Equipment, RenderEquipmentItem)
+                    .Margin(16, 16, 16, 32)
         )
         .OnAppearing(() => OnPageAppearing());
     }
@@ -181,16 +168,14 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
     VisualNode RenderEmptyState()
     {
         return VStack(spacing: 12,
-            Label(MaterialSymbolsFont.Build)
-                .FontFamily(MaterialSymbolsFont.FontFamily)
-                .FontSize(64)
+            Image()
+                .Source(AppIcons.EspressoMachine)
                 .HCenter(),
             Label("No Equipment Yet")
-                .FontSize(20)
+                .ThemeKey(ThemeKeys.CardTitle)
                 .HCenter(),
             Label("Add your coffee machines, grinders, and accessories")
-                .FontSize(16)
-                .TextColor(Colors.Gray)
+                .ThemeKey(ThemeKeys.CardSubtitle)
                 .HCenter()
         )
         .VCenter()

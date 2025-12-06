@@ -110,20 +110,14 @@ partial class BeanManagementPage : Component<BeanManagementState>
                 .Order(MauiControls.ToolbarItemOrder.Primary)
                 .Priority(0)
                 .OnClicked(async () => await NavigateToAddBean()),
-            Grid("Auto,*", "*",
-                Label("Beans")
-                    .ThemeKey(ThemeKeys.SubHeadline)
-                    .Padding(16, 8)
-                    .GridRow(0),
 
-                // Bean list
-                State.Beans.Count == 0
-                    ? RenderEmptyState().GridRow(1)
-                    : CollectionView()
-                        .ItemsSource(State.Beans, RenderBeanItem)
-                        .Margin(16, 0)
-                        .GridRow(1)
-            )
+            // Bean list
+            State.Beans.Count == 0
+                ? RenderEmptyState()
+                : CollectionView()
+                    .ItemsSource(State.Beans, RenderBeanItem)
+                    .Margin(16, 16, 16, 32)
+
         ).Title("Beans")
         .OnAppearing(() => OnPageAppearing());
     }
@@ -142,11 +136,10 @@ partial class BeanManagementPage : Component<BeanManagementState>
                 .FontSize(64)
                 .HCenter(),
             Label("No Beans Yet")
-                .FontSize(20)
+                .ThemeKey(ThemeKeys.CardTitle)
                 .HCenter(),
             Label("Add your favorite coffee beans to track freshness and tasting notes")
-                .FontSize(16)
-                .ThemeKey(ThemeKeys.SecondaryText)
+                .ThemeKey(ThemeKeys.CardSubtitle)
                 .HCenter()
         )
         .VCenter()

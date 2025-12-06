@@ -169,22 +169,12 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                 .Order(MauiControls.ToolbarItemOrder.Primary)
                 .Priority(0)
                 .OnClicked(async () => await ShowAddProfileSheet()),
-            Grid("Auto,*", "*",
-                // Header with Add button
-                Label("Profiles")
-                    .FontSize(24)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .Padding(16, 8)
-                    .GridRow(0),
-
-                // Profile list
-                State.Profiles.Count == 0
-                    ? RenderEmptyState().GridRow(1)
-                    : CollectionView()
-                        .ItemsSource(State.Profiles, RenderProfileItem)
-                        .Margin(16, 0)
-                        .GridRow(1)
-            )
+            // Profile list
+            State.Profiles.Count == 0
+                ? RenderEmptyState()
+                : CollectionView()
+                    .ItemsSource(State.Profiles, RenderProfileItem)
+                    .Margin(16, 16, 16, 32)
         ).Title("Profiles")
         .OnAppearing(() => OnPageAppearing());
     }
@@ -197,11 +187,10 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                 .FontSize(64)
                 .HCenter(),
             Label("No Profiles Yet")
-                .FontSize(20)
+                .ThemeKey(ThemeKeys.CardTitle)
                 .HCenter(),
             Label("Create profiles for different users or coffee preferences")
-                .FontSize(16)
-                .TextColor(Colors.Gray)
+                .ThemeKey(ThemeKeys.CardSubtitle)
                 .HCenter()
         )
         .VCenter()

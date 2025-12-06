@@ -157,19 +157,12 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
     public override VisualNode Render()
     {
         return ContentPage("Shot History",
-            Grid("Auto,*", "*",
-                Label("Shot History")
-                    .ThemeKey(ThemeKeys.Headline)
-                    .Padding(16, 8)
-                    .GridRow(0),
-
-                RefreshView(
-                    RenderContent()
-                )
-                .IsRefreshing(State.IsRefreshing)
-                .OnRefreshing(async () => await LoadShotsAsync(isRefresh: true))
-                .GridRow(1)
-            ).SafeAreaEdges(SafeAreaEdges.None)
+            RefreshView(
+                RenderContent()
+            )
+            .SafeAreaEdges(SafeAreaEdges.None)
+            .IsRefreshing(State.IsRefreshing)
+            .OnRefreshing(async () => await LoadShotsAsync(isRefresh: true))
         )
         .OnAppearing(() => OnPageAppearing());
     }
@@ -226,12 +219,11 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                     .HCenter(),
 
                 Label("No Shots Yet")
-                    .FontSize(20)
+                    .ThemeKey(ThemeKeys.CardTitle)
                     .HCenter(),
 
                 Label("Start logging your espresso shots to see them here")
-                    .FontSize(16)
-                    .TextColor(Colors.Gray)
+                    .ThemeKey(ThemeKeys.CardSubtitle)
                     .HCenter()
             )
             .VCenter()
@@ -256,6 +248,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                         .IconImageSource(AppIcons.Delete)
                         .OnInvoked(async () => await ShowDeleteConfirmation(shot.Id))
                 ])
+                .Margin(0, 4)
             )
             .RemainingItemsThreshold(5)
             .OnRemainingItemsThresholdReached(() =>
@@ -267,6 +260,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
             })
             .Footer(
                 ContentView().HeightRequest(80)
-            );
+            )
+            .Margin(16, 16, 16, 32);
     }
 }

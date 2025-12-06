@@ -335,8 +335,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
         return ContentPage(Props.ShotId.HasValue ? "Edit Shot" : "New Shot",
             ScrollView(
-                VStack(spacing: 16,
-
+                VStack(
                     // Error message
                     State.ErrorMessage != null ?
                         Label(State.ErrorMessage)
@@ -362,15 +361,15 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     RenderRatingSelector(),
 
                     // Save Button
-                    Button("Add Shot")
+                    Button(Props.ShotId.HasValue ? "Update Shot" : "Add Shot")
                         .IsEnabled(!State.IsLoading)
                         .OnClicked(async () => await SaveShotAsync())
-                        .HeightRequest(50)
-                        .Margin(0, 16),
+                        .HeightRequest(50),
 
                     BoxView()
                         .HorizontalOptions(LayoutOptions.Fill)
-                        .HeightRequest(1),
+                        .HeightRequest(1)
+                        .Margin(0, AppSpacing.L, 0, 0),
 
                     Label()
                         .Text("Additional Details")
@@ -444,8 +443,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
 
 
-                )
-                .Padding(16)
+                ).Spacing(AppSpacing.M)
+                .Padding(16, 0, 16, 32)
             )
         )
         .OnAppearing(() => OnPageAppearing());
@@ -466,7 +465,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
         return Grid("Auto", "*, Auto, *",
             // In Gauge (left column)
-            VStack(spacing: 4,
+            Grid(
                 RenderSingleGauge(
                     value: (double)State.DoseIn,
                     min: 15,
@@ -483,47 +482,48 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .TextColor(secondaryTextColor)
                     .FontSize(24)
                     .HCenter()
+                    .VEnd()
             ).GridColumn(0),
 
             // Equipment button (center column)
-            VStack(spacing: 4,
-                Grid(
+            Grid(
+                Border(
+                    Label()
+                        .Text("s") // Machine icon from coffee-icons font
+                        .FontFamily("coffee-icons")
+                        .FontSize(32)
+                        // .TextColor(selectedCount > 0 ? primaryColor : secondaryTextColor)
+                        .HCenter()
+                        .VCenter()
+                        .TranslationX(3)
+                )
+                .StrokeShape(new RoundRectangle().CornerRadius(25))
+                .BackgroundColor(surfaceColor)
+                .HeightRequest(50)
+                .WidthRequest(50)
+                .OnTapped(() => _ = ShowEquipmentSelectionPopup()),
+
+                // Badge showing count of selected equipment
+                selectedCount > 0 ?
                     Border(
-                        Label()
-                            .Text("s") // Machine icon from coffee-icons font
-                            .FontFamily("coffee-icons")
-                            .FontSize(32)
-                            .TextColor(selectedCount > 0 ? primaryColor : secondaryTextColor)
+                        Label(selectedCount.ToString())
+                            .FontSize(10)
+                            .TextColor(Colors.White)
                             .HCenter()
                             .VCenter()
                     )
-                    .StrokeShape(new RoundRectangle().CornerRadius(25))
-                    .BackgroundColor(surfaceColor)
-                    .HeightRequest(50)
-                    .WidthRequest(50)
-                    .OnTapped(() => _ = ShowEquipmentSelectionPopup()),
-
-                    // Badge showing count of selected equipment
-                    selectedCount > 0 ?
-                        Border(
-                            Label(selectedCount.ToString())
-                                .FontSize(10)
-                                .TextColor(Colors.White)
-                                .HCenter()
-                                .VCenter()
-                        )
-                        .StrokeShape(new RoundRectangle().CornerRadius(8))
-                        .BackgroundColor(primaryColor)
-                        .HeightRequest(16)
-                        .WidthRequest(16)
-                        .HEnd()
-                        .VStart()
-                        .Margin(0, -4, -4, 0) : null
-                )
-            ).GridColumn(1).VCenter(),
+                    .StrokeShape(new RoundRectangle().CornerRadius(8))
+                    .BackgroundColor(primaryColor)
+                    .HeightRequest(16)
+                    .WidthRequest(16)
+                    .HEnd()
+                    .VStart()
+                    .Margin(0, -4, -4, 0) : null
+            )
+            .GridColumn(1).VCenter(),
 
             // Out Gauge (right column)
-            VStack(spacing: 4,
+            Grid(
                 RenderSingleGauge(
                     value: (double)(State.ActualOutput ?? 0),
                     min: 25,
@@ -537,8 +537,10 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 Label()
                     .Text("t")
                     .FontFamily("coffee-icons")
+                    .TextColor(secondaryTextColor)
                     .FontSize(24)
                     .HCenter()
+                    .VEnd()
             ).GridColumn(2)
         );
     }
@@ -630,42 +632,45 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         var textColor = isLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
         var secondaryTextColor = isLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
 
-        return HStack(spacing: 16,
+        return Grid("Auto, Auto", "Auto, Auto, Auto",
             // Made By avatar
-            VStack(spacing: 4,
-                RenderUserAvatar(
-                    user: State.SelectedMaker,
-                    backgroundColor: surfaceColor,
-                    iconColor: secondaryTextColor,
-                    onTapped: () => _ = ShowUserSelectionPopup("Made By", user => SetState(s => s.SelectedMaker = user))
-                ),
-                Label("Made by")
-                    .FontSize(12)
-                    .TextColor(secondaryTextColor)
-                    .HCenter()
-            ),
+            RenderUserAvatar(
+                user: State.SelectedMaker,
+                backgroundColor: surfaceColor,
+                iconColor: secondaryTextColor,
+                onTapped: () => _ = ShowUserSelectionPopup("Made By", user => SetState(s => s.SelectedMaker = user))
+            ).GridRow(0).GridColumn(0),
 
             // Arrow
             Label(MaterialSymbolsFont.Arrow_forward)
                 .FontFamily(MaterialSymbolsFont.FontFamily)
                 .FontSize(24)
                 .TextColor(secondaryTextColor)
-                .VCenter(),
+                .VCenter()
+                .HCenter()
+                .GridRow(0).GridColumn(1),
 
             // Made For avatar
-            VStack(spacing: 4,
-                RenderUserAvatar(
-                    user: State.SelectedRecipient,
-                    backgroundColor: surfaceColor,
-                    iconColor: secondaryTextColor,
-                    onTapped: () => _ = ShowUserSelectionPopup("Made For", user => SetState(s => s.SelectedRecipient = user))
-                ),
-                Label("For")
-                    .FontSize(12)
-                    .TextColor(secondaryTextColor)
-                    .HCenter()
-            )
-        ).HCenter();
+            RenderUserAvatar(
+                user: State.SelectedRecipient,
+                backgroundColor: surfaceColor,
+                iconColor: secondaryTextColor,
+                onTapped: () => _ = ShowUserSelectionPopup("Made For", user => SetState(s => s.SelectedRecipient = user))
+            ).GridRow(0).GridColumn(2),
+
+            // Labels row
+            Label("Made by")
+                .FontSize(12)
+                .TextColor(secondaryTextColor)
+                .HCenter()
+                .GridRow(1).GridColumn(0),
+
+            Label("For")
+                .FontSize(12)
+                .TextColor(secondaryTextColor)
+                .HCenter()
+                .GridRow(1).GridColumn(2)
+        ).ColumnSpacing(16).RowSpacing(4).HCenter();
     }
 
     VisualNode RenderRatingSelector()

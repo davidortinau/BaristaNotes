@@ -6,7 +6,7 @@ public class ShotRecord
     public DateTimeOffset Timestamp { get; set; }
     
     // Foreign keys
-    public int? BeanId { get; set; }
+    public int BagId { get; set; }
     public int? MachineId { get; set; }
     public int? GrinderId { get; set; }
     public int? MadeById { get; set; }
@@ -33,7 +33,7 @@ public class ShotRecord
     public bool IsDeleted { get; set; } = false;
     
     // Navigation properties
-    public virtual Bean? Bean { get; set; }
+    public virtual Bag Bag { get; set; } = null!;
     public virtual Equipment? Machine { get; set; }
     public virtual Equipment? Grinder { get; set; }
     public virtual UserProfile? MadeBy { get; set; }

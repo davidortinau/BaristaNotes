@@ -8,6 +8,7 @@ public class BaristaNotesContext : DbContext
 {
     public DbSet<Equipment> Equipment { get; set; } = null!;
     public DbSet<Bean> Beans { get; set; } = null!;
+    public DbSet<Bag> Bags { get; set; } = null!;
     public DbSet<UserProfile> UserProfiles { get; set; } = null!;
     public DbSet<ShotRecord> ShotRecords { get; set; } = null!;
     public DbSet<ShotEquipment> ShotEquipments { get; set; } = null!;
@@ -56,6 +57,33 @@ public class BaristaNotesContext : DbContext
             entity.HasIndex(e => e.SyncId).IsUnique();
         });
         
+        // Bag configuration
+        modelBuilder.Entity<Bag>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BeanId).IsRequired();
+            entity.Property(e => e.RoastDate).IsRequired();
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.IsComplete).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.SyncId).IsRequired();
+            entity.Property(e => e.LastModifiedAt).IsRequired();
+            entity.Property(e => e.IsDeleted).IsRequired().HasDefaultValue(false);
+            
+            // Indexes for performance
+            entity.HasIndex(e => e.BeanId);
+            entity.HasIndex(e => new { e.BeanId, e.IsComplete, e.RoastDate }).IsDescending(false, false, true);
+            entity.HasIndex(e => new { e.BeanId, e.RoastDate }).IsDescending(false, true);
+            entity.HasIndex(e => e.SyncId).IsUnique();
+            
+            // Relationships
+            entity.HasOne(e => e.Bean)
+                .WithMany(b => b.Bags)
+                .HasForeignKey(e => e.BeanId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        
         // UserProfile configuration
         modelBuilder.Entity<UserProfile>(entity =>
         {
@@ -76,6 +104,7 @@ public class BaristaNotesContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Timestamp).IsRequired();
+            entity.Property(e => e.BagId).IsRequired();
             entity.Property(e => e.DoseIn).IsRequired().HasPrecision(5, 2);
             entity.Property(e => e.GrindSetting).IsRequired().HasMaxLength(50);
             entity.Property(e => e.ExpectedTime).IsRequired().HasPrecision(5, 2);
@@ -89,16 +118,17 @@ public class BaristaNotesContext : DbContext
             entity.Property(e => e.IsDeleted).IsRequired().HasDefaultValue(false);
             
             entity.HasIndex(e => e.Timestamp).IsDescending();
-            entity.HasIndex(e => e.BeanId);
+            entity.HasIndex(e => e.BagId);
+            entity.HasIndex(e => new { e.BagId, e.Rating });
             entity.HasIndex(e => e.MadeById);
             entity.HasIndex(e => e.MadeForId);
             entity.HasIndex(e => e.SyncId).IsUnique();
             
             // Relationships
-            entity.HasOne(e => e.Bean)
+            entity.HasOne(e => e.Bag)
                 .WithMany(b => b.ShotRecords)
-                .HasForeignKey(e => e.BeanId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .HasForeignKey(e => e.BagId)
+                .OnDelete(DeleteBehavior.Cascade);
             
             entity.HasOne(e => e.Machine)
                 .WithMany()

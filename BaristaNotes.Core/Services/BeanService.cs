@@ -49,7 +49,8 @@ public class BeanService : IBeanService
             {
                 Name = dto.Name,
                 Roaster = dto.Roaster,
-                RoastDate = dto.RoastDate,
+                // TODO: RoastDate moved to Bag entity - will be handled in T041 (BagFormPage)
+                // Temporarily removed to allow migration generation
                 Origin = dto.Origin,
                 Notes = dto.Notes,
                 IsActive = true,
@@ -89,8 +90,9 @@ public class BeanService : IBeanService
             bean.Name = dto.Name;
         if (dto.Roaster != null)
             bean.Roaster = dto.Roaster;
-        if (dto.RoastDate.HasValue)
-            bean.RoastDate = dto.RoastDate;
+        // TODO: RoastDate moved to Bag entity - dto.RoastDate temporarily ignored
+        // if (dto.RoastDate.HasValue)
+        //     bean.RoastDate = dto.RoastDate;
         if (dto.Origin != null)
             bean.Origin = dto.Origin;
         if (dto.Notes != null)
@@ -131,7 +133,7 @@ public class BeanService : IBeanService
         Id = bean.Id,
         Name = bean.Name,
         Roaster = bean.Roaster,
-        RoastDate = bean.RoastDate,
+        RoastDate = null, // TODO: RoastDate moved to Bag - will populate from first Bag in later tasks
         Origin = bean.Origin,
         Notes = bean.Notes,
         IsActive = bean.IsActive,

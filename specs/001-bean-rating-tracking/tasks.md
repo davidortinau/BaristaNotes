@@ -28,9 +28,9 @@ This is a .NET MAUI mobile project with three-project structure:
 
 **Purpose**: Project initialization and database migration framework
 
-- [ ] T001 Review existing project structure and verify all dependencies are installed (dotnet restore)
-- [ ] T002 Create feature branch tracking: Add specs/001-bean-rating-tracking/implementation-log.md for progress tracking
-- [ ] T003 [P] Review existing Bean, ShotRecord entities in BaristaNotes.Core/Models/ to understand current schema
+- [X] T001 Review existing project structure and verify all dependencies are installed (dotnet restore)
+- [X] T002 Create feature branch tracking: Add specs/001-bean-rating-tracking/implementation-log.md for progress tracking
+- [X] T003 [P] Review existing Bean, ShotRecord entities in BaristaNotes.Core/Models/ to understand current schema
 
 ---
 
@@ -42,15 +42,15 @@ This is a .NET MAUI mobile project with three-project structure:
 
 ### Database Migration Tasks
 
-- [ ] T004 Create Bag entity model in BaristaNotes.Core/Models/Bag.cs with schema from data-model.md (Id, BeanId, RoastDate, Notes, IsComplete, IsActive, CreatedAt, SyncId, LastModifiedAt, IsDeleted)
-- [ ] T005 Modify Bean entity in BaristaNotes.Core/Models/Bean.cs: Remove RoastDate property, add Bags navigation property
-- [ ] T006 Modify ShotRecord entity in BaristaNotes.Core/Models/ShotRecord.cs: Change BeanId to BagId, update navigation property from Bean to Bag
-- [ ] T007 Update BaristaNotesContext in BaristaNotes.Core/Data/BaristaNotesContext.cs: Add DbSet<Bag> Bags, configure Bag entity in OnModelCreating (relationships, indexes, validation rules)
-- [ ] T008 Generate EF Core migration via `dotnet ef migrations add AddBagEntity --project BaristaNotes.Core` from Core directory
-- [ ] T009 Review generated migration file in BaristaNotes.Core/Migrations/[timestamp]_AddBagEntity.cs and manually add data seeding SQL in Up() method per research.md section 1 (create Bags from existing Beans, update ShotRecords.BagId)
-- [ ] T010 Add Down() migration logic to rollback schema changes (restore BeanId column, copy RoastDate back, drop Bags table)
-- [ ] T011 Test migration: Run `dotnet ef database update` in dev environment, verify Bags table created, existing data migrated, ShotRecords updated
-- [ ] T012 Test migration rollback: Run `dotnet ef database update [previous_migration]`, verify schema restored correctly
+- [X] T004 Create Bag entity model in BaristaNotes.Core/Models/Bag.cs with schema from data-model.md (Id, BeanId, RoastDate, Notes, IsComplete, IsActive, CreatedAt, SyncId, LastModifiedAt, IsDeleted)
+- [X] T005 Modify Bean entity in BaristaNotes.Core/Models/Bean.cs: Remove RoastDate property, add Bags navigation property
+- [X] T006 Modify ShotRecord entity in BaristaNotes.Core/Models/ShotRecord.cs: Change BeanId to BagId, update navigation property from Bean to Bag
+- [X] T007 Update BaristaNotesContext in BaristaNotes.Core/Data/BaristaNotesContext.cs: Add DbSet<Bag> Bags, configure Bag entity in OnModelCreating (relationships, indexes, validation rules)
+- [X] T008 Generate EF Core migration via `dotnet ef migrations add AddBagEntity --project BaristaNotes.Core` from Core directory
+- [X] T009 Review generated migration file in BaristaNotes.Core/Migrations/[timestamp]_AddBagEntity.cs and manually add data seeding SQL in Up() method per research.md section 1 (create Bags from existing Beans, update ShotRecords.BagId)
+- [X] T010 Add Down() migration logic to rollback schema changes (restore BeanId column, copy RoastDate back, drop Bags table)
+- [X] T011 Test migration: Run `dotnet ef database update` in dev environment, verify Bags table created, existing data migrated, ShotRecords updated
+- [X] T012 Test migration rollback: Run `dotnet ef database update [previous_migration]`, verify schema restored correctly
 - [ ] T013 Create DataMigrationTests.cs in BaristaNotes.Tests/Integration/ to verify Up() and Down() migration data integrity (seed test data, run migration, assert Bags created, ShotRecords updated)
 
 **Checkpoint**: Database schema updated, migration tested. User story implementation can now begin.

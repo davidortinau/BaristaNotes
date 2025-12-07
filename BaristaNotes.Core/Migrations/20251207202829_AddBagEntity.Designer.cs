@@ -3,6 +3,7 @@ using System;
 using BaristaNotes.Core.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BaristaNotes.Core.Migrations
 {
     [DbContext(typeof(BaristaNotesContext))]
-    partial class BaristaNotesContextModelSnapshot : ModelSnapshot
+    [Migration("20251207202829_AddBagEntity")]
+    partial class AddBagEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");

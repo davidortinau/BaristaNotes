@@ -31,7 +31,7 @@ public class ShotService : IShotService
         var shot = new ShotRecord
         {
             Timestamp = dto.Timestamp ?? DateTimeOffset.Now,
-            BeanId = dto.BeanId,
+            BagId = dto.BeanId ?? 1, // TODO T038-T039: Change DTO to use BagId (required). Temporary default to 1.
             MachineId = dto.MachineId,
             GrinderId = dto.GrinderId,
             MadeById = dto.MadeById,
@@ -91,9 +91,9 @@ public class ShotService : IShotService
         if (shot == null || shot.IsDeleted)
             throw new EntityNotFoundException(nameof(ShotRecord), id);
 
-        // Update bean if provided
+        // Update bag if provided
         if (dto.BeanId.HasValue)
-            shot.BeanId = dto.BeanId.Value;
+            shot.BagId = dto.BeanId.Value; // TODO T038-T039: DTO should use BagId
 
         // Update maker/recipient if provided
         if (dto.MadeById.HasValue)
@@ -205,16 +205,16 @@ public class ShotService : IShotService
     {
         Id = shot.Id,
         Timestamp = shot.Timestamp,
-        Bean = shot.Bean == null ? null : new BeanDto
+        Bean = shot.Bag?.Bean == null ? null : new BeanDto // TODO T038-T039: Navigate through Bag
         {
-            Id = shot.Bean.Id,
-            Name = shot.Bean.Name,
-            Roaster = shot.Bean.Roaster,
-            RoastDate = shot.Bean.RoastDate,
-            Origin = shot.Bean.Origin,
-            Notes = shot.Bean.Notes,
-            IsActive = shot.Bean.IsActive,
-            CreatedAt = shot.Bean.CreatedAt
+            Id = shot.Bag.Bean.Id,
+            Name = shot.Bag.Bean.Name,
+            Roaster = shot.Bag.Bean.Roaster,
+            RoastDate = shot.Bag.RoastDate, // TODO: Get from Bag instead of Bean
+            Origin = shot.Bag.Bean.Origin,
+            Notes = shot.Bag.Bean.Notes,
+            IsActive = shot.Bag.Bean.IsActive,
+            CreatedAt = shot.Bag.Bean.CreatedAt
         },
         Machine = shot.Machine == null ? null : new EquipmentDto
         {

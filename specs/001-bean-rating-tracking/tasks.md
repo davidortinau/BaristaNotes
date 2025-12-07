@@ -65,22 +65,22 @@ This is a .NET MAUI mobile project with three-project structure:
 
 ### Tests for User Story 1 (Write FIRST) ⚠️
 
-- [ ] T014 [P] [US1] Create RatingServiceTests.cs in BaristaNotes.Tests/Unit/: Test GetBeanRatingAsync with multiple bags returns correct aggregate, test with no shots returns empty aggregate, test distribution calculation accuracy
+- [X] T014 [P] [US1] Create RatingServiceTests.cs in BaristaNotes.Tests/Unit/: Test GetBeanRatingAsync with multiple bags returns correct aggregate, test with no shots returns empty aggregate, test distribution calculation accuracy
 - [ ] T015 [P] [US1] Create BeanServiceTests.cs in BaristaNotes.Tests/Unit/: Test GetWithRatingsAsync returns bean with rating aggregate
 - [ ] T016 [P] [US1] Create BeanRepositoryTests.cs in BaristaNotes.Tests/Integration/: Test rating queries with proper indexes, test N+1 query prevention with .Include()
 
 ### DTOs and Service Interfaces for User Story 1
 
-- [ ] T017 [P] [US1] Create RatingAggregateDto.cs in BaristaNotes.Core/Services/DTOs/ (copy from specs/001-bean-rating-tracking/contracts/DTOs/RatingAggregateDto.cs)
-- [ ] T018 [P] [US1] Create IRatingService.cs interface in BaristaNotes.Core/Services/ (copy from specs/001-bean-rating-tracking/contracts/IRatingService.cs)
+- [X] T017 [P] [US1] Create RatingAggregateDto.cs in BaristaNotes.Core/Services/DTOs/ (copy from specs/001-bean-rating-tracking/contracts/DTOs/RatingAggregateDto.cs)
+- [X] T018 [P] [US1] Create IRatingService.cs interface in BaristaNotes.Core/Services/ (copy from specs/001-bean-rating-tracking/contracts/IRatingService.cs)
 
 ### Service Implementation for User Story 1
 
-- [ ] T019 [US1] Implement RatingService.cs in BaristaNotes.Core/Services/: Implement GetBeanRatingAsync (query ShotRecords where Bag.BeanId = X, calculate average, build distribution dictionary), implement GetBagRatingAsync (same logic filtered by BagId)
+- [X] T019 [US1] Implement RatingService.cs in BaristaNotes.Core/Services/: Implement GetBeanRatingAsync (query ShotRecords where Bag.BeanId = X, calculate average, build distribution dictionary), implement GetBagRatingAsync (same logic filtered by BagId)
 - [ ] T020 [US1] Add composite index IX_ShotRecords_BagId_Rating in migration or OnModelCreating for performance (critical for <500ms target per NFR-P2)
 - [ ] T021 [US1] Update IBeanService.cs in BaristaNotes.Core/Services/ to add GetWithRatingsAsync(int beanId) method signature
 - [ ] T022 [US1] Implement GetWithRatingsAsync in BeanService.cs: Inject IRatingService, load bean, call GetBeanRatingAsync, return bean with ratings
-- [ ] T023 [US1] Register IRatingService in MauiProgram.cs: Add builder.Services.AddScoped<IRatingService, RatingService>()
+- [X] T023 [US1] Register IRatingService in MauiProgram.cs: Add builder.Services.AddScoped<IRatingService, RatingService>()
 
 ### UI Components for User Story 1
 

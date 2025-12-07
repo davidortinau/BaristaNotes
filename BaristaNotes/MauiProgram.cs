@@ -112,6 +112,7 @@ public static class MauiProgram
 		builder.Services.AddScoped<IEquipmentService, EquipmentService>();
 		builder.Services.AddScoped<IBeanService, BeanService>();
 		builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+		builder.Services.AddScoped<IRatingService, RatingService>();
 		builder.Services.AddSingleton<IPreferencesService, PreferencesService>();
 		builder.Services.AddSingleton<IFeedbackService, FeedbackService>();
 		builder.Services.AddSingleton<IThemeService, ThemeService>();

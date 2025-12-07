@@ -144,6 +144,7 @@ public record BeanDto
     public string? Notes { get; init; }
     public bool IsActive { get; init; }
     public DateTimeOffset CreatedAt { get; init; }
+    public RatingAggregateDto? RatingAggregate { get; init; }
 }
 
 public record CreateBeanDto

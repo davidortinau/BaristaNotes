@@ -9,10 +9,12 @@ namespace BaristaNotes.Core.Services;
 public class BeanService : IBeanService
 {
     private readonly IBeanRepository _beanRepository;
+    private readonly IRatingService _ratingService;
     
-    public BeanService(IBeanRepository beanRepository)
+    public BeanService(IBeanRepository beanRepository, IRatingService ratingService)
     {
         _beanRepository = beanRepository;
+        _ratingService = ratingService;
     }
     
     public async Task<List<BeanDto>> GetAllActiveBeansAsync()
@@ -25,6 +27,16 @@ public class BeanService : IBeanService
     {
         var bean = await _beanRepository.GetByIdAsync(id);
         return bean == null ? null : MapToDto(bean);
+    }
+    
+    public async Task<BeanDto?> GetBeanWithRatingsAsync(int id)
+    {
+        var bean = await _beanRepository.GetByIdAsync(id);
+        if (bean == null) return null;
+        
+        var ratings = await _ratingService.GetBeanRatingAsync(id);
+        
+        return MapToDto(bean) with { RatingAggregate = ratings };
     }
     
     public async Task<OperationResult<BeanDto>> CreateBeanAsync(CreateBeanDto dto)

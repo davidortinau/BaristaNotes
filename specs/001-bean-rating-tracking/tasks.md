@@ -77,15 +77,15 @@ This is a .NET MAUI mobile project with three-project structure:
 ### Service Implementation for User Story 1
 
 - [X] T019 [US1] Implement RatingService.cs in BaristaNotes.Core/Services/: Implement GetBeanRatingAsync (query ShotRecords where Bag.BeanId = X, calculate average, build distribution dictionary), implement GetBagRatingAsync (same logic filtered by BagId)
-- [ ] T020 [US1] Add composite index IX_ShotRecords_BagId_Rating in migration or OnModelCreating for performance (critical for <500ms target per NFR-P2)
-- [ ] T021 [US1] Update IBeanService.cs in BaristaNotes.Core/Services/ to add GetWithRatingsAsync(int beanId) method signature
-- [ ] T022 [US1] Implement GetWithRatingsAsync in BeanService.cs: Inject IRatingService, load bean, call GetBeanRatingAsync, return bean with ratings
+- [X] T020 [US1] Add composite index IX_ShotRecords_BagId_Rating in migration or OnModelCreating for performance (critical for <500ms target per NFR-P2)
+- [X] T021 [US1] Update IBeanService.cs in BaristaNotes.Core/Services/ to add GetWithRatingsAsync(int beanId) method signature
+- [X] T022 [US1] Implement GetWithRatingsAsync in BeanService.cs: Inject IRatingService, load bean, call GetBeanRatingAsync, return bean with ratings
 - [X] T023 [US1] Register IRatingService in MauiProgram.cs: Add builder.Services.AddScoped<IRatingService, RatingService>()
 
 ### UI Components for User Story 1
 
-- [ ] T024 [P] [US1] Create RatingDisplayComponent.cs in BaristaNotes/Components/: Implement Reactor.Maui component to display average rating (stars), total shots, rating distribution bars (use ProgressBar for each rating level 5→1)
-- [ ] T025 [US1] Modify BeanDetailPage.cs in BaristaNotes/Pages/: Inject IRatingService, load bean rating in OnMountedAsync, render RatingDisplayComponent with aggregate data, add empty state for no ratings ("No ratings yet")
+- [X] T024 [P] [US1] Create RatingDisplayComponent.cs in BaristaNotes/Components/: Implement Reactor.Maui component to display average rating (stars), total shots, rating distribution bars (use ProgressBar for each rating level 5→1)
+- [X] T025 [US1] Modify BeanDetailPage.cs in BaristaNotes/Pages/: Inject IRatingService, load bean rating in OnMountedAsync, render RatingDisplayComponent with aggregate data, add empty state for no ratings ("No ratings yet")
 
 ### Validation for User Story 1
 

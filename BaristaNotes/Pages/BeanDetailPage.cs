@@ -30,6 +30,9 @@ class BeanDetailPageState
     public bool IsLoading { get; set; }
     public string? ErrorMessage { get; set; }
 
+    // Rating aggregate
+    public RatingAggregateDto? RatingAggregate { get; set; }
+
     // Shot history
     public List<ShotRecordDto> Shots { get; set; } = new();
     public bool IsLoadingShots { get; set; }
@@ -67,7 +70,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
 
         try
         {
-            var bean = await _beanService.GetBeanByIdAsync(State.BeanId.Value);
+            var bean = await _beanService.GetBeanWithRatingsAsync(State.BeanId.Value);
 
             if (bean == null)
             {
@@ -87,6 +90,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 s.TrackRoastDate = bean.RoastDate.HasValue;
                 s.RoastDate = bean.RoastDate?.DateTime ?? DateTime.Now;
                 s.Notes = bean.Notes ?? "";
+                s.RatingAggregate = bean.RatingAggregate;
                 s.IsLoading = false;
             });
 
@@ -310,6 +314,9 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                     // Form section
                     RenderForm(),
 
+                    // Rating section (edit mode only)
+                    isEditMode ? RenderRatings() : null,
+
                     // Shot history section (edit mode only)
                     isEditMode ? RenderShotHistory() : null
                 )
@@ -398,6 +405,21 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                         .BackgroundColor(Colors.Red)
                     : null
             )
+        );
+    }
+
+    VisualNode RenderRatings()
+    {
+        return VStack(spacing: 12,
+            // Section header
+            BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
+
+            Label("Bean Ratings")
+                .ThemeKey(ThemeKeys.SubHeadline),
+
+            // Rating display component
+            new RatingDisplayComponent()
+                .RatingAggregate(State.RatingAggregate)
         );
     }
 

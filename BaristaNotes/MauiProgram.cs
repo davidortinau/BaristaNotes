@@ -14,7 +14,7 @@ using BaristaNotes.Styles;
 using Microsoft.Maui.Handlers;
 using Syncfusion.Maui.Core.Hosting;
 
-#if IOS || MACCATALYST
+#if IOS
 using BaristaNotes.Platforms.iOS;
 #endif
 

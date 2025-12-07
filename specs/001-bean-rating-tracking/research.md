@@ -186,67 +186,107 @@ public class RatingAggregateDto
 
 **Question**: How does user select which bag when logging a shot? Must integrate with existing ShotLoggingPage.cs (44KB, complex Reactor component).
 
+**Updated Requirement** (from user clarification): Shot logging should be **bag-first**, not bean-first. Users select a bag directly, and the bean information is derived from the selected bag. Completed bags should not appear in the picker.
+
 **Research**:
 - Current ShotLoggingPage: Uses Reactor.Maui reactive state management
-- Bean selection: Existing picker/dropdown pattern (check BeanService usage)
+- Existing patterns: Picker/dropdown components (check BeanService, EquipmentService usage)
 - Reactor.Maui patterns: Component composition, state flows via RxUI observables
 - Constitution: "UX Consistency: Design system components MUST be used"
 
-**Decision**: Two-stage selection: (1) Bean picker (existing), (2) Bag picker (new, conditionally shown)
+**Decision**: Single bag picker showing active (incomplete) bags only, with bean name included in display label
 
 **Rationale**:
-1. **Minimal disruption**: Preserve existing Bean selection flow
-2. **Progressive disclosure**: Show Bag picker only after Bean selected (avoid overwhelming user)
-3. **Default to newest bag**: Pre-select most recent bag by RoastDate DESC (90% case per expected usage)
-4. **Component reusability**: Extract BagSelectorComponent for use in ShotLoggingPage and future locations
+1. **User-centric workflow**: Users think in terms of "which bag am I using" not "which bean + which bag"
+2. **Simplified UX**: One picker instead of two-stage selection reduces cognitive load
+3. **Completion filtering**: Only show bags marked as incomplete (IsComplete=false), keeping UI clean
+4. **Bean context automatic**: Bean name displayed in bag picker label (e.g., "Ethiopian Yirgacheffe - Roasted Dec 05, 2025")
+5. **Default selection**: Pre-select most recent active bag by RoastDate DESC
 
 **UX Flow**:
 ```
 1. User taps "Log Shot"
-2. Select Bean (existing VStack with Picker)
-   → OnBeanSelected: Load bags for selected bean
-3. IF multiple bags exist:
-     Show Bag picker (Label: "Which bag?", default: newest)
+2. Bag picker loads active bags (IsComplete=false, IsDeleted=false, IsActive=true)
+   → Bags displayed with format: "{BeanName} - Roasted {Date} [- Notes]"
+   → Sorted by RoastDate DESC (newest first)
+   → Pre-select most recent bag
+3. IF no active bags exist:
+      Show "No active bags" message with "Add New Bag" button
    ELSE:
-     Auto-select single bag, hide picker
+      Display selected bag's bean info (name, roaster, origin) below picker
 4. Continue with shot parameters (grind, time, etc.)
+5. Save shot with BagId (not BeanId)
 ```
 
 **Component Pattern** (Reactor.Maui):
 ```csharp
 new VStack
 {
-    // Existing bean picker
-    new Label("Bean").FontWeight(FontWeights.SemiBold),
-    new Picker()
-        .ItemsSource(state.Beans, b => b.Name)
-        .SelectedItem(state.SelectedBean)
-        .OnSelectedItemChanged(bean => state.SelectedBean = bean),
+    new Label("Select Bag").FontWeight(FontWeights.SemiBold),
     
-    // NEW: Bag picker (conditional rendering)
-    RenderIf(state.SelectedBean != null && state.AvailableBags.Count > 1,
-        new Label("Which bag?").FontWeight(FontWeights.SemiBold),
+    RenderIf(state.ActiveBags.Count > 0,
         new Picker()
-            .ItemsSource(state.AvailableBags, bag => FormatBagLabel(bag))
+            .ItemsSource(state.ActiveBags, bag => bag.DisplayLabel) // "Bean - Roasted Date - Notes"
             .SelectedItem(state.SelectedBag)
-            .OnSelectedItemChanged(bag => state.SelectedBag = bag)
+            .OnSelectedItemChanged(async bag => {
+                SetState(s => s.SelectedBag = bag);
+                // Bean info auto-displayed from bag.BeanName, bag.Bean properties
+            })
+    ),
+    
+    RenderIf(state.ActiveBags.Count == 0,
+        new VStack(spacing: 8)
+        {
+            new Label("No active bags available").Opacity(0.7),
+            new Button("Add New Bag")
+                .OnClicked(async () => await NavigateTo<BagFormPage>())
+        }
+    ),
+    
+    // Auto-display bean info from selected bag
+    RenderIf(state.SelectedBag != null,
+        new VStack(spacing: 4).Padding(8).BackgroundColor(Colors.LightGray.WithAlpha(0.1f))
+        {
+            new Label($"Bean: {state.SelectedBag.BeanName}").FontSize(14),
+            new Label($"{state.SelectedBag.ShotCount} shots logged, avg {state.SelectedBag.FormattedRating}").FontSize(12).Opacity(0.7)
+        }
     )
 }
+```
 
-string FormatBagLabel(Bag bag) 
-    => $"Roasted {bag.RoastDate:MMM dd, yyyy}" + 
-       (bag.Notes != null ? $" - {bag.Notes}" : "");
+**BagSummaryDto.DisplayLabel format**:
+```csharp
+public string DisplayLabel => 
+    $"{BeanName} - Roasted {FormattedRoastDate}" + 
+    (Notes != null ? $" - {Notes}" : "");
+
+// Example outputs:
+// "Ethiopian Yirgacheffe - Roasted Dec 05, 2025"
+// "Colombian Supremo - Roasted Nov 28, 2025 - From Trader Joe's"
+```
+
+**Completion Workflow**:
+```
+1. User finishes a bag
+2. Navigate to Bag Detail page (from bean detail or shot history)
+3. Tap "Mark as Complete" button
+4. Bag.IsComplete = true
+5. Bag no longer appears in shot logging picker
+6. Bag remains visible in bean detail "Bags" history section (with "Complete" badge)
+7. User can "Reactivate" bag if needed (IsComplete = false)
 ```
 
 **Alternatives Considered**:
+- **Two-stage: Bean → Bag selection** (original design): 
+  - Rejected: User feedback clarified bag-first workflow is more intuitive
+  - Rejected: Extra step slows down most frequent operation (logging shots)
+- **Show completed bags with disabled state**:
+  - Rejected: Visual clutter, users don't want to see finished bags in picker
+  - Kept in history views: Completed bags visible in bean detail for historical reference
+- **Bean-only selection (no bag concept)**:
+  - Rejected: Core requirement is tracking multiple bags per bean
 - **Modal/BottomSheet for bag selection**: 
-  - Rejected: Adds navigation step, slows down logging flow
-  - Rejected: Over-engineering for simple picker
-- **Combine Bean+Bag in single hierarchical picker**:
-  - Rejected: Reactor.Maui Picker doesn't support grouping natively
-  - Rejected: Complex custom control, violates "simplicity first"
-- **Show all bags always (even if only one)**:
-  - Rejected: Visual clutter, 80% of cases have single bag
+  - Rejected: Adds navigation step, standard Picker is sufficient
 
 **Accessibility**:
 - Picker has implicit keyboard navigation (MAUI standard control)
@@ -404,8 +444,10 @@ class BagSelectorComponent : Component<BagSelectorState>
 
 **ShotService** (`BaristaNotes.Core/Services/ShotService.cs`):
 - Current: CRUD operations for ShotRecord, expects `BeanId` parameter
-- Modification: Change parameter to `BagId`, add validation (Bag exists, belongs to expected Bean)
-- Cascade: On shot delete, trigger rating recalculation (handled by RatingService)
+- **Major Change**: Shot logging now uses `BagId` as primary parameter (not BeanId)
+- Modification: Change all shot creation/update signatures to accept `BagId`
+- Validation: Bag exists, is active (IsComplete=false), and not deleted
+- Cascade: On shot delete, ratings recalculated on-demand (no explicit trigger needed)
 
 ### 2. Existing UI Pages
 
@@ -418,10 +460,14 @@ class BagSelectorComponent : Component<BagSelectorState>
 
 **ShotLoggingPage** (`BaristaNotes/Pages/ShotLoggingPage.cs`):
 - Current: Multi-step form for shot parameters (bean, machine, grinder, dose, time, output, rating)
+- **Major Change**: Replace bean selection with bag selection as primary picker
 - Modification:
-  - After bean selection, load bags for selected bean
-  - Show bag picker (conditional, if >1 bag exists)
+  - **Remove** bean picker (or make it secondary/optional for filtering)
+  - **Add** bag picker showing active bags only (via `GetActiveBagsForShotLoggingAsync()`)
+  - Bag picker displays: "{BeanName} - Roasted {Date} [- Notes]"
+  - Auto-display bean info from selected bag (bean name, roaster shown below picker)
   - Update service call to use `BagId` instead of `BeanId`
+  - Handle empty state: "No active bags" → prompt to add bag
 
 ### 3. Database Context
 
@@ -441,7 +487,8 @@ class BagSelectorComponent : Component<BagSelectorState>
 | Data Migration | Multi-step EF Core migration with data seeding | Constitution compliance, zero-downtime, rollback safety |
 | Rating Calculation | On-demand LINQ queries with indexing | Data consistency, simplicity, meets <500ms target |
 | Distribution Storage | Compute on-the-fly (GROUP BY query) | Same query as average, no denormalization complexity |
-| Bag Selection UX | Two-stage picker (Bean → Bag), default newest | Minimal disruption, progressive disclosure, 90% case optimized |
+| Bag Selection UX | **Single bag picker** (bag-first, not bean-first) with completion filtering | User clarification: bag is primary selector, bean derived. Only active (incomplete) bags shown. Simpler workflow. |
+| Bag Completion | IsComplete boolean flag (separate from IsActive/IsDeleted) | Clear semantics: Complete=finished/empty, Active=soft-delete, Deleted=permanent. Allows reactivation. |
 | Empty States | Inline messages with CTA buttons | User guidance, existing pattern consistency |
 
 **All NEEDS CLARIFICATION items resolved. Ready for Phase 1: Design & Contracts.**

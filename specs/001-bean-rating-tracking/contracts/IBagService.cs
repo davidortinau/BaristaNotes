@@ -6,6 +6,7 @@ namespace BaristaNotes.Core.Services;
 /// <summary>
 /// Service interface for managing Bag entities (physical bags of coffee beans).
 /// A Bag represents a specific roast batch of a Bean, distinguished by roasting date.
+/// Bags can be marked as "complete" when finished to hide them from shot logging workflows.
 /// </summary>
 public interface IBagService
 {
@@ -32,24 +33,33 @@ public interface IBagService
     /// Gets all bags for a specific bean, ordered by roast date descending (newest first).
     /// </summary>
     /// <param name="beanId">Bean ID</param>
-    /// <param name="includeInactive">If true, includes bags with IsActive=false</param>
+    /// <param name="includeCompleted">If true, includes bags marked as complete</param>
     /// <returns>List of bags (empty if none found)</returns>
-    Task<List<Bag>> GetBagsForBeanAsync(int beanId, bool includeInactive = false);
+    Task<List<Bag>> GetBagsForBeanAsync(int beanId, bool includeCompleted = true);
+    
+    /// <summary>
+    /// Gets active (incomplete) bags for shot logging, ordered by roast date descending.
+    /// Used in shot logging page bag picker.
+    /// </summary>
+    /// <returns>List of active bag summaries with bean names</returns>
+    Task<List<BagSummaryDto>> GetActiveBagsForShotLoggingAsync();
     
     /// <summary>
     /// Gets bag summaries (lightweight DTOs) for a bean, including shot count and average rating.
+    /// Used in bean detail page to show bag history.
     /// </summary>
     /// <param name="beanId">Bean ID</param>
+    /// <param name="includeCompleted">If true, includes completed bags</param>
     /// <returns>List of bag summaries ordered by roast date descending</returns>
-    Task<List<BagSummaryDto>> GetBagSummariesForBeanAsync(int beanId);
+    Task<List<BagSummaryDto>> GetBagSummariesForBeanAsync(int beanId, bool includeCompleted = true);
     
     /// <summary>
-    /// Gets the most recent bag for a bean (by roast date).
-    /// Used for auto-selecting bag when logging shots.
+    /// Gets the most recent active (incomplete) bag for a bean (by roast date).
+    /// Used for auto-selecting bag when logging shots from bean context.
     /// </summary>
     /// <param name="beanId">Bean ID</param>
-    /// <returns>Most recent active bag, or null if bean has no bags</returns>
-    Task<Bag?> GetMostRecentBagForBeanAsync(int beanId);
+    /// <returns>Most recent active bag, or null if bean has no active bags</returns>
+    Task<Bag?> GetMostRecentActiveBagForBeanAsync(int beanId);
     
     /// <summary>
     /// Updates an existing bag's properties.
@@ -61,18 +71,26 @@ public interface IBagService
     Task<OperationResult<Bag>> UpdateBagAsync(Bag bag);
     
     /// <summary>
+    /// Marks a bag as complete (finished/empty).
+    /// Completed bags are excluded from shot logging bag picker but remain in history views.
+    /// </summary>
+    /// <param name="id">Bag ID</param>
+    /// <returns>Success if marked complete, failure if not found</returns>
+    Task<OperationResult> MarkBagCompleteAsync(int id);
+    
+    /// <summary>
+    /// Reactivates a completed bag (unmarks as complete).
+    /// Allows user to log more shots to a previously completed bag.
+    /// </summary>
+    /// <param name="id">Bag ID</param>
+    /// <returns>Success if reactivated, failure if not found</returns>
+    Task<OperationResult> ReactivateBagAsync(int id);
+    
+    /// <summary>
     /// Soft-deletes a bag (sets IsDeleted=true).
     /// Also soft-deletes all associated shot records.
     /// </summary>
     /// <param name="id">Bag ID to delete</param>
     /// <returns>Success if deleted, failure if not found</returns>
     Task<OperationResult> DeleteBagAsync(int id);
-    
-    /// <summary>
-    /// Marks a bag as inactive (IsActive=false).
-    /// Bag remains in database but excluded from bag picker UI.
-    /// </summary>
-    /// <param name="id">Bag ID</param>
-    /// <returns>Success if deactivated, failure if not found</returns>
-    Task<OperationResult> DeactivateBagAsync(int id);
 }

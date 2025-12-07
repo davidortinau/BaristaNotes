@@ -23,19 +23,21 @@ As a barista, I want to see an aggregate rating for a bean (averaged across all 
 
 ---
 
-### User Story 2 - Add New Bag of Existing Bean (Priority: P2)
+### User Story 2 - Bag-Based Shot Logging (Priority: P2)
 
-As a barista, when I receive a new bag of a bean I've already logged, I want to add it by roasting date so I can track shots for this specific bag while maintaining the history of previous bags.
+As a barista, when I log a new shot, I want to select a bag (not a bean) so that shots are properly associated with the specific physical bag I'm using, and I want to mark bags as complete when finished so they don't clutter my selection list.
 
-**Why this priority**: Essential for ongoing use - users will frequently receive new bags of beans they like. Without this, the system becomes unusable after the first bag is consumed.
+**Why this priority**: Essential for daily workflow - users log shots multiple times per day. The bag selection must be the primary interface, not bean selection. Bag completion prevents confusion and keeps the UI clean.
 
-**Independent Test**: Can be tested by adding a new bag to an existing bean with a different roasting date and verifying it's tracked separately. Delivers value by enabling continued use of the app over time.
+**Independent Test**: Can be tested by logging shots while selecting from active bags, then marking a bag complete and verifying it no longer appears in the shot logging bag picker. Delivers value by streamlining the most frequent user action.
 
 **Acceptance Scenarios**:
 
-1. **Given** I have an existing bean in the system, **When** I receive a new bag of the same bean with a different roasting date, **Then** I can add a new bag entry linked to that bean with the new roasting date
-2. **Given** I have multiple bags of the same bean with different roasting dates, **When** I log a shot, **Then** I can specify which bag the shot came from
-3. **Given** I have logged shots for multiple bags of the same bean, **When** I view the bean details, **Then** I can see all bags listed with their roasting dates
+1. **Given** I am logging a new shot, **When** I open the shot logging page, **Then** I see a bag picker showing only active (incomplete) bags, ordered by most recent roast date first
+2. **Given** I have multiple bags for the same bean, **When** I select a bag in the shot logger, **Then** the bean information is displayed automatically (derived from the selected bag)
+3. **Given** I have finished using a bag, **When** I mark it as complete, **Then** it no longer appears in the shot logging bag picker but remains visible in bag history views
+4. **Given** I want to add a new bag, **When** I navigate to bean details and add a bag, **Then** that bag immediately becomes available in the shot logging bag picker
+5. **Given** I have an existing bean with a finished bag, **When** I receive a new bag of the same bean with a different roasting date, **Then** I can add a new bag entry and start logging shots to it
 
 ---
 
@@ -59,9 +61,11 @@ As a barista, I want to see ratings for each individual bag of a bean so I can i
 
 - What happens when a bean has only one logged shot? (Show single rating without statistical significance warning)
 - What happens when multiple bags have the same roasting date? (Allow duplicate dates, distinguish by entry timestamp or allow user to add notes)
-- How does the system handle very old bags? (Display all bags regardless of age, may add filtering options in the future)
+- What happens when all bags for a bean are marked complete? (Show "No active bags" message with option to add new bag or reactivate a completed bag)
+- What happens if a user tries to log a shot but no active bags exist? (Prompt to add a new bag first)
 - What happens if a user deletes a shot? (Recalculate aggregate and bag-specific ratings immediately)
-- What if a bean has 50+ bags logged over time? (Display bags in reverse chronological order by roasting date, consider pagination for large lists)
+- What if a bean has 50+ bags logged over time (including completed)? (Display active bags first, then completed bags, consider pagination for large lists)
+- Can a user un-complete a bag? (Yes, via bag detail page - reactivate by unmarking complete status)
 
 ## Requirements *(mandatory)*
 
@@ -70,13 +74,14 @@ As a barista, I want to see ratings for each individual bag of a bean so I can i
 - **FR-001**: System MUST display an aggregate rating for each bean, calculated as the average of all logged shots across all bags of that bean
 - **FR-002**: System MUST display a rating distribution breakdown showing the count of shots at each rating level (e.g., 5 stars: 3, 4 stars: 5, 3 stars: 1)
 - **FR-003**: Users MUST be able to create multiple bag entries for the same bean, with each bag distinguished by its roasting date
-- **FR-004**: System MUST allow users to associate each logged shot with a specific bag
-- **FR-005**: System MUST display ratings at two levels: aggregate (all bags of a bean) and per-bag (individual bag ratings)
-- **FR-006**: System MUST maintain the relationship between beans and their bags such that deleting or modifying a shot updates both bag-level and bean-level ratings
-- **FR-007**: Users MUST be able to view a list of all bags for a given bean, ordered by roasting date (most recent first)
-- **FR-008**: System MUST display the roasting date for each bag when viewing bean or bag details
-- **FR-009**: System MUST recalculate aggregate and bag-specific ratings immediately when shots are added, modified, or deleted
-- **FR-010**: System MUST handle beans with no logged shots by displaying a clear "No ratings yet" indicator
+- **FR-004**: Shot logging interface MUST present bag selection as the primary picker (not bean selection), showing only active (incomplete) bags
+- **FR-005**: System MUST allow users to mark a bag as "complete" to remove it from the shot logging bag picker while preserving it in history views
+- **FR-006**: System MUST display ratings at two levels: aggregate (all bags of a bean) and per-bag (individual bag ratings)
+- **FR-007**: System MUST maintain the relationship between beans and their bags such that deleting or modifying a shot updates both bag-level and bean-level ratings
+- **FR-008**: Users MUST be able to view a list of all bags for a given bean, ordered by roasting date (most recent first), with visual distinction between active and completed bags
+- **FR-009**: System MUST display the roasting date and bean information for each bag when viewing bag or shot logging interfaces
+- **FR-010**: System MUST recalculate aggregate and bag-specific ratings immediately when shots are added, modified, or deleted
+- **FR-011**: Users MUST be able to reactivate a completed bag (unmark as complete) if needed
 
 ### Non-Functional Requirements (Constitution-Mandated)
 

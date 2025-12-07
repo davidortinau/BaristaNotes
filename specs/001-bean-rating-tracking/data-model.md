@@ -111,7 +111,7 @@ public class Bean
 
 ### Bag (New Entity)
 
-**Purpose**: Represents a physical bag of a specific bean, distinguished by roasting date. Links beans to shots, enabling bag-level and bean-level rating aggregation.
+**Purpose**: Represents a physical bag of a specific bean, distinguished by roasting date. Links beans to shots, enabling bag-level and bean-level rating aggregation. Bags can be marked as "complete" when finished to remove them from active shot logging workflows.
 
 **Schema**:
 ```csharp
@@ -121,7 +121,8 @@ public class Bag
     public int BeanId { get; set; }
     public DateTimeOffset RoastDate { get; set; }
     public string? Notes { get; set; } // e.g., "From Trader Joe's", "Gift from friend"
-    public bool IsActive { get; set; } = true;
+    public bool IsComplete { get; set; } = false; // NEW: marks bag as finished/empty
+    public bool IsActive { get; set; } = true; // Soft-delete flag (IsActive=false means hidden from all views)
     public DateTimeOffset CreatedAt { get; set; }
     
     // CoreSync metadata
@@ -135,23 +136,28 @@ public class Bag
 }
 ```
 
-**Validation Rules** (from FR-003, FR-008):
+**Validation Rules** (from FR-003, FR-005, FR-009, FR-011):
 - `BeanId`: Required, FK to Bean.Id
 - `RoastDate`: Required (business rule: cannot be future date)
 - `Notes`: Optional, max 500 chars
-- `IsActive`: Required, default true
+- `IsComplete`: Required, default false (marks bag as finished)
+- `IsActive`: Required, default true (soft-delete flag)
 - `SyncId`: Required, unique
 
 **Business Rules**:
 - Multiple bags can have same RoastDate (edge case from spec: distinguish by Notes or creation timestamp)
 - RoastDate cannot be in the future (validation in service layer)
+- **Completed bags** (IsComplete=true) are excluded from shot logging bag picker but visible in history/detail views
+- **Inactive bags** (IsActive=false) are hidden from all views (soft-deleted)
+- Users can toggle IsComplete status to reactivate a bag (FR-011)
 - Deleting a Bag soft-deletes associated ShotRecords (cascade delete via service, not DB FK)
 
 **Indexes**:
 - Primary key: `Id`
 - Foreign key: `BeanId` (for bean→bags queries)
 - Unique: `SyncId`
-- Composite: `BeanId`, `RoastDate DESC` (for "most recent bag" queries)
+- **NEW** Composite: `BeanId`, `IsComplete`, `RoastDate DESC` (for "active bags only" queries in shot logger)
+- Composite: `BeanId`, `RoastDate DESC` (for all bags queries in history views)
 
 ---
 
@@ -276,7 +282,7 @@ public async Task<RatingAggregateDto> GetBeanRatingAsync(int beanId)
 
 ### BagSummaryDto
 
-**Purpose**: Lightweight DTO for listing bags with basic stats (used in BeanDetailPage bag list).
+**Purpose**: Lightweight DTO for listing bags with basic stats (used in BeanDetailPage bag list and shot logging bag picker).
 
 **Schema**:
 ```csharp
@@ -284,15 +290,34 @@ public class BagSummaryDto
 {
     public int Id { get; set; }
     public int BeanId { get; set; }
+    public string BeanName { get; set; } = string.Empty; // NEW: for shot logger display
     public DateTimeOffset RoastDate { get; set; }
     public string? Notes { get; set; }
+    public bool IsComplete { get; set; } // NEW: completion status
     public int ShotCount { get; set; }
     public double? AverageRating { get; set; } // Null if no rated shots
     
     // Convenience properties
     public string FormattedRoastDate => RoastDate.ToString("MMM dd, yyyy");
-    public string DisplayLabel => $"Roasted {FormattedRoastDate}" + 
-                                  (Notes != null ? $" - {Notes}" : "");
+    
+    /// <summary>
+    /// Display label for bag picker in shot logger.
+    /// Format: "Bean Name - Roasted Dec 05, 2025 [- Notes]"
+    /// </summary>
+    public string DisplayLabel => 
+        $"{BeanName} - Roasted {FormattedRoastDate}" + 
+        (Notes != null ? $" - {Notes}" : "");
+    
+    /// <summary>
+    /// Formatted average rating for display (e.g., "4.5" or "No ratings").
+    /// </summary>
+    public string FormattedRating => 
+        AverageRating.HasValue ? AverageRating.Value.ToString("F1") : "No ratings";
+    
+    /// <summary>
+    /// Status badge text for UI display.
+    /// </summary>
+    public string StatusBadge => IsComplete ? "Complete" : "Active";
 }
 ```
 
@@ -306,8 +331,32 @@ public async Task<List<BagSummaryDto>> GetBagSummariesForBeanAsync(int beanId)
         {
             Id = b.Id,
             BeanId = b.BeanId,
+            BeanName = b.Bean.Name,
             RoastDate = b.RoastDate,
             Notes = b.Notes,
+            IsComplete = b.IsComplete,
+            ShotCount = b.ShotRecords.Count(s => !s.IsDeleted),
+            AverageRating = b.ShotRecords
+                .Where(s => !s.IsDeleted && s.Rating != null)
+                .Average(s => (double?)s.Rating)
+        })
+        .OrderByDescending(b => b.RoastDate)
+        .ToListAsync();
+}
+
+// NEW: Query for shot logging bag picker (active/incomplete bags only)
+public async Task<List<BagSummaryDto>> GetActiveBagsForShotLoggingAsync()
+{
+    return await _context.Bags
+        .Where(b => !b.IsDeleted && b.IsActive && !b.IsComplete)
+        .Select(b => new BagSummaryDto
+        {
+            Id = b.Id,
+            BeanId = b.BeanId,
+            BeanName = b.Bean.Name,
+            RoastDate = b.RoastDate,
+            Notes = b.Notes,
+            IsComplete = false, // guaranteed by query filter
             ShotCount = b.ShotRecords.Count(s => !s.IsDeleted),
             AverageRating = b.ShotRecords
                 .Where(s => !s.IsDeleted && s.Rating != null)
@@ -368,19 +417,29 @@ public async Task<List<BagSummaryDto>> GetBagSummariesForBeanAsync(int beanId)
                                    ▼
                               [Active, Has Shots]
                                    │
-                                   │ (user marks inactive)
-                                   ▼
-                              [Inactive]
+                                   ├─> (user marks complete) ──> [Complete]
+                                   │                                  │
+                                   │                                  │ (user reactivates)
+                                   │                                  └──────────┐
+                                   │                                             │
+                                   │ (user marks inactive)                       │
+                                   ▼                                             ▼
+                              [Inactive] ◄────────────────────────────────── [Active]
                                    │
-                                   │ (user deletes)
+                                   │ (user soft-deletes)
                                    ▼
                               [Soft Deleted] (IsDeleted = true)
 ```
 
 **Rules**:
-- Cannot delete Bag if it has ShotRecords (must soft-delete instead)
-- Soft-deleted Bags excluded from all queries (WHERE !IsDeleted)
-- Bags with IsActive=false still appear in detail views, but not in bag picker
+- **Complete** (IsComplete=true): Bag is finished/empty, hidden from shot logging bag picker, visible in history views
+- **Active** (IsActive=true, IsComplete=false): Bag appears in shot logging picker
+- **Inactive** (IsActive=false): Bag hidden from all views (deprecated state, prefer IsComplete)
+- **Soft Deleted** (IsDeleted=true): Bag permanently hidden, cannot be restored via UI
+- Users can toggle between Active ↔ Complete states (FR-011)
+- Cannot hard-delete Bag if it has ShotRecords (must soft-delete instead)
+- Shot logging interface queries: `WHERE !IsDeleted AND IsActive AND !IsComplete`
+- History views query: `WHERE !IsDeleted`
 
 ### Rating Calculation Triggers
 
@@ -391,12 +450,17 @@ ShotRecord CRUD Event
     ├─> Update Rating ──────> Recalculate Bean & Bag aggregates
     ├─> Delete ─────────────> Recalculate Bean & Bag aggregates
     └─> Create without Rating ─> No rating recalculation (TotalShots increments)
+
+Bag Status Change (Complete/Reactivate)
+    │
+    └─> No rating recalculation (ratings unaffected by completion status)
 ```
 
 **Implementation**: 
 - Not event-driven (no DB triggers per constitution)
 - Calculation happens on-demand when UI requests `RatingAggregateDto`
 - Service methods return fresh calculations every time
+- Bag completion status does NOT affect rating calculations (completed bags' shots still count)
 
 ---
 

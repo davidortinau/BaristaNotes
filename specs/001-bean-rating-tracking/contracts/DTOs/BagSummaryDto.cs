@@ -1,7 +1,7 @@
 namespace BaristaNotes.Core.Services.DTOs;
 
 /// <summary>
-/// Lightweight data transfer object for bag list display.
+/// Lightweight data transfer object for bag list display and shot logging bag picker.
 /// Contains basic bag info plus aggregated shot statistics.
 /// </summary>
 public class BagSummaryDto
@@ -17,6 +17,11 @@ public class BagSummaryDto
     public int BeanId { get; set; }
     
     /// <summary>
+    /// Bean name for display in shot logger (e.g., "Ethiopian Yirgacheffe").
+    /// </summary>
+    public string BeanName { get; set; } = string.Empty;
+    
+    /// <summary>
     /// Date the coffee was roasted.
     /// </summary>
     public DateTimeOffset RoastDate { get; set; }
@@ -25,6 +30,12 @@ public class BagSummaryDto
     /// Optional user notes about this bag (e.g., "From Trader Joe's", "Gift").
     /// </summary>
     public string? Notes { get; set; }
+    
+    /// <summary>
+    /// Indicates if bag is marked as complete (finished/empty).
+    /// Complete bags are hidden from shot logging bag picker.
+    /// </summary>
+    public bool IsComplete { get; set; }
     
     /// <summary>
     /// Total number of shots logged for this bag.
@@ -43,11 +54,12 @@ public class BagSummaryDto
     public string FormattedRoastDate => RoastDate.ToString("MMM dd, yyyy");
     
     /// <summary>
-    /// User-friendly label for bag selection (e.g., "Roasted Dec 05, 2025 - From Trader Joe's").
-    /// Used in picker controls and list views.
+    /// User-friendly label for bag selection in shot logger.
+    /// Format: "Bean Name - Roasted Dec 05, 2025 [- Notes]"
+    /// Example: "Ethiopian Yirgacheffe - Roasted Dec 05, 2025 - From Trader Joe's"
     /// </summary>
     public string DisplayLabel => 
-        $"Roasted {FormattedRoastDate}" + 
+        $"{BeanName} - Roasted {FormattedRoastDate}" + 
         (Notes != null ? $" - {Notes}" : "");
     
     /// <summary>
@@ -55,4 +67,9 @@ public class BagSummaryDto
     /// </summary>
     public string FormattedRating => 
         AverageRating.HasValue ? AverageRating.Value.ToString("F1") : "No ratings";
+    
+    /// <summary>
+    /// Status badge text for UI display ("Active" or "Complete").
+    /// </summary>
+    public string StatusBadge => IsComplete ? "Complete" : "Active";
 }

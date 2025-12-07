@@ -10,6 +10,10 @@ using BaristaNotes.Components;
 using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups.Services;
 using Fonts;
+using Microsoft.Maui.Controls.PlatformConfiguration;
+using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
+using Application = Microsoft.Maui.Controls.Application;
+
 
 namespace BaristaNotes.Pages;
 
@@ -81,6 +85,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
     void OnPageAppearing()
     {
+
+        //On<iOS>().SetLargeTitleDisplay(LargeTitleDisplayMode.Always);
         // Reload data when tab becomes visible (handles new beans added from Settings)
         _ = LoadDataAsync();
     }
@@ -330,6 +336,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 .VCenter()
                 .HCenter()
             )
+            .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
             .OnAppearing(() => OnPageAppearing());
         }
 
@@ -447,6 +454,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 .Padding(16, 0, 16, 32)
             )
         )
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
         .OnAppearing(() => OnPageAppearing());
     }
 

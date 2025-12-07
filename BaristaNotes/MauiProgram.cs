@@ -14,6 +14,10 @@ using BaristaNotes.Styles;
 using Microsoft.Maui.Handlers;
 using Syncfusion.Maui.Core.Hosting;
 
+#if IOS || MACCATALYST
+using BaristaNotes.Platforms.iOS;
+#endif
+
 namespace BaristaNotes;
 
 public static class MauiProgram
@@ -63,6 +67,11 @@ public static class MauiProgram
 			.ConfigureMauiHandlers(handlers =>
 			{
 				ModifyEntrys();
+
+				// this sets the stage for Large Titles support in iOS
+				// #if IOS || MACCATALYST
+				// 				handlers.AddHandler<Microsoft.Maui.Controls.Shell, CustomShellRenderer>();
+				// #endif
 			})
 			.UseUXDiversPopups()
 			.UseBottomSheet()
@@ -75,6 +84,11 @@ public static class MauiProgram
 				fonts.AddFont("MaterialSymbols.ttf", MaterialSymbolsFont.FontFamily);
 				fonts.AddFont("coffee-icons.ttf", "coffee-icons");
 			});
+
+		// #if IOS || MACCATALYST
+		// 		// Custom shell renderer to enable large titles
+		// 		CustomShellRenderer.PrefersLargeTitles = true;
+		// #endif
 
 		// Register MauiReactor routes
 		RegisterRoutes();
@@ -160,31 +174,31 @@ public static class MauiProgram
 #endif
 
 #if ANDROID
-        EntryHandler.Mapper.AppendToMapping("NoUnderline", (handler, view) =>
-        {
-            // Remove background/underline + any focus tint
-            handler.PlatformView.Background = null;
-            handler.PlatformView.SetBackgroundColor(Android.Graphics.Color.Transparent);
-            handler.PlatformView.BackgroundTintList =
-                Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent);
+		EntryHandler.Mapper.AppendToMapping("NoUnderline", (handler, view) =>
+		{
+			// Remove background/underline + any focus tint
+			handler.PlatformView.Background = null;
+			handler.PlatformView.SetBackgroundColor(Android.Graphics.Color.Transparent);
+			handler.PlatformView.BackgroundTintList =
+				Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent);
 
-            // Optional: tweak padding so text isn't cramped
-            handler.PlatformView.SetPadding(0, handler.PlatformView.PaddingTop, 0, handler.PlatformView.PaddingBottom);
-        });
+			// Optional: tweak padding so text isn't cramped
+			handler.PlatformView.SetPadding(0, handler.PlatformView.PaddingTop, 0, handler.PlatformView.PaddingBottom);
+		});
 
-        PickerHandler.Mapper.AppendToMapping("NoUnderline", (handler, view) =>
-        {
-            var pv = handler.PlatformView;
+		PickerHandler.Mapper.AppendToMapping("NoUnderline", (handler, view) =>
+		{
+			var pv = handler.PlatformView;
 
-            // Remove default underline / background & tints
-            pv.Background = null;
-            pv.SetBackgroundColor(Android.Graphics.Color.Transparent);
-            pv.BackgroundTintList =
-                Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent);
+			// Remove default underline / background & tints
+			pv.Background = null;
+			pv.SetBackgroundColor(Android.Graphics.Color.Transparent);
+			pv.BackgroundTintList =
+				Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent);
 
-            // Optional: tighten side padding so text aligns with other controls
-            pv.SetPadding(0, 0, 0, 0);
-        });
+			// Optional: tighten side padding so text aligns with other controls
+			pv.SetPadding(0, 0, 0, 0);
+		});
 #endif
 	}
 

@@ -28,7 +28,7 @@ partial class ShotRecordCard : Component
         return Border(
             VStack(spacing: 8,
                 // Header: Drink type and rating
-                HStack(spacing: 12,
+                Grid(
                     HStack(spacing: 4,
                         Label(MaterialSymbolsFont.Coffee)
                             .FontFamily(MaterialSymbolsFont.FontFamily)
@@ -41,25 +41,20 @@ partial class ShotRecordCard : Component
                     RenderRating()
                 ),
 
-                // User profiles (if available)
-                RenderUserProfiles(),
-
                 // Bean info
                 Label(_shot.Bean?.Name ?? "Unknown Bean")
                     .FontSize(16),
 
                 // Recipe details
-                Label($"{_shot.DoseIn}g in → {_shot.ActualOutput ?? _shot.ExpectedOutput}g out ({_shot.ActualTime ?? _shot.ExpectedTime}s)")
+                Label($"{_shot.DoseIn:F1}g in → {(_shot.ActualOutput ?? _shot.ExpectedOutput):F1}g out ({(_shot.ActualTime ?? _shot.ExpectedTime):F1}s)")
                     .FontSize(14)
                     .TextColor(Colors.Gray),
 
                 // Equipment (if available)
-                RenderEquipment(),
+                // RenderEquipment(),
 
-                // Timestamp
-                Label(FormatTimestamp(_shot.Timestamp))
-                    .FontSize(12)
-                    .TextColor(Colors.Gray)
+                // User profiles (if available)
+                RenderUserProfilesAndTimestamp()
             )
             .Padding(12)
         )
@@ -76,21 +71,23 @@ partial class ShotRecordCard : Component
         return Label(icon)
             .FontFamily(MaterialSymbolsFont.FontFamily)
             .FontSize(24)
-            .TextColor(AppColors.Light.Primary);
+            .TextColor(AppColors.Light.Primary)
+            .HEnd();
     }
 
-    VisualNode? RenderUserProfiles()
+    MauiReactor.Label RenderUserProfilesAndTimestamp()
     {
         var parts = new List<string>();
         if (_shot?.MadeBy != null)
-            parts.Add($"Made by: {_shot.MadeBy.Name}");
+            parts.Add($"By: {_shot.MadeBy.Name}");
         if (_shot?.MadeFor != null)
             parts.Add($"For: {_shot.MadeFor.Name}");
 
         if (parts.Count == 0)
             return null;
 
-        return Label(string.Join(" • ", parts))
+        return Label()
+            .Text($"{FormatTimestamp(_shot.Timestamp)} • {string.Join(" • ", parts)}")
             .FontSize(12)
             .TextColor(Colors.Gray);
     }

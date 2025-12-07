@@ -106,26 +106,26 @@ This is a .NET MAUI mobile project with three-project structure:
 
 ### Tests for User Story 2 (Write FIRST) ⚠️
 
-- [ ] T030 [P] [US2] Create BagServiceTests.cs in BaristaNotes.Tests/Unit/: Test CreateBagAsync validation (RoastDate not future, BeanId exists), test GetActiveBagsForShotLoggingAsync returns only incomplete bags ordered by RoastDate DESC, test MarkBagCompleteAsync sets IsComplete=true, test ReactivateBagAsync sets IsComplete=false
-- [ ] T031 [P] [US2] Create BagRepositoryTests.cs in BaristaNotes.Tests/Integration/: Test GetBagSummariesForBeanAsync includes BeanName and IsComplete, test active bags query uses composite index (BeanId, IsComplete, RoastDate)
-- [ ] T032 [P] [US2] Create ShotServiceTests.cs in BaristaNotes.Tests/Unit/: Test shot creation with BagId validates bag exists and is active (IsComplete=false)
+- [X] T030 [P] [US2] Create BagServiceTests.cs in BaristaNotes.Tests/Unit/: Test CreateBagAsync validation (RoastDate not future, BeanId exists), test GetActiveBagsForShotLoggingAsync returns only incomplete bags ordered by RoastDate DESC, test MarkBagCompleteAsync sets IsComplete=true, test ReactivateBagAsync sets IsComplete=false
+- [X] T031 [P] [US2] Create BagRepositoryTests.cs in BaristaNotes.Tests/Integration/: Test GetBagSummariesForBeanAsync includes BeanName and IsComplete, test active bags query uses composite index (BeanId, IsComplete, RoastDate)
+- [X] T032 [P] [US2] Create ShotServiceTests.cs in BaristaNotes.Tests/Unit/: Test shot creation with BagId validates bag exists and is active (IsComplete=false)
 
 ### DTOs and Service Interfaces for User Story 2
 
-- [ ] T033 [P] [US2] Create BagSummaryDto.cs in BaristaNotes.Core/Services/DTOs/ (copy from specs/001-bean-rating-tracking/contracts/DTOs/BagSummaryDto.cs with BeanName, IsComplete, DisplayLabel properties)
-- [ ] T034 [P] [US2] Create IBagService.cs interface in BaristaNotes.Core/Services/ (copy from specs/001-bean-rating-tracking/contracts/IBagService.cs with CreateBagAsync, GetActiveBagsForShotLoggingAsync, MarkBagCompleteAsync, ReactivateBagAsync methods)
+- [X] T033 [P] [US2] Create BagSummaryDto.cs in BaristaNotes.Core/Services/DTOs/ (copy from specs/001-bean-rating-tracking/contracts/DTOs/BagSummaryDto.cs with BeanName, IsComplete, DisplayLabel properties)
+- [X] T034 [P] [US2] Create IBagService.cs interface in BaristaNotes.Core/Services/ (copy from specs/001-bean-rating-tracking/contracts/IBagService.cs with CreateBagAsync, GetActiveBagsForShotLoggingAsync, MarkBagCompleteAsync, ReactivateBagAsync methods)
 
 ### Repository Layer for User Story 2
 
-- [ ] T035 [P] [US2] Create IBagRepository.cs in BaristaNotes.Core/Data/Repositories/ with methods: GetBagSummariesForBeanAsync(int beanId, bool includeCompleted), GetActiveBagsForShotLoggingAsync()
-- [ ] T036 [US2] Implement BagRepository.cs in BaristaNotes.Core/Data/Repositories/: Implement query methods using EF Core LINQ with .Include(b => b.Bean) for BeanName, apply IsComplete filter for active bags query, order by RoastDate DESC
+- [X] T035 [P] [US2] Create IBagRepository.cs in BaristaNotes.Core/Data/Repositories/ with methods: GetBagSummariesForBeanAsync(int beanId, bool includeCompleted), GetActiveBagsForShotLoggingAsync()
+- [X] T036 [US2] Implement BagRepository.cs in BaristaNotes.Core/Data/Repositories/: Implement query methods using EF Core LINQ with .Include(b => b.Bean) for BeanName, apply IsComplete filter for active bags query, order by RoastDate DESC
 
 ### Service Implementation for User Story 2
 
-- [ ] T037 [US2] Implement BagService.cs in BaristaNotes.Core/Services/: Implement CreateBagAsync (validate RoastDate not future, BeanId exists, Notes ≤500 chars), implement GetActiveBagsForShotLoggingAsync (call repository method), implement MarkBagCompleteAsync and ReactivateBagAsync (toggle IsComplete flag, update LastModifiedAt)
-- [ ] T038 [US2] Update IShotService.cs in BaristaNotes.Core/Services/ to change CreateShotAsync parameter from BeanId to BagId
-- [ ] T039 [US2] Modify ShotService.cs in BaristaNotes.Core/Services/: Change shot creation to use BagId, add validation that Bag exists and IsComplete=false before allowing shot creation
-- [ ] T040 [US2] Register IBagService in MauiProgram.cs: Add builder.Services.AddScoped<IBagService, BagService>()
+- [X] T037 [US2] Implement BagService.cs in BaristaNotes.Core/Services/: Implement CreateBagAsync (validate RoastDate not future, BeanId exists, Notes ≤500 chars), implement GetActiveBagsForShotLoggingAsync (call repository method), implement MarkBagCompleteAsync and ReactivateBagAsync (toggle IsComplete flag, update LastModifiedAt)
+- [X] T038 [US2] Update IShotService.cs in BaristaNotes.Core/Services/ to change CreateShotAsync parameter from BeanId to BagId
+- [X] T039 [US2] Modify ShotService.cs in BaristaNotes.Core/Services/: Change shot creation to use BagId, add validation that Bag exists and IsComplete=false before allowing shot creation
+- [X] T040 [US2] Register IBagService in MauiProgram.cs: Add builder.Services.AddScoped<IBagService, BagService>()
 
 ### UI Pages for User Story 2
 

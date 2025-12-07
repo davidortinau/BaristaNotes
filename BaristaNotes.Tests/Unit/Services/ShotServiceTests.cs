@@ -537,4 +537,125 @@ public class ShotServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.DeleteShotAsync(1));
     }
+
+    #region Bag Validation Tests (T032 - Phase 4)
+
+    [Fact]
+    public async Task CreateShotAsync_WithNonExistentBag_ThrowsValidationException()
+    {
+        // Arrange
+        var mockBagRepo = new Mock<IBagRepository>();
+        mockBagRepo.Setup(x => x.GetByIdAsync(999)).ReturnsAsync((BaristaNotes.Core.Models.Bag?)null);
+        
+        var serviceWithBagRepo = new ShotService(
+            _mockShotRepository.Object,
+            _mockPreferences.Object,
+            mockBagRepo.Object
+        );
+
+        var dto = new CreateShotDto
+        {
+            BagId = 999, // Non-existent bag
+            DoseIn = 18,
+            GrindSetting = "5",
+            ExpectedTime = 30,
+            ExpectedOutput = 40,
+            DrinkType = "Espresso"
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ValidationException>(() => serviceWithBagRepo.CreateShotAsync(dto));
+        Assert.Contains("Bag", exception.Errors["BagId"][0]);
+    }
+
+    [Fact]
+    public async Task CreateShotAsync_WithCompletedBag_ThrowsValidationException()
+    {
+        // Arrange
+        var mockBagRepo = new Mock<IBagRepository>();
+        var completedBag = new BaristaNotes.Core.Models.Bag
+        {
+            Id = 1,
+            BeanId = 1,
+            RoastDate = DateTimeOffset.Now.AddDays(-10),
+            IsComplete = true // Bag is marked as complete
+        };
+        mockBagRepo.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(completedBag);
+        
+        var serviceWithBagRepo = new ShotService(
+            _mockShotRepository.Object,
+            _mockPreferences.Object,
+            mockBagRepo.Object
+        );
+
+        var dto = new CreateShotDto
+        {
+            BagId = 1,
+            DoseIn = 18,
+            GrindSetting = "5",
+            ExpectedTime = 30,
+            ExpectedOutput = 40,
+            DrinkType = "Espresso"
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ValidationException>(() => serviceWithBagRepo.CreateShotAsync(dto));
+        Assert.Contains("complete", exception.Errors["BagId"][0].ToLower());
+    }
+
+    [Fact]
+    public async Task CreateShotAsync_WithActiveBag_Success()
+    {
+        // Arrange
+        var mockBagRepo = new Mock<IBagRepository>();
+        var activeBag = new BaristaNotes.Core.Models.Bag
+        {
+            Id = 1,
+            BeanId = 1,
+            RoastDate = DateTimeOffset.Now.AddDays(-10),
+            IsComplete = false // Active bag
+        };
+        mockBagRepo.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(activeBag);
+        
+        var serviceWithBagRepo = new ShotService(
+            _mockShotRepository.Object,
+            _mockPreferences.Object,
+            mockBagRepo.Object
+        );
+
+        var dto = new CreateShotDto
+        {
+            BagId = 1,
+            DoseIn = 18,
+            GrindSetting = "5",
+            ExpectedTime = 30,
+            ExpectedOutput = 40,
+            DrinkType = "Espresso"
+        };
+
+        var expectedShot = new BaristaNotes.Core.Models.ShotRecord
+        {
+            Id = 1,
+            BagId = 1,
+            DoseIn = 18,
+            GrindSetting = "5",
+            ExpectedTime = 30,
+            ExpectedOutput = 40,
+            DrinkType = "Espresso",
+            SyncId = Guid.NewGuid()
+        };
+
+        _mockShotRepository.Setup(r => r.CreateAsync(It.IsAny<BaristaNotes.Core.Models.ShotRecord>()))
+            .ReturnsAsync(expectedShot);
+
+        // Act
+        var result = await serviceWithBagRepo.CreateShotAsync(dto);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(1, result.BagId);
+        _mockShotRepository.Verify(r => r.CreateAsync(It.IsAny<BaristaNotes.Core.Models.ShotRecord>()), Times.Once);
+    }
+
+    #endregion
 }

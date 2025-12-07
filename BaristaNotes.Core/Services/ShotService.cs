@@ -9,13 +9,16 @@ public class ShotService : IShotService
 {
     private readonly IShotRecordRepository _shotRepository;
     private readonly IPreferencesService _preferences;
+    private readonly IBagRepository _bagRepository;
 
     public ShotService(
         IShotRecordRepository shotRepository,
-        IPreferencesService preferences)
+        IPreferencesService preferences,
+        IBagRepository bagRepository)
     {
         _shotRepository = shotRepository;
         _preferences = preferences;
+        _bagRepository = bagRepository;
     }
 
     public async Task<ShotRecordDto?> GetMostRecentShotAsync()
@@ -28,10 +31,36 @@ public class ShotService : IShotService
     {
         ValidateCreateShot(dto);
 
+        // T039: Validate bag exists and is active (IsComplete=false)
+        if (!dto.BagId.HasValue)
+        {
+            throw new ValidationException(new Dictionary<string, List<string>>
+            {
+                { nameof(dto.BagId), new List<string> { "Bag is required" } }
+            });
+        }
+
+        var bag = await _bagRepository.GetByIdAsync(dto.BagId.Value);
+        if (bag == null)
+        {
+            throw new ValidationException(new Dictionary<string, List<string>>
+            {
+                { nameof(dto.BagId), new List<string> { "Bag not found" } }
+            });
+        }
+
+        if (bag.IsComplete)
+        {
+            throw new ValidationException(new Dictionary<string, List<string>>
+            {
+                { nameof(dto.BagId), new List<string> { "Cannot log shot to a completed bag. Please reactivate the bag or select an active bag." } }
+            });
+        }
+
         var shot = new ShotRecord
         {
             Timestamp = dto.Timestamp ?? DateTimeOffset.Now,
-            BagId = dto.BeanId ?? 1, // TODO T038-T039: Change DTO to use BagId (required). Temporary default to 1.
+            BagId = dto.BagId.Value,
             MachineId = dto.MachineId,
             GrinderId = dto.GrinderId,
             MadeById = dto.MadeById,
@@ -66,8 +95,8 @@ public class ShotService : IShotService
 
         // Remember selections
         _preferences.SetLastDrinkType(dto.DrinkType);
-        if (dto.BeanId.HasValue)
-            _preferences.SetLastBeanId(dto.BeanId.Value);
+        if (dto.BagId.HasValue)
+            _preferences.SetLastBagId(dto.BagId.Value);
         if (dto.MachineId.HasValue)
             _preferences.SetLastMachineId(dto.MachineId.Value);
         if (dto.GrinderId.HasValue)
@@ -92,8 +121,8 @@ public class ShotService : IShotService
             throw new EntityNotFoundException(nameof(ShotRecord), id);
 
         // Update bag if provided
-        if (dto.BeanId.HasValue)
-            shot.BagId = dto.BeanId.Value; // TODO T038-T039: DTO should use BagId
+        if (dto.BagId.HasValue)
+            shot.BagId = dto.BagId.Value;
 
         // Update maker/recipient if provided
         if (dto.MadeById.HasValue)

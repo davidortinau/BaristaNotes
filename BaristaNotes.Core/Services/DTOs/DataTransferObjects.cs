@@ -29,7 +29,7 @@ public record CreateShotDto
 {
     public DateTimeOffset? Timestamp { get; init; }
     
-    public int? BeanId { get; init; }
+    public int? BagId { get; init; }  // Changed from BeanId - Phase 4 (T038)
     public int? MachineId { get; init; }
     public int? GrinderId { get; init; }
     public List<int> AccessoryIds { get; init; } = new();
@@ -51,16 +51,16 @@ public record CreateShotDto
 
 /// <summary>
 /// DTO for updating editable fields of a shot record.
-/// Includes result fields (actual time/output, rating) and correctable setup fields (bean).
+/// Includes result fields (actual time/output, rating) and correctable setup fields (bag).
 /// </summary>
 public record UpdateShotDto
 {
     /// <summary>
-    /// Bean used for the shot.
+    /// Bag used for the shot (which contains bean and roast date info).
     /// Optional - null means no change to existing value.
-    /// Allows correcting bean selection mistakes.
+    /// Allows correcting bag selection mistakes.
     /// </summary>
-    public int? BeanId { get; init; }
+    public int? BagId { get; init; }  // Changed from BeanId - Phase 4 (T038)
     
     /// <summary>
     /// User who pulled the shot (barista).

@@ -8,6 +8,7 @@ public class PreferencesService : IPreferencesService
     
     private const string KeyLastDrinkType = "last_drink_type";
     private const string KeyLastBeanId = "last_bean_id";
+    private const string KeyLastBagId = "last_bag_id";  // Added for Phase 4 (T039)
     private const string KeyLastMachineId = "last_machine_id";
     private const string KeyLastGrinderId = "last_grinder_id";
     private const string KeyLastAccessoryIds = "last_accessory_ids";
@@ -38,6 +39,15 @@ public class PreferencesService : IPreferencesService
     
     public void SetLastBeanId(int? beanId)
         => _store.Set(KeyLastBeanId, beanId ?? -1);
+    
+    public int? GetLastBagId()
+    {
+        var value = _store.Get(KeyLastBagId, -1);
+        return value == -1 ? null : value;
+    }
+    
+    public void SetLastBagId(int? bagId)
+        => _store.Set(KeyLastBagId, bagId ?? -1);
     
     public int? GetLastMachineId()
     {

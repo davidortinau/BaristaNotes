@@ -8,7 +8,6 @@ using BaristaNotes.Core.Data.Repositories;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Infrastructure;
 using BaristaNotes.Services;
-using The49.Maui.BottomSheet;
 using Fonts;
 using BaristaNotes.Styles;
 using Microsoft.Maui.Handlers;
@@ -26,7 +25,7 @@ public static class MauiProgram
 	{
 		var builder = MauiApp.CreateBuilder();
 		builder
-			.UseMauiReactorApp<App>(app =>
+			.UseMauiReactorApp<BaristaApp>(app =>
 			{
 				app.UseTheme<ApplicationTheme>();
 				app.SetWindowsSpecificAssetsDirectory("Assets");
@@ -74,7 +73,6 @@ public static class MauiProgram
 				// #endif
 			})
 			.UseUXDiversPopups()
-			.UseBottomSheet()
 			.UseMauiCommunityToolkit()
 			.ConfigureSyncfusionCore()
 			.ConfigureFonts(fonts =>

@@ -6,7 +6,7 @@ public class ThemeService : IThemeService
 {
     private readonly IPreferencesStore _preferencesStore;
     private const string ThemeModeKey = "AppThemeMode";
-    
+
     private ThemeMode _currentMode = ThemeMode.System;
 
     public ThemeMode CurrentMode => _currentMode;
@@ -28,7 +28,15 @@ public class ThemeService : IThemeService
     public ThemeService(IPreferencesStore preferencesStore)
     {
         _preferencesStore = preferencesStore;
-        
+
+        // Initialize _currentMode from stored preferences
+        var saved = _preferencesStore.Get(ThemeModeKey, string.Empty);
+        if (!string.IsNullOrEmpty(saved) && Enum.TryParse<ThemeMode>(saved, out var mode))
+        {
+            _currentMode = mode;
+            System.Diagnostics.Debug.WriteLine($"[ThemeService] Loaded saved theme mode: {_currentMode}");
+        }
+
         // Subscribe to system theme changes
         if (Application.Current != null)
         {
@@ -77,7 +85,7 @@ public class ThemeService : IThemeService
     private void OnSystemThemeChanged(object? sender, AppThemeChangedEventArgs e)
     {
         System.Diagnostics.Debug.WriteLine($"[ThemeService] OnSystemThemeChanged fired: NewTheme={e.RequestedTheme}, CurrentMode={_currentMode}");
-        
+
         // Only react to system theme changes if we're in System mode
         if (_currentMode == ThemeMode.System)
         {

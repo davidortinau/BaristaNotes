@@ -1,10 +1,8 @@
 using BaristaNotes.Components;
-using BaristaNotes.Components.Forms;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
-using BaristaNotes.Utilities;
 using Fonts;
 using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups.Services;
@@ -102,9 +100,15 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
     async Task ShowLastProfileWarning()
     {
-        await BottomSheetManager.ShowAsync(
-            () => new LastProfileWarningComponent(),
-            sheet => sheet.HasBackdrop = true);
+        var popup = new SimpleActionPopup
+        {
+            Title = "Cannot Delete",
+            Text = "This is your last profile. You must have at least one profile to log shots.\n\nCreate another profile first if you want to delete this one.",
+            ActionButtonText = "OK",
+            ShowSecondaryActionButton = false
+        };
+
+        await IPopupService.Current.PushAsync(popup);
     }
 
     async Task DeleteProfile(UserProfileDto profile)

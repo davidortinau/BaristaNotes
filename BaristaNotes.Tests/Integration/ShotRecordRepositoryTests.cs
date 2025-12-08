@@ -11,6 +11,7 @@ public class ShotRecordRepositoryTests : IDisposable
 {
     private readonly BaristaNotesContext _context;
     private readonly ShotRecordRepository _repository;
+    private int _defaultBagId;
     
     public ShotRecordRepositoryTests()
     {
@@ -20,6 +21,31 @@ public class ShotRecordRepositoryTests : IDisposable
         
         _context = new BaristaNotesContext(options);
         _repository = new ShotRecordRepository(_context);
+        
+        // Create a default bean and bag for tests
+        _defaultBagId = CreateDefaultBag().GetAwaiter().GetResult();
+    }
+    
+    private async Task<int> CreateDefaultBag()
+    {
+        var bean = new Bean
+        {
+            Name = "Test Bean",
+            Roaster = "Test Roaster"
+        };
+        _context.Beans.Add(bean);
+        await _context.SaveChangesAsync();
+        
+        var bag = new Bag
+        {
+            BeanId = bean.Id,
+            RoastDate = DateTime.Now,
+            IsComplete = false
+        };
+        _context.Bags.Add(bag);
+        await _context.SaveChangesAsync();
+        
+        return bag.Id;
     }
     
     public void Dispose()
@@ -34,6 +60,7 @@ public class ShotRecordRepositoryTests : IDisposable
         // Arrange
         var shot = new ShotRecord
         {
+            BagId = _defaultBagId,
             Timestamp = DateTime.Now,
             DoseIn = 18,
             GrindSetting = "5",
@@ -69,6 +96,7 @@ public class ShotRecordRepositoryTests : IDisposable
         // Arrange
         var oldShot = new ShotRecord
         {
+            BagId = _defaultBagId,
             Timestamp = DateTime.Now.AddDays(-2),
             DoseIn = 17,
             GrindSetting = "4",
@@ -81,6 +109,7 @@ public class ShotRecordRepositoryTests : IDisposable
         
         var recentShot = new ShotRecord
         {
+            BagId = _defaultBagId,
             Timestamp = DateTime.Now.AddMinutes(-5),
             DoseIn = 18,
             GrindSetting = "5",
@@ -109,6 +138,7 @@ public class ShotRecordRepositoryTests : IDisposable
         // Arrange
         var activeShot = new ShotRecord
         {
+            BagId = _defaultBagId,
             Timestamp = DateTime.Now.AddDays(-1),
             DoseIn = 17,
             GrindSetting = "4",
@@ -122,6 +152,7 @@ public class ShotRecordRepositoryTests : IDisposable
         
         var deletedShot = new ShotRecord
         {
+            BagId = _defaultBagId,
             Timestamp = DateTime.Now,
             DoseIn = 18,
             GrindSetting = "5",
@@ -153,6 +184,7 @@ public class ShotRecordRepositoryTests : IDisposable
         {
             var shot = new ShotRecord
             {
+                BagId = _defaultBagId,
                 Timestamp = DateTime.Now.AddMinutes(-i),
                 DoseIn = 18 + i,
                 GrindSetting = i.ToString(),
@@ -186,6 +218,7 @@ public class ShotRecordRepositoryTests : IDisposable
         // Arrange
         var shot = new ShotRecord
         {
+            BagId = _defaultBagId,
             Timestamp = DateTime.Now,
             DoseIn = 18,
             GrindSetting = "5",
@@ -222,6 +255,7 @@ public class ShotRecordRepositoryTests : IDisposable
         {
             var shot = new ShotRecord
             {
+                BagId = _defaultBagId,
                 Timestamp = DateTime.Now.AddMinutes(-i),
                 DoseIn = 18,
                 GrindSetting = "5",
@@ -248,6 +282,7 @@ public class ShotRecordRepositoryTests : IDisposable
         // Arrange
         var shot = new ShotRecord
         {
+            BagId = _defaultBagId,
             Timestamp = DateTime.Now,
             DoseIn = 18,
             GrindSetting = "5",
@@ -281,6 +316,7 @@ public class ShotRecordRepositoryTests : IDisposable
         // Arrange
         var activeShot = new ShotRecord
         {
+            BagId = _defaultBagId,
             Timestamp = DateTime.Now,
             DoseIn = 18,
             GrindSetting = "5",
@@ -294,6 +330,7 @@ public class ShotRecordRepositoryTests : IDisposable
         
         var deletedShot = new ShotRecord
         {
+            BagId = _defaultBagId,
             Timestamp = DateTime.Now.AddMinutes(-5),
             DoseIn = 18,
             GrindSetting = "5",
@@ -322,6 +359,7 @@ public class ShotRecordRepositoryTests : IDisposable
         // Arrange
         var shot = new ShotRecord
         {
+            BagId = _defaultBagId,
             Timestamp = DateTime.Now,
             DoseIn = 18,
             GrindSetting = "5",
@@ -365,6 +403,7 @@ public class ShotRecordRepositoryTests : IDisposable
         var originalTimestamp = DateTime.Now.AddHours(-2);
         var shot = new ShotRecord
         {
+            BagId = _defaultBagId,
             Timestamp = originalTimestamp,
             DoseIn = 18,
             GrindSetting = "5",

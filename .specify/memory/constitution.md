@@ -1,31 +1,37 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version Change: INITIAL → 1.0.0
-Constitution Type: Initial Ratification
+Version Change: 1.1.0 → 1.2.0
+Constitution Type: Minor Amendment
 
 Core Principles Added:
-  1. Code Quality Standards
-  2. Test-First Development (NON-NEGOTIABLE)
-  3. User Experience Consistency
-  4. Performance Requirements
+  VI. Technology Stack Consistency - New principle establishing architectural constraint authority
 
-Sections Added:
-  - Performance Standards (specific metrics and requirements)
-  - Quality Gates (enforcement mechanisms)
-  - Governance (amendment and compliance procedures)
+Document Relationship Clarified:
+  - Constitution (this file): Governance principles and "WHY"
+  - ARCHITECTURE_CONSTRAINTS.md: Technical implementation rules and "HOW"
+  - Cross-references established between documents
+  
+Sections Refactored:
+  - EF Core implementation details moved to ARCHITECTURE_CONSTRAINTS.md
+  - Data Preservation principles retained at governance level
+  - Development Standards section streamlined (removed redundant EF migration details)
 
 Templates Status:
-  ✅ plan-template.md - Constitution Check section will reference all 4 principles
-  ✅ spec-template.md - Requirements sections align with UX consistency & quality standards
-  ✅ tasks-template.md - Test-first emphasis maintained, quality gates noted
+  ✅ plan-template.md - Constitution Check references all 6 principles
+  ✅ spec-template.md - Requirements sections align with all standards
+  ✅ tasks-template.md - References both constitution and architecture constraints
+  ⚠️  ARCHITECTURE_CONSTRAINTS.md - Updated with EF Core details from constitution
   
-Follow-up Actions: None - all principles fully defined
+Follow-up Actions:
+  - Update ARCHITECTURE_CONSTRAINTS.md with consolidated EF Core migration patterns
+  - Verify plan-template.md includes architecture constraint compliance check
 
-Rationale for Version 1.0.0:
-  - Initial constitution ratification for BaristaNotes project
-  - Establishes foundational governance framework
-  - All principles defined and ready for enforcement
+Rationale for Version 1.2.0 (MINOR bump):
+  - Added new Principle VI (Technology Stack Consistency)
+  - Clarified document separation of concerns (governance vs implementation)
+  - Streamlined constitution by moving technical details to appropriate document
+  - No breaking changes to existing principles
 -->
 
 # BaristaNotes Constitution
@@ -93,6 +99,40 @@ Application performance directly impacts user satisfaction and operational costs
 
 **Rationale**: Performance is a feature. Slow applications drive user abandonment, increase infrastructure costs, and damage brand reputation.
 
+### V. Rating Scale Standard
+
+All rating systems MUST follow project-wide consistency standards:
+
+- **0-4 Scale (NON-NEGOTIABLE)**: All ratings use 0-4 scale with 5 levels:
+  - 0 = Terrible
+  - 1 = Bad
+  - 2 = Average
+  - 3 = Good
+  - 4 = Excellent
+- **Coffee Cup Icon Standard**: Coffee cup icon (☕) represents rating levels throughout UI. Use font icons (MaterialSymbolsFont) for consistency.
+- **Rating Display Order**: Display ratings in descending order (4 → 0) for rating distributions and summary views.
+- **No Alternative Scales**: Never use 1-5 scale, star ratings, or other rating systems. Consistency across all features is mandatory.
+
+**Rationale**: Inconsistent rating scales confuse users and make data comparison impossible. The 0-4 scale provides clear differentiation between levels and aligns with user mental models (zero = none/terrible, four = maximum/excellent).
+
+### VI. Technology Stack Consistency
+
+All technical implementation MUST adhere to the established architectural constraints:
+
+- **Mandatory Compliance**: All code MUST follow the architectural decisions documented in `.specify/ARCHITECTURE_CONSTRAINTS.md`. These constraints are non-negotiable without explicit stakeholder approval.
+- **Technology Stack Adherence**: Use only approved technologies and libraries:
+  - **UI Framework**: MauiReactor (NOT standard MAUI XAML)
+  - **Feedback/Popups**: UXDivers.Popups.Maui via IFeedbackService
+  - **Navigation**: Shell-based with MauiReactor extensions
+  - **Data Layer**: Entity Framework Core with migrations
+  - **Testing**: xUnit with FluentAssertions
+  - **Dependency Injection**: Microsoft.Extensions.DependencyInjection
+- **Pattern Consistency**: Follow established patterns for state management, async/await, and navigation as defined in architecture constraints.
+- **No Pattern Deviation**: Do not introduce alternative libraries, frameworks, or patterns without documented justification and approval.
+- **Implementation Examples Required**: Architecture constraints provide code examples showing correct and incorrect usage. Follow them precisely.
+
+**Rationale**: Consistency in technology choices and implementation patterns reduces cognitive load, simplifies onboarding, enables code reuse, and prevents framework fragmentation. Mixed architectural approaches create maintenance nightmares and technical debt.
+
 ## Performance Standards
 
 ### Measurement & Monitoring
@@ -111,19 +151,11 @@ Application performance directly impacts user satisfaction and operational costs
 
 ### Database Schema Management (NON-NEGOTIABLE)
 
-- **EF Core Migrations Only**: ALL database schema changes MUST be made using `dotnet ef migrations add` command. Manual SQL scripts or direct database modifications are PROHIBITED.
-- **Never Manually Modify Schema**: Do not add columns, tables, indexes, or constraints directly to the database or via manual SQL. This creates inconsistent state between the EF model and actual database.
-- **Migration Workflow**:
-  1. Update entity models in `*.Core/Models/`
-  2. Update `DbContext.OnModelCreating()` if needed
-  3. Run `dotnet ef migrations add MigrationName` from the Core project directory
-  4. Review the generated migration to ensure it only contains intended changes
-  5. Test migration with `dotnet ef database update` in development
-  6. Application startup calls `await db.Database.MigrateAsync()` to apply migrations automatically
-- **Migration Rollback**: Always test Down() migration in development to ensure it can be safely rolled back.
-- **Never Skip Migrations**: If database and model are out of sync, fix by creating proper migration, never by manually altering database.
+- **EF Core Migrations Only**: ALL database schema changes MUST be made through Entity Framework Core migrations. Manual schema modifications are PROHIBITED.
+- **Data Preservation First**: Migrations MUST preserve existing user data. Use data-preserving SQL for complex transformations.
+- **Migration Discipline**: See `.specify/ARCHITECTURE_CONSTRAINTS.md` for detailed EF Core migration workflow and implementation patterns.
 
-**Rationale**: Manual database changes bypass EF Core's change tracking, creating inconsistent state that causes runtime errors ("table already exists", "column not found"). EF migrations provide versioned, testable, rollback-able schema changes with full audit trail.
+**Rationale**: Database migrations provide versioned, testable, rollback-able schema changes with full audit trail. Manual changes bypass change tracking and create deployment risks.
 
 ### Data Preservation (NON-NEGOTIABLE)
 
@@ -172,6 +204,8 @@ All features MUST pass constitution check in implementation plan (plan.md):
 - [ ] **Test-First**: Are test scenarios defined, approved, and written before implementation?
 - [ ] **UX Consistency**: Does the feature follow design system and accessibility standards?
 - [ ] **Performance**: Have performance targets been defined and validated?
+- [ ] **Rating Standards**: If applicable, does feature use 0-4 rating scale consistently?
+- [ ] **Technology Stack**: Does implementation follow architectural constraints (MauiReactor, EF Core, etc.)?
 
 ## Governance
 
@@ -208,4 +242,56 @@ Exception to constitutional principles require:
 3. **Technical Debt Tracking**: Create technical debt item with remediation plan.
 4. **Stakeholder Approval**: Product owner or technical lead approval required.
 
-**Version**: 1.0.0 | **Ratified**: 2025-12-02 | **Last Amended**: 2025-12-02
+## Development Standards & Enforcement Guidelines
+
+### MauiReactor UI Standards
+
+All MauiReactor UI code MUST follow these standards:
+
+- **ThemeKey System (MANDATORY)**: Never use inline styling methods (`.FontSize()`, `.TextColor()`, `.BackgroundColor()`, etc.). All styling MUST use the ThemeKey system.
+- **Theme File References**: Before creating new theme keys, reference existing theme files:
+  - `ThemeKeys.cs` - Theme key constants
+  - `AppColors.cs` - Color definitions  
+  - `ApplicationTheme.cs` - Theme implementations
+  - `AppFontSizes.cs` - Font size constants
+  - `AppSpacing.cs` - Spacing constants
+- **Correct Type Usage**: Use `FontAttributes` from `Microsoft.Maui.Controls`, NOT `Microsoft.Maui.Graphics.Text`. Verify namespace imports.
+- **New Theme Keys**: When new styling is required, create theme keys in `ThemeKeys.cs` and define values in `ApplicationTheme.cs`.
+
+**Rationale**: Inline styling creates unmaintainable code, makes theme switching impossible, and violates the single source of truth principle. The ThemeKey system ensures consistency and enables runtime theme changes.
+
+### Build Verification Standard
+
+**ALWAYS build the application before reporting completion**:
+
+1. Run `dotnet build` after ALL code changes
+2. Verify zero compilation errors before marking tasks complete
+3. Never report "no errors" without actually building
+4. Fix all compilation errors as part of the task (not deferred)
+
+**Rationale**: Unbuildable code breaks the development pipeline and wastes team time. Build verification is a basic quality gate that must never be skipped.
+
+### EF Core Migration Standards
+
+Entity Framework Core migration discipline:
+
+- **Migration File Preservation**: Never delete existing migration files. They are the historical record of schema evolution.
+- **Restore Before Adding**: If migrations are accidentally deleted, restore from git history before creating new ones.
+- **Data-Preserving SQL**: Include custom SQL in migrations for complex schema changes affecting existing data.
+- **Production Testing**: Test migrations on production-like data before deployment.
+- **Rollback Procedures**: Document rollback plans for complex migrations.
+
+**Implementation Details**: See `.specify/ARCHITECTURE_CONSTRAINTS.md` for complete EF Core workflow, migration commands, and code examples.
+
+**Rationale**: Migrations are deployment scripts, not just development artifacts. Deleting them breaks production deployment and loses schema history.
+
+## Document Relationship
+
+This Constitution establishes **governance principles and rationale** (the "WHY" and "WHAT").
+
+For **technical implementation rules** (the "HOW"), see:
+- `.specify/ARCHITECTURE_CONSTRAINTS.md` - Technology stack mandates, implementation patterns, code examples
+
+Both documents are mandatory. Constitution violations require amendment process; Architecture Constraint violations require stakeholder approval.
+
+**Version**: 1.2.0 | **Ratified**: 2025-12-02 | **Last Amended**: 2025-12-08

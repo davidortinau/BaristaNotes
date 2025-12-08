@@ -1,5 +1,11 @@
 # Architecture Constraints
 
+**Document Purpose**: This file defines the mandatory technical implementation rules for the BaristaNotes project. These constraints are NON-NEGOTIABLE without stakeholder approval.
+
+**Relationship to Constitution**: The project [Constitution](memory/constitution.md) establishes governance principles and rationale (WHY/WHAT). This document provides technical implementation rules (HOW). Both are mandatory.
+
+---
+
 ## NON-NEGOTIABLE ARCHITECTURAL DECISIONS
 
 These constraints are **MANDATORY** and **CANNOT** be changed without explicit user approval.
@@ -128,6 +134,161 @@ var shotService = ServiceLocator.Get<IShotService>(); // Service locator pattern
 - Complex reporting queries that EF can't optimize
 - Bulk operations where performance is critical
 - Must use `dbContext.Database.ExecuteSqlRaw()` with parameterized queries
+
+### EF Core Migration Workflow (MANDATORY)
+
+**ALL** database schema changes MUST follow this exact workflow:
+
+1. **Update Entity Models**: Modify entity classes in `*.Core/Models/`
+   ```csharp
+   // Example: Adding a new property
+   public class ShotRecord
+   {
+       public int Id { get; set; }
+       public string BeanName { get; set; }
+       public DateTime Timestamp { get; set; }
+       public int Rating { get; set; } // NEW property
+   }
+   ```
+
+2. **Update DbContext Configuration** (if needed):
+   ```csharp
+   protected override void OnModelCreating(ModelBuilder modelBuilder)
+   {
+       modelBuilder.Entity<ShotRecord>()
+           .Property(s => s.Rating)
+           .HasDefaultValue(0); // Optional: add constraints
+   }
+   ```
+
+3. **Generate Migration**:
+   ```bash
+   cd BaristaNotes.Core
+   dotnet ef migrations add AddRatingToShotRecord
+   ```
+
+4. **Review Generated Migration**:
+   - Open `Migrations/[timestamp]_AddRatingToShotRecord.cs`
+   - Verify `Up()` contains only intended changes
+   - Add custom SQL for data preservation if needed:
+     ```csharp
+     protected override void Up(MigrationBuilder migrationBuilder)
+     {
+         migrationBuilder.AddColumn<int>(
+             name: "Rating",
+             table: "ShotRecords",
+             nullable: false,
+             defaultValue: 0);
+         
+         // Custom SQL for data transformation
+         migrationBuilder.Sql(
+             "UPDATE ShotRecords SET Rating = 2 WHERE Rating = 0");
+     }
+     ```
+
+5. **Test Migration Locally**:
+   ```bash
+   dotnet ef database update
+   ```
+
+6. **Test Rollback** (verify Down() works):
+   ```bash
+   dotnet ef database update [PreviousMigrationName]
+   dotnet ef database update  # Re-apply
+   ```
+
+7. **Production Deployment**: Application startup automatically applies migrations:
+   ```csharp
+   // In App.xaml.cs or Startup
+   await dbContext.Database.MigrateAsync();
+   ```
+
+### Data-Preserving Migration Patterns
+
+**When Renaming Columns/Tables**:
+```csharp
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+    migrationBuilder.RenameColumn(
+        name: "OldName",
+        table: "ShotRecords",
+        newName: "NewName");
+}
+```
+
+**When Restructuring Data**:
+```csharp
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+    // 1. Add new column
+    migrationBuilder.AddColumn<string>(
+        name: "FullName",
+        table: "Users");
+    
+    // 2. Copy/transform existing data
+    migrationBuilder.Sql(@"
+        UPDATE Users 
+        SET FullName = FirstName || ' ' || LastName 
+        WHERE FirstName IS NOT NULL");
+    
+    // 3. Remove old columns (only after data copied)
+    migrationBuilder.DropColumn(name: "FirstName", table: "Users");
+    migrationBuilder.DropColumn(name: "LastName", table: "Users");
+}
+```
+
+**When Changing Types**:
+```csharp
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+    // Add temporary column with new type
+    migrationBuilder.AddColumn<DateTime>(
+        name: "CreatedAt_New",
+        table: "ShotRecords");
+    
+    // Convert data
+    migrationBuilder.Sql(@"
+        UPDATE ShotRecords 
+        SET CreatedAt_New = datetime(CreatedAt_Old, 'unixepoch')");
+    
+    // Drop old, rename new
+    migrationBuilder.DropColumn(name: "CreatedAt_Old", table: "ShotRecords");
+    migrationBuilder.RenameColumn(
+        name: "CreatedAt_New",
+        table: "ShotRecords",
+        newName: "CreatedAt");
+}
+```
+
+### Migration Troubleshooting
+
+**Problem**: "Table already exists" error
+- **DO**: Create migration to add `DropTable()` or use `migrationBuilder.Sql("DROP TABLE IF EXISTS...")` in Up()
+- **DON'T**: Delete database or manually drop table
+
+**Problem**: Migration and database out of sync
+- **DO**: Check `__EFMigrationsHistory` table, create corrective migration
+- **DON'T**: Delete migrations or database
+
+**Problem**: Accidentally deleted migration files
+- **DO**: Restore from git history: `git checkout HEAD~1 -- Migrations/`
+- **DON'T**: Recreate migration with `migrations add` (creates duplicate)
+
+### Migration Best Practices
+
+✅ **DO**:
+- Keep migrations small and focused (one logical change per migration)
+- Name migrations descriptively: `AddRatingColumn`, `RenameUserTable`
+- Test migrations with production-like data volumes
+- Document complex migrations with comments
+- Include rollback SQL in Down() method
+
+❌ **DON'T**:
+- Modify existing migration files after they've been applied
+- Delete migration files (breaks deployment)
+- Create migrations manually (use `dotnet ef migrations add`)
+- Skip testing Down() migrations
+- Apply migrations directly in production database (let app apply them)
 
 ---
 

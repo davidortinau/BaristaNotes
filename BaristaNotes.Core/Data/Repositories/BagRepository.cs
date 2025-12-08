@@ -20,8 +20,8 @@ public class BagRepository : IBagRepository
 
     public async Task<Bag> CreateAsync(Bag bag)
     {
-        bag.CreatedAt = DateTimeOffset.Now;
-        bag.LastModifiedAt = DateTimeOffset.Now;
+        bag.CreatedAt = DateTime.Now;
+        bag.LastModifiedAt = DateTime.Now;
         
         _context.Bags.Add(bag);
         await _context.SaveChangesAsync();
@@ -119,7 +119,7 @@ public class BagRepository : IBagRepository
 
     public async Task<Bag> UpdateAsync(Bag bag)
     {
-        bag.LastModifiedAt = DateTimeOffset.Now;
+        bag.LastModifiedAt = DateTime.Now;
         
         _context.Bags.Update(bag);
         await _context.SaveChangesAsync();
@@ -132,7 +132,7 @@ public class BagRepository : IBagRepository
         if (bag != null)
         {
             bag.IsDeleted = true;
-            bag.LastModifiedAt = DateTimeOffset.Now;
+            bag.LastModifiedAt = DateTime.Now;
             await _context.SaveChangesAsync();
         }
     }

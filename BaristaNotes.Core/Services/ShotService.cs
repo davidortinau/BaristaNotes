@@ -59,7 +59,7 @@ public class ShotService : IShotService
 
         var shot = new ShotRecord
         {
-            Timestamp = dto.Timestamp ?? DateTimeOffset.Now,
+            Timestamp = dto.Timestamp ?? DateTime.Now,
             BagId = dto.BagId.Value,
             MachineId = dto.MachineId,
             GrinderId = dto.GrinderId,
@@ -74,7 +74,7 @@ public class ShotService : IShotService
             ActualOutput = dto.ActualOutput,
             Rating = dto.Rating,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
 
         var created = await _shotRepository.AddAsync(shot);
@@ -140,7 +140,7 @@ public class ShotService : IShotService
 
         shot.Rating = dto.Rating; // Can be null
         shot.DrinkType = dto.DrinkType;
-        shot.LastModifiedAt = DateTimeOffset.Now;
+        shot.LastModifiedAt = DateTime.Now;
 
         var updated = await _shotRepository.UpdateAsync(shot);
         return MapToDto(updated);
@@ -153,7 +153,7 @@ public class ShotService : IShotService
             throw new EntityNotFoundException(nameof(ShotRecord), id);
 
         shot.IsDeleted = true;
-        shot.LastModifiedAt = DateTimeOffset.Now;
+        shot.LastModifiedAt = DateTime.Now;
         await _shotRepository.UpdateAsync(shot);
     }
 
@@ -230,20 +230,42 @@ public class ShotService : IShotService
         return bestShot == null ? null : MapToDto(bestShot);
     }
 
+    public async Task<ShotRecordDto?> GetBestRatedShotByBagAsync(int bagId)
+    {
+        var shots = await _shotRepository.GetAllAsync();
+        var bestShot = shots
+            .Where(s => s.BagId == bagId && s.Rating.HasValue && !s.IsDeleted)
+            .OrderByDescending(s => s.Rating)
+            .ThenByDescending(s => s.Timestamp)
+            .FirstOrDefault();
+        return bestShot == null ? null : MapToDto(bestShot);
+    }
+
     private ShotRecordDto MapToDto(ShotRecord shot) => new()
     {
         Id = shot.Id,
         Timestamp = shot.Timestamp,
-        Bean = shot.Bag?.Bean == null ? null : new BeanDto // TODO T038-T039: Navigate through Bag
+        Bean = shot.Bag?.Bean == null ? null : new BeanDto // Kept for backward compatibility
         {
             Id = shot.Bag.Bean.Id,
             Name = shot.Bag.Bean.Name,
             Roaster = shot.Bag.Bean.Roaster,
-            RoastDate = shot.Bag.RoastDate, // TODO: Get from Bag instead of Bean
+            RoastDate = shot.Bag.RoastDate, // Get from Bag
             Origin = shot.Bag.Bean.Origin,
             Notes = shot.Bag.Bean.Notes,
             IsActive = shot.Bag.Bean.IsActive,
             CreatedAt = shot.Bag.Bean.CreatedAt
+        },
+        Bag = shot.Bag == null ? null : new BagSummaryDto // NEW: Include bag reference
+        {
+            Id = shot.Bag.Id,
+            BeanId = shot.Bag.BeanId,
+            BeanName = shot.Bag.Bean?.Name ?? "",
+            RoastDate = shot.Bag.RoastDate,
+            Notes = shot.Bag.Notes,
+            IsComplete = shot.Bag.IsComplete,
+            ShotCount = 0, // Not needed in this context
+            AverageRating = null // Not needed in this context
         },
         Machine = shot.Machine == null ? null : new EquipmentDto
         {

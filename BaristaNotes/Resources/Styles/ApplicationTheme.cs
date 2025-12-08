@@ -358,5 +358,19 @@ class ApplicationTheme : Theme
 
         BorderStyles.Themes[ThemeKeys.BottomSheet] = _ => _
             .BackgroundColor(IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface);
+
+        // Rating display themes
+        LabelStyles.Themes[ThemeKeys.RatingAverage] = _ => _
+            .TextColor(IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)
+            .FontSize(AppFontSizes.Display);
+
+        LabelStyles.Themes[ThemeKeys.RatingIcon] = _ => _
+            .FontSize(32);
+
+        BoxViewStyles.Themes[ThemeKeys.RatingBarBackground] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant);
+
+        BoxViewStyles.Themes[ThemeKeys.RatingBarFilled] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary);
     }
 }

@@ -24,7 +24,7 @@ public class BagSummaryDto
     /// <summary>
     /// Date the coffee was roasted.
     /// </summary>
-    public DateTimeOffset RoastDate { get; set; }
+    public DateTime RoastDate { get; set; }
     
     /// <summary>
     /// Optional user notes about this bag (e.g., "From Trader Joe's", "Gift").

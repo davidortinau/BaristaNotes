@@ -34,14 +34,14 @@ public class ShotRecordRepositoryTests : IDisposable
         // Arrange
         var shot = new ShotRecord
         {
-            Timestamp = DateTimeOffset.Now,
+            Timestamp = DateTime.Now,
             DoseIn = 18,
             GrindSetting = "5",
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso",
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         // Act
@@ -69,26 +69,26 @@ public class ShotRecordRepositoryTests : IDisposable
         // Arrange
         var oldShot = new ShotRecord
         {
-            Timestamp = DateTimeOffset.Now.AddDays(-2),
+            Timestamp = DateTime.Now.AddDays(-2),
             DoseIn = 17,
             GrindSetting = "4",
             ExpectedTime = 28,
             ExpectedOutput = 38,
             DrinkType = "Espresso",
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         var recentShot = new ShotRecord
         {
-            Timestamp = DateTimeOffset.Now.AddMinutes(-5),
+            Timestamp = DateTime.Now.AddMinutes(-5),
             DoseIn = 18,
             GrindSetting = "5",
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Latte",
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         await _repository.AddAsync(oldShot);
@@ -109,7 +109,7 @@ public class ShotRecordRepositoryTests : IDisposable
         // Arrange
         var activeShot = new ShotRecord
         {
-            Timestamp = DateTimeOffset.Now.AddDays(-1),
+            Timestamp = DateTime.Now.AddDays(-1),
             DoseIn = 17,
             GrindSetting = "4",
             ExpectedTime = 28,
@@ -117,12 +117,12 @@ public class ShotRecordRepositoryTests : IDisposable
             DrinkType = "Espresso",
             IsDeleted = false,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         var deletedShot = new ShotRecord
         {
-            Timestamp = DateTimeOffset.Now,
+            Timestamp = DateTime.Now,
             DoseIn = 18,
             GrindSetting = "5",
             ExpectedTime = 30,
@@ -130,7 +130,7 @@ public class ShotRecordRepositoryTests : IDisposable
             DrinkType = "Latte",
             IsDeleted = true,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         await _repository.AddAsync(activeShot);
@@ -153,14 +153,14 @@ public class ShotRecordRepositoryTests : IDisposable
         {
             var shot = new ShotRecord
             {
-                Timestamp = DateTimeOffset.Now.AddMinutes(-i),
+                Timestamp = DateTime.Now.AddMinutes(-i),
                 DoseIn = 18 + i,
                 GrindSetting = i.ToString(),
                 ExpectedTime = 30,
                 ExpectedOutput = 40,
                 DrinkType = "Espresso",
                 SyncId = Guid.NewGuid(),
-                LastModifiedAt = DateTimeOffset.Now
+                LastModifiedAt = DateTime.Now
             };
             await _repository.AddAsync(shot);
         }
@@ -186,7 +186,7 @@ public class ShotRecordRepositoryTests : IDisposable
         // Arrange
         var shot = new ShotRecord
         {
-            Timestamp = DateTimeOffset.Now,
+            Timestamp = DateTime.Now,
             DoseIn = 18,
             GrindSetting = "5",
             ExpectedTime = 30,
@@ -195,7 +195,7 @@ public class ShotRecordRepositoryTests : IDisposable
             ActualTime = null,
             Rating = null,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         var created = await _repository.AddAsync(shot);
@@ -222,7 +222,7 @@ public class ShotRecordRepositoryTests : IDisposable
         {
             var shot = new ShotRecord
             {
-                Timestamp = DateTimeOffset.Now.AddMinutes(-i),
+                Timestamp = DateTime.Now.AddMinutes(-i),
                 DoseIn = 18,
                 GrindSetting = "5",
                 ExpectedTime = 30,
@@ -230,7 +230,7 @@ public class ShotRecordRepositoryTests : IDisposable
                 DrinkType = "Espresso",
                 IsDeleted = i == 2, // Mark one as deleted
                 SyncId = Guid.NewGuid(),
-                LastModifiedAt = DateTimeOffset.Now
+                LastModifiedAt = DateTime.Now
             };
             await _repository.AddAsync(shot);
         }
@@ -248,7 +248,7 @@ public class ShotRecordRepositoryTests : IDisposable
         // Arrange
         var shot = new ShotRecord
         {
-            Timestamp = DateTimeOffset.Now,
+            Timestamp = DateTime.Now,
             DoseIn = 18,
             GrindSetting = "5",
             ExpectedTime = 30,
@@ -256,14 +256,14 @@ public class ShotRecordRepositoryTests : IDisposable
             DrinkType = "Espresso",
             IsDeleted = false,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         var saved = await _repository.AddAsync(shot);
         
         // Act - Soft delete
         saved.IsDeleted = true;
-        saved.LastModifiedAt = DateTimeOffset.Now;
+        saved.LastModifiedAt = DateTime.Now;
         await _repository.UpdateAsync(saved);
         
         // Assert - Shot still exists in DB but marked as deleted
@@ -281,7 +281,7 @@ public class ShotRecordRepositoryTests : IDisposable
         // Arrange
         var activeShot = new ShotRecord
         {
-            Timestamp = DateTimeOffset.Now,
+            Timestamp = DateTime.Now,
             DoseIn = 18,
             GrindSetting = "5",
             ExpectedTime = 30,
@@ -289,12 +289,12 @@ public class ShotRecordRepositoryTests : IDisposable
             DrinkType = "Espresso",
             IsDeleted = false,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         var deletedShot = new ShotRecord
         {
-            Timestamp = DateTimeOffset.Now.AddMinutes(-5),
+            Timestamp = DateTime.Now.AddMinutes(-5),
             DoseIn = 18,
             GrindSetting = "5",
             ExpectedTime = 30,
@@ -302,7 +302,7 @@ public class ShotRecordRepositoryTests : IDisposable
             DrinkType = "Latte",
             IsDeleted = true,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         await _repository.AddAsync(activeShot);
@@ -322,7 +322,7 @@ public class ShotRecordRepositoryTests : IDisposable
         // Arrange
         var shot = new ShotRecord
         {
-            Timestamp = DateTimeOffset.Now,
+            Timestamp = DateTime.Now,
             DoseIn = 18,
             GrindSetting = "5",
             ExpectedTime = 30,
@@ -333,7 +333,7 @@ public class ShotRecordRepositoryTests : IDisposable
             Rating = 3,
             IsDeleted = false,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now.AddHours(-1)
+            LastModifiedAt = DateTime.Now.AddHours(-1)
         };
         
         var saved = await _repository.AddAsync(shot);
@@ -343,7 +343,7 @@ public class ShotRecordRepositoryTests : IDisposable
         saved.ActualOutput = 42.0m;
         saved.Rating = 5;
         saved.DrinkType = "Latte";
-        saved.LastModifiedAt = DateTimeOffset.Now;
+        saved.LastModifiedAt = DateTime.Now;
         
         await _repository.UpdateAsync(saved);
         
@@ -355,14 +355,14 @@ public class ShotRecordRepositoryTests : IDisposable
         Assert.Equal(42.0m, retrieved.ActualOutput);
         Assert.Equal(5, retrieved.Rating);
         Assert.Equal("Latte", retrieved.DrinkType);
-        Assert.True(retrieved.LastModifiedAt > DateTimeOffset.Now.AddMinutes(-1));
+        Assert.True(retrieved.LastModifiedAt > DateTime.Now.AddMinutes(-1));
     }
     
     [Fact]
     public async Task UpdateAsync_UpdatePreservesImmutableFields()
     {
         // Arrange
-        var originalTimestamp = DateTimeOffset.Now.AddHours(-2);
+        var originalTimestamp = DateTime.Now.AddHours(-2);
         var shot = new ShotRecord
         {
             Timestamp = originalTimestamp,
@@ -374,7 +374,7 @@ public class ShotRecordRepositoryTests : IDisposable
             ActualTime = 25,
             IsDeleted = false,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now.AddHours(-1)
+            LastModifiedAt = DateTime.Now.AddHours(-1)
         };
         
         var saved = await _repository.AddAsync(shot);
@@ -382,7 +382,7 @@ public class ShotRecordRepositoryTests : IDisposable
         // Act - Update editable fields only
         saved.ActualTime = 28.5m;
         saved.DrinkType = "Latte";
-        saved.LastModifiedAt = DateTimeOffset.Now;
+        saved.LastModifiedAt = DateTime.Now;
         
         await _repository.UpdateAsync(saved);
         

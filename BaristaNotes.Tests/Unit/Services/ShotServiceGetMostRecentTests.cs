@@ -10,13 +10,15 @@ public class ShotServiceGetMostRecentTests
 {
     private readonly Mock<IShotRecordRepository> _mockShotRepository;
     private readonly Mock<IPreferencesService> _mockPreferences;
+    private readonly Mock<IBagRepository> _mockBagRepository;
     private readonly ShotService _service;
     
     public ShotServiceGetMostRecentTests()
     {
         _mockShotRepository = new Mock<IShotRecordRepository>();
         _mockPreferences = new Mock<IPreferencesService>();
-        _service = new ShotService(_mockShotRepository.Object, _mockPreferences.Object);
+        _mockBagRepository = new Mock<IBagRepository>();
+        _service = new ShotService(_mockShotRepository.Object, _mockPreferences.Object, _mockBagRepository.Object);
     }
     
     [Fact]
@@ -37,7 +39,7 @@ public class ShotServiceGetMostRecentTests
     public async Task GetMostRecentShotAsync_ShotsExist_ReturnsLatestShot()
     {
         // Arrange
-        var expectedTimestamp = DateTimeOffset.Now.AddMinutes(-5);
+        var expectedTimestamp = DateTime.Now.AddMinutes(-5);
         var mostRecentShot = new ShotRecord
         {
             Id = 42,
@@ -51,7 +53,7 @@ public class ShotServiceGetMostRecentTests
             ActualOutput = 38,
             Rating = 4,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         _mockShotRepository.Setup(r => r.GetMostRecentAsync())
@@ -83,9 +85,9 @@ public class ShotServiceGetMostRecentTests
             Id = 1,
             Name = "Ethiopia Yirgacheffe",
             Roaster = "Local Roasters",
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         var machine = new Equipment
@@ -93,9 +95,9 @@ public class ShotServiceGetMostRecentTests
             Id = 2,
             Name = "Gaggia Classic Pro",
             Type = BaristaNotes.Core.Models.Enums.EquipmentType.Machine,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         var grinder = new Equipment
@@ -103,35 +105,46 @@ public class ShotServiceGetMostRecentTests
             Id = 3,
             Name = "Baratza Sette 270",
             Type = BaristaNotes.Core.Models.Enums.EquipmentType.Grinder,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         var madeBy = new UserProfile
         {
             Id = 4,
             Name = "Alice",
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         var madeFor = new UserProfile
         {
             Id = 5,
             Name = "Bob",
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
+        };
+        
+        var bag = new Bag
+        {
+            Id = 6,
+            BeanId = bean.Id,
+            Bean = bean,
+            RoastDate = DateTime.Now.AddDays(-7),
+            IsComplete = false,
+            SyncId = Guid.NewGuid(),
+            LastModifiedAt = DateTime.Now
         };
         
         var mostRecentShot = new ShotRecord
         {
             Id = 42,
-            Timestamp = DateTimeOffset.Now.AddMinutes(-5),
-            Bean = bean,
-            BeanId = bean.Id,
+            Timestamp = DateTime.Now.AddMinutes(-5),
+            Bag = bag,
+            BagId = bag.Id,
             Machine = machine,
             MachineId = machine.Id,
             Grinder = grinder,
@@ -146,7 +159,7 @@ public class ShotServiceGetMostRecentTests
             ExpectedOutput = 40,
             DrinkType = "Espresso",
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         _mockShotRepository.Setup(r => r.GetMostRecentAsync())

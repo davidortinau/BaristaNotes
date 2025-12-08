@@ -9,24 +9,23 @@ public class RatingAggregateDto
     /// <summary>
     /// Average rating across all rated shots.
     /// 0.00 if no rated shots exist.
-    /// Range: 0.00 - 5.00
+    /// Range: 0.00 - 4.00 (5-level scale: 0=Terrible, 1=Bad, 2=Average, 3=Good, 4=Excellent)
     /// </summary>
     public double AverageRating { get; set; }
     
     /// <summary>
-    /// Total number of shots (including those without ratings).
+    /// Total number of shots (all shots have ratings - this equals RatedShots).
     /// </summary>
     public int TotalShots { get; set; }
     
     /// <summary>
-    /// Number of shots with non-null ratings.
-    /// RatedShots <= TotalShots always.
+    /// Number of shots with ratings (equals TotalShots since all shots are rated).
     /// </summary>
     public int RatedShots { get; set; }
     
     /// <summary>
-    /// Rating distribution: Rating value (1-5) → Count of shots with that rating.
-    /// Example: { 5: 10, 4: 5, 3: 2, 2: 0, 1: 1 }
+    /// Rating distribution: Rating value (0-4) → Count of shots with that rating.
+    /// Example: { 4: 10, 3: 5, 2: 2, 1: 1, 0: 0 }
     /// </summary>
     public Dictionary<int, int> Distribution { get; set; } = new();
     
@@ -36,13 +35,13 @@ public class RatingAggregateDto
     public bool HasRatings => RatedShots > 0;
     
     /// <summary>
-    /// Formatted average rating for display (e.g., "4.25").
+    /// Formatted average rating for display (e.g., "2.9 / 4").
     /// Returns "N/A" if no ratings exist.
     /// </summary>
-    public string FormattedAverage => HasRatings ? AverageRating.ToString("F2") : "N/A";
+    public string FormattedAverage => HasRatings ? $"{AverageRating:F1} / 4" : "N/A";
     
     /// <summary>
-    /// Gets count for a specific rating level (1-5).
+    /// Gets count for a specific rating level (0-4).
     /// Returns 0 if rating level has no shots.
     /// </summary>
     public int GetCountForRating(int rating)

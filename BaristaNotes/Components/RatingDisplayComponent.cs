@@ -6,9 +6,9 @@ using Fonts;
 namespace BaristaNotes.Components;
 
 /// <summary>
-/// Component for displaying rating aggregates with star distribution bars.
-/// Used in BeanDetailPage to show bean-level ratings.
-/// Matches product review UI pattern per requirements.
+/// Component for displaying rating aggregates with sentiment icon distribution bars.
+/// Uses 0-4 rating scale (5 levels: Terrible, Bad, Average, Good, Excellent).
+/// Matches the ShotLoggingPage rating input pattern per requirements.
 /// </summary>
 partial class RatingDisplayComponent : Component
 {
@@ -21,16 +21,15 @@ partial class RatingDisplayComponent : Component
         {
             return VStack(spacing: 8,
                 Label("No ratings yet")
-                    .FontSize(14)
-                    .TextColor(AppColors.Dark.TextSecondary)
+                    .ThemeKey(ThemeKeys.SecondaryText)
             );
         }
 
         return VStack(spacing: 16,
             // Average rating display
             RenderAverageRating(),
-            
-            // Rating distribution bars (5 → 1 stars, descending)
+
+            // Rating distribution bars (4 → 0, descending)
             RenderDistributionBars()
         );
     }
@@ -41,22 +40,12 @@ partial class RatingDisplayComponent : Component
             // Large average number
             HStack(spacing: 8,
                 Label(_ratingAggregate!.FormattedAverage)
-                    .FontSize(48)
-                    .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
-                    .TextColor(AppColors.Dark.Primary),
-                
-                // Star icon
-                Label(MaterialSymbolsFont.Star)
-                    .FontFamily(MaterialSymbolsFont.FontFamily)
-                    .FontSize(32)
-                    .TextColor(AppColors.Dark.Primary)
-                    .VCenter()
+                    .ThemeKey(ThemeKeys.RatingAverage)
             ).HCenter(),
-            
-            // Shot counts
-            Label($"{_ratingAggregate.RatedShots} rated shots ({_ratingAggregate.TotalShots} total)")
-                .FontSize(14)
-                .TextColor(AppColors.Dark.TextSecondary)
+
+            // Shot count
+            Label($"{_ratingAggregate.TotalShots} shots")
+                .ThemeKey(ThemeKeys.SecondaryText)
                 .HCenter()
         );
     }
@@ -64,12 +53,12 @@ partial class RatingDisplayComponent : Component
     VisualNode RenderDistributionBars()
     {
         return VStack(spacing: 8,
-            // Display ratings from 5 down to 1 (product review pattern)
-            RenderDistributionBar(5),
+            // Display ratings from 4 (Excellent) down to 0 (Terrible)
             RenderDistributionBar(4),
             RenderDistributionBar(3),
             RenderDistributionBar(2),
-            RenderDistributionBar(1)
+            RenderDistributionBar(1),
+            RenderDistributionBar(0)
         );
     }
 
@@ -77,32 +66,27 @@ partial class RatingDisplayComponent : Component
     {
         var count = _ratingAggregate!.GetCountForRating(rating);
         var percentage = _ratingAggregate.GetPercentageForRating(rating);
-        
+
         return HStack(spacing: 8,
-            // Rating number with stars
-            HStack(spacing: 4,
-                Label($"{rating}")
-                    .FontSize(14)
-                    .TextColor(AppColors.Dark.TextPrimary)
-                    .WidthRequest(12),
-                
-                Label(MaterialSymbolsFont.Star)
-                    .FontFamily(MaterialSymbolsFont.FontFamily)
-                    .FontSize(14)
-                    .TextColor(AppColors.Dark.Primary)
-            ).WidthRequest(40),
-            
+            // Rating icon (left side)
+            Label(AppIcons.GetRatingIcon(rating))
+                .FontFamily(MaterialSymbolsFont.FontFamily)
+                .FontSize(20)
+                .ThemeKey(ThemeKeys.SecondaryText)
+                .WidthRequest(30)
+                .HCenter(),
+
             // Progress bar container
             Grid(
                 // Background bar
                 BoxView()
-                    .Color(AppColors.Dark.Outline)
+                    .ThemeKey(ThemeKeys.RatingBarBackground)
                     .WidthRequest(200)
                     .HeightRequest(20),
-                
+
                 // Filled portion
                 BoxView()
-                    .BackgroundColor(AppColors.Dark.Primary)
+                    .ThemeKey(ThemeKeys.RatingBarFilled)
                     .WidthRequest(percentage > 0 ? percentage * 2 : 0) // Max 200px width = 100%
                     .HeightRequest(20)
                     .HStart()
@@ -110,11 +94,10 @@ partial class RatingDisplayComponent : Component
             .WidthRequest(200)
             .HeightRequest(20)
             .HStart(),
-            
-            // Count label
+
+            // Count label (right side)
             Label($"{count}")
-                .FontSize(14)
-                .TextColor(AppColors.Dark.TextSecondary)
+                .ThemeKey(ThemeKeys.SecondaryText)
                 .WidthRequest(30)
                 .HEnd()
         ).VCenter();

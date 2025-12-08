@@ -98,6 +98,8 @@ public static class MauiProgram
 		builder.Services.AddDbContext<BaristaNotesContext>(options =>
 			options.UseSqlite($"Data Source={dbPath}"));
 
+		Console.WriteLine($"Database path: {dbPath}");
+
 		// Register Repositories (scoped)
 		builder.Services.AddScoped<IEquipmentRepository, EquipmentRepository>();
 		builder.Services.AddScoped<IBeanRepository, BeanRepository>();

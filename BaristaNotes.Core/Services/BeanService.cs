@@ -66,9 +66,9 @@ public class BeanService : IBeanService
                 Origin = dto.Origin,
                 Notes = dto.Notes,
                 IsActive = true,
-                CreatedAt = DateTimeOffset.Now,
+                CreatedAt = DateTime.Now,
                 SyncId = Guid.NewGuid(),
-                LastModifiedAt = DateTimeOffset.Now
+                LastModifiedAt = DateTime.Now
             };
             
             var created = await _beanRepository.AddAsync(bean);
@@ -112,7 +112,7 @@ public class BeanService : IBeanService
         if (dto.IsActive.HasValue)
             bean.IsActive = dto.IsActive.Value;
         
-        bean.LastModifiedAt = DateTimeOffset.Now;
+        bean.LastModifiedAt = DateTime.Now;
         
         var updated = await _beanRepository.UpdateAsync(bean);
         return MapToDto(updated);
@@ -125,7 +125,7 @@ public class BeanService : IBeanService
             throw new EntityNotFoundException(nameof(Bean), id);
         
         bean.IsActive = false;
-        bean.LastModifiedAt = DateTimeOffset.Now;
+        bean.LastModifiedAt = DateTime.Now;
         await _beanRepository.UpdateAsync(bean);
     }
     
@@ -136,7 +136,7 @@ public class BeanService : IBeanService
             throw new EntityNotFoundException(nameof(Bean), id);
         
         bean.IsDeleted = true;
-        bean.LastModifiedAt = DateTimeOffset.Now;
+        bean.LastModifiedAt = DateTime.Now;
         await _beanRepository.UpdateAsync(bean);
     }
     
@@ -170,7 +170,7 @@ public class BeanService : IBeanService
         if (dto.Notes?.Length > 500)
             errors.Add(nameof(dto.Notes), new List<string> { "Notes must be 500 characters or less" });
         
-        if (dto.RoastDate.HasValue && dto.RoastDate.Value > DateTimeOffset.Now)
+        if (dto.RoastDate.HasValue && dto.RoastDate.Value > DateTime.Now)
             errors.Add(nameof(dto.RoastDate), new List<string> { "Roast date cannot be in the future" });
         
         if (errors.Any())

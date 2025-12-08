@@ -108,7 +108,7 @@ public class BagService : IBagService
         }
 
         bag.IsComplete = true;
-        bag.LastModifiedAt = DateTimeOffset.Now;
+        bag.LastModifiedAt = DateTime.Now;
         await _bagRepository.UpdateAsync(bag);
     }
 
@@ -121,7 +121,7 @@ public class BagService : IBagService
         }
 
         bag.IsComplete = false;
-        bag.LastModifiedAt = DateTimeOffset.Now;
+        bag.LastModifiedAt = DateTime.Now;
         await _bagRepository.UpdateAsync(bag);
     }
 
@@ -141,7 +141,7 @@ public class BagService : IBagService
     private OperationResult<Bag> ValidateBag(Bag bag)
     {
         // RoastDate cannot be in the future
-        if (bag.RoastDate > DateTimeOffset.Now)
+        if (bag.RoastDate > DateTime.Now)
         {
             return OperationResult<Bag>.Fail("Roast date cannot be in the future");
         }

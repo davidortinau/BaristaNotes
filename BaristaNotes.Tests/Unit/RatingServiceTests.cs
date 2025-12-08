@@ -43,9 +43,9 @@ public class RatingServiceTests : IDisposable
             Name = "Test Bean",
             Roaster = "Test Roaster",
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         _context.Beans.Add(bean);
         await _context.SaveChangesAsync();
@@ -53,20 +53,20 @@ public class RatingServiceTests : IDisposable
         var bag1 = new Bag
         {
             BeanId = bean.Id,
-            RoastDate = DateTimeOffset.Now.AddDays(-7),
+            RoastDate = DateTime.Now.AddDays(-7),
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         var bag2 = new Bag
         {
             BeanId = bean.Id,
-            RoastDate = DateTimeOffset.Now.AddDays(-3),
+            RoastDate = DateTime.Now.AddDays(-3),
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         _context.Bags.AddRange(bag1, bag2);
         await _context.SaveChangesAsync();
@@ -112,9 +112,9 @@ public class RatingServiceTests : IDisposable
         {
             Name = "Empty Bean",
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         _context.Beans.Add(bean);
         await _context.SaveChangesAsync();
@@ -122,11 +122,11 @@ public class RatingServiceTests : IDisposable
         var bag = new Bag
         {
             BeanId = bean.Id,
-            RoastDate = DateTimeOffset.Now,
+            RoastDate = DateTime.Now,
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         _context.Bags.Add(bag);
         await _context.SaveChangesAsync();
@@ -151,9 +151,9 @@ public class RatingServiceTests : IDisposable
         {
             Name = "Mixed Bean",
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         _context.Beans.Add(bean);
         await _context.SaveChangesAsync();
@@ -161,11 +161,11 @@ public class RatingServiceTests : IDisposable
         var bag = new Bag
         {
             BeanId = bean.Id,
-            RoastDate = DateTimeOffset.Now,
+            RoastDate = DateTime.Now,
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         _context.Bags.Add(bag);
         await _context.SaveChangesAsync();
@@ -197,9 +197,9 @@ public class RatingServiceTests : IDisposable
         {
             Name = "Distribution Test",
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         _context.Beans.Add(bean);
         await _context.SaveChangesAsync();
@@ -207,11 +207,11 @@ public class RatingServiceTests : IDisposable
         var bag = new Bag
         {
             BeanId = bean.Id,
-            RoastDate = DateTimeOffset.Now,
+            RoastDate = DateTime.Now,
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         _context.Bags.Add(bag);
         await _context.SaveChangesAsync();
@@ -254,9 +254,9 @@ public class RatingServiceTests : IDisposable
         {
             Name = "Test Bean",
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         _context.Beans.Add(bean);
         await _context.SaveChangesAsync();
@@ -264,11 +264,11 @@ public class RatingServiceTests : IDisposable
         var bag = new Bag
         {
             BeanId = bean.Id,
-            RoastDate = DateTimeOffset.Now,
+            RoastDate = DateTime.Now,
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         _context.Bags.Add(bag);
         await _context.SaveChangesAsync();
@@ -300,7 +300,7 @@ public class RatingServiceTests : IDisposable
         return new ShotRecord
         {
             BagId = bagId,
-            Timestamp = DateTimeOffset.Now,
+            Timestamp = DateTime.Now,
             DoseIn = 18.0m,
             GrindSetting = "5",
             ExpectedTime = 28.0m,
@@ -308,7 +308,7 @@ public class RatingServiceTests : IDisposable
             DrinkType = "Espresso",
             Rating = rating,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
     }
 

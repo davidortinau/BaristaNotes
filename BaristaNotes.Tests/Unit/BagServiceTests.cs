@@ -35,7 +35,7 @@ public class BagServiceTests
         var bag = new Bag
         {
             BeanId = 1,
-            RoastDate = DateTimeOffset.Now.AddDays(-1),
+            RoastDate = DateTime.Now.AddDays(-1),
             Notes = "Test notes"
         };
 
@@ -46,7 +46,7 @@ public class BagServiceTests
         var result = await _service.CreateBagAsync(bag);
 
         // Assert
-        Assert.True(result.IsSuccess);
+        Assert.True(result.Success);
         Assert.NotNull(result.Data);
         _mockBagRepo.Verify(x => x.CreateAsync(It.IsAny<Bag>()), Times.Once);
     }
@@ -55,14 +55,14 @@ public class BagServiceTests
     public async Task CreateBagAsync_NonExistentBean_ThrowsValidationException()
     {
         // Arrange
-        var bag = new Bag { BeanId = 999, RoastDate = DateTimeOffset.Now };
+        var bag = new Bag { BeanId = 999, RoastDate = DateTime.Now };
         _mockBeanRepo.Setup(x => x.GetByIdAsync(999)).ReturnsAsync((Bean?)null);
 
         // Act
         var result = await _service.CreateBagAsync(bag);
 
         // Assert
-        Assert.False(result.IsSuccess);
+        Assert.False(result.Success);
         Assert.Contains("Bean", result.ErrorMessage);
         _mockBagRepo.Verify(x => x.CreateAsync(It.IsAny<Bag>()), Times.Never);
     }
@@ -75,7 +75,7 @@ public class BagServiceTests
         var bag = new Bag
         {
             BeanId = 1,
-            RoastDate = DateTimeOffset.Now.AddDays(1) // Future date
+            RoastDate = DateTime.Now.AddDays(1) // Future date
         };
 
         _mockBeanRepo.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(bean);
@@ -84,7 +84,7 @@ public class BagServiceTests
         var result = await _service.CreateBagAsync(bag);
 
         // Assert
-        Assert.False(result.IsSuccess);
+        Assert.False(result.Success);
         Assert.Contains("future", result.ErrorMessage.ToLower());
         _mockBagRepo.Verify(x => x.CreateAsync(It.IsAny<Bag>()), Times.Never);
     }
@@ -97,7 +97,7 @@ public class BagServiceTests
         var bag = new Bag
         {
             BeanId = 1,
-            RoastDate = DateTimeOffset.Now,
+            RoastDate = DateTime.Now,
             Notes = new string('x', 501) // >500 characters
         };
 
@@ -107,7 +107,7 @@ public class BagServiceTests
         var result = await _service.CreateBagAsync(bag);
 
         // Assert
-        Assert.False(result.IsSuccess);
+        Assert.False(result.Success);
         Assert.Contains("500", result.ErrorMessage);
         _mockBagRepo.Verify(x => x.CreateAsync(It.IsAny<Bag>()), Times.Never);
     }
@@ -122,8 +122,8 @@ public class BagServiceTests
         // Arrange
         var activeBags = new List<BagSummaryDto>
         {
-            new() { Id = 1, BeanId = 1, BeanName = "Bean 1", IsComplete = false, RoastDate = DateTimeOffset.Now.AddDays(-1) },
-            new() { Id = 2, BeanId = 2, BeanName = "Bean 2", IsComplete = false, RoastDate = DateTimeOffset.Now.AddDays(-2) }
+            new() { Id = 1, BeanId = 1, BeanName = "Bean 1", IsComplete = false, RoastDate = DateTime.Now.AddDays(-1) },
+            new() { Id = 2, BeanId = 2, BeanName = "Bean 2", IsComplete = false, RoastDate = DateTime.Now.AddDays(-2) }
         };
 
         _mockBagRepo.Setup(x => x.GetActiveBagsForShotLoggingAsync())
@@ -143,9 +143,9 @@ public class BagServiceTests
         // Arrange
         var activeBags = new List<BagSummaryDto>
         {
-            new() { Id = 1, BeanId = 1, BeanName = "Bean 1", RoastDate = DateTimeOffset.Now.AddDays(-5) },
-            new() { Id = 2, BeanId = 2, BeanName = "Bean 2", RoastDate = DateTimeOffset.Now.AddDays(-1) },
-            new() { Id = 3, BeanId = 3, BeanName = "Bean 3", RoastDate = DateTimeOffset.Now.AddDays(-3) }
+            new() { Id = 1, BeanId = 1, BeanName = "Bean 1", RoastDate = DateTime.Now.AddDays(-5) },
+            new() { Id = 2, BeanId = 2, BeanName = "Bean 2", RoastDate = DateTime.Now.AddDays(-1) },
+            new() { Id = 3, BeanId = 3, BeanName = "Bean 3", RoastDate = DateTime.Now.AddDays(-3) }
         };
 
         _mockBagRepo.Setup(x => x.GetActiveBagsForShotLoggingAsync())
@@ -189,7 +189,7 @@ public class BagServiceTests
         {
             Id = 1,
             BeanId = 1,
-            RoastDate = DateTimeOffset.Now,
+            RoastDate = DateTime.Now,
             IsComplete = false
         };
 
@@ -197,25 +197,22 @@ public class BagServiceTests
         _mockBagRepo.Setup(x => x.UpdateAsync(It.IsAny<Bag>())).ReturnsAsync(bag);
 
         // Act
-        var result = await _service.MarkBagCompleteAsync(1);
+        await _service.MarkBagCompleteAsync(1);
 
         // Assert
-        Assert.True(result.IsSuccess);
         _mockBagRepo.Verify(x => x.UpdateAsync(It.Is<Bag>(b => b.IsComplete == true)), Times.Once);
     }
 
     [Fact]
-    public async Task MarkBagCompleteAsync_NonExistentBag_ReturnsFailure()
+    public async Task MarkBagCompleteAsync_NonExistentBag_ThrowsException()
     {
         // Arrange
         _mockBagRepo.Setup(x => x.GetByIdAsync(999)).ReturnsAsync((Bag?)null);
 
-        // Act
-        var result = await _service.MarkBagCompleteAsync(999);
-
-        // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Contains("not found", result.ErrorMessage.ToLower());
+        // Act & Assert
+        await Assert.ThrowsAsync<EntityNotFoundException>(
+            async () => await _service.MarkBagCompleteAsync(999));
+        
         _mockBagRepo.Verify(x => x.UpdateAsync(It.IsAny<Bag>()), Times.Never);
     }
 
@@ -231,7 +228,7 @@ public class BagServiceTests
         {
             Id = 1,
             BeanId = 1,
-            RoastDate = DateTimeOffset.Now,
+            RoastDate = DateTime.Now,
             IsComplete = true
         };
 
@@ -239,25 +236,22 @@ public class BagServiceTests
         _mockBagRepo.Setup(x => x.UpdateAsync(It.IsAny<Bag>())).ReturnsAsync(bag);
 
         // Act
-        var result = await _service.ReactivateBagAsync(1);
+        await _service.ReactivateBagAsync(1);
 
         // Assert
-        Assert.True(result.IsSuccess);
         _mockBagRepo.Verify(x => x.UpdateAsync(It.Is<Bag>(b => b.IsComplete == false)), Times.Once);
     }
 
     [Fact]
-    public async Task ReactivateBagAsync_NonExistentBag_ReturnsFailure()
+    public async Task ReactivateBagAsync_NonExistentBag_ThrowsException()
     {
         // Arrange
         _mockBagRepo.Setup(x => x.GetByIdAsync(999)).ReturnsAsync((Bag?)null);
 
-        // Act
-        var result = await _service.ReactivateBagAsync(999);
-
-        // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Contains("not found", result.ErrorMessage.ToLower());
+        // Act & Assert
+        await Assert.ThrowsAsync<EntityNotFoundException>(
+            async () => await _service.ReactivateBagAsync(999));
+        
         _mockBagRepo.Verify(x => x.UpdateAsync(It.IsAny<Bag>()), Times.Never);
     }
 

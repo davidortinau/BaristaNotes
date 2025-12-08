@@ -34,4 +34,10 @@ public static class ThemeKeys
     
     // Entry/Editor theme keys
     public const string Entry = nameof(Entry);
+    
+    // Rating display theme keys
+    public const string RatingAverage = nameof(RatingAverage);
+    public const string RatingIcon = nameof(RatingIcon);
+    public const string RatingBarBackground = nameof(RatingBarBackground);
+    public const string RatingBarFilled = nameof(RatingBarFilled);
 }

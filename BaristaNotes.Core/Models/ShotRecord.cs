@@ -3,7 +3,7 @@ namespace BaristaNotes.Core.Models;
 public class ShotRecord
 {
     public int Id { get; set; }
-    public DateTimeOffset Timestamp { get; set; }
+    public DateTime Timestamp { get; set; }
     
     // Foreign keys
     public int BagId { get; set; }
@@ -29,7 +29,7 @@ public class ShotRecord
     
     // CoreSync metadata
     public Guid SyncId { get; set; }
-    public DateTimeOffset LastModifiedAt { get; set; }
+    public DateTime LastModifiedAt { get; set; }
     public bool IsDeleted { get; set; } = false;
     
     // Navigation properties

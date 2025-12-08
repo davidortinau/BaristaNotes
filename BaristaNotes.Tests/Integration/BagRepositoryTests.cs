@@ -42,14 +42,14 @@ public class BagRepositoryTests : IDisposable
         {
             Id = 1,
             BeanId = 1,
-            RoastDate = DateTimeOffset.Now.AddDays(-10),
+            RoastDate = DateTime.Now.AddDays(-10),
             IsComplete = false
         };
         var bag2 = new Bag
         {
             Id = 2,
             BeanId = 1,
-            RoastDate = DateTimeOffset.Now.AddDays(-5),
+            RoastDate = DateTime.Now.AddDays(-5),
             IsComplete = false
         };
 
@@ -74,14 +74,14 @@ public class BagRepositoryTests : IDisposable
         {
             Id = 1,
             BeanId = 1,
-            RoastDate = DateTimeOffset.Now.AddDays(-10),
+            RoastDate = DateTime.Now.AddDays(-10),
             IsComplete = false
         };
         var completedBag = new Bag
         {
             Id = 2,
             BeanId = 1,
-            RoastDate = DateTimeOffset.Now.AddDays(-5),
+            RoastDate = DateTime.Now.AddDays(-5),
             IsComplete = true
         };
 
@@ -104,9 +104,9 @@ public class BagRepositoryTests : IDisposable
     {
         // Arrange
         var bean = new Bean { Id = 1, Name = "Test Bean", IsActive = true };
-        var oldBag = new Bag { Id = 1, BeanId = 1, RoastDate = DateTimeOffset.Now.AddDays(-20) };
-        var middleBag = new Bag { Id = 2, BeanId = 1, RoastDate = DateTimeOffset.Now.AddDays(-10) };
-        var newBag = new Bag { Id = 3, BeanId = 1, RoastDate = DateTimeOffset.Now.AddDays(-1) };
+        var oldBag = new Bag { Id = 1, BeanId = 1, RoastDate = DateTime.Now.AddDays(-20) };
+        var middleBag = new Bag { Id = 2, BeanId = 1, RoastDate = DateTime.Now.AddDays(-10) };
+        var newBag = new Bag { Id = 3, BeanId = 1, RoastDate = DateTime.Now.AddDays(-1) };
 
         _context.Beans.Add(bean);
         _context.Bags.AddRange(oldBag, middleBag, newBag);
@@ -133,9 +133,9 @@ public class BagRepositoryTests : IDisposable
         var bean1 = new Bean { Id = 1, Name = "Bean 1", IsActive = true };
         var bean2 = new Bean { Id = 2, Name = "Bean 2", IsActive = true };
         
-        var activeBag1 = new Bag { Id = 1, BeanId = 1, RoastDate = DateTimeOffset.Now.AddDays(-5), IsComplete = false };
-        var activeBag2 = new Bag { Id = 2, BeanId = 2, RoastDate = DateTimeOffset.Now.AddDays(-3), IsComplete = false };
-        var completedBag = new Bag { Id = 3, BeanId = 1, RoastDate = DateTimeOffset.Now.AddDays(-10), IsComplete = true };
+        var activeBag1 = new Bag { Id = 1, BeanId = 1, RoastDate = DateTime.Now.AddDays(-5), IsComplete = false };
+        var activeBag2 = new Bag { Id = 2, BeanId = 2, RoastDate = DateTime.Now.AddDays(-3), IsComplete = false };
+        var completedBag = new Bag { Id = 3, BeanId = 1, RoastDate = DateTime.Now.AddDays(-10), IsComplete = true };
 
         _context.Beans.AddRange(bean1, bean2);
         _context.Bags.AddRange(activeBag1, activeBag2, completedBag);
@@ -155,7 +155,7 @@ public class BagRepositoryTests : IDisposable
     {
         // Arrange
         var bean = new Bean { Id = 1, Name = "Colombian Supremo", IsActive = true };
-        var bag = new Bag { Id = 1, BeanId = 1, RoastDate = DateTimeOffset.Now.AddDays(-5), IsComplete = false };
+        var bag = new Bag { Id = 1, BeanId = 1, RoastDate = DateTime.Now.AddDays(-5), IsComplete = false };
 
         _context.Beans.Add(bean);
         _context.Bags.Add(bag);
@@ -184,7 +184,7 @@ public class BagRepositoryTests : IDisposable
             {
                 Id = i,
                 BeanId = i % 2 == 0 ? 2 : 1,
-                RoastDate = DateTimeOffset.Now.AddDays(-i),
+                RoastDate = DateTime.Now.AddDays(-i),
                 IsComplete = i % 3 == 0 // Every 3rd bag is complete
             });
         }
@@ -225,7 +225,7 @@ public class BagRepositoryTests : IDisposable
             {
                 Id = i,
                 BeanId = 1,
-                RoastDate = DateTimeOffset.Now.AddDays(-i),
+                RoastDate = DateTime.Now.AddDays(-i),
                 IsComplete = false
             });
         }

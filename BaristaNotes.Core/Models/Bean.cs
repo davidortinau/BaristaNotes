@@ -8,11 +8,11 @@ public class Bean
     public string? Origin { get; set; }
     public string? Notes { get; set; }
     public bool IsActive { get; set; } = true;
-    public DateTimeOffset CreatedAt { get; set; }
+    public DateTime CreatedAt { get; set; }
     
     // CoreSync metadata
     public Guid SyncId { get; set; }
-    public DateTimeOffset LastModifiedAt { get; set; }
+    public DateTime LastModifiedAt { get; set; }
     public bool IsDeleted { get; set; } = false;
     
     // Navigation properties

@@ -14,4 +14,5 @@ public interface IShotService
     Task<PagedResult<ShotRecordDto>> GetShotHistoryByEquipmentAsync(int equipmentId, int pageIndex, int pageSize);
     Task<ShotRecordDto?> GetShotByIdAsync(int id);
     Task<ShotRecordDto?> GetBestRatedShotByBeanAsync(int beanId);
+    Task<ShotRecordDto?> GetBestRatedShotByBagAsync(int bagId);
 }

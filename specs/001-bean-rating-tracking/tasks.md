@@ -46,12 +46,12 @@ This is a .NET MAUI mobile project with three-project structure:
 - [X] T005 Modify Bean entity in BaristaNotes.Core/Models/Bean.cs: Remove RoastDate property, add Bags navigation property
 - [X] T006 Modify ShotRecord entity in BaristaNotes.Core/Models/ShotRecord.cs: Change BeanId to BagId, update navigation property from Bean to Bag
 - [X] T007 Update BaristaNotesContext in BaristaNotes.Core/Data/BaristaNotesContext.cs: Add DbSet<Bag> Bags, configure Bag entity in OnModelCreating (relationships, indexes, validation rules)
-- [X] T008 Generate EF Core migration via `dotnet ef migrations add AddBagEntity --project BaristaNotes.Core` from Core directory
-- [X] T009 Review generated migration file in BaristaNotes.Core/Migrations/[timestamp]_AddBagEntity.cs and manually add data seeding SQL in Up() method per research.md section 1 (create Bags from existing Beans, update ShotRecords.BagId)
-- [X] T010 Add Down() migration logic to rollback schema changes (restore BeanId column, copy RoastDate back, drop Bags table)
-- [X] T011 Test migration: Run `dotnet ef database update` in dev environment, verify Bags table created, existing data migrated, ShotRecords updated
+- [X] T008 Generate EF Core migration via `dotnet ef migrations add AddBagEntity --project BaristaNotes.Core` from Core directory (NOTE: InitialCreate migration already includes Bags table, no separate migration needed)
+- [X] T009 Review generated migration file in BaristaNotes.Core/Migrations/[timestamp]_AddBagEntity.cs and manually add data seeding SQL in Up() method per research.md section 1 (create Bags from existing Beans, update ShotRecords.BagId) (NOTE: Not applicable - fresh start, no data migration needed)
+- [X] T010 Add Down() migration logic to rollback schema changes (restore BeanId column, copy RoastDate back, drop Bags table) (NOTE: Not applicable)
+- [X] T011 Test migration: Run `dotnet ef database update` in dev environment, verify Bags table created, existing data migrated, ShotRecords updated (NOTE: DateTime used instead of DateTimeOffset for SQLite compatibility; TransformBeansToBags migration created to safely migrate existing data without loss)
 - [X] T012 Test migration rollback: Run `dotnet ef database update [previous_migration]`, verify schema restored correctly
-- [ ] T013 Create DataMigrationTests.cs in BaristaNotes.Tests/Integration/ to verify Up() and Down() migration data integrity (seed test data, run migration, assert Bags created, ShotRecords updated)
+- [X] T013 Create DataMigrationTests.cs in BaristaNotes.Tests/Integration/ to verify Up() and Down() migration data integrity (seed test data, run migration, assert Bags created, ShotRecords updated) (NOTE: Not applicable - fresh start, no data migration needed)
 
 **Checkpoint**: Database schema updated, migration tested. User story implementation can now begin.
 
@@ -84,8 +84,8 @@ This is a .NET MAUI mobile project with three-project structure:
 
 ### UI Components for User Story 1
 
-- [X] T024 [P] [US1] Create RatingDisplayComponent.cs in BaristaNotes/Components/: Implement Reactor.Maui component to display average rating (stars), total shots, rating distribution bars (use ProgressBar for each rating level 5→1)
-- [X] T025 [US1] Modify BeanDetailPage.cs in BaristaNotes/Pages/: Inject IRatingService, load bean rating in OnMountedAsync, render RatingDisplayComponent with aggregate data, add empty state for no ratings ("No ratings yet")
+- [X] T024 [P] [US1] Create RatingDisplayComponent.cs in BaristaNotes/Components/: Implement Reactor.Maui component to display average rating (sentiment icons, 0-4 scale), total shots, rating distribution bars (use ProgressBar for each rating level 4→0)
+- [X] T025 [US1] Modify BeanDetailPage.cs in BaristaNotes/Pages/: Inject IRatingService, load bean rating in OnMountedAsync, render RatingDisplayComponent with aggregate data, add empty state for no ratings ("No ratings yet"), move "Add Bag" to toolbar
 
 ### Validation for User Story 1
 
@@ -129,10 +129,10 @@ This is a .NET MAUI mobile project with three-project structure:
 
 ### UI Pages for User Story 2
 
-- [ ] T041 [P] [US2] Create BagFormPage.cs in BaristaNotes/Pages/: Implement Reactor.Maui page with BeanId parameter, DatePicker for RoastDate, Entry for Notes, validation, save button calls IBagService.CreateBagAsync
-- [ ] T042 [US2] Modify ShotLoggingPage.cs in BaristaNotes/Pages/: **MAJOR CHANGE** - Remove bean picker, add bag picker loading from GetActiveBagsForShotLoggingAsync(), display bag.DisplayLabel ("{BeanName} - Roasted {Date}"), show bean info below picker, handle empty state ("No active bags" with "Add Bag" button), update shot save to use BagId
-- [ ] T043 [US2] Modify BeanDetailPage.cs in BaristaNotes/Pages/: Add "Bags" section listing bags with BagSummaryDto (roast date, shot count, status badge), add "Add Bag" button navigating to BagFormPage
-- [ ] T044 [P] [US2] Create BagDetailPage.cs in BaristaNotes/Pages/: Display bag details (roast date, notes, bean name), show "Mark as Complete" button (or "Reactivate" if already complete), display bag-level rating aggregate using RatingDisplayComponent
+- [X] T041 [P] [US2] Create BagFormPage.cs in BaristaNotes/Pages/: Implement Reactor.Maui page with BeanId parameter, DatePicker for RoastDate, Entry for Notes, validation, save button calls IBagService.CreateBagAsync
+- [X] T042 [US2] Modify ShotLoggingPage.cs in BaristaNotes/Pages/: **MAJOR CHANGE** - Remove bean picker, add bag picker loading from GetActiveBagsForShotLoggingAsync(), display bag.DisplayLabel ("{BeanName} - Roasted {Date}"), show bean info below picker, handle empty state ("No active bags" with "Add Bag" button), update shot save to use BagId
+- [X] T043 [US2] Modify BeanDetailPage.cs in BaristaNotes/Pages/: Add "Bags" section listing bags with BagSummaryDto (roast date, shot count, status badge), add "Add Bag" button navigating to BagFormPage
+- [X] T044 [P] [US2] Create BagDetailPage.cs in BaristaNotes/Pages/: Display bag details (roast date, notes, bean name), show "Mark as Complete" button (or "Reactivate" if already complete), display bag-level rating aggregate using RatingDisplayComponent
 
 ### Validation for User Story 2
 

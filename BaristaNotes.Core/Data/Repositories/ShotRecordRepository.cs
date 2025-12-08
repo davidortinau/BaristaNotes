@@ -7,6 +7,20 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
 {
     public ShotRecordRepository(BaristaNotesContext context) : base(context) { }
     
+    public override async Task<ShotRecord?> GetByIdAsync(int id)
+    {
+        return await _dbSet
+            .Include(s => s.Bag)
+                .ThenInclude(b => b.Bean)
+            .Include(s => s.Machine)
+            .Include(s => s.Grinder)
+            .Include(s => s.MadeBy)
+            .Include(s => s.MadeFor)
+            .Include(s => s.ShotEquipments)
+                .ThenInclude(se => se.Equipment)
+            .FirstOrDefaultAsync(s => s.Id == id);
+    }
+    
     public async Task<ShotRecord?> GetMostRecentAsync()
     {
         // Load all records first, then order in memory to avoid SQLite DateTimeOffset limitations

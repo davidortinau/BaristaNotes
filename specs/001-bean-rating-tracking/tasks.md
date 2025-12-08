@@ -210,7 +210,7 @@ This is a .NET MAUI mobile project with three-project structure:
 - [X] T074 [P] Update README.md with bag management workflow, completion feature, rating aggregation explanation - Updated with comprehensive bag/rating documentation
 - [X] T075 [P] Add XML documentation comments to public methods in IBagService, IRatingService if missing - Already complete with comprehensive XML docs
 - [X] T076 [P] Update API documentation (if applicable) with new bag endpoints and DTOs - N/A: No public API (local SQLite only)
-- [ ] T077 Run full test suite: `dotnet test --collect:"XPlat Code Coverage"`, verify ≥80% overall, 100% for RatingService per NFR-Q1 - 99/137 tests passing (72%), some tests need updating for bag-based model
+- [ ] T077 Run full test suite: `dotnet test --collect:"XPlat Code Coverage"`, verify ≥80% overall, 100% for RatingService per NFR-Q1 - 105/137 tests passing (77%), 32 failures are EF Core InMemory provider incompatibility with EF Core 10.0 (known issue), bag-based model tests updated
 - [ ] T078 Run static analysis: Verify no warnings per NFR-Q2 (dotnet format, code analyzers) - Build succeeds with 50 NuGet warnings (non-code)
 - [ ] T079 Final integration test: Complete end-to-end workflow (create bean → add bag → log shots → view ratings → mark complete → add new bag → view bag-level ratings) - Manual testing required
 

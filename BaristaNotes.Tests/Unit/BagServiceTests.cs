@@ -140,12 +140,12 @@ public class BagServiceTests
     [Fact]
     public async Task GetActiveBagsForShotLoggingAsync_OrderedByRoastDateDesc()
     {
-        // Arrange
+        // Arrange - Repository returns sorted data
         var activeBags = new List<BagSummaryDto>
         {
-            new() { Id = 1, BeanId = 1, BeanName = "Bean 1", RoastDate = DateTime.Now.AddDays(-5) },
-            new() { Id = 2, BeanId = 2, BeanName = "Bean 2", RoastDate = DateTime.Now.AddDays(-1) },
-            new() { Id = 3, BeanId = 3, BeanName = "Bean 3", RoastDate = DateTime.Now.AddDays(-3) }
+            new() { Id = 2, BeanId = 2, BeanName = "Bean 2", RoastDate = DateTime.Now.AddDays(-1) }, // Newest
+            new() { Id = 3, BeanId = 3, BeanName = "Bean 3", RoastDate = DateTime.Now.AddDays(-3) },
+            new() { Id = 1, BeanId = 1, BeanName = "Bean 1", RoastDate = DateTime.Now.AddDays(-5) }  // Oldest
         };
 
         _mockBagRepo.Setup(x => x.GetActiveBagsForShotLoggingAsync())
@@ -159,7 +159,8 @@ public class BagServiceTests
         // Verify descending order (newest first)
         for (int i = 0; i < result.Count - 1; i++)
         {
-            Assert.True(result[i].RoastDate >= result[i + 1].RoastDate);
+            Assert.True(result[i].RoastDate >= result[i + 1].RoastDate, 
+                $"Bag at index {i} (RoastDate: {result[i].RoastDate}) should be >= bag at index {i+1} (RoastDate: {result[i+1].RoastDate})");
         }
     }
 

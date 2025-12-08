@@ -61,9 +61,12 @@ public class BeanServiceTests
             Roaster = "Test Roaster"
         };
 
-        // Act & Assert
-        await Assert.ThrowsAsync<ValidationException>(() => 
-            _service.CreateBeanAsync(createDto));
+        // Act
+        var result = await _service.CreateBeanAsync(createDto);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("Name is required", result.ErrorMessage);
     }
 
     [Fact]
@@ -76,9 +79,12 @@ public class BeanServiceTests
             Roaster = "Test Roaster"
         };
 
-        // Act & Assert
-        await Assert.ThrowsAsync<ValidationException>(() => 
-            _service.CreateBeanAsync(createDto));
+        // Act
+        var result = await _service.CreateBeanAsync(createDto);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("Name must be 100 characters or less", result.ErrorMessage);
     }
 
     [Fact]
@@ -92,9 +98,12 @@ public class BeanServiceTests
             RoastDate = DateTime.Now.AddDays(1)
         };
 
-        // Act & Assert
-        await Assert.ThrowsAsync<ValidationException>(() => 
-            _service.CreateBeanAsync(createDto));
+        // Act
+        var result = await _service.CreateBeanAsync(createDto);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("Roast date cannot be in the future", result.ErrorMessage);
     }
 
     [Fact]

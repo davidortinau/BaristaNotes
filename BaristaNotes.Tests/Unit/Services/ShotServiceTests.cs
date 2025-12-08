@@ -158,6 +158,18 @@ public class ShotServiceTests
             MadeForId = 7
         };
         
+        var activeBag = new BaristaNotes.Core.Models.Bag
+        {
+            Id = 1,
+            BeanId = 1,
+            RoastDate = DateTime.Now.AddDays(-7),
+            IsComplete = false,
+            IsActive = true,
+            CreatedAt = DateTime.Now,
+            SyncId = Guid.NewGuid(),
+            LastModifiedAt = DateTime.Now
+        };
+        
         var savedShot = new BaristaNotes.Core.Models.ShotRecord
         {
             Id = 1,
@@ -166,12 +178,15 @@ public class ShotServiceTests
             ExpectedTime = dto.ExpectedTime,
             ExpectedOutput = dto.ExpectedOutput,
             DrinkType = dto.DrinkType,
+            BagId = 1,
             Timestamp = DateTime.Now,
             SyncId = Guid.NewGuid(),
             LastModifiedAt = DateTime.Now,
             ShotEquipments = new List<BaristaNotes.Core.Models.ShotEquipment>()
         };
         
+        _mockBagRepository.Setup(r => r.GetByIdAsync(1))
+            .ReturnsAsync(activeBag);
         _mockShotRepository.Setup(r => r.AddAsync(It.IsAny<BaristaNotes.Core.Models.ShotRecord>()))
             .ReturnsAsync((BaristaNotes.Core.Models.ShotRecord shot) => 
             {
@@ -188,7 +203,7 @@ public class ShotServiceTests
         
         // Assert
         _mockPreferences.Verify(p => p.SetLastDrinkType("Latte"), Times.Once);
-        _mockPreferences.Verify(p => p.SetLastBeanId(1), Times.Once);
+        _mockPreferences.Verify(p => p.SetLastBagId(1), Times.Once);
         _mockPreferences.Verify(p => p.SetLastMachineId(2), Times.Once);
         _mockPreferences.Verify(p => p.SetLastGrinderId(3), Times.Once);
         _mockPreferences.Verify(p => p.SetLastAccessoryIds(It.Is<List<int>>(l => l.Count == 2)), Times.Once);
@@ -639,6 +654,7 @@ public class ShotServiceTests
         {
             Id = 1,
             BagId = 1,
+            Bag = activeBag,
             DoseIn = 18,
             GrindSetting = "5",
             ExpectedTime = 30,
@@ -648,6 +664,8 @@ public class ShotServiceTests
         };
 
         _mockShotRepository.Setup(r => r.AddAsync(It.IsAny<BaristaNotes.Core.Models.ShotRecord>()))
+            .ReturnsAsync(expectedShot);
+        _mockShotRepository.Setup(r => r.GetByIdAsync(1))
             .ReturnsAsync(expectedShot);
 
         // Act

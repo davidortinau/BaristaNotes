@@ -7,12 +7,27 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
 {
     public ShotRecordRepository(BaristaNotesContext context) : base(context) { }
     
+    public override async Task<ShotRecord?> GetByIdAsync(int id)
+    {
+        return await _dbSet
+            .Include(s => s.Bag)
+                .ThenInclude(b => b.Bean)
+            .Include(s => s.Machine)
+            .Include(s => s.Grinder)
+            .Include(s => s.MadeBy)
+            .Include(s => s.MadeFor)
+            .Include(s => s.ShotEquipments)
+                .ThenInclude(se => se.Equipment)
+            .FirstOrDefaultAsync(s => s.Id == id);
+    }
+    
     public async Task<ShotRecord?> GetMostRecentAsync()
     {
         // Load all records first, then order in memory to avoid SQLite DateTimeOffset limitations
         var shots = await _dbSet
             .AsNoTracking()
-            .Include(s => s.Bean)
+            .Include(s => s.Bag)
+                .ThenInclude(b => b.Bean) // TODO T038-T039: Navigate through Bag to Bean
             .Include(s => s.Machine)
             .Include(s => s.Grinder)
             .Include(s => s.MadeBy)
@@ -30,7 +45,8 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
         // Load all non-deleted records first, then order and paginate in memory
         var allShots = await _dbSet
             .AsNoTracking()
-            .Include(s => s.Bean)
+            .Include(s => s.Bag)
+                .ThenInclude(b => b.Bean)
             .Include(s => s.Machine)
             .Include(s => s.Grinder)
             .Include(s => s.MadeBy)
@@ -51,7 +67,8 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
     {
         var allShots = await _dbSet
             .AsNoTracking()
-            .Include(s => s.Bean)
+            .Include(s => s.Bag)
+                .ThenInclude(b => b.Bean)
             .Include(s => s.Machine)
             .Include(s => s.Grinder)
             .Include(s => s.MadeBy)
@@ -70,12 +87,13 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
     {
         var allShots = await _dbSet
             .AsNoTracking()
-            .Include(s => s.Bean)
+            .Include(s => s.Bag)
+                .ThenInclude(b => b.Bean)
             .Include(s => s.Machine)
             .Include(s => s.Grinder)
             .Include(s => s.MadeBy)
             .Include(s => s.MadeFor)
-            .Where(s => !s.IsDeleted && s.BeanId == beanId)
+            .Where(s => !s.IsDeleted && s.Bag.BeanId == beanId) // TODO T038-T039: Query through Bag
             .ToListAsync();
             
         return allShots
@@ -89,7 +107,8 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
     {
         var allShots = await _dbSet
             .AsNoTracking()
-            .Include(s => s.Bean)
+            .Include(s => s.Bag)
+                .ThenInclude(b => b.Bean)
             .Include(s => s.Machine)
             .Include(s => s.Grinder)
             .Include(s => s.MadeBy)

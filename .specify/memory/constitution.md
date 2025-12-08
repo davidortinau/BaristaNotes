@@ -64,6 +64,7 @@ Test-Driven Development is the mandatory development methodology:
 User-facing functionality MUST provide a consistent, high-quality experience:
 
 - **Design System Adherence**: All UI components MUST follow the established design system. Custom components require design review.
+- **Icon Usage (NON-NEGOTIABLE)**: NEVER use emojis (☕, ⭐, etc.) in UI. Always use font icons (MaterialSymbolsFont, custom font icons) unless a specific PNG or SVG file is explicitly specified. Emojis render inconsistently across platforms and break accessibility.
 - **Accessibility Standards**: WCAG 2.1 Level AA compliance is mandatory. All interactive elements must be keyboard navigable and screen-reader compatible.
 - **Error Handling**: User-facing errors MUST be clear, actionable, and never expose technical details. Provide recovery steps when possible.
 - **Responsive Design**: All interfaces MUST function on mobile, tablet, and desktop form factors. Touch targets minimum 44x44px.
@@ -123,6 +124,22 @@ Application performance directly impacts user satisfaction and operational costs
 - **Never Skip Migrations**: If database and model are out of sync, fix by creating proper migration, never by manually altering database.
 
 **Rationale**: Manual database changes bypass EF Core's change tracking, creating inconsistent state that causes runtime errors ("table already exists", "column not found"). EF migrations provide versioned, testable, rollback-able schema changes with full audit trail.
+
+### Data Preservation (NON-NEGOTIABLE)
+
+- **NEVER DELETE THE DATABASE**: Under NO circumstances is it acceptable to delete the database, regardless of migration issues, schema conflicts, or development challenges.
+- **User Data is Sacred**: All user data MUST be preserved during schema changes, feature development, debugging, or any other development activity.
+- **Migration-Based Solutions Only**: Any database issues MUST be resolved through proper EF Core migrations that preserve existing data.
+- **Data-Preserving Migration Strategy**:
+  1. When renaming columns/tables: Use `RenameColumn()` and `RenameTable()` operations
+  2. When restructuring data: Include SQL in migration to copy/transform existing data to new schema
+  3. When splitting tables: Migrate data to new tables before removing old structure
+  4. When changing types: Use SQL CAST/CONVERT to transform existing data
+  5. Always test migrations with actual production-like data before deployment
+- **Zero Data Loss**: Migrations must be designed to preserve 100% of existing data. Data loss is NEVER an acceptable solution.
+- **Development Database = Production Database**: Treat your development database with the same respect as production. Deleting it to "fix" issues is prohibited.
+
+**Rationale**: The database contains valuable user data that represents hours of user effort, trust, and commitment to the application. Losing this data destroys user trust, wastes user time, and makes continuous development impossible. EF Core migrations exist specifically to enable schema evolution without data loss. Any suggestion to delete the database demonstrates a fundamental misunderstanding of database migration principles and is completely unacceptable.
 
 ## Quality Gates
 

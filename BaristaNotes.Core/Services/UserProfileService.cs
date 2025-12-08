@@ -38,9 +38,9 @@ public class UserProfileService : IUserProfileService
         {
             Name = dto.Name,
             AvatarPath = dto.AvatarPath,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
 
         var created = await _profileRepository.AddAsync(profile);
@@ -58,7 +58,7 @@ public class UserProfileService : IUserProfileService
         if (dto.AvatarPath != null)
             profile.AvatarPath = dto.AvatarPath;
 
-        profile.LastModifiedAt = DateTimeOffset.Now;
+        profile.LastModifiedAt = DateTime.Now;
 
         var updated = await _profileRepository.UpdateAsync(profile);
         return MapToDto(updated);
@@ -77,7 +77,7 @@ public class UserProfileService : IUserProfileService
         }
 
         profile.IsDeleted = true;
-        profile.LastModifiedAt = DateTimeOffset.Now;
+        profile.LastModifiedAt = DateTime.Now;
         await _profileRepository.UpdateAsync(profile);
     }
 
@@ -122,7 +122,7 @@ public class UserProfileService : IUserProfileService
 
             // Update profile
             profile.AvatarPath = filename;
-            profile.LastModifiedAt = DateTimeOffset.UtcNow;
+            profile.LastModifiedAt = DateTime.UtcNow;
 
             await _profileRepository.UpdateAsync(profile);
 
@@ -146,7 +146,7 @@ public class UserProfileService : IUserProfileService
         await _imageProcessingService.DeleteImageAsync(profile.AvatarPath);
 
         profile.AvatarPath = null;
-        profile.LastModifiedAt = DateTimeOffset.UtcNow;
+        profile.LastModifiedAt = DateTime.UtcNow;
 
         await _profileRepository.UpdateAsync(profile);
 

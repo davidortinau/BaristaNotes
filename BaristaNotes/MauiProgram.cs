@@ -14,7 +14,7 @@ using BaristaNotes.Styles;
 using Microsoft.Maui.Handlers;
 using Syncfusion.Maui.Core.Hosting;
 
-#if IOS || MACCATALYST
+#if IOS
 using BaristaNotes.Platforms.iOS;
 #endif
 
@@ -98,9 +98,12 @@ public static class MauiProgram
 		builder.Services.AddDbContext<BaristaNotesContext>(options =>
 			options.UseSqlite($"Data Source={dbPath}"));
 
+		Console.WriteLine($"Database path: {dbPath}");
+
 		// Register Repositories (scoped)
 		builder.Services.AddScoped<IEquipmentRepository, EquipmentRepository>();
 		builder.Services.AddScoped<IBeanRepository, BeanRepository>();
+		builder.Services.AddScoped<IBagRepository, BagRepository>();  // T040: Phase 4
 		builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 		builder.Services.AddScoped<IShotRecordRepository, ShotRecordRepository>();
 
@@ -111,7 +114,9 @@ public static class MauiProgram
 		builder.Services.AddScoped<IShotService, ShotService>();
 		builder.Services.AddScoped<IEquipmentService, EquipmentService>();
 		builder.Services.AddScoped<IBeanService, BeanService>();
+		builder.Services.AddScoped<IBagService, BagService>();  // T040: Phase 4
 		builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+		builder.Services.AddScoped<IRatingService, RatingService>();
 		builder.Services.AddSingleton<IPreferencesService, PreferencesService>();
 		builder.Services.AddSingleton<IFeedbackService, FeedbackService>();
 		builder.Services.AddSingleton<IThemeService, ThemeService>();

@@ -30,6 +30,13 @@ class BeanDetailPageState
     public bool IsLoading { get; set; }
     public string? ErrorMessage { get; set; }
 
+    // Rating aggregate
+    public RatingAggregateDto? RatingAggregate { get; set; }
+
+    // Bags section
+    public List<BagSummaryDto> Bags { get; set; } = new();
+    public bool IsLoadingBags { get; set; }
+
     // Shot history
     public List<ShotRecordDto> Shots { get; set; } = new();
     public bool IsLoadingShots { get; set; }
@@ -41,6 +48,7 @@ class BeanDetailPageState
 partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProps>
 {
     [Inject] IBeanService _beanService;
+    [Inject] IBagService _bagService;
     [Inject] IShotService _shotService;
     [Inject] IFeedbackService _feedbackService;
 
@@ -67,7 +75,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
 
         try
         {
-            var bean = await _beanService.GetBeanByIdAsync(State.BeanId.Value);
+            var bean = await _beanService.GetBeanWithRatingsAsync(State.BeanId.Value);
 
             if (bean == null)
             {
@@ -85,12 +93,14 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 s.Roaster = bean.Roaster ?? "";
                 s.Origin = bean.Origin ?? "";
                 s.TrackRoastDate = bean.RoastDate.HasValue;
-                s.RoastDate = bean.RoastDate?.DateTime ?? DateTime.Now;
+                s.RoastDate = bean.RoastDate ?? DateTime.Now;
                 s.Notes = bean.Notes ?? "";
+                s.RatingAggregate = bean.RatingAggregate;
                 s.IsLoading = false;
             });
 
-            // Load shot history after bean loads
+            // Load bags and shot history after bean loads
+            _ = LoadBagsAsync();
             _ = LoadShotsAsync();
         }
         catch (Exception ex)
@@ -99,6 +109,32 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
             {
                 s.IsLoading = false;
                 s.ErrorMessage = $"Failed to load bean: {ex.Message}";
+            });
+        }
+    }
+
+    async Task LoadBagsAsync()
+    {
+        if (!State.BeanId.HasValue || State.IsLoadingBags) return;
+
+        SetState(s => s.IsLoadingBags = true);
+
+        try
+        {
+            var bags = await _bagService.GetBagSummariesForBeanAsync(State.BeanId.Value, includeCompleted: true);
+
+            SetState(s =>
+            {
+                s.Bags = bags;
+                s.IsLoadingBags = false;
+            });
+        }
+        catch (Exception ex)
+        {
+            SetState(s =>
+            {
+                s.IsLoadingBags = false;
+                s.ErrorMessage = $"Failed to load bags: {ex.Message}";
             });
         }
     }
@@ -207,7 +243,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                     Name = State.Name,
                     Roaster = string.IsNullOrWhiteSpace(State.Roaster) ? null : State.Roaster,
                     Origin = string.IsNullOrWhiteSpace(State.Origin) ? null : State.Origin,
-                    RoastDate = State.TrackRoastDate ? new DateTimeOffset(State.RoastDate) : null,
+                    RoastDate = State.TrackRoastDate ? State.RoastDate : null,
                     Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes
                 };
 
@@ -222,7 +258,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                     Name = State.Name,
                     Roaster = string.IsNullOrWhiteSpace(State.Roaster) ? null : State.Roaster,
                     Origin = string.IsNullOrWhiteSpace(State.Origin) ? null : State.Origin,
-                    RoastDate = State.TrackRoastDate ? new DateTimeOffset(State.RoastDate) : null,
+                    RoastDate = State.TrackRoastDate ? State.RoastDate : null,
                     Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes
                 };
 
@@ -286,6 +322,25 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
         });
     }
 
+    async void NavigateToBag(int bagId)
+    {
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<BagDetailPageProps>("bag-detail", props =>
+        {
+            props.BagId = bagId;
+        });
+    }
+
+    async void NavigateToAddBag()
+    {
+        if (!State.BeanId.HasValue) return;
+
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<BagFormPageProps>("bag-form", props =>
+        {
+            props.BeanId = State.BeanId.Value;
+            props.BeanName = State.Name;
+        });
+    }
+
     public override VisualNode Render()
     {
         var isEditMode = State.BeanId.HasValue && State.BeanId.Value > 0;
@@ -304,11 +359,21 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
             ).Title(title);
         }
 
-        return ContentPage(
+        var page = ContentPage(
+            (isEditMode) ?
+                ToolbarItem().Text("Add Bag").Order(ToolbarItemOrder.Secondary).OnClicked(NavigateToAddBag) : null,
+            (isEditMode) ?
+                ToolbarItem().Text("Delete").Order(ToolbarItemOrder.Secondary).OnClicked(DeleteBeanAsync) : null,
             ScrollView(
                 VStack(spacing: 16,
                     // Form section
                     RenderForm(),
+
+                    // Rating section (edit mode only)
+                    isEditMode ? RenderRatings() : null,
+
+                    // Bags section (edit mode only)
+                    isEditMode ? RenderBags() : null,
 
                     // Shot history section (edit mode only)
                     isEditMode ? RenderShotHistory() : null
@@ -316,13 +381,13 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 .Padding(16)
             )
         ).Title(title);
+
+        return page;
     }
 
     VisualNode RenderForm()
     {
         var isEditMode = State.BeanId.HasValue && State.BeanId.Value > 0;
-        var isLightTheme = Application.Current?.RequestedTheme == AppTheme.Light;
-        var backgroundColor = isLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
 
         return VStack(spacing: 16,
             // Name field
@@ -380,25 +445,110 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 .Stroke(Colors.Red)
                 : null,
 
-            // Action buttons
-            VStack(spacing: 12,
-                Button(State.IsSaving ? "Saving..." : (isEditMode ? "Save Changes" : "Create Bean"))
-                    .OnClicked(async () => await SaveBeanAsync())
-                    .IsEnabled(!State.IsSaving),
+            // Action button            
+            Button(State.IsSaving ? "Saving..." : (isEditMode ? "Save Changes" : "Create Bean"))
+                .OnClicked(async () => await SaveBeanAsync())
+                .IsEnabled(!State.IsSaving)
 
-                Button("Cancel")
-                    .OnClicked(async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync(".."))
-                    .IsEnabled(!State.IsSaving)
-                    .BackgroundColor(Colors.Gray),
 
-                isEditMode
-                    ? Button("Delete Bean")
-                        .OnClicked(async () => await DeleteBeanAsync())
-                        .IsEnabled(!State.IsSaving)
-                        .BackgroundColor(Colors.Red)
-                    : null
-            )
+
         );
+    }
+
+    VisualNode RenderRatings()
+    {
+        return VStack(spacing: 12,
+            // Section header
+            BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
+
+            Label("Bean Ratings")
+                .ThemeKey(ThemeKeys.SubHeadline),
+
+            // Rating display component
+            new RatingDisplayComponent()
+                .RatingAggregate(State.RatingAggregate)
+        );
+    }
+
+    VisualNode RenderBags()
+    {
+        return VStack(spacing: 12,
+            // Section header
+            BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
+
+            Label("Bags")
+                .ThemeKey(ThemeKeys.SubHeadline),
+
+            // Loading state
+            State.IsLoadingBags
+                ? ActivityIndicator().IsRunning(true).HCenter()
+                : null,
+
+            // Empty state
+            !State.IsLoadingBags && State.Bags.Count == 0
+                ? VStack(spacing: 8,
+                    Label("No bags added yet")
+                        .TextColor(Colors.Gray)
+                        .FontSize(14)
+                        .HCenter()
+                )
+                : null,
+
+            // Bag list
+            State.Bags.Count > 0
+                ? VStack(spacing: 8,
+                    [.. State.Bags.Select(RenderBagItem)]
+                )
+                : null
+        );
+    }
+
+    VisualNode RenderBagItem(BagSummaryDto bag)
+    {
+        return Border(
+            VStack(spacing: 8,
+                // Roast date and status
+                HStack(spacing: 8,
+                    Label($"Roasted {bag.FormattedRoastDate}")
+                        .ThemeKey(ThemeKeys.CardTitle)
+                        .HStart()
+                        .VCenter(),
+
+                    // Status badge
+                    Label(bag.StatusBadge)
+                        .ThemeKey(ThemeKeys.SecondaryText)
+                        .Padding(6, 2)
+                ),
+
+                // Notes if present
+                bag.Notes != null
+                    ? Label(bag.Notes)
+                        .ThemeKey(ThemeKeys.SecondaryText)
+                        .LineBreakMode(Microsoft.Maui.LineBreakMode.WordWrap)
+                    : null,
+
+                // Stats row
+                HStack(spacing: 16,
+                    Label($"{bag.ShotCount} shots")
+                        .ThemeKey(ThemeKeys.SecondaryText),
+
+                    bag.AverageRating.HasValue
+                        ? HStack(spacing: 4,
+                            Label(bag.FormattedRating)
+                                .ThemeKey(ThemeKeys.PrimaryText),
+                            Label(AppIcons.GetRatingIcon((int)Math.Round(bag.AverageRating.Value)))
+                                .FontFamily(MaterialSymbolsFont.FontFamily)
+                                .FontSize(16)
+                                .ThemeKey(ThemeKeys.PrimaryText)
+                        )
+                        : Label("No ratings")
+                            .ThemeKey(ThemeKeys.SecondaryText)
+                )
+            )
+            .Padding(12)
+        )
+        .ThemeKey(ThemeKeys.CardBorder)
+        .OnTapped(() => NavigateToBag(bag.Id));
     }
 
     VisualNode RenderShotHistory()

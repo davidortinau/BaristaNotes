@@ -51,7 +51,7 @@ partial class BeanFormSheet : Component<BeanFormState>
                 s.Roaster = _bean.Roaster ?? string.Empty;
                 s.Origin = _bean.Origin ?? string.Empty;
                 s.TrackRoastDate = _bean.RoastDate.HasValue;
-                s.RoastDate = _bean.RoastDate?.DateTime ?? DateTime.Now;
+                s.RoastDate = _bean.RoastDate ?? DateTime.Now;
                 s.Notes = _bean.Notes ?? string.Empty;
             });
         }
@@ -145,7 +145,7 @@ partial class BeanFormSheet : Component<BeanFormState>
             Name = State.Name,
             Roaster = string.IsNullOrWhiteSpace(State.Roaster) ? null : State.Roaster,
             Origin = string.IsNullOrWhiteSpace(State.Origin) ? null : State.Origin,
-            RoastDate = State.TrackRoastDate ? new DateTimeOffset(State.RoastDate) : null,
+            RoastDate = State.TrackRoastDate ? State.RoastDate : null,
             Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes,
             IsActive = true
         };

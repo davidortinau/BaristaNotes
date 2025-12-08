@@ -8,6 +8,9 @@ public interface IPreferencesService
     int? GetLastBeanId();
     void SetLastBeanId(int? beanId);
     
+    int? GetLastBagId();  // Added for Phase 4 (T039)
+    void SetLastBagId(int? bagId);
+    
     int? GetLastMachineId();
     void SetLastMachineId(int? machineId);
     

@@ -88,8 +88,8 @@ public class EquipmentServiceTests
             Type = EquipmentType.Grinder,
             IsActive = true,
             SyncId = Guid.NewGuid(),
-            CreatedAt = DateTimeOffset.Now,
-            LastModifiedAt = DateTimeOffset.Now
+            CreatedAt = DateTime.Now,
+            LastModifiedAt = DateTime.Now
         };
 
         _mockRepository
@@ -127,8 +127,8 @@ public class EquipmentServiceTests
         // Arrange
         var equipment = new List<Equipment>
         {
-            new Equipment { Id = 1, Name = "Active Machine", Type = EquipmentType.Machine, IsActive = true, SyncId = Guid.NewGuid(), CreatedAt = DateTimeOffset.Now, LastModifiedAt = DateTimeOffset.Now },
-            new Equipment { Id = 2, Name = "Archived Machine", Type = EquipmentType.Machine, IsActive = false, SyncId = Guid.NewGuid(), CreatedAt = DateTimeOffset.Now, LastModifiedAt = DateTimeOffset.Now }
+            new Equipment { Id = 1, Name = "Active Machine", Type = EquipmentType.Machine, IsActive = true, SyncId = Guid.NewGuid(), CreatedAt = DateTime.Now, LastModifiedAt = DateTime.Now },
+            new Equipment { Id = 2, Name = "Archived Machine", Type = EquipmentType.Machine, IsActive = false, SyncId = Guid.NewGuid(), CreatedAt = DateTime.Now, LastModifiedAt = DateTime.Now }
         };
 
         _mockRepository
@@ -149,8 +149,8 @@ public class EquipmentServiceTests
         // Arrange
         var equipment = new List<Equipment>
         {
-            new Equipment { Id = 1, Name = "Machine 1", Type = EquipmentType.Machine, IsActive = true, SyncId = Guid.NewGuid(), CreatedAt = DateTimeOffset.Now, LastModifiedAt = DateTimeOffset.Now },
-            new Equipment { Id = 2, Name = "Grinder 1", Type = EquipmentType.Grinder, IsActive = true, SyncId = Guid.NewGuid(), CreatedAt = DateTimeOffset.Now, LastModifiedAt = DateTimeOffset.Now }
+            new Equipment { Id = 1, Name = "Machine 1", Type = EquipmentType.Machine, IsActive = true, SyncId = Guid.NewGuid(), CreatedAt = DateTime.Now, LastModifiedAt = DateTime.Now },
+            new Equipment { Id = 2, Name = "Grinder 1", Type = EquipmentType.Grinder, IsActive = true, SyncId = Guid.NewGuid(), CreatedAt = DateTime.Now, LastModifiedAt = DateTime.Now }
         };
 
         _mockRepository

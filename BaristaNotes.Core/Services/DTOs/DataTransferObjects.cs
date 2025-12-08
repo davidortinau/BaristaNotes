@@ -3,9 +3,10 @@ namespace BaristaNotes.Core.Services.DTOs;
 public record ShotRecordDto
 {
     public int Id { get; init; }
-    public DateTimeOffset Timestamp { get; init; }
+    public DateTime Timestamp { get; init; }
     
-    public BeanDto? Bean { get; init; }
+    public BeanDto? Bean { get; init; }  // Kept for backward compatibility in UI
+    public BagSummaryDto? Bag { get; init; }  // NEW: Bag reference for edit mode
     public EquipmentDto? Machine { get; init; }
     public EquipmentDto? Grinder { get; init; }
     public List<EquipmentDto> Accessories { get; init; } = new();
@@ -27,9 +28,9 @@ public record ShotRecordDto
 
 public record CreateShotDto
 {
-    public DateTimeOffset? Timestamp { get; init; }
+    public DateTime? Timestamp { get; init; }
     
-    public int? BeanId { get; init; }
+    public int? BagId { get; init; }  // Changed from BeanId - Phase 4 (T038)
     public int? MachineId { get; init; }
     public int? GrinderId { get; init; }
     public List<int> AccessoryIds { get; init; } = new();
@@ -51,16 +52,16 @@ public record CreateShotDto
 
 /// <summary>
 /// DTO for updating editable fields of a shot record.
-/// Includes result fields (actual time/output, rating) and correctable setup fields (bean).
+/// Includes result fields (actual time/output, rating) and correctable setup fields (bag).
 /// </summary>
 public record UpdateShotDto
 {
     /// <summary>
-    /// Bean used for the shot.
+    /// Bag used for the shot (which contains bean and roast date info).
     /// Optional - null means no change to existing value.
-    /// Allows correcting bean selection mistakes.
+    /// Allows correcting bag selection mistakes.
     /// </summary>
-    public int? BeanId { get; init; }
+    public int? BagId { get; init; }  // Changed from BeanId - Phase 4 (T038)
     
     /// <summary>
     /// User who pulled the shot (barista).
@@ -116,7 +117,7 @@ public record EquipmentDto
     public Models.Enums.EquipmentType Type { get; init; }
     public string? Notes { get; init; }
     public bool IsActive { get; init; }
-    public DateTimeOffset CreatedAt { get; init; }
+    public DateTime CreatedAt { get; init; }
 }
 
 public record CreateEquipmentDto
@@ -139,18 +140,19 @@ public record BeanDto
     public int Id { get; init; }
     public string Name { get; init; } = string.Empty;
     public string? Roaster { get; init; }
-    public DateTimeOffset? RoastDate { get; init; }
+    public DateTime? RoastDate { get; init; }
     public string? Origin { get; init; }
     public string? Notes { get; init; }
     public bool IsActive { get; init; }
-    public DateTimeOffset CreatedAt { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public RatingAggregateDto? RatingAggregate { get; init; }
 }
 
 public record CreateBeanDto
 {
     public string Name { get; init; } = string.Empty;
     public string? Roaster { get; init; }
-    public DateTimeOffset? RoastDate { get; init; }
+    public DateTime? RoastDate { get; init; }
     public string? Origin { get; init; }
     public string? Notes { get; init; }
 }
@@ -159,7 +161,7 @@ public record UpdateBeanDto
 {
     public string? Name { get; init; }
     public string? Roaster { get; init; }
-    public DateTimeOffset? RoastDate { get; init; }
+    public DateTime? RoastDate { get; init; }
     public string? Origin { get; init; }
     public string? Notes { get; init; }
     public bool? IsActive { get; init; }
@@ -170,7 +172,7 @@ public record UserProfileDto
     public int Id { get; init; }
     public string Name { get; init; } = string.Empty;
     public string? AvatarPath { get; init; }
-    public DateTimeOffset CreatedAt { get; init; }
+    public DateTime CreatedAt { get; init; }
 }
 
 public record CreateUserProfileDto

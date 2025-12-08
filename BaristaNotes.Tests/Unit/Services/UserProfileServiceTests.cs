@@ -79,8 +79,8 @@ public class UserProfileServiceTests
         // Arrange
         var profiles = new List<UserProfile>
         {
-            new UserProfile { Id = 1, Name = "John", SyncId = Guid.NewGuid(), CreatedAt = DateTimeOffset.Now, LastModifiedAt = DateTimeOffset.Now },
-            new UserProfile { Id = 2, Name = "Jane", SyncId = Guid.NewGuid(), CreatedAt = DateTimeOffset.Now, LastModifiedAt = DateTimeOffset.Now }
+            new UserProfile { Id = 1, Name = "John", SyncId = Guid.NewGuid(), CreatedAt = DateTime.Now, LastModifiedAt = DateTime.Now },
+            new UserProfile { Id = 2, Name = "Jane", SyncId = Guid.NewGuid(), CreatedAt = DateTime.Now, LastModifiedAt = DateTime.Now }
         };
 
         _mockRepository
@@ -103,8 +103,8 @@ public class UserProfileServiceTests
             Id = 1,
             Name = "Old Name",
             SyncId = Guid.NewGuid(),
-            CreatedAt = DateTimeOffset.Now,
-            LastModifiedAt = DateTimeOffset.Now
+            CreatedAt = DateTime.Now,
+            LastModifiedAt = DateTime.Now
         };
 
         var updateDto = new UpdateUserProfileDto
@@ -156,8 +156,8 @@ public class UserProfileServiceTests
             Id = 1,
             Name = "John",
             SyncId = Guid.NewGuid(),
-            CreatedAt = DateTimeOffset.Now,
-            LastModifiedAt = DateTimeOffset.Now
+            CreatedAt = DateTime.Now,
+            LastModifiedAt = DateTime.Now
         };
 
         _mockRepository

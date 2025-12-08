@@ -11,13 +11,15 @@ public class ShotServiceTests
 {
     private readonly Mock<IShotRecordRepository> _mockShotRepository;
     private readonly Mock<IPreferencesService> _mockPreferences;
+    private readonly Mock<IBagRepository> _mockBagRepository;
     private readonly ShotService _service;
     
     public ShotServiceTests()
     {
         _mockShotRepository = new Mock<IShotRecordRepository>();
         _mockPreferences = new Mock<IPreferencesService>();
-        _service = new ShotService(_mockShotRepository.Object, _mockPreferences.Object);
+        _mockBagRepository = new Mock<IBagRepository>();
+        _service = new ShotService(_mockShotRepository.Object, _mockPreferences.Object, _mockBagRepository.Object);
     }
     
     [Theory]
@@ -148,12 +150,24 @@ public class ShotServiceTests
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Latte",
-            BeanId = 1,
+            BagId = 1,
             MachineId = 2,
             GrinderId = 3,
             AccessoryIds = new List<int> { 4, 5 },
             MadeById = 6,
             MadeForId = 7
+        };
+        
+        var activeBag = new BaristaNotes.Core.Models.Bag
+        {
+            Id = 1,
+            BeanId = 1,
+            RoastDate = DateTime.Now.AddDays(-7),
+            IsComplete = false,
+            IsActive = true,
+            CreatedAt = DateTime.Now,
+            SyncId = Guid.NewGuid(),
+            LastModifiedAt = DateTime.Now
         };
         
         var savedShot = new BaristaNotes.Core.Models.ShotRecord
@@ -164,12 +178,15 @@ public class ShotServiceTests
             ExpectedTime = dto.ExpectedTime,
             ExpectedOutput = dto.ExpectedOutput,
             DrinkType = dto.DrinkType,
-            Timestamp = DateTimeOffset.Now,
+            BagId = 1,
+            Timestamp = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now,
+            LastModifiedAt = DateTime.Now,
             ShotEquipments = new List<BaristaNotes.Core.Models.ShotEquipment>()
         };
         
+        _mockBagRepository.Setup(r => r.GetByIdAsync(1))
+            .ReturnsAsync(activeBag);
         _mockShotRepository.Setup(r => r.AddAsync(It.IsAny<BaristaNotes.Core.Models.ShotRecord>()))
             .ReturnsAsync((BaristaNotes.Core.Models.ShotRecord shot) => 
             {
@@ -186,7 +203,7 @@ public class ShotServiceTests
         
         // Assert
         _mockPreferences.Verify(p => p.SetLastDrinkType("Latte"), Times.Once);
-        _mockPreferences.Verify(p => p.SetLastBeanId(1), Times.Once);
+        _mockPreferences.Verify(p => p.SetLastBagId(1), Times.Once);
         _mockPreferences.Verify(p => p.SetLastMachineId(2), Times.Once);
         _mockPreferences.Verify(p => p.SetLastGrinderId(3), Times.Once);
         _mockPreferences.Verify(p => p.SetLastAccessoryIds(It.Is<List<int>>(l => l.Count == 2)), Times.Once);
@@ -207,14 +224,14 @@ public class ShotServiceTests
             ActualTime = 25,
             ActualOutput = 38,
             Rating = 3,
-            Timestamp = DateTimeOffset.Now.AddHours(-1),
+            Timestamp = DateTime.Now.AddHours(-1),
             DoseIn = 18,
             GrindSetting = "5",
             ExpectedTime = 30,
             ExpectedOutput = 40,
             IsDeleted = false,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now.AddHours(-1),
+            LastModifiedAt = DateTime.Now.AddHours(-1),
             ShotEquipments = new List<BaristaNotes.Core.Models.ShotEquipment>()
         };
         
@@ -238,7 +255,7 @@ public class ShotServiceTests
         Assert.Equal(42.0m, existingShot.ActualOutput);
         Assert.Equal(4, existingShot.Rating);
         Assert.Equal("Latte", existingShot.DrinkType);
-        Assert.True(existingShot.LastModifiedAt > DateTimeOffset.Now.AddMinutes(-1));
+        Assert.True(existingShot.LastModifiedAt > DateTime.Now.AddMinutes(-1));
         _mockShotRepository.Verify(r => r.UpdateAsync(existingShot), Times.Once);
     }
     
@@ -253,14 +270,14 @@ public class ShotServiceTests
             ActualTime = 25,
             ActualOutput = 38,
             Rating = 3,
-            Timestamp = DateTimeOffset.Now.AddHours(-1),
+            Timestamp = DateTime.Now.AddHours(-1),
             DoseIn = 18,
             GrindSetting = "5",
             ExpectedTime = 30,
             ExpectedOutput = 40,
             IsDeleted = false,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now.AddHours(-1),
+            LastModifiedAt = DateTime.Now.AddHours(-1),
             ShotEquipments = new List<BaristaNotes.Core.Models.ShotEquipment>()
         };
         
@@ -371,7 +388,7 @@ public class ShotServiceTests
             DrinkType = "Espresso",
             ActualTime = 25,
             IsDeleted = false,
-            LastModifiedAt = DateTimeOffset.Now.AddHours(-1),
+            LastModifiedAt = DateTime.Now.AddHours(-1),
             SyncId = Guid.NewGuid(),
             ShotEquipments = new List<BaristaNotes.Core.Models.ShotEquipment>()
         };
@@ -381,7 +398,7 @@ public class ShotServiceTests
             .ReturnsAsync((BaristaNotes.Core.Models.ShotRecord shot) => shot);
         
         var dto = new UpdateShotDto { DrinkType = "Latte" };
-        var beforeUpdate = DateTimeOffset.Now;
+        var beforeUpdate = DateTime.Now;
         
         // Act
         await _service.UpdateShotAsync(1, dto);
@@ -394,12 +411,12 @@ public class ShotServiceTests
     public async Task UpdateShotAsync_PreservesImmutableFields()
     {
         // Arrange
-        var originalTimestamp = DateTimeOffset.Now.AddHours(-2);
+        var originalTimestamp = DateTime.Now.AddHours(-2);
         var existingShot = new BaristaNotes.Core.Models.ShotRecord
         {
             Id = 1,
             Timestamp = originalTimestamp,
-            BeanId = 5,
+            BagId = 5,
             GrindSetting = "10",
             DoseIn = 18,
             ExpectedTime = 30,
@@ -407,7 +424,7 @@ public class ShotServiceTests
             DrinkType = "Espresso",
             IsDeleted = false,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now.AddHours(-1),
+            LastModifiedAt = DateTime.Now.AddHours(-1),
             ShotEquipments = new List<BaristaNotes.Core.Models.ShotEquipment>()
         };
         
@@ -426,7 +443,7 @@ public class ShotServiceTests
         
         // Assert - Immutable fields unchanged
         Assert.Equal(originalTimestamp, existingShot.Timestamp);
-        Assert.Equal(5, existingShot.BeanId);
+        Assert.Equal(5, existingShot.BagId);
         Assert.Equal("10", existingShot.GrindSetting);
         Assert.Equal(18, existingShot.DoseIn);
         Assert.Equal(30, existingShot.ExpectedTime);
@@ -465,7 +482,7 @@ public class ShotServiceTests
             Id = 1,
             IsDeleted = false,
             DrinkType = "Espresso",
-            LastModifiedAt = DateTimeOffset.Now.AddHours(-1),
+            LastModifiedAt = DateTime.Now.AddHours(-1),
             SyncId = Guid.NewGuid(),
             ShotEquipments = new List<BaristaNotes.Core.Models.ShotEquipment>()
         };
@@ -501,7 +518,7 @@ public class ShotServiceTests
             Id = 1,
             IsDeleted = false,
             DrinkType = "Espresso",
-            LastModifiedAt = DateTimeOffset.Now.AddHours(-1),
+            LastModifiedAt = DateTime.Now.AddHours(-1),
             SyncId = Guid.NewGuid(),
             ShotEquipments = new List<BaristaNotes.Core.Models.ShotEquipment>()
         };
@@ -510,7 +527,7 @@ public class ShotServiceTests
         _mockShotRepository.Setup(r => r.UpdateAsync(It.IsAny<BaristaNotes.Core.Models.ShotRecord>()))
             .ReturnsAsync((BaristaNotes.Core.Models.ShotRecord shot) => shot);
         
-        var beforeDelete = DateTimeOffset.Now;
+        var beforeDelete = DateTime.Now;
         
         // Act
         await _service.DeleteShotAsync(1);
@@ -537,4 +554,129 @@ public class ShotServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.DeleteShotAsync(1));
     }
+
+    #region Bag Validation Tests (T032 - Phase 4)
+
+    [Fact]
+    public async Task CreateShotAsync_WithNonExistentBag_ThrowsValidationException()
+    {
+        // Arrange
+        var mockBagRepo = new Mock<IBagRepository>();
+        mockBagRepo.Setup(x => x.GetByIdAsync(999)).ReturnsAsync((BaristaNotes.Core.Models.Bag?)null);
+        
+        var serviceWithBagRepo = new ShotService(
+            _mockShotRepository.Object,
+            _mockPreferences.Object,
+            mockBagRepo.Object
+        );
+
+        var dto = new CreateShotDto
+        {
+            BagId = 999, // Non-existent bag
+            DoseIn = 18,
+            GrindSetting = "5",
+            ExpectedTime = 30,
+            ExpectedOutput = 40,
+            DrinkType = "Espresso"
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ValidationException>(() => serviceWithBagRepo.CreateShotAsync(dto));
+        Assert.Contains("Bag", exception.Errors["BagId"][0]);
+    }
+
+    [Fact]
+    public async Task CreateShotAsync_WithCompletedBag_ThrowsValidationException()
+    {
+        // Arrange
+        var mockBagRepo = new Mock<IBagRepository>();
+        var completedBag = new BaristaNotes.Core.Models.Bag
+        {
+            Id = 1,
+            BeanId = 1,
+            RoastDate = DateTime.Now.AddDays(-10),
+            IsComplete = true // Bag is marked as complete
+        };
+        mockBagRepo.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(completedBag);
+        
+        var serviceWithBagRepo = new ShotService(
+            _mockShotRepository.Object,
+            _mockPreferences.Object,
+            mockBagRepo.Object
+        );
+
+        var dto = new CreateShotDto
+        {
+            BagId = 1,
+            DoseIn = 18,
+            GrindSetting = "5",
+            ExpectedTime = 30,
+            ExpectedOutput = 40,
+            DrinkType = "Espresso"
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ValidationException>(() => serviceWithBagRepo.CreateShotAsync(dto));
+        Assert.Contains("complete", exception.Errors["BagId"][0].ToLower());
+    }
+
+    [Fact]
+    public async Task CreateShotAsync_WithActiveBag_Success()
+    {
+        // Arrange
+        var mockBagRepo = new Mock<IBagRepository>();
+        var activeBag = new BaristaNotes.Core.Models.Bag
+        {
+            Id = 1,
+            BeanId = 1,
+            RoastDate = DateTime.Now.AddDays(-10),
+            IsComplete = false // Active bag
+        };
+        mockBagRepo.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(activeBag);
+        
+        var serviceWithBagRepo = new ShotService(
+            _mockShotRepository.Object,
+            _mockPreferences.Object,
+            mockBagRepo.Object
+        );
+
+        var dto = new CreateShotDto
+        {
+            BagId = 1,
+            DoseIn = 18,
+            GrindSetting = "5",
+            ExpectedTime = 30,
+            ExpectedOutput = 40,
+            DrinkType = "Espresso"
+        };
+
+        var expectedShot = new BaristaNotes.Core.Models.ShotRecord
+        {
+            Id = 1,
+            BagId = 1,
+            Bag = activeBag,
+            DoseIn = 18,
+            GrindSetting = "5",
+            ExpectedTime = 30,
+            ExpectedOutput = 40,
+            DrinkType = "Espresso",
+            SyncId = Guid.NewGuid()
+        };
+
+        _mockShotRepository.Setup(r => r.AddAsync(It.IsAny<BaristaNotes.Core.Models.ShotRecord>()))
+            .ReturnsAsync(expectedShot);
+        _mockShotRepository.Setup(r => r.GetByIdAsync(1))
+            .ReturnsAsync(expectedShot);
+
+        // Act
+        var result = await serviceWithBagRepo.CreateShotAsync(dto);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.Bag);
+        Assert.Equal(1, result.Bag.Id);
+        _mockShotRepository.Verify(r => r.AddAsync(It.IsAny<BaristaNotes.Core.Models.ShotRecord>()), Times.Once);
+    }
+
+    #endregion
 }

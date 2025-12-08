@@ -61,4 +61,22 @@ public static class AppIcons
         Color = IconColor
     };
 
+    // Rating icons (0-4 scale: Terrible to Excellent)
+    // Used consistently across ShotLoggingPage, ShotRecordCard, RatingDisplayComponent
+    public static readonly string[] RatingIcons = new[]
+    {
+        MaterialSymbolsFont.Sentiment_very_dissatisfied, // 0 - Terrible
+        MaterialSymbolsFont.Sentiment_dissatisfied,      // 1 - Bad
+        MaterialSymbolsFont.Sentiment_neutral,           // 2 - Average
+        MaterialSymbolsFont.Sentiment_satisfied,         // 3 - Good
+        MaterialSymbolsFont.Sentiment_very_satisfied     // 4 - Excellent
+    };
+
+    public static string GetRatingIcon(int rating)
+    {
+        if (rating < 0 || rating >= RatingIcons.Length)
+            return RatingIcons[2]; // Default to neutral
+        return RatingIcons[rating];
+    }
+
 }

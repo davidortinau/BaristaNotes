@@ -3,10 +3,10 @@ namespace BaristaNotes.Core.Models;
 public class ShotRecord
 {
     public int Id { get; set; }
-    public DateTimeOffset Timestamp { get; set; }
+    public DateTime Timestamp { get; set; }
     
     // Foreign keys
-    public int? BeanId { get; set; }
+    public int BagId { get; set; }
     public int? MachineId { get; set; }
     public int? GrinderId { get; set; }
     public int? MadeById { get; set; }
@@ -29,11 +29,11 @@ public class ShotRecord
     
     // CoreSync metadata
     public Guid SyncId { get; set; }
-    public DateTimeOffset LastModifiedAt { get; set; }
+    public DateTime LastModifiedAt { get; set; }
     public bool IsDeleted { get; set; } = false;
     
     // Navigation properties
-    public virtual Bean? Bean { get; set; }
+    public virtual Bag Bag { get; set; } = null!;
     public virtual Equipment? Machine { get; set; }
     public virtual Equipment? Grinder { get; set; }
     public virtual UserProfile? MadeBy { get; set; }

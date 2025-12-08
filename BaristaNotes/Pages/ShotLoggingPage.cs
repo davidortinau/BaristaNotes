@@ -27,10 +27,10 @@ class ShotLoggingState
     public decimal? ActualTime { get; set; }
     public decimal? ActualOutput { get; set; }
     public int Rating { get; set; } = 2;
-    public int? SelectedBeanId { get; set; }
-    public int SelectedBeanIndex { get; set; } = -1;
+    public int? SelectedBagId { get; set; }
+    public int SelectedBagIndex { get; set; } = -1;
     public int SelectedDrinkIndex { get; set; } = 0;
-    public List<BeanDto> AvailableBeans { get; set; } = new();
+    public List<BagSummaryDto> AvailableBags { get; set; } = new();
     public List<string> DrinkTypes { get; set; } = new() { "Espresso", "Americano", "Latte", "Cappuccino", "Flat White", "Cortado" };
     public bool IsLoading { get; set; }
     public string? ErrorMessage { get; set; }
@@ -65,6 +65,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     IBeanService _beanService;
 
     [Inject]
+    IBagService _bagService;
+
+    [Inject]
     IEquipmentService _equipmentService;
 
     [Inject]
@@ -95,7 +98,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     {
         try
         {
-            var beans = await _beanService.GetAllActiveBeansAsync();
+            var bags = await _bagService.GetActiveBagsForShotLoggingAsync();
             var users = await _userProfileService.GetAllProfilesAsync();
             var equipment = await _equipmentService.GetAllActiveEquipmentAsync();
 
@@ -112,7 +115,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
                 SetState(s =>
                 {
-                    s.AvailableBeans = beans.ToList();
+                    s.AvailableBags = bags;
                     s.AvailableUsers = users;
                     s.AvailableEquipment = equipment.ToList();
 
@@ -127,8 +130,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     s.ActualOutput = shot.ActualOutput;
                     s.Rating = shot.Rating ?? 0;
                     s.DrinkType = shot.DrinkType;
-                    s.SelectedBeanId = shot.Bean?.Id;
-                    s.SelectedBeanIndex = shot.Bean != null ? s.AvailableBeans.FindIndex(b => b.Id == shot.Bean.Id) : -1;
+                    s.SelectedBagId = shot.Bag?.Id;
+                    s.SelectedBagIndex = shot.Bag != null ? s.AvailableBags.FindIndex(b => b.Id == shot.Bag.Id) : -1;
                     s.SelectedDrinkIndex = s.DrinkTypes.IndexOf(shot.DrinkType);
 
                     // Set maker/recipient from shot
@@ -150,7 +153,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
                 SetState(s =>
                 {
-                    s.AvailableBeans = beans.ToList();
+                    s.AvailableBags = bags;
                     s.AvailableUsers = users;
                     s.AvailableEquipment = equipment.ToList();
 
@@ -164,8 +167,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         s.ActualOutput = lastShot.ActualOutput;
                         s.Rating = lastShot.Rating ?? 2;
                         s.DrinkType = lastShot.DrinkType;
-                        s.SelectedBeanId = lastShot.Bean?.Id;
-                        s.SelectedBeanIndex = lastShot.Bean != null ? s.AvailableBeans.FindIndex(b => b.Id == lastShot.Bean.Id) : -1;
+                        s.SelectedBagId = lastShot.Bag?.Id;
+                        s.SelectedBagIndex = lastShot.Bag != null ? s.AvailableBags.FindIndex(b => b.Id == lastShot.Bag.Id) : -1;
                         s.SelectedDrinkIndex = s.DrinkTypes.IndexOf(lastShot.DrinkType);
 
                         // Load last-used maker/recipient from preferences
@@ -198,12 +201,12 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         }
     }
 
-    async Task LoadBestShotSettingsAsync(int beanId)
+    async Task LoadBestShotSettingsAsync(int bagId)
     {
         try
         {
-            System.Diagnostics.Debug.WriteLine($"[ShotLoggingPage] LoadBestShotSettingsAsync called for beanId: {beanId}");
-            var bestShot = await _shotService.GetBestRatedShotByBeanAsync(beanId);
+            System.Diagnostics.Debug.WriteLine($"[ShotLoggingPage] LoadBestShotSettingsAsync called for bagId: {bagId}");
+            var bestShot = await _shotService.GetBestRatedShotByBagAsync(bagId);
 
             if (bestShot != null)
             {
@@ -219,8 +222,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"[ShotLoggingPage] No rated shots found for beanId: {beanId}");
-                await _feedbackService.ShowSuccessAsync("No rated shots found for this bean");
+                System.Diagnostics.Debug.WriteLine($"[ShotLoggingPage] No rated shots found for bagId: {bagId}");
+                await _feedbackService.ShowSuccessAsync("No rated shots found for this bag");
             }
         }
         catch (Exception ex)
@@ -237,15 +240,15 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             // Edit mode: Update existing shot
             if (Props.ShotId.HasValue)
             {
-                if (State.SelectedBeanId == null)
+                if (State.SelectedBagId == null)
                 {
-                    await _feedbackService.ShowErrorAsync("Please select a bean");
+                    await _feedbackService.ShowErrorAsync("Please select a bag");
                     return;
                 }
 
                 var updateDto = new UpdateShotDto
                 {
-                    BeanId = State.SelectedBeanId.Value,
+                    BagId = State.SelectedBagId.Value,
                     MadeById = State.SelectedMaker?.Id,
                     MadeForId = State.SelectedRecipient?.Id,
                     ActualTime = State.ActualTime,
@@ -267,16 +270,22 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             // Add mode: Create new shot
             else
             {
-                if (State.SelectedBeanId == null)
+                if (State.SelectedBagId == null)
                 {
-
-                    await _feedbackService.ShowErrorAsync("Please select a bean", "Choose a bean before logging your shot");
+                    if (State.AvailableBags.Count == 0)
+                    {
+                        await _feedbackService.ShowErrorAsync("No active bags", "Please add a bag before logging a shot");
+                    }
+                    else
+                    {
+                        await _feedbackService.ShowErrorAsync("Please select a bag", "Choose a bag before logging your shot");
+                    }
                     return;
                 }
 
                 var createDto = new CreateShotDto
                 {
-                    BeanId = State.SelectedBeanId.Value,
+                    BagId = State.SelectedBagId.Value,
                     MachineId = State.SelectedMachineId,
                     GrinderId = State.SelectedGrinderId,
                     AccessoryIds = State.SelectedAccessoryIds,
@@ -295,9 +304,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 await _shotService.CreateShotAsync(createDto);
 
                 _preferencesService.SetLastDrinkType(State.DrinkType);
-                if (State.SelectedBeanId.HasValue)
+                if (State.SelectedBagId.HasValue)
                 {
-                    _preferencesService.SetLastBeanId(State.SelectedBeanId.Value);
+                    _preferencesService.SetLastBagId(State.SelectedBagId.Value);
                 }
 
                 // Save last-used equipment to preferences
@@ -324,7 +333,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
     public override VisualNode Render()
     {
-        if (State.IsLoading && !State.AvailableBeans.Any())
+        if (State.IsLoading && !State.AvailableBags.Any())
         {
             return ContentPage(Props.ShotId.HasValue ? "Edit Shot" : "New Shot",
                 VStack(
@@ -382,25 +391,39 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         .Text("Additional Details")
                         .ThemeKey(ThemeKeys.MutedText),
 
-                    // Bean Picker
-                    new FormPickerField()
-                        .Label("Bean")
-                        .Title("Select Bean")
-                        .ItemsSource(State.AvailableBeans.Select(b => b.Name).ToList())
-                        .SelectedIndex(State.SelectedBeanIndex)
-                        .OnSelectedIndexChanged(idx =>
-                        {
-                            if (idx >= 0 && idx < State.AvailableBeans.Count)
+                    // Bag Picker with empty state handling
+                    State.AvailableBags.Count > 0 ?
+                        new FormPickerField()
+                            .Label("Bag")
+                            .Title("Select Bag")
+                            .ItemsSource(State.AvailableBags.Select(b => b.DisplayLabel).ToList())
+                            .SelectedIndex(State.SelectedBagIndex)
+                            .OnSelectedIndexChanged(idx =>
                             {
-                                var beanId = State.AvailableBeans[idx].Id;
-                                SetState(s =>
+                                if (idx >= 0 && idx < State.AvailableBags.Count)
                                 {
-                                    s.SelectedBeanIndex = idx;
-                                    s.SelectedBeanId = beanId;
-                                });
-                                _ = LoadBestShotSettingsAsync(beanId);
-                            }
-                        }),
+                                    var bagId = State.AvailableBags[idx].Id;
+                                    SetState(s =>
+                                    {
+                                        s.SelectedBagIndex = idx;
+                                        s.SelectedBagId = bagId;
+                                    });
+                                    _ = LoadBestShotSettingsAsync(bagId);
+                                }
+                            }) :
+                        VStack(spacing: 12,
+                            Label("No active bags available")
+                                .ThemeKey(ThemeKeys.SecondaryText)
+                                .FontSize(16)
+                                .HCenter(),
+                            Label("Add a bag to start logging shots")
+                                .ThemeKey(ThemeKeys.MutedText)
+                                .FontSize(14)
+                                .HCenter(),
+                            Button("Add New Bag")
+                                .OnClicked(async () => await Navigation.PushAsync<BagFormPage>())
+                                .HCenter()
+                        ).Padding(16),
 
                     // Grind Setting
                     new FormEntryField()
@@ -689,18 +712,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         var textColor = isLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
         var mutedColor = isLightTheme ? AppColors.Light.TextMuted : AppColors.Dark.TextMuted;
 
-        // Sentiment icons for ratings 0-4
-        var ratingIcons = new[]
-        {
-            MaterialSymbolsFont.Sentiment_very_dissatisfied,
-            MaterialSymbolsFont.Sentiment_dissatisfied,
-            MaterialSymbolsFont.Sentiment_neutral,
-            MaterialSymbolsFont.Sentiment_satisfied,
-            MaterialSymbolsFont.Sentiment_very_satisfied
-        };
-
         return HStack(spacing: 8,
-            ratingIcons.Select((icon, index) =>
+            AppIcons.RatingIcons.Select((icon, index) =>
                 Border(
                     Label(icon)
                         .FontFamily(MaterialSymbolsFont.FontFamily)

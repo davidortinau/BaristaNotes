@@ -34,25 +34,37 @@ public class DatabaseTests : IDisposable
             Name = "Ethiopia Yirgacheffe",
             Roaster = "Local Roasters",
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         _context.Beans.Add(bean);
         await _context.SaveChangesAsync();
         
+        var bag = new Bag
+        {
+            BeanId = bean.Id,
+            RoastDate = DateTime.Now,
+            IsComplete = false,
+            SyncId = Guid.NewGuid(),
+            LastModifiedAt = DateTime.Now
+        };
+        
+        _context.Bags.Add(bag);
+        await _context.SaveChangesAsync();
+        
         var shot = new ShotRecord
         {
-            Timestamp = DateTimeOffset.Now,
-            BeanId = bean.Id,
+            Timestamp = DateTime.Now,
+            BagId = bag.Id,
             DoseIn = 18,
             GrindSetting = "5",
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso",
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         _context.ShotRecords.Add(shot);
@@ -60,13 +72,15 @@ public class DatabaseTests : IDisposable
         
         // Act
         var retrieved = await _context.ShotRecords
-            .Include(s => s.Bean)
+            .Include(s => s.Bag)
+                .ThenInclude(b => b.Bean)
             .FirstAsync(s => s.Id == shot.Id);
         
         // Assert
-        Assert.NotNull(retrieved.Bean);
-        Assert.Equal("Ethiopia Yirgacheffe", retrieved.Bean.Name);
-        Assert.Equal("Local Roasters", retrieved.Bean.Roaster);
+        Assert.NotNull(retrieved.Bag);
+        Assert.NotNull(retrieved.Bag.Bean);
+        Assert.Equal("Ethiopia Yirgacheffe", retrieved.Bag.Bean.Name);
+        Assert.Equal("Local Roasters", retrieved.Bag.Bean.Roaster);
     }
     
     [Fact]
@@ -78,9 +92,9 @@ public class DatabaseTests : IDisposable
             Name = "Gaggia Classic Pro",
             Type = EquipmentType.Machine,
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         var grinder = new Equipment
@@ -88,9 +102,9 @@ public class DatabaseTests : IDisposable
             Name = "Baratza Sette 270",
             Type = EquipmentType.Grinder,
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         _context.Equipment.AddRange(machine, grinder);
@@ -98,7 +112,7 @@ public class DatabaseTests : IDisposable
         
         var shot = new ShotRecord
         {
-            Timestamp = DateTimeOffset.Now,
+            Timestamp = DateTime.Now,
             MachineId = machine.Id,
             GrinderId = grinder.Id,
             DoseIn = 18,
@@ -107,7 +121,7 @@ public class DatabaseTests : IDisposable
             ExpectedOutput = 40,
             DrinkType = "Espresso",
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         _context.ShotRecords.Add(shot);
@@ -138,9 +152,9 @@ public class DatabaseTests : IDisposable
             Name = "Normcore 58.5mm",
             Type = EquipmentType.Tamper,
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         var puckScreen = new Equipment
@@ -148,9 +162,9 @@ public class DatabaseTests : IDisposable
             Name = "IMS Precision Screen",
             Type = EquipmentType.PuckScreen,
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         _context.Equipment.AddRange(tamper, puckScreen);
@@ -158,14 +172,14 @@ public class DatabaseTests : IDisposable
         
         var shot = new ShotRecord
         {
-            Timestamp = DateTimeOffset.Now,
+            Timestamp = DateTime.Now,
             DoseIn = 18,
             GrindSetting = "5",
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso",
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         _context.ShotRecords.Add(shot);
@@ -205,17 +219,17 @@ public class DatabaseTests : IDisposable
         var alice = new UserProfile
         {
             Name = "Alice",
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         var bob = new UserProfile
         {
             Name = "Bob",
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         _context.UserProfiles.AddRange(alice, bob);
@@ -223,7 +237,7 @@ public class DatabaseTests : IDisposable
         
         var shot = new ShotRecord
         {
-            Timestamp = DateTimeOffset.Now,
+            Timestamp = DateTime.Now,
             MadeById = alice.Id,
             MadeForId = bob.Id,
             DoseIn = 18,
@@ -232,7 +246,7 @@ public class DatabaseTests : IDisposable
             ExpectedOutput = 40,
             DrinkType = "Latte",
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         _context.ShotRecords.Add(shot);
@@ -260,25 +274,37 @@ public class DatabaseTests : IDisposable
         {
             Name = "Test Bean",
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         _context.Beans.Add(bean);
         await _context.SaveChangesAsync();
         
+        var bag = new Bag
+        {
+            BeanId = bean.Id,
+            RoastDate = DateTime.Now,
+            IsComplete = false,
+            SyncId = Guid.NewGuid(),
+            LastModifiedAt = DateTime.Now
+        };
+        
+        _context.Bags.Add(bag);
+        await _context.SaveChangesAsync();
+        
         var shot = new ShotRecord
         {
-            Timestamp = DateTimeOffset.Now,
-            BeanId = bean.Id,
+            Timestamp = DateTime.Now,
+            BagId = bag.Id,
             DoseIn = 18,
             GrindSetting = "5",
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso",
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         _context.ShotRecords.Add(shot);
@@ -288,15 +314,17 @@ public class DatabaseTests : IDisposable
         bean.IsDeleted = true;
         await _context.SaveChangesAsync();
         
-        // Assert - Shot still exists but BeanId is preserved (soft delete doesn't cascade)
+        // Assert - Shot still exists but BagId is preserved (soft delete doesn't cascade)
         var retrieved = await _context.ShotRecords
-            .Include(s => s.Bean)
+            .Include(s => s.Bag)
+                .ThenInclude(b => b.Bean)
             .FirstAsync(s => s.Id == shot.Id);
         
         Assert.NotNull(retrieved);
-        Assert.Equal(bean.Id, retrieved.BeanId);
-        // Bean is still accessible but marked as deleted
-        Assert.NotNull(retrieved.Bean);
-        Assert.True(retrieved.Bean.IsDeleted);
+        Assert.Equal(bag.Id, retrieved.BagId);
+        // Bean is still accessible through Bag but marked as deleted
+        Assert.NotNull(retrieved.Bag);
+        Assert.NotNull(retrieved.Bag.Bean);
+        Assert.True(retrieved.Bag.Bean.IsDeleted);
     }
 }

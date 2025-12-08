@@ -11,12 +11,14 @@ namespace BaristaNotes.Tests.Unit.Services;
 public class BeanServiceTests
 {
     private readonly Mock<IBeanRepository> _mockRepository;
+    private readonly Mock<IRatingService> _mockRatingService;
     private readonly BeanService _service;
 
     public BeanServiceTests()
     {
         _mockRepository = new Mock<IBeanRepository>();
-        _service = new BeanService(_mockRepository.Object);
+        _mockRatingService = new Mock<IRatingService>();
+        _service = new BeanService(_mockRepository.Object, _mockRatingService.Object);
     }
 
     [Fact]
@@ -27,7 +29,7 @@ public class BeanServiceTests
         {
             Name = "Ethiopia Yirgacheffe",
             Roaster = "Local Roasters",
-            RoastDate = DateTimeOffset.Now.AddDays(-7),
+            RoastDate = DateTime.Now.AddDays(-7),
             Origin = "Ethiopia",
             Notes = "Floral and citrus notes"
         };
@@ -59,9 +61,12 @@ public class BeanServiceTests
             Roaster = "Test Roaster"
         };
 
-        // Act & Assert
-        await Assert.ThrowsAsync<ValidationException>(() => 
-            _service.CreateBeanAsync(createDto));
+        // Act
+        var result = await _service.CreateBeanAsync(createDto);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("Name is required", result.ErrorMessage);
     }
 
     [Fact]
@@ -74,9 +79,12 @@ public class BeanServiceTests
             Roaster = "Test Roaster"
         };
 
-        // Act & Assert
-        await Assert.ThrowsAsync<ValidationException>(() => 
-            _service.CreateBeanAsync(createDto));
+        // Act
+        var result = await _service.CreateBeanAsync(createDto);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("Name must be 100 characters or less", result.ErrorMessage);
     }
 
     [Fact]
@@ -87,12 +95,15 @@ public class BeanServiceTests
         {
             Name = "Future Bean",
             Roaster = "Test Roaster",
-            RoastDate = DateTimeOffset.Now.AddDays(1)
+            RoastDate = DateTime.Now.AddDays(1)
         };
 
-        // Act & Assert
-        await Assert.ThrowsAsync<ValidationException>(() => 
-            _service.CreateBeanAsync(createDto));
+        // Act
+        var result = await _service.CreateBeanAsync(createDto);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("Roast date cannot be in the future", result.ErrorMessage);
     }
 
     [Fact]
@@ -105,8 +116,8 @@ public class BeanServiceTests
             Name = "Old Bean",
             IsActive = true,
             SyncId = Guid.NewGuid(),
-            CreatedAt = DateTimeOffset.Now,
-            LastModifiedAt = DateTimeOffset.Now
+            CreatedAt = DateTime.Now,
+            LastModifiedAt = DateTime.Now
         };
 
         _mockRepository
@@ -144,8 +155,8 @@ public class BeanServiceTests
         // Arrange
         var beans = new List<Bean>
         {
-            new Bean { Id = 1, Name = "Active Bean", IsActive = true, SyncId = Guid.NewGuid(), CreatedAt = DateTimeOffset.Now, LastModifiedAt = DateTimeOffset.Now },
-            new Bean { Id = 2, Name = "Archived Bean", IsActive = false, SyncId = Guid.NewGuid(), CreatedAt = DateTimeOffset.Now, LastModifiedAt = DateTimeOffset.Now }
+            new Bean { Id = 1, Name = "Active Bean", IsActive = true, SyncId = Guid.NewGuid(), CreatedAt = DateTime.Now, LastModifiedAt = DateTime.Now },
+            new Bean { Id = 2, Name = "Archived Bean", IsActive = false, SyncId = Guid.NewGuid(), CreatedAt = DateTime.Now, LastModifiedAt = DateTime.Now }
         };
 
         _mockRepository
@@ -171,8 +182,8 @@ public class BeanServiceTests
             Roaster = "Old Roaster",
             IsActive = true,
             SyncId = Guid.NewGuid(),
-            CreatedAt = DateTimeOffset.Now,
-            LastModifiedAt = DateTimeOffset.Now
+            CreatedAt = DateTime.Now,
+            LastModifiedAt = DateTime.Now
         };
 
         var updateDto = new UpdateBeanDto

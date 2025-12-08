@@ -10,16 +10,6 @@ partial class ShotRecordCard : Component
     [Prop]
     ShotRecordDto? _shot;
 
-    // Sentiment icons for ratings 0-4 (matching ShotLoggingPage)
-    private static readonly string[] RatingIcons = new[]
-    {
-        MaterialSymbolsFont.Sentiment_very_dissatisfied,
-        MaterialSymbolsFont.Sentiment_dissatisfied,
-        MaterialSymbolsFont.Sentiment_neutral,
-        MaterialSymbolsFont.Sentiment_satisfied,
-        MaterialSymbolsFont.Sentiment_very_satisfied
-    };
-
     public override VisualNode Render()
     {
         if (_shot == null)
@@ -64,9 +54,7 @@ partial class ShotRecordCard : Component
     VisualNode RenderRating()
     {
         var rating = _shot?.Rating ?? 0;
-        // Clamp rating to valid index range (0-4)
-        var ratingIndex = Math.Clamp(rating, 0, 4);
-        var icon = RatingIcons[ratingIndex];
+        var icon = AppIcons.GetRatingIcon(rating);
 
         return Label(icon)
             .FontFamily(MaterialSymbolsFont.FontFamily)

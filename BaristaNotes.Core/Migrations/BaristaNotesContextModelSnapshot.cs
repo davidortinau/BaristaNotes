@@ -17,6 +17,62 @@ namespace BaristaNotes.Core.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
 
+            modelBuilder.Entity("BaristaNotes.Core.Models.Bag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BeanId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsComplete")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTimeOffset>("LastModifiedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("RoastDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BeanId");
+
+                    b.HasIndex("SyncId")
+                        .IsUnique();
+
+                    b.HasIndex("BeanId", "RoastDate")
+                        .IsDescending(false, true);
+
+                    b.HasIndex("BeanId", "IsComplete", "RoastDate")
+                        .IsDescending(false, false, true);
+
+                    b.ToTable("Bags");
+                });
+
             modelBuilder.Entity("BaristaNotes.Core.Models.Bean", b =>
                 {
                     b.Property<int>("Id")
@@ -50,9 +106,6 @@ namespace BaristaNotes.Core.Migrations
 
                     b.Property<string>("Origin")
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset?>("RoastDate")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Roaster")
@@ -152,7 +205,7 @@ namespace BaristaNotes.Core.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("BeanId")
+                    b.Property<int>("BagId")
                         .HasColumnType("INTEGER");
 
                     b.Property<decimal>("DoseIn")
@@ -212,7 +265,7 @@ namespace BaristaNotes.Core.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BeanId");
+                    b.HasIndex("BagId");
 
                     b.HasIndex("GrinderId");
 
@@ -227,6 +280,8 @@ namespace BaristaNotes.Core.Migrations
 
                     b.HasIndex("Timestamp")
                         .IsDescending();
+
+                    b.HasIndex("BagId", "Rating");
 
                     b.ToTable("ShotRecords");
                 });
@@ -270,6 +325,17 @@ namespace BaristaNotes.Core.Migrations
                     b.ToTable("UserProfiles");
                 });
 
+            modelBuilder.Entity("BaristaNotes.Core.Models.Bag", b =>
+                {
+                    b.HasOne("BaristaNotes.Core.Models.Bean", "Bean")
+                        .WithMany("Bags")
+                        .HasForeignKey("BeanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Bean");
+                });
+
             modelBuilder.Entity("BaristaNotes.Core.Models.ShotEquipment", b =>
                 {
                     b.HasOne("BaristaNotes.Core.Models.Equipment", "Equipment")
@@ -291,10 +357,11 @@ namespace BaristaNotes.Core.Migrations
 
             modelBuilder.Entity("BaristaNotes.Core.Models.ShotRecord", b =>
                 {
-                    b.HasOne("BaristaNotes.Core.Models.Bean", "Bean")
+                    b.HasOne("BaristaNotes.Core.Models.Bag", "Bag")
                         .WithMany("ShotRecords")
-                        .HasForeignKey("BeanId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("BagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("BaristaNotes.Core.Models.Equipment", "Grinder")
                         .WithMany()
@@ -316,7 +383,7 @@ namespace BaristaNotes.Core.Migrations
                         .HasForeignKey("MadeForId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.Navigation("Bean");
+                    b.Navigation("Bag");
 
                     b.Navigation("Grinder");
 
@@ -327,9 +394,14 @@ namespace BaristaNotes.Core.Migrations
                     b.Navigation("MadeFor");
                 });
 
-            modelBuilder.Entity("BaristaNotes.Core.Models.Bean", b =>
+            modelBuilder.Entity("BaristaNotes.Core.Models.Bag", b =>
                 {
                     b.Navigation("ShotRecords");
+                });
+
+            modelBuilder.Entity("BaristaNotes.Core.Models.Bean", b =>
+                {
+                    b.Navigation("Bags");
                 });
 
             modelBuilder.Entity("BaristaNotes.Core.Models.Equipment", b =>

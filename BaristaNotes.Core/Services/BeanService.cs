@@ -9,10 +9,12 @@ namespace BaristaNotes.Core.Services;
 public class BeanService : IBeanService
 {
     private readonly IBeanRepository _beanRepository;
+    private readonly IRatingService _ratingService;
     
-    public BeanService(IBeanRepository beanRepository)
+    public BeanService(IBeanRepository beanRepository, IRatingService ratingService)
     {
         _beanRepository = beanRepository;
+        _ratingService = ratingService;
     }
     
     public async Task<List<BeanDto>> GetAllActiveBeansAsync()
@@ -25,6 +27,16 @@ public class BeanService : IBeanService
     {
         var bean = await _beanRepository.GetByIdAsync(id);
         return bean == null ? null : MapToDto(bean);
+    }
+    
+    public async Task<BeanDto?> GetBeanWithRatingsAsync(int id)
+    {
+        var bean = await _beanRepository.GetByIdAsync(id);
+        if (bean == null) return null;
+        
+        var ratings = await _ratingService.GetBeanRatingAsync(id);
+        
+        return MapToDto(bean) with { RatingAggregate = ratings };
     }
     
     public async Task<OperationResult<BeanDto>> CreateBeanAsync(CreateBeanDto dto)
@@ -49,13 +61,14 @@ public class BeanService : IBeanService
             {
                 Name = dto.Name,
                 Roaster = dto.Roaster,
-                RoastDate = dto.RoastDate,
+                // TODO: RoastDate moved to Bag entity - will be handled in T041 (BagFormPage)
+                // Temporarily removed to allow migration generation
                 Origin = dto.Origin,
                 Notes = dto.Notes,
                 IsActive = true,
-                CreatedAt = DateTimeOffset.Now,
+                CreatedAt = DateTime.Now,
                 SyncId = Guid.NewGuid(),
-                LastModifiedAt = DateTimeOffset.Now
+                LastModifiedAt = DateTime.Now
             };
             
             var created = await _beanRepository.AddAsync(bean);
@@ -89,8 +102,9 @@ public class BeanService : IBeanService
             bean.Name = dto.Name;
         if (dto.Roaster != null)
             bean.Roaster = dto.Roaster;
-        if (dto.RoastDate.HasValue)
-            bean.RoastDate = dto.RoastDate;
+        // TODO: RoastDate moved to Bag entity - dto.RoastDate temporarily ignored
+        // if (dto.RoastDate.HasValue)
+        //     bean.RoastDate = dto.RoastDate;
         if (dto.Origin != null)
             bean.Origin = dto.Origin;
         if (dto.Notes != null)
@@ -98,7 +112,7 @@ public class BeanService : IBeanService
         if (dto.IsActive.HasValue)
             bean.IsActive = dto.IsActive.Value;
         
-        bean.LastModifiedAt = DateTimeOffset.Now;
+        bean.LastModifiedAt = DateTime.Now;
         
         var updated = await _beanRepository.UpdateAsync(bean);
         return MapToDto(updated);
@@ -111,7 +125,7 @@ public class BeanService : IBeanService
             throw new EntityNotFoundException(nameof(Bean), id);
         
         bean.IsActive = false;
-        bean.LastModifiedAt = DateTimeOffset.Now;
+        bean.LastModifiedAt = DateTime.Now;
         await _beanRepository.UpdateAsync(bean);
     }
     
@@ -122,7 +136,7 @@ public class BeanService : IBeanService
             throw new EntityNotFoundException(nameof(Bean), id);
         
         bean.IsDeleted = true;
-        bean.LastModifiedAt = DateTimeOffset.Now;
+        bean.LastModifiedAt = DateTime.Now;
         await _beanRepository.UpdateAsync(bean);
     }
     
@@ -131,7 +145,7 @@ public class BeanService : IBeanService
         Id = bean.Id,
         Name = bean.Name,
         Roaster = bean.Roaster,
-        RoastDate = bean.RoastDate,
+        RoastDate = null, // TODO: RoastDate moved to Bag - will populate from first Bag in later tasks
         Origin = bean.Origin,
         Notes = bean.Notes,
         IsActive = bean.IsActive,
@@ -156,7 +170,7 @@ public class BeanService : IBeanService
         if (dto.Notes?.Length > 500)
             errors.Add(nameof(dto.Notes), new List<string> { "Notes must be 500 characters or less" });
         
-        if (dto.RoastDate.HasValue && dto.RoastDate.Value > DateTimeOffset.Now)
+        if (dto.RoastDate.HasValue && dto.RoastDate.Value > DateTime.Now)
             errors.Add(nameof(dto.RoastDate), new List<string> { "Roast date cannot be in the future" });
         
         if (errors.Any())

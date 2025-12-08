@@ -43,9 +43,9 @@ public class EquipmentService : IEquipmentService
             Type = dto.Type,
             Notes = dto.Notes,
             IsActive = true,
-            CreatedAt = DateTimeOffset.Now,
+            CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
-            LastModifiedAt = DateTimeOffset.Now
+            LastModifiedAt = DateTime.Now
         };
         
         var created = await _equipmentRepository.AddAsync(equipment);
@@ -67,7 +67,7 @@ public class EquipmentService : IEquipmentService
         if (dto.IsActive.HasValue)
             equipment.IsActive = dto.IsActive.Value;
         
-        equipment.LastModifiedAt = DateTimeOffset.Now;
+        equipment.LastModifiedAt = DateTime.Now;
         
         var updated = await _equipmentRepository.UpdateAsync(equipment);
         return MapToDto(updated);
@@ -80,7 +80,7 @@ public class EquipmentService : IEquipmentService
             throw new EntityNotFoundException(nameof(Equipment), id);
         
         equipment.IsActive = false;
-        equipment.LastModifiedAt = DateTimeOffset.Now;
+        equipment.LastModifiedAt = DateTime.Now;
         await _equipmentRepository.UpdateAsync(equipment);
     }
     
@@ -91,7 +91,7 @@ public class EquipmentService : IEquipmentService
             throw new EntityNotFoundException(nameof(Equipment), id);
         
         equipment.IsDeleted = true;
-        equipment.LastModifiedAt = DateTimeOffset.Now;
+        equipment.LastModifiedAt = DateTime.Now;
         await _equipmentRepository.UpdateAsync(equipment);
     }
     

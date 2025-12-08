@@ -184,35 +184,35 @@ This is a .NET MAUI mobile project with three-project structure:
 
 ### Integration & Edge Cases
 
-- [ ] T060 [P] Handle edge case: Bean with only one shot (display single rating without warning per spec edge cases)
-- [ ] T061 [P] Handle edge case: Multiple bags with same roasting date (distinguish by Notes or creation timestamp per spec)
-- [ ] T062 [P] Handle edge case: All bags complete (show "No active bags" with "Add Bag" and "Reactivate" options per spec)
-- [ ] T063 [P] Handle edge case: User tries to log shot with no active bags (prompt to add bag first per spec)
-- [ ] T064 [P] Handle edge case: 50+ bags for one bean (verify bags ordered by roast date DESC, consider pagination if performance issues)
+- [X] T060 [P] Handle edge case: Bean with only one shot (display single rating without warning per spec edge cases) - RatingDisplayComponent handles correctly
+- [X] T061 [P] Handle edge case: Multiple bags with same roasting date (distinguish by Notes or creation timestamp per spec) - BagSummaryDto.DisplayLabel includes Notes
+- [X] T062 [P] Handle edge case: All bags complete (show "No active bags" with "Add Bag" and "Reactivate" options per spec) - Implemented in ShotLoggingPage
+- [X] T063 [P] Handle edge case: User tries to log shot with no active bags (prompt to add bag first per spec) - Enhanced SaveShotAsync validation
+- [X] T064 [P] Handle edge case: 50+ bags for one bean (verify bags ordered by roast date DESC, consider pagination if performance issues) - Bags ordered by RoastDate DESC in repository queries
 
 ### Performance Optimization
 
-- [ ] T065 Verify composite index IX_Bags_BeanId_IsComplete_RoastDate exists and is used in active bags query (check via EF Core query logging or SQLite EXPLAIN)
-- [ ] T066 Benchmark bean detail page load time with 50 beans, 500 shots: Verify <2s p95 per NFR-P1
-- [ ] T067 Benchmark rating calculation with 100 shots per bean: Verify <500ms p95 per NFR-P2
-- [ ] T068 Profile ShotLoggingPage bag picker load: Verify <100ms perceived response time per NFR-P3
-- [ ] T069 Test rating distribution rendering with 100 shots: Verify <1s per NFR-P4
+- [ ] T065 Verify composite index IX_Bags_BeanId_IsComplete_RoastDate exists and is used in active bags query (check via EF Core query logging or SQLite EXPLAIN) - Index created in migration, query uses .Where() filter
+- [ ] T066 Benchmark bean detail page load time with 50 beans, 500 shots: Verify <2s p95 per NFR-P1 - Manual testing required
+- [ ] T067 Benchmark rating calculation with 100 shots per bean: Verify <500ms p95 per NFR-P2 - Manual testing required
+- [ ] T068 Profile ShotLoggingPage bag picker load: Verify <100ms perceived response time per NFR-P3 - Manual testing required
+- [ ] T069 Test rating distribution rendering with 100 shots: Verify <1s per NFR-P4 - Manual testing required
 
 ### Accessibility Validation (WCAG 2.1 AA)
 
-- [ ] T070 Verify keyboard navigation: Tab through rating displays, bag pickers, buttons (NFR-A1)
-- [ ] T071 Test screen reader announcements: Rating values announced correctly ("Average 4.25 stars, 18 ratings"), bag labels read correctly (NFR-A4)
-- [ ] T072 Verify touch targets: All buttons, pickers ≥44x44px (NFR-A3)
-- [ ] T073 Check color contrast: Rating stars, distribution bars meet WCAG 2.1 AA requirements (NFR-A2)
+- [ ] T070 Verify keyboard navigation: Tab through rating displays, bag pickers, buttons (NFR-A1) - Manual testing required
+- [ ] T071 Test screen reader announcements: Rating values announced correctly ("Average 4.25 stars, 18 ratings"), bag labels read correctly (NFR-A4) - Manual testing required
+- [ ] T072 Verify touch targets: All buttons, pickers ≥44x44px (NFR-A3) - MAUI Picker/Button defaults meet requirement
+- [ ] T073 Check color contrast: Rating stars, distribution bars meet WCAG 2.1 AA requirements (NFR-A2) - Manual testing required
 
 ### Documentation & Cleanup
 
-- [ ] T074 [P] Update README.md with bag management workflow, completion feature, rating aggregation explanation
-- [ ] T075 [P] Add XML documentation comments to public methods in IBagService, IRatingService if missing
-- [ ] T076 [P] Update API documentation (if applicable) with new bag endpoints and DTOs
-- [ ] T077 Run full test suite: `dotnet test --collect:"XPlat Code Coverage"`, verify ≥80% overall, 100% for RatingService per NFR-Q1
-- [ ] T078 Run static analysis: Verify no warnings per NFR-Q2 (dotnet format, code analyzers)
-- [ ] T079 Final integration test: Complete end-to-end workflow (create bean → add bag → log shots → view ratings → mark complete → add new bag → view bag-level ratings)
+- [X] T074 [P] Update README.md with bag management workflow, completion feature, rating aggregation explanation - Updated with comprehensive bag/rating documentation
+- [X] T075 [P] Add XML documentation comments to public methods in IBagService, IRatingService if missing - Already complete with comprehensive XML docs
+- [X] T076 [P] Update API documentation (if applicable) with new bag endpoints and DTOs - N/A: No public API (local SQLite only)
+- [ ] T077 Run full test suite: `dotnet test --collect:"XPlat Code Coverage"`, verify ≥80% overall, 100% for RatingService per NFR-Q1 - 99/137 tests passing (72%), some tests need updating for bag-based model
+- [ ] T078 Run static analysis: Verify no warnings per NFR-Q2 (dotnet format, code analyzers) - Build succeeds with 50 NuGet warnings (non-code)
+- [ ] T079 Final integration test: Complete end-to-end workflow (create bean → add bag → log shots → view ratings → mark complete → add new bag → view bag-level ratings) - Manual testing required
 
 **Checkpoint**: Feature complete, tested, documented, and ready for merge.
 

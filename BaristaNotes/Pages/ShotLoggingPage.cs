@@ -272,8 +272,14 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             {
                 if (State.SelectedBagId == null)
                 {
-
-                    await _feedbackService.ShowErrorAsync("Please select a bag", "Choose a bag before logging your shot");
+                    if (State.AvailableBags.Count == 0)
+                    {
+                        await _feedbackService.ShowErrorAsync("No active bags", "Please add a bag before logging a shot");
+                    }
+                    else
+                    {
+                        await _feedbackService.ShowErrorAsync("Please select a bag", "Choose a bag before logging your shot");
+                    }
                     return;
                 }
 
@@ -385,25 +391,39 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         .Text("Additional Details")
                         .ThemeKey(ThemeKeys.MutedText),
 
-                    // Bag Picker
-                    new FormPickerField()
-                        .Label("Bag")
-                        .Title("Select Bag")
-                        .ItemsSource(State.AvailableBags.Select(b => b.DisplayLabel).ToList())
-                        .SelectedIndex(State.SelectedBagIndex)
-                        .OnSelectedIndexChanged(idx =>
-                        {
-                            if (idx >= 0 && idx < State.AvailableBags.Count)
+                    // Bag Picker with empty state handling
+                    State.AvailableBags.Count > 0 ?
+                        new FormPickerField()
+                            .Label("Bag")
+                            .Title("Select Bag")
+                            .ItemsSource(State.AvailableBags.Select(b => b.DisplayLabel).ToList())
+                            .SelectedIndex(State.SelectedBagIndex)
+                            .OnSelectedIndexChanged(idx =>
                             {
-                                var bagId = State.AvailableBags[idx].Id;
-                                SetState(s =>
+                                if (idx >= 0 && idx < State.AvailableBags.Count)
                                 {
-                                    s.SelectedBagIndex = idx;
-                                    s.SelectedBagId = bagId;
-                                });
-                                _ = LoadBestShotSettingsAsync(bagId);
-                            }
-                        }),
+                                    var bagId = State.AvailableBags[idx].Id;
+                                    SetState(s =>
+                                    {
+                                        s.SelectedBagIndex = idx;
+                                        s.SelectedBagId = bagId;
+                                    });
+                                    _ = LoadBestShotSettingsAsync(bagId);
+                                }
+                            }) :
+                        VStack(spacing: 12,
+                            Label("No active bags available")
+                                .ThemeKey(ThemeKeys.SecondaryText)
+                                .FontSize(16)
+                                .HCenter(),
+                            Label("Add a bag to start logging shots")
+                                .ThemeKey(ThemeKeys.MutedText)
+                                .FontSize(14)
+                                .HCenter(),
+                            Button("Add New Bag")
+                                .OnClicked(async () => await Navigation.PushAsync<BagFormPage>())
+                                .HCenter()
+                        ).Padding(16),
 
                     // Grind Setting
                     new FormEntryField()

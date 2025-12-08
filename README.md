@@ -10,8 +10,11 @@ BaristaNotes helps coffee enthusiasts track and analyze their espresso shots. Bu
 
 ### What You Can Do
 
-- **Track Espresso Shots**: Log detailed parameters including dose, grind setting, extraction time, output weight, and taste ratings
-- **Manage Coffee Beans**: Store information about different coffee beans with roast dates, origins, and roaster details
+- **Track Espresso Shots**: Log detailed parameters including dose, grind setting, extraction time, output weight, and taste ratings (0-4 scale using sentiment icons)
+- **Manage Coffee Beans**: Store information about different coffee beans with roaster and origin details
+- **Track Coffee Bags**: Manage multiple physical bags of the same bean variety, each with its own roast date and inventory status
+- **View Rating Aggregates**: See bean-level and bag-level rating statistics with distribution charts to identify your best beans and roasting batches
+- **Bag Completion Workflow**: Mark bags as complete when finished to keep shot logging interface clean and focused
 - **Equipment Tracking**: Keep records of your espresso machines, grinders, and accessories
 - **User Profiles**: Support multiple users (maker and recipient) with custom avatars
 - **Activity Feed**: Review shot history with filtering and sorting capabilities
@@ -230,10 +233,12 @@ public interface IImagePickerService
 
 Each page is a MauiReactor component with optional Props and State classes:
 
-- **ShotLoggingPage**: Create and edit espresso shot records
+- **ShotLoggingPage**: Create and edit espresso shot records with bag selection
 - **ActivityFeedPage**: Browse shot history with filters
 - **BeanManagementPage**: List and manage coffee beans
-- **BeanDetailPage**: View/edit bean details with shot history
+- **BeanDetailPage**: View/edit bean details with rating aggregates and bag history
+- **BagFormPage**: Add new bags for existing beans
+- **BagDetailPage**: View bag details with bag-level rating statistics
 - **EquipmentManagementPage**: Manage espresso equipment
 - **EquipmentDetailPage**: View/edit equipment details
 - **UserProfileManagementPage**: Manage user profiles
@@ -245,6 +250,7 @@ Each page is a MauiReactor component with optional Props and State classes:
 Reusable UI components following the composition pattern:
 
 - **FormFields**: Reusable form input components (Entry, Picker, Slider, Editor)
+- **RatingDisplayComponent**: Shows aggregate rating statistics with sentiment icon distribution bars
 - **ShotRecordCard**: Displays shot summary in lists
 - **CircularAvatar**: User profile image with circular crop
 - **ProfileImagePicker**: Image selection with validation and processing
@@ -256,6 +262,8 @@ Reusable UI components following the composition pattern:
 
 - **ShotService**: CRUD operations for shot records
 - **BeanService**: Coffee bean management
+- **BagService**: Physical coffee bag inventory management with completion tracking
+- **RatingService**: On-demand calculation of rating aggregates (bean-level and bag-level)
 - **EquipmentService**: Equipment tracking
 - **UserProfileService**: User profile management
 - **PreferencesService**: App preferences and settings
@@ -270,15 +278,19 @@ Reusable UI components following the composition pattern:
 
 BaristaNotes uses SQLite with Entity Framework Core. Key entities:
 
-- **ShotRecord**: Espresso shot data (dose, time, output, rating, timestamp)
-- **Bean**: Coffee bean information (name, roaster, origin, roast date)
+- **ShotRecord**: Espresso shot data (dose, time, output, rating 0-4, timestamp)
+- **Bean**: Coffee bean variety information (name, roaster, origin)
+- **Bag**: Physical bag of a bean with specific roast date and completion status
 - **Equipment**: Machines, grinders, and accessories
 - **UserProfile**: User information with avatar support
 
 Relationships:
-- Shot → Bean (many-to-one)
+- Shot → Bag (many-to-one) - Each shot is logged to a specific bag
+- Bag → Bean (many-to-one) - Multiple bags can exist for the same bean variety
 - Shot → Equipment (many-to-many via junction tables)
 - Shot → UserProfile (maker and recipient, many-to-one each)
+
+**Bean-Bag-Shot Hierarchy**: This three-level structure allows tracking rating aggregates at both the bean level (across all bags) and individual bag level (per roasting batch), helping users identify which beans to reorder and which roast dates produced the best results.
 
 For complete schema documentation, see [DATA_LAYER.md](docs/DATA_LAYER.md).
 

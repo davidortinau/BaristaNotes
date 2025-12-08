@@ -291,6 +291,140 @@ public class RatingServiceTests : IDisposable
         Assert.Equal(1, result.GetCountForRating(4));
     }
 
+    [Fact]
+    public async Task GetBagRatingAsync_WithNoBag_ReturnsEmptyAggregate()
+    {
+        // Act
+        var result = await _ratingService.GetBagRatingAsync(999);
+
+        // Assert
+        Assert.Equal(0, result.TotalShots);
+        Assert.Equal(0, result.RatedShots);
+        Assert.Equal(0.0, result.AverageRating);
+    }
+
+    #endregion
+
+    #region GetBagRatingsBatchAsync Tests (US3)
+
+    [Fact]
+    public async Task GetBagRatingsBatchAsync_WithMultipleBags_ReturnsDictionaryMappingBagIdToAggregate()
+    {
+        // Arrange: Create bean with 3 bags, each with different ratings
+        var bean = new Bean
+        {
+            Name = "Test Bean",
+            IsActive = true,
+            CreatedAt = DateTime.Now,
+            SyncId = Guid.NewGuid(),
+            LastModifiedAt = DateTime.Now
+        };
+        _context.Beans.Add(bean);
+        await _context.SaveChangesAsync();
+
+        var bag1 = new Bag { BeanId = bean.Id, RoastDate = DateTime.Now.AddDays(-10), IsActive = true, CreatedAt = DateTime.Now, SyncId = Guid.NewGuid(), LastModifiedAt = DateTime.Now };
+        var bag2 = new Bag { BeanId = bean.Id, RoastDate = DateTime.Now.AddDays(-5), IsActive = true, CreatedAt = DateTime.Now, SyncId = Guid.NewGuid(), LastModifiedAt = DateTime.Now };
+        var bag3 = new Bag { BeanId = bean.Id, RoastDate = DateTime.Now, IsActive = true, CreatedAt = DateTime.Now, SyncId = Guid.NewGuid(), LastModifiedAt = DateTime.Now };
+
+        _context.Bags.AddRange(bag1, bag2, bag3);
+        await _context.SaveChangesAsync();
+
+        // Bag 1: Avg = 4.8 (5,5,5,5,4)
+        _context.ShotRecords.AddRange(
+            CreateShot(bag1.Id, 5),
+            CreateShot(bag1.Id, 5),
+            CreateShot(bag1.Id, 5),
+            CreateShot(bag1.Id, 5),
+            CreateShot(bag1.Id, 4)
+        );
+
+        // Bag 2: Avg = 3.2 (4,3,3,3,3)
+        _context.ShotRecords.AddRange(
+            CreateShot(bag2.Id, 4),
+            CreateShot(bag2.Id, 3),
+            CreateShot(bag2.Id, 3),
+            CreateShot(bag2.Id, 3),
+            CreateShot(bag2.Id, 3)
+        );
+
+        // Bag 3: No shots yet
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _ratingService.GetBagRatingsBatchAsync(new[] { bag1.Id, bag2.Id, bag3.Id });
+
+        // Assert
+        Assert.Equal(3, result.Count);
+
+        // Bag 1 assertions
+        Assert.True(result.ContainsKey(bag1.Id));
+        Assert.Equal(5, result[bag1.Id].RatedShots);
+        Assert.Equal(4.8, result[bag1.Id].AverageRating, 1);
+        Assert.Equal(4, result[bag1.Id].GetCountForRating(5));
+        Assert.Equal(1, result[bag1.Id].GetCountForRating(4));
+
+        // Bag 2 assertions
+        Assert.True(result.ContainsKey(bag2.Id));
+        Assert.Equal(5, result[bag2.Id].RatedShots);
+        Assert.Equal(3.2, result[bag2.Id].AverageRating, 1);
+        Assert.Equal(1, result[bag2.Id].GetCountForRating(4));
+        Assert.Equal(4, result[bag2.Id].GetCountForRating(3));
+
+        // Bag 3 assertions (no shots)
+        Assert.True(result.ContainsKey(bag3.Id));
+        Assert.Equal(0, result[bag3.Id].RatedShots);
+        Assert.Equal(0.0, result[bag3.Id].AverageRating);
+    }
+
+    [Fact]
+    public async Task GetBagRatingsBatchAsync_WithEmptyList_ReturnsEmptyDictionary()
+    {
+        // Act
+        var result = await _ratingService.GetBagRatingsBatchAsync(Array.Empty<int>());
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetBagRatingsBatchAsync_OptimizesQueryPerformance_SingleDatabaseRoundTrip()
+    {
+        // Arrange: Create multiple bags with shots
+        var bean = new Bean { Name = "Test", IsActive = true, CreatedAt = DateTime.Now, SyncId = Guid.NewGuid(), LastModifiedAt = DateTime.Now };
+        _context.Beans.Add(bean);
+        await _context.SaveChangesAsync();
+
+        var bagIds = new List<int>();
+        for (int i = 0; i < 10; i++)
+        {
+            var bag = new Bag { BeanId = bean.Id, RoastDate = DateTime.Now.AddDays(-i), IsActive = true, CreatedAt = DateTime.Now, SyncId = Guid.NewGuid(), LastModifiedAt = DateTime.Now };
+            _context.Bags.Add(bag);
+            await _context.SaveChangesAsync();
+            bagIds.Add(bag.Id);
+
+            // Add 5 shots per bag
+            _context.ShotRecords.AddRange(Enumerable.Range(1, 5).Select(j => CreateShot(bag.Id, (j % 5) + 1)));
+        }
+        await _context.SaveChangesAsync();
+
+        // Act: Batch query should be faster than individual queries
+        var startTime = DateTime.Now;
+        var result = await _ratingService.GetBagRatingsBatchAsync(bagIds);
+        var batchDuration = (DateTime.Now - startTime).TotalMilliseconds;
+
+        // Assert: All bags processed
+        Assert.Equal(10, result.Count);
+        foreach (var bagId in bagIds)
+        {
+            Assert.True(result.ContainsKey(bagId));
+            Assert.Equal(5, result[bagId].RatedShots);
+        }
+
+        // Performance assertion: Should complete quickly (< 500ms per NFR-P2)
+        Assert.True(batchDuration < 500, $"Batch query took {batchDuration}ms, expected < 500ms");
+    }
+
     #endregion
 
     #region Helper Methods

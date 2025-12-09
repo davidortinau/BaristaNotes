@@ -1,0 +1,1184 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:UXDivers.Popups.Maui.Controls;assembly=UXDivers.Popups.Maui"
+    xmlns:uxd="clr-namespace:UXDivers.Popups.Maui;assembly=UXDivers.Popups.Maui"
+    xmlns:converters="clr-namespace:UXDivers.Popups.Maui.Converters;assembly=UXDivers.Popups.Maui"
+    xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+    x:Class="UXDivers.Popups.Maui.Controls.PopupStyles">
+
+    <!-- ##############   HELPERS   ################# -->
+
+    <converters:EmptyStringBoolConverter
+        x:Key="IsNotEmptyStringConverter"
+        Inverted="False"/>
+
+    <converters:EmptyStringBoolConverter
+        x:Key="IsEmptyStringConverter"
+        Inverted="True"/>
+
+    <!-- ############################################ -->
+
+    <!-- ############   BASIC STYLES   ############## -->
+
+    <!-- Default Font Family  -->
+    <Style x:Key="LabelDefaultStyle"
+           TargetType="Label">
+        <Setter Property="FontFamily"
+                Value="{ DynamicResource AppFontFamily }"/>
+    </Style>
+
+    <!--  Main Title  -->
+    <Style x:Key="MainTitleStyle"
+           TargetType="Label"
+           BasedOn="{ StaticResource LabelDefaultStyle }">
+        <Setter Property="TextColor"
+                Value="{ DynamicResource TextColor }"/>
+        <Setter Property="FontSize"
+                Value="{ DynamicResource TitleFontSize }"/>
+        <Setter Property="FontFamily"
+                Value="{ DynamicResource AppSemiBoldFamily }"/>
+        <Setter Property="VerticalTextAlignment"
+                Value="Center"/>
+        <Setter Property="HorizontalTextAlignment"
+                Value="Start"/>
+    </Style>
+
+    <!--  Main SubTitle  -->
+    <Style x:Key="MainSubTitleStyle"
+           TargetType="Label"
+           BasedOn="{ StaticResource LabelDefaultStyle }">
+        <Setter Property="TextColor"
+                Value="{ DynamicResource TextTertiaryColor }"/>
+        <Setter Property="FontSize"
+                Value="{ DynamicResource SmallFontSize }"/>
+        <Setter Property="VerticalTextAlignment"
+                Value="Center"/>
+        <Setter Property="HorizontalTextAlignment"
+                Value="Start"/>
+    </Style>
+
+    <!-- MAIN CARD -->
+    <!--  Card Title  -->
+    <Style x:Key="CardTitleStyle"
+           TargetType="Label"
+           BasedOn="{ StaticResource LabelDefaultStyle }">
+        <Setter Property="TextColor"
+                Value="{ DynamicResource TextColor }"/>
+        <Setter Property="FontSize"
+                Value="{ DynamicResource MainCardTitleSize }"/>
+        <Setter Property="FontAttributes"
+                Value="Bold"/>
+        <Setter Property="VerticalTextAlignment"
+                Value="Start"/>
+        <Setter Property="HorizontalTextAlignment"
+                Value="Start"/>
+    </Style>
+
+    <!-- Card Sub-Title  -->
+    <Style x:Key="CardSubTitleStyle"
+           TargetType="Label"
+           BasedOn="{ StaticResource LabelDefaultStyle }">
+        <Setter Property="TextColor"
+                Value="{ DynamicResource TextSecondaryColor }"/>
+        <Setter Property="FontSize"
+                Value="{ DynamicResource MainCardSubTitleSize }"/>
+        <Setter Property="VerticalTextAlignment"
+                Value="Start"/>
+        <Setter Property="HorizontalTextAlignment"
+                Value="Start"/>
+    </Style>
+
+
+    <!-- Card Icon -->
+    <Style x:Key="CardIconStyle"
+           TargetType="Label"
+           BasedOn="{ StaticResource LabelDefaultStyle }">
+        <Setter Property="FontFamily"
+                Value="{ DynamicResource IconsFontFamily }"/>
+        <Setter Property="FontSize"
+                Value="{ DynamicResource MainCardIconSize }"/>
+        <Setter Property="VerticalOptions"
+                Value="Start"/>
+        <Setter Property="VerticalTextAlignment"
+                Value="Start"/>
+        <Setter Property="HorizontalTextAlignment"
+                Value="Start"/>
+    </Style>
+
+    <!--  Sub-Title  -->
+    <Style x:Key="SubTitleStyle"
+           TargetType="Label"
+           BasedOn="{ StaticResource LabelDefaultStyle }">
+        <Setter Property="TextColor"
+                Value="{ DynamicResource TextSecondaryColor }"/>
+        <Setter Property="FontSize"
+                Value="{ DynamicResource TinyFontSize }"/>
+        <Setter Property="VerticalTextAlignment"
+                Value="Start"/>
+        <Setter Property="HorizontalTextAlignment"
+                Value="Start"/>
+    </Style>
+
+    <!--  Title  -->
+    <Style x:Key="TitleStyle"
+           TargetType="Label"
+           BasedOn="{ StaticResource LabelDefaultStyle }">
+        <Setter Property="TextColor"
+                Value="{ DynamicResource TextColor }"/>
+        <Setter Property="FontSize"
+                Value="{ DynamicResource LargeFontSize }"/>
+        <Setter Property="FontFamily"
+                Value="{DynamicResource AppSemiBoldFamily}"/>
+        <Setter Property="VerticalTextAlignment"
+                Value="Start"/>
+        <Setter Property="HorizontalTextAlignment"
+                Value="Start"/>
+    </Style>
+
+    <!--  Title  -->
+
+    <!-- List Text Style  -->
+    <Style x:Key="ListTextStyle"
+           TargetType="Label"
+           BasedOn="{ StaticResource TitleStyle }">
+        <Setter Property="FontFamily"
+                Value="{DynamicResource AppFontFamily}"/>
+        <Setter Property="VerticalTextAlignment"
+                Value="Center"/>
+    </Style>
+
+    <!--  Playground Card Text Style  -->
+    <Style x:Key="PlaygroundCardTextStyle"
+           TargetType="Label"
+           BasedOn="{ StaticResource LabelDefaultStyle }">
+        <Setter Property="TextColor"
+                Value="{ DynamicResource TextColor }"/>
+        <Setter Property="FontSize"
+                Value="{ DynamicResource BaseFontSize }"/>
+        <Setter Property="VerticalTextAlignment"
+                Value="Center"/>
+        <Setter Property="HorizontalTextAlignment"
+                Value="Start"/>
+    </Style>
+
+    <!--  Icons -->
+    <Style x:Key="IconStyle"
+           TargetType="Label">
+        <Setter Property="FontFamily"
+                Value="{ DynamicResource IconsFontFamily }"/>
+        <Setter Property="FontSize"
+                Value="{ DynamicResource TitleFontSize }"/>
+        <Setter Property="VerticalTextAlignment"
+                Value="Start"/>
+        <Setter Property="HorizontalTextAlignment"
+                Value="Start"/>
+    </Style>
+
+    <!-- List Icons -->
+    <Style x:Key="ListIconStyle"
+           TargetType="Label"
+           BasedOn="{ StaticResource IconStyle }">
+        <Setter Property="VerticalTextAlignment"
+                Value="Center"/>
+        <Setter Property="HorizontalTextAlignment"
+                Value="Center"/>
+        <Setter Property="TextColor"
+                Value="{DynamicResource PrimaryColor}"/>
+    </Style>
+
+    <!--  Card Style  -->
+    <Style x:Key="CardStyle"
+           TargetType="Border">
+        <Setter Property="BackgroundColor"
+                Value="{ DynamicResource BackgroundSecondaryColor}"/>
+        <Setter Property="StrokeShape"
+                Value="RoundRectangle 16"/>
+    </Style>
+
+    <!--  Main Card Style  -->
+    <Style x:Key="MainCardStyle"
+           TargetType="Border"
+           BasedOn="{ StaticResource CardStyle}">
+        <Setter Property="Padding"
+                Value="{OnIdiom Phone='16,20' , Tablet=30, Desktop=30}"/>
+        <Setter Property="HeightRequest"
+                Value="{OnIdiom Phone=130, Tablet=240, Desktop=240}"/>
+        <Setter Property="Margin"
+                Value="4"/>
+        <Setter Property="FlexLayout.Basis"
+                Value="50%"/>
+    </Style>
+
+    <!--  Main Card Content Grid Style  -->
+    <Style x:Key="MainCardContentGridStyle"
+           TargetType="Grid">
+        <Setter Property="RowDefinitions"
+                Value="{OnIdiom Phone='*,Auto,30' , Tablet='2*,Auto,*', Desktop='2*,Auto,*'}"/>
+        <Setter Property="RowSpacing"
+                Value="{OnIdiom Phone=2, Tablet=6, Desktop=6}"/>
+    </Style>
+
+    <!--  Playground Card Style  -->
+    <Style x:Key="PlaygroundCardStyle"
+           TargetType="Border"
+           BasedOn="{ StaticResource CardStyle}">
+        <Setter Property="Padding"
+                Value="20,16"/>
+    </Style>
+
+    <!--  Primary Button  Style  -->
+    <Style x:Key="PrimaryActionButtonStyle"
+           TargetType="Button">
+        <Setter Property="TextColor"
+                Value="{ DynamicResource TextColor }"/>
+        <Setter Property="FontSize"
+                Value="{ DynamicResource LargeFontSize }"/>
+        <Setter Property="BackgroundColor"
+                Value="{ DynamicResource PrimaryColor }"/>
+        <Setter Property="HeightRequest"
+                Value="54"/>
+        <Setter Property="Padding"
+                Value="20,4"/>
+        <Setter Property="CornerRadius"
+                Value="{DynamicResource BaseButtonCornerRadius}"/>
+    </Style>
+
+    <!--  Secondary Button  Style  -->
+    <Style x:Key="SecondaryActionButtonStyle"
+           TargetType="Button">
+        <Setter Property="TextColor"
+                Value="{ DynamicResource PrimaryColor }"/>
+        <Setter Property="FontSize"
+                Value="{ DynamicResource LargeFontSize }"/>
+        <Setter Property="BackgroundColor"
+                Value="{ DynamicResource PrimaryVariantColor }"/>
+        <Setter Property="HeightRequest"
+                Value="54"/>
+        <Setter Property="Padding"
+                Value="20,4"/>
+        <Setter Property="CornerRadius"
+                Value="{DynamicResource BaseButtonCornerRadius}"/>
+    </Style>
+
+    <!--  User Image Style  -->
+    <Style x:Key="UserImageStyle"
+           TargetType="Image">
+        <Setter Property="HeightRequest"
+                Value="{OnIdiom Phone=42, Tablet=54, Desktop=54}"/>
+        <Setter Property="Aspect"
+                Value="AspectFit"/>
+        <Setter Property="HorizontalOptions"
+                Value="Center"/>
+        <Setter Property="VerticalOptions"
+                Value="Center"/>
+        <Setter Property="Grid.RowSpan"
+                Value="2"/>
+    </Style>
+
+    <!-- Entry Style  -->
+    <Style x:Key="EntryDefaultStyle"
+           TargetType="Entry"
+           ApplyToDerivedTypes="True">
+        <Setter Property="TextColor"
+                Value="{ DynamicResource TextColor}"/>
+        <Setter Property="BackgroundColor"
+                Value="Transparent"/>
+        <Setter Property="PlaceholderColor"
+                Value="{ DynamicResource EntryPlaceholderColor}"/>
+        <Setter Property="Margin"
+                Value="16,0"/>
+    </Style>
+
+    <!-- CloseButton Style  -->
+    <Style x:Key="CloseButtonStyle"
+           TargetType="Label"
+           BasedOn="{ StaticResource LabelDefaultStyle }">
+        <Setter Property="FontSize"
+                Value="{ DynamicResource TitleFontSize }"/>
+        <Setter Property="FontFamily"
+                Value="{ DynamicResource IconsFontFamily}"/>
+        <Setter Property="HorizontalOptions"
+                Value="End"/>
+        <Setter Property="VerticalOptions"
+                Value="Start"/>
+        <Setter Property="Margin"
+                Value="0,-4,0,0"/>
+    </Style>
+
+    <!-- Image Banner Style  -->
+    <Style x:Key="ImageBannerStyle"
+           TargetType="Border">
+        <Setter Property="StrokeShape"
+                Value="RoundRectangle 16"/>
+        <Setter Property="Stroke"
+                Value="{ DynamicResource BackgroundSecondaryColor}"/>
+        <Setter Property="StrokeThickness"
+                Value="1"/>
+        <Setter Property="HeightRequest"
+                Value="{OnIdiom Phone=127, Tablet=200, Desktop=200}"/>
+        <Setter Property="Margin"
+                Value="{OnIdiom Phone=4, Tablet=8, Desktop=8}"/>
+        <Setter Property="FlexLayout.Basis"
+                Value="100%"/>
+        <Setter Property="VerticalOptions"
+                Value="Start"/>
+    </Style>
+
+    <!-- ############################################ -->
+
+    <!-- ############   POPUP STYLES   ############## -->
+
+    <!-- BASE STYLE -->
+    <Style x:Key="PopupBaseStyle"
+           TargetType="uxd:PopupPage"
+           ApplyToDerivedTypes="True">
+        <Setter Property="CloseWhenBackgroundIsClicked"
+                Value="True"/>
+        <Setter Property="BackgroundInputTransparent"
+                Value="False"/>
+        <Setter Property="BackgroundColor"
+                Value="{ DynamicResource PopupBackdropColor }"/>
+        <Setter Property="AppearingAnimation"
+                Value="{ uxd:MoveInPopupAnimation MoveDirection=Bottom, Duration=300, Easing=CubicOut }"/>
+        <Setter Property="DisappearingAnimation"
+                Value="{ uxd:MoveOutPopupAnimation MoveDirection=Bottom, Duration=400, Easing=CubicIn }"/>
+    </Style>
+
+    <!-- ACTION MODAL -->
+    <Style x:Key="DefaultActionModalPopupStyle"
+           TargetType="local:ActionModalPopup"
+           BasedOn="{ StaticResource PopupBaseStyle }">
+        <Setter Property="Title"
+                Value="Sample Title"/>
+        <Setter Property="CloseButtonIconText"
+                Value="{DynamicResource UXDPopupsCloseIconButton}"/>
+        <Setter Property="CloseButtonIconColor"
+                Value="{DynamicResource TextColor}"/>
+        <Setter Property="ActionButtonText"
+                Value="Do Something"/>
+        <Setter Property="ControlTemplate">
+            <ControlTemplate>
+                <!-- Main Container -->
+                <Grid
+                    IgnoreSafeArea="True"
+                    x:DataType="local:ActionModalPopup"
+                    VerticalOptions="{ OnIdiom Phone=End, Tablet=Center, Desktop=Center}"
+                    HorizontalOptions="Fill"
+                    RowDefinitions="Auto,Auto,Auto"
+                    RowSpacing="{DynamicResource SpacingMedium}"
+                    Padding="{DynamicResource PopupAirSpacing}">
+                    <!-- Popup Background -->
+                    <BoxView
+                        Grid.RowSpan="4"
+                        BackgroundColor="{DynamicResource BackgroundColor}"
+                        Margin="-24"
+                        CornerRadius="{DynamicResource CornerRadiusXBig}"
+                        HorizontalOptions="Fill"/>
+                    <!-- Title -->
+                    <Label
+                        Text="{Binding Title, Source={RelativeSource TemplatedParent}}"
+                        Style="{DynamicResource TitleStyle}"
+                        FontSize="{DynamicResource SmallTitleFontSize}"
+                        HorizontalTextAlignment="Center"/>
+                    <!-- Close Button -->
+                    <Label
+                        IsVisible="{Binding CloseButtonIconText, Source={RelativeSource TemplatedParent}, Converter={StaticResource IsNotEmptyStringConverter}}"
+                        Style="{DynamicResource CloseButtonStyle}"
+                        Text="{Binding CloseButtonIconText, Source={RelativeSource TemplatedParent}}"
+                        TextColor="{Binding CloseButtonIconColor, Source={RelativeSource TemplatedParent}, TargetNullValue={StaticResource TextColor}}">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding CloseButtonCommand, Source={RelativeSource TemplatedParent}}"/>
+                        </Label.GestureRecognizers>
+                    </Label>
+                    <!-- Close button default -->
+                    <Grid
+                        IsVisible="{Binding CloseButtonIconText, Source={RelativeSource TemplatedParent}, Converter={StaticResource IsEmptyStringConverter}}"
+                        HorizontalOptions="End">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding CloseButtonCommand, Source={RelativeSource TemplatedParent}}"/>
+                        </Grid.GestureRecognizers>
+                        <shapes:Path
+                            WidthRequest="24"
+                            HeightRequest="24"
+                            Data="M6,6 L18,18 M18,6 L6,18"
+                            Fill="Transparent"
+                            Stroke="{Binding CloseButtonIconColor, Source={RelativeSource TemplatedParent}, TargetNullValue={StaticResource TextColor}}"
+                            StrokeThickness="1"
+                            StrokeLineJoin="Round"
+                            StrokeLineCap="Round"/>
+                    </Grid>
+                    <!-- Content -->
+                    <ContentPresenter
+                        Grid.Row="1"/>
+                    <!-- Action Button -->
+                    <Button
+                        Grid.Row="2"
+                        Style="{DynamicResource PrimaryActionButtonStyle}"
+                        Text="{Binding ActionButtonText, Source={RelativeSource TemplatedParent}}"
+                        Command="{Binding ActionButtonCommand, Source={RelativeSource TemplatedParent}}"
+                        IsVisible="{Binding ShowActionButton, Source={RelativeSource TemplatedParent}}"/>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+
+    <!-- FLOATER -->
+    <Style x:Key="DefaultFloaterPopupStyle"
+           TargetType="local:FloaterPopup"
+           BasedOn="{ StaticResource PopupBaseStyle }">
+        <Setter Property="IconText"
+                Value="{ DynamicResource UXDPopupsCheckCircleIconButton }"/>
+        <Setter Property="IconColor"
+                Value="{DynamicResource PrimaryColor}"/>
+        <Setter Property="Title"
+                Value="Sample Title"/>
+        <Setter Property="Text"
+                Value="Text goes here"/>
+        <Setter Property="BackgroundColor"
+                Value="Transparent"/>
+        <Setter Property="ControlTemplate">
+            <ControlTemplate>
+                <!-- Content -->
+                <Grid
+                    IgnoreSafeArea="True"
+                    x:DataType="local:FloaterPopup"
+                    ColumnDefinitions="Auto,*"
+                    Margin="{DynamicResource AirSpacingSmallTop}"
+                    ColumnSpacing="{DynamicResource SpacingSmall}"
+                    Padding="16"
+                    VerticalOptions="Start"
+                    WidthRequest="{OnIdiom Default=-1, Tablet=400 , Desktop=400}">
+                    <!-- Popup Background -->
+                    <BoxView
+                        BackgroundColor="{DynamicResource BackgroundTertiaryColor}"
+                        CornerRadius="{DynamicResource CornerRadiusBig}"
+                        Margin="-16"
+                        Grid.ColumnSpan="2"/>
+                    <!-- Icon -->
+                    <Label
+                        IsVisible="{Binding IconText, Source={RelativeSource TemplatedParent}, Converter={StaticResource IsNotEmptyStringConverter}}"
+                        Text="{Binding IconText, Source={RelativeSource TemplatedParent}}"
+                        TextColor="{Binding IconColor, Source={RelativeSource TemplatedParent}}"
+                        FontFamily="{DynamicResource IconsFontFamily}"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"
+                        FontSize="{OnIdiom Phone=28, Tablet=32, Desktop=32}"/>
+                    <!-- Icon default -->
+                    <Grid
+                        IsVisible="{Binding IconText, Source={RelativeSource TemplatedParent}, Converter={StaticResource IsEmptyStringConverter}}"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center">
+                        <shapes:Path
+                            WidthRequest="24"
+                            HeightRequest="24"
+                            Data="M12,2 A10,10 0 1,1 12,22 A10,10 0 1,1 12,2 M8,12.5 L11.5,16 L16.5,9.5"
+                            Fill="Transparent"
+                            Stroke="{Binding IconColor, Source={RelativeSource TemplatedParent}}"
+                            StrokeThickness="1"
+                            StrokeLineJoin="Round"
+                            StrokeLineCap="Round"/>
+                    </Grid>
+                    <!-- MESSAGE -->
+                    <VerticalStackLayout Grid.Column="1">
+                        <!-- Title -->
+                        <Label
+                            Text="{Binding Title, Source={RelativeSource TemplatedParent}}"
+                            Style="{DynamicResource TitleStyle}"
+                            FontSize="{DynamicResource BaseFontSize}"/>
+                        <!-- Text -->
+                        <Label
+                            Text="{Binding Text, Source={RelativeSource TemplatedParent}}"
+                            Style="{DynamicResource MainSubTitleStyle}"/>
+                    </VerticalStackLayout>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+
+    <!-- FORM -->
+    <Style x:Key="DefaultFormPopupStyle"
+           TargetType="local:FormPopup"
+           BasedOn="{ StaticResource PopupBaseStyle }">
+        <Setter Property="Title"
+                Value="Form Title"/>
+        <Setter Property="Text"
+                Value="Subtitle goes here"/>
+        <Setter Property="ActionButtonText"
+                Value="Button Text"/>
+        <Setter Property="SecondaryActionText"
+                Value="Don’t have an account?"/>
+        <Setter Property="SecondaryActionLinkText"
+                Value="Sign Up"/>
+        <Setter Property="AppearingAnimation"
+                Value="{ uxd:MoveInPopupAnimation MoveDirection=Bottom, Duration=500, Easing=CubicOut, TranslationY=150 }"/>
+        <Setter Property="DisappearingAnimation"
+                Value="{ uxd:MoveOutPopupAnimation MoveDirection=Top, Duration=500, Easing=CubicIn }"/>
+        <Setter Property="ItemDataTemplate">
+            <uxd:TypeTemplateSelector>
+                <uxd:TypeTemplateSelector.Items>
+                    <!-- Replace this value with an item for every entry type -->
+                    <uxd:TypeTemplateSelectorItem
+                        TargetType="{x:Type local:FormField}">
+                        <DataTemplate>
+                            <Grid
+                                x:DataType="local:FormField"
+                                ColumnDefinitions="Auto,*"
+                                ColumnSpacing="{ DynamicResource SpacingSmall }">
+                                <!-- Icon -->
+                                <Label
+                                    Text="{ Binding Icon }"
+                                    TextColor="{ Binding IconColor }"
+                                    FontFamily="{ DynamicResource IconsFontFamily }"
+                                    FontSize="{ OnIdiom Phone=16, Tablet=22, Desktop=22 }"
+                                    HorizontalTextAlignment="Center"
+                                    VerticalTextAlignment="Center"/>
+                                <!-- Entry Background -->
+                                <BoxView
+                                    Grid.Column="1"
+                                    BackgroundColor="{ DynamicResource BackgroundColor }"
+                                    HeightRequest="50"
+                                    CornerRadius="{ DynamicResource CornerRadiusXBig }"/>
+                                <!-- Entry -->
+                                <Entry
+                                    Grid.Column="1"
+                                    Placeholder="{Binding Placeholder}"
+                                    Text="{ Binding Value, Mode=TwoWay }"
+                                    IsPassword="{ Binding IsPassword }"
+                                    Style="{ DynamicResource EntryDefaultStyle }"/>
+                            </Grid>
+                        </DataTemplate>
+                    </uxd:TypeTemplateSelectorItem>
+                </uxd:TypeTemplateSelector.Items>
+            </uxd:TypeTemplateSelector>
+        </Setter>
+        <Setter Property="ControlTemplate">
+            <ControlTemplate>
+                <!-- Content -->
+                <Grid
+                    x:DataType="local:FormPopup"
+                    RowDefinitions="Auto,Auto,Auto,Auto"
+                    Margin="{DynamicResource AirSpacing}"
+                    RowSpacing="{DynamicResource SpacingBig}"
+                    Padding="{DynamicResource PopupAirSpacing}"
+                    VerticalOptions="Center"
+                    WidthRequest="{OnIdiom Default=-1, Tablet=400 , Desktop=400}">
+                    <!-- Popup Background -->
+                    <BoxView
+                        Grid.RowSpan="4"
+                        BackgroundColor="{DynamicResource BackgroundSecondaryColor}"
+                        Margin="-24"
+                        CornerRadius="{DynamicResource CornerRadiusXBig}"
+                        HorizontalOptions="Fill"/>
+                    <!-- HEADER -->
+                    <VerticalStackLayout>
+                        <!-- Title -->
+                        <Label
+                            Text="{Binding Title, Source={RelativeSource TemplatedParent}}"
+                            Style="{DynamicResource MainTitleStyle}"
+                            VerticalTextAlignment="End"
+                            HorizontalTextAlignment="Center"/>
+                        <!-- Text -->
+                        <Label
+                            Text="{Binding Text, Source={RelativeSource TemplatedParent}}"
+                            Style="{DynamicResource MainSubTitleStyle}"
+                            HorizontalTextAlignment="Center"/>
+                    </VerticalStackLayout>
+                    <!-- Form Container -->
+                    <VerticalStackLayout
+                        Grid.Row="1"
+                        Spacing="{ DynamicResource SpacingSmall }"
+                        BindableLayout.ItemsSource="{ Binding Items, Source={RelativeSource TemplatedParent}}"
+                        uxd:BindableLayoutProperties.FlexibleItemTemplate="{Binding ItemDataTemplate, Source={RelativeSource TemplatedParent}}"/>
+                    <!-- Action Button -->
+                    <Button
+                        Grid.Row="2"
+                        Style="{DynamicResource PrimaryActionButtonStyle}"
+                        Text="Sign In"
+                        Command="{Binding ActionButtonCommand, Source={RelativeSource TemplatedParent}}"
+                        IsVisible="{Binding ShowActionButton, Source={RelativeSource TemplatedParent}}"/>
+                    <!-- Bottom Text -->
+                    <HorizontalStackLayout
+                        Grid.Row="3"
+                        Spacing="4"
+                        HorizontalOptions="Center">
+                        <!-- Text -->
+                        <Label
+                            Text="{Binding SecondaryActionText, Source={RelativeSource TemplatedParent}}"
+                            Style="{DynamicResource MainSubTitleStyle}"/>
+                        <!-- Link -->
+                        <Label
+                            Text="{Binding SecondaryActionLinkText, Source={RelativeSource TemplatedParent}}"
+                            Style="{DynamicResource MainSubTitleStyle}"
+                            TextColor="{DynamicResource PrimaryColor}">
+                            <Label.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding SecondaryActionLinkCommand, Source={RelativeSource TemplatedParent}}"/>
+                            </Label.GestureRecognizers>
+                        </Label>
+                    </HorizontalStackLayout>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+
+    <!-- ICON TEXT -->
+    <Style x:Key="DefaultIconTextPopupStyle"
+           TargetType="local:IconTextPopup"
+           BasedOn="{ StaticResource PopupBaseStyle }">
+        <Setter Property="CloseWhenBackgroundIsClicked"
+                Value="False"/>
+        <Setter Property="IconText"
+                Value="{ DynamicResource UXDPopupsCheckCircleIconButton }"/>
+        <Setter Property="IconColor"
+                Value="{DynamicResource PrimaryColor}"/>
+        <Setter Property="Title"
+                Value="Title Goes Here"/>
+        <Setter Property="Text"
+                Value="Add some text here"/>
+        <Setter Property="ActionButtonText"
+                Value="Button Text"/>
+        <Setter Property="AppearingAnimation"
+                Value="{ uxd:MoveInPopupAnimation MoveDirection=Right, Easing=SinIn, Duration=300 }"/>
+        <Setter Property="DisappearingAnimation"
+                Value="{ uxd:MoveOutPopupAnimation MoveDirection=Left, Easing=SinOut, Duration=300 }"/>
+        <Setter Property="ControlTemplate">
+            <ControlTemplate>
+                <!-- Content -->
+                <Grid
+                    x:DataType="local:IconTextPopup"
+                    RowDefinitions="Auto,Auto,Auto"
+                    Margin="{DynamicResource AirSpacing}"
+                    RowSpacing="{DynamicResource SpacingMedium}"
+                    Padding="{DynamicResource PopupAirSpacing}"
+                    VerticalOptions="Center"
+                    WidthRequest="{OnIdiom Default=-1, Tablet=400 , Desktop=400}">
+                    <!-- Popup Background -->
+                    <BoxView
+                        Grid.RowSpan="3"
+                        BackgroundColor="{DynamicResource BackgroundSecondaryColor}"
+                        Margin="-24"
+                        CornerRadius="{DynamicResource CornerRadiusXBig}"
+                        HorizontalOptions="Fill"/>
+                    <!-- Icon -->
+                    <Label
+                        Text="{Binding IconText, Source={RelativeSource TemplatedParent}}"
+                        TextColor="{Binding IconColor, Source={RelativeSource TemplatedParent}}"
+                        FontFamily="{DynamicResource IconsFontFamily}"
+                        FontSize="{OnIdiom Phone=53, Tablet=60, Desktop=60}"
+                        HorizontalTextAlignment="Center"/>
+                    <VerticalStackLayout
+                        Grid.Row="1"
+                        Spacing="6">
+                        <!-- Title -->
+                        <Label
+                            Text="{Binding Title, Source={RelativeSource TemplatedParent}}"
+                            Style="{DynamicResource TitleStyle}"
+                            VerticalTextAlignment="End"
+                            HorizontalTextAlignment="Center"/>
+                        <!-- Text -->
+                        <Label
+                            Text="{Binding Text, Source={RelativeSource TemplatedParent}}"
+                            Style="{DynamicResource SubTitleStyle}"
+                            FontSize="{DynamicResource BaseFontSize}"
+                            HorizontalTextAlignment="Center"/>
+                    </VerticalStackLayout>
+                    <!-- Action Button -->
+                    <Button
+                        Grid.Row="2"
+                        Style="{DynamicResource PrimaryActionButtonStyle}"
+                        Text="{Binding ActionButtonText, Source={RelativeSource TemplatedParent}}"
+                        Command="{Binding ActionButtonCommand, Source={RelativeSource TemplatedParent}}"
+                        IsVisible="{Binding ShowActionButton, Source={RelativeSource TemplatedParent}}"/>
+
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+    <Style x:Key="DefaultListActionPopupStyle"
+           TargetType="local:ListActionPopup"
+           BasedOn="{ StaticResource PopupBaseStyle }">
+        <Setter Property="Title"
+                Value="Sample Title"/>
+        <Setter Property="CloseButtonIconText"
+                Value="{DynamicResource UXDPopupsCloseIconButton}"/>
+        <Setter Property="CloseButtonIconColor"
+                Value="{DynamicResource TextColor}"/>
+        <Setter Property="ActionButtonText"
+                Value="Do Something"/>
+        <Setter Property="AppearingAnimation"
+                Value="{ uxd:FadeInPopupAnimation Duration=300 }"/>
+        <Setter Property="DisappearingAnimation"
+                Value="{ uxd:FadeOutPopupAnimation Duration=200 }"/>
+        <Setter Property="ItemDataTemplate">
+            <DataTemplate>
+                <Label
+                    Text="MISSING DATA TEMPLATE"
+                    TextColor="Red"/>
+            </DataTemplate>
+        </Setter>
+        <Setter Property="ControlTemplate">
+            <ControlTemplate>
+                <!-- Main Container -->
+                <Grid
+                    x:DataType="local:ListActionPopup"
+                    RowDefinitions="Auto,Auto,Auto"
+                    Margin="{DynamicResource AirSpacing}"
+                    RowSpacing="{DynamicResource SpacingMedium}"
+                    Padding="{DynamicResource PopupAirSpacing}"
+                    VerticalOptions="Center"
+                    WidthRequest="{OnIdiom Default=-1, Tablet=400 , Desktop=400}">
+                    <!-- Decoration Background -->
+                    <BoxView
+                        Grid.RowSpan="3"
+                        BackgroundColor="{DynamicResource BackgroundSecondaryColor}"
+                        Margin="-24"
+                        CornerRadius="{DynamicResource CornerRadiusXBig}"
+                        HorizontalOptions="Fill"/>
+                    <!-- Popup Title -->
+                    <Label
+                        Text="{Binding Title, Source={RelativeSource TemplatedParent}}"
+                        Style="{DynamicResource TitleStyle}"
+                        FontSize="{DynamicResource SmallTitleFontSize}"
+                        HorizontalTextAlignment="Center"/>
+                    <!-- Close Button -->
+                    <Label
+                        IsVisible="{Binding CloseButtonIconText, Source={RelativeSource TemplatedParent}, Converter={StaticResource IsNotEmptyStringConverter}}"
+                        Style="{DynamicResource CloseButtonStyle}"
+                        Text="{Binding CloseButtonIconText, Source={RelativeSource TemplatedParent}}"
+                        TextColor="{Binding CloseButtonIconColor, Source={RelativeSource TemplatedParent}, TargetNullValue={StaticResource TextColor}}">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding CloseButtonCommand, Source={RelativeSource TemplatedParent}}"/>
+                        </Label.GestureRecognizers>
+                    </Label>
+                    <!-- Close button default -->
+                    <Grid
+                        IsVisible="{Binding CloseButtonIconText, Source={RelativeSource TemplatedParent}, Converter={StaticResource IsEmptyStringConverter}}"
+                        HorizontalOptions="End">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding CloseButtonCommand, Source={RelativeSource TemplatedParent}}"/>
+                        </Grid.GestureRecognizers>
+                        <shapes:Path
+                            WidthRequest="24"
+                            HeightRequest="24"
+                            Data="M6,6 L18,18 M18,6 L6,18"
+                            Fill="Transparent"
+                            Stroke="{Binding CloseButtonIconColor, Source={RelativeSource TemplatedParent}, TargetNullValue={StaticResource TextColor}}"
+                            StrokeThickness="1"
+                            StrokeLineJoin="Round"
+                            StrokeLineCap="Round"/>
+                    </Grid>
+
+                    <!-- Content -->
+                    <VerticalStackLayout
+                        x:DataType="local:ListActionPopup"
+                        Grid.Row="1"
+                        Spacing="{DynamicResource SpacingMedium}"
+                        BindableLayout.ItemsSource="{ Binding ItemsSource, Source={RelativeSource TemplatedParent}}"
+                        BindableLayout.ItemTemplate="{ Binding ItemDataTemplate, Source={RelativeSource TemplatedParent}}"/>
+
+                    <!-- Action Button -->
+                    <Button
+                        Margin="0,10,0,0"
+                        Grid.Row="2"
+                        Style="{DynamicResource PrimaryActionButtonStyle}"
+                        Text="{Binding ActionButtonText, Source={RelativeSource TemplatedParent}}"
+                        Command="{Binding ActionButtonCommand, Source={RelativeSource TemplatedParent}}"
+                        IsVisible="{Binding ShowActionButton, Source={RelativeSource TemplatedParent}}"/>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+
+    <!-- OPTIONS SHEET -->
+    <Style x:Key="DefaultOptionSheetPopupStyle"
+           TargetType="local:OptionSheetPopup"
+           BasedOn="{ StaticResource PopupBaseStyle }">
+        <Setter Property="Title"
+                Value="Title"/>
+        <Setter Property="CloseButtonIconText"
+                Value="{DynamicResource UXDPopupsCloseIconButton}"/>
+        <Setter Property="CloseButtonIconColor"
+                Value="{DynamicResource TextColor}"/>
+        <Setter Property="ItemDataTemplate">
+            <uxd:TypeTemplateSelector>
+                <uxd:TypeTemplateSelector.Items>
+                    <uxd:TypeTemplateSelectorItem
+                        TargetType="{ x:Type local:OptionSheetItem }">
+                        <DataTemplate>
+                            <HorizontalStackLayout
+                                x:DataType="local:OptionSheetItem"
+                                Spacing="{DynamicResource SpacingSmall}">
+                                <HorizontalStackLayout.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Command}"
+                                        CommandParameter="{Binding CommandParameter}"/>
+                                </HorizontalStackLayout.GestureRecognizers>
+                                <!-- Icon -->
+                                <Label
+                                    Text="{Binding Icon}"
+                                    TextColor="{Binding IconColor, TargetNullValue={StaticResource PrimaryColor}}"
+                                    Style="{DynamicResource ListIconStyle}"/>
+                                <!-- Text -->
+                                <Label
+                                    Text="{Binding Text}"
+                                    Style="{DynamicResource ListTextStyle}"/>
+                            </HorizontalStackLayout>
+                        </DataTemplate>
+                    </uxd:TypeTemplateSelectorItem>
+                </uxd:TypeTemplateSelector.Items>
+            </uxd:TypeTemplateSelector>
+        </Setter>
+        <Setter Property="ControlTemplate">
+            <ControlTemplate>
+                <!-- Content -->
+                <Grid
+                    IgnoreSafeArea="True"
+                    x:DataType="local:OptionSheetPopup"
+                    WidthRequest="{OnIdiom Default=-1, Tablet=400 , Desktop=400}"
+                    VerticalOptions="{OnIdiom Default=End, Tablet=Center , Desktop=Center}"
+                    RowDefinitions="Auto,Auto"
+                    RowSpacing="{DynamicResource SpacingMedium}"
+                    Padding="{DynamicResource PopupAirSpacing}">
+                    <!-- Popup Background -->
+                    <BoxView
+                        Grid.RowSpan="2"
+                        BackgroundColor="{DynamicResource BackgroundColor}"
+                        Margin="-24"
+                        CornerRadius="{DynamicResource CornerRadiusXBig}"
+                        HorizontalOptions="Fill"/>
+                    <!-- Popup Title -->
+                    <Label
+                        Text="{Binding Title, Source={RelativeSource TemplatedParent}}"
+                        Style="{DynamicResource TitleStyle}"
+                        FontSize="{DynamicResource SmallTitleFontSize}"
+                        HorizontalTextAlignment="Center"/>
+                    <!-- Close Button -->
+                    <Label
+                        IsVisible="{Binding CloseButtonIconText, Source={RelativeSource TemplatedParent}, Converter={StaticResource IsNotEmptyStringConverter}}"
+                        Style="{DynamicResource CloseButtonStyle}"
+                        Text="{Binding CloseButtonIconText, Source={RelativeSource TemplatedParent}}"
+                        TextColor="{Binding CloseButtonIconColor, Source={RelativeSource TemplatedParent}, TargetNullValue={StaticResource TextColor}}">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding CloseButtonCommand, Source={RelativeSource TemplatedParent}}"/>
+                        </Label.GestureRecognizers>
+                    </Label>
+                    <!-- Close button default -->
+                    <Grid
+                        IsVisible="{Binding CloseButtonIconText, Source={RelativeSource TemplatedParent}, Converter={StaticResource IsEmptyStringConverter}}"
+                        HorizontalOptions="End">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding CloseButtonCommand, Source={RelativeSource TemplatedParent}}"/>
+                        </Grid.GestureRecognizers>
+                        <shapes:Path
+                            WidthRequest="24"
+                            HeightRequest="24"
+                            Data="M6,6 L18,18 M18,6 L6,18"
+                            Fill="Transparent"
+                            Stroke="{Binding CloseButtonIconColor, Source={RelativeSource TemplatedParent}, TargetNullValue={StaticResource TextColor}}"
+                            StrokeThickness="1"
+                            StrokeLineJoin="Round"
+                            StrokeLineCap="Round"/>
+                    </Grid>
+                    <!-- Item List -->
+                    <VerticalStackLayout
+                        Grid.Row="1"
+                        BindableLayout.ItemsSource="{Binding Groups, Source={RelativeSource TemplatedParent}}"
+                        Spacing="{DynamicResource SpacingMedium}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate>
+                                <!-- Item Group Background Wrapper -->
+                                <Border
+                                    x:DataType="local:OptionSheetGroup"
+                                    BackgroundColor="{DynamicResource BackgroundSecondaryColor}"
+                                    StrokeShape="RoundRectangle 12"
+                                    Padding="16,12">
+                                    <!-- Item -->
+                                    <VerticalStackLayout
+                                        Spacing="{DynamicResource SpacingMedium}"
+                                        BindableLayout.ItemsSource="{Binding Items}"
+                                        uxd:BindableLayoutProperties.FlexibleItemTemplate="{Binding ItemDataTemplate, Source={RelativeSource TemplatedParent}, x:DataType=local:OptionSheetPopup}"/>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+
+    <!-- SIMPLE ACTION -->
+    <Style x:Key="DefaultSimpleActionPopupStyle"
+           TargetType="local:SimpleActionPopup"
+           BasedOn="{ StaticResource PopupBaseStyle }">
+        <Setter Property="Title"
+                Value="Sample Title"/>
+        <Setter Property="Text"
+                Value="Additional text goes here"/>
+        <Setter Property="ActionButtonText"
+                Value="Action"/>
+        <Setter Property="SecondaryActionButtonText"
+                Value="Action"/>
+        <Setter Property="AppearingAnimation"
+                Value="{ uxd:MoveInPopupAnimation MoveDirection=Right, Easing=SpringOut, Duration=400 }"/>
+        <Setter Property="DisappearingAnimation"
+                Value="{ uxd:StoryboardAnimation 
+            Strategy=RunAllSequentially,       
+            Animation1={ uxd:ScaleToPopupAnimation Scale=1.2, Easing=Linear, Duration=150  },   
+            Animation2={ uxd:ScaleToPopupAnimation Scale=0.5, Easing=Linear, Duration=150  },              
+            Animation3={ uxd:MoveOutPopupAnimation MoveDirection=Left, Easing=SpringOut, Duration=500   }
+        }"/>
+        <Setter Property="ControlTemplate">
+            <ControlTemplate>
+                <!-- Content -->
+                <Grid
+                    x:DataType="local:SimpleActionPopup"
+                    WidthRequest="{OnIdiom Default=-1, Tablet=400 , Desktop=400}"
+                    VerticalOptions="Center"
+                    Margin="{DynamicResource AirSpacing}"
+                    RowDefinitions="Auto,Auto"
+                    RowSpacing="{DynamicResource SpacingSmall}"
+                    Padding="{DynamicResource PopupAirSpacing}">
+                    <!-- Popup Background -->
+                    <BoxView
+                        BackgroundColor="{DynamicResource BackgroundSecondaryColor}"
+                        CornerRadius="{DynamicResource CornerRadiusXBig}"
+                        Margin="-24"
+                        Grid.RowSpan="2"/>
+                    <!-- Content -->
+                    <VerticalStackLayout
+                        Spacing="4"
+                        Margin="{DynamicResource HorizontalAirSpacing}">
+                        <!-- Title -->
+                        <Label
+                            Text="{Binding Title, Source={RelativeSource TemplatedParent}}"
+                            Style="{DynamicResource MainTitleStyle}"
+                            HorizontalTextAlignment="Center"/>
+                        <!-- Text -->
+                        <Label
+                            Text="{Binding Text, Source={RelativeSource TemplatedParent}}"
+                            Style="{DynamicResource MainSubTitleStyle}"
+                            HorizontalTextAlignment="Center"/>
+                    </VerticalStackLayout>
+                    <!-- Buttons -->
+                    <Grid
+                        Grid.Row="1"
+                        ColumnDefinitions="*,*"
+                        ColumnSpacing="{DynamicResource SpacingMedium}">
+                        <!-- Secondary Action Button -->
+                        <Button
+                            Style="{DynamicResource SecondaryActionButtonStyle}"
+                            Text="{Binding SecondaryActionButtonText, Source={RelativeSource TemplatedParent}}"
+                            Command="{Binding SecondaryActionButtonCommand, Source={RelativeSource TemplatedParent}}"
+                            IsVisible="{Binding ShowSecondaryActionButton, Source={RelativeSource TemplatedParent}}"/>
+                        <!-- Primary Action Button -->
+                        <Button
+                            Grid.Column="1"
+                            Style="{DynamicResource PrimaryActionButtonStyle}"
+                            Text="{Binding ActionButtonText, Source={RelativeSource TemplatedParent}}"
+                            Command="{Binding ActionButtonCommand, Source={RelativeSource TemplatedParent}}"
+                            IsVisible="{Binding ShowActionButton, Source={RelativeSource TemplatedParent}}"/>
+                    </Grid>
+
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+    <!-- SIMPLE TEXT -->
+    <Style x:Key="DefaultSimpleTextPopupStyle"
+           TargetType="local:SimpleTextPopup"
+           BasedOn="{ StaticResource PopupBaseStyle }">
+        <Setter Property="Title"
+                Value="Sample Title"/>
+        <Setter Property="Text"
+                Value="Additional text goes here"/>
+        <Setter Property="CloseButtonIconText"
+                Value="{DynamicResource UXDPopupsCloseIconButton}"/>
+        <Setter Property="CloseButtonIconColor"
+                Value="{DynamicResource TextColor}"/>
+        <Setter Property="CloseWhenBackgroundIsClicked"
+                Value="False"/>
+        <Setter Property="AppearingAnimation"
+                Value="{ uxd:FadeInPopupAnimation Duration=300 }"/>
+        <Setter Property="DisappearingAnimation"
+                Value="{ uxd:FadeOutPopupAnimation Duration=200 }"/>
+        <Setter Property="ControlTemplate">
+            <ControlTemplate>
+                <!-- Content -->
+                <Grid
+                    x:DataType="local:SimpleTextPopup"
+                    WidthRequest="{OnIdiom Default=-1, Tablet=400 , Desktop=400}"
+                    VerticalOptions="Center"
+                    Margin="{DynamicResource AirSpacing}"
+                    RowDefinitions="Auto,Auto"
+                    ColumnDefinitions="*,Auto"
+                    ColumnSpacing="{DynamicResource SpacingSmall}"
+                    RowSpacing="{DynamicResource SpacingSmall}"
+                    Padding="{DynamicResource PopupAirSpacing}">
+                    <!-- Popup Background -->
+                    <BoxView
+                        Grid.RowSpan="2"
+                        Grid.ColumnSpan="2"
+                        BackgroundColor="{DynamicResource BackgroundSecondaryColor}"
+                        CornerRadius="{DynamicResource CornerRadiusXBig}"
+                        Margin="-24"/>
+
+                    <!-- Close Button -->
+                    <Label
+                        IsVisible="{Binding CloseButtonIconText, Source={RelativeSource TemplatedParent}, Converter={StaticResource IsNotEmptyStringConverter}}"
+                        Grid.Column="1"
+                        Style="{DynamicResource CloseButtonStyle}"
+                        Text="{Binding CloseButtonIconText, Source={RelativeSource TemplatedParent}}"
+                        TextColor="{Binding CloseButtonIconColor, Source={RelativeSource TemplatedParent}, TargetNullValue={StaticResource TextColor}}">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding CloseButtonCommand, Source={RelativeSource TemplatedParent}}"/>
+                        </Label.GestureRecognizers>
+                    </Label>
+
+                    <!-- Close button default -->
+                    <Grid
+                        IsVisible="{Binding CloseButtonIconText, Source={RelativeSource TemplatedParent}, Converter={StaticResource IsEmptyStringConverter}}"
+                        Grid.Column="1"
+                        HorizontalOptions="End">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding CloseButtonCommand, Source={RelativeSource TemplatedParent}}"/>
+                        </Grid.GestureRecognizers>
+                        <shapes:Path
+                            WidthRequest="24"
+                            HeightRequest="24"
+                            Data="M6,6 L18,18 M18,6 L6,18"
+                            Fill="Transparent"
+                            Stroke="{Binding CloseButtonIconColor, Source={RelativeSource TemplatedParent}, TargetNullValue={StaticResource TextColor}}"
+                            StrokeThickness="1"
+                            StrokeLineJoin="Round"
+                            StrokeLineCap="Round"/>
+                    </Grid>
+
+                    <!-- Title -->
+                    <Label
+                        Text="{Binding Title, Source={RelativeSource TemplatedParent}}"
+                        Style="{DynamicResource TitleStyle}"
+                        FontSize="{DynamicResource SmallTitleFontSize}"/>
+
+                    <!-- Text -->
+                    <Label
+                        Grid.Row="1"
+                        Grid.ColumnSpan="2"
+                        Text="{Binding Text, Source={RelativeSource TemplatedParent}}"
+                        Style="{DynamicResource SubTitleStyle}"
+                        FontSize="{DynamicResource LargeFontSize}"/>
+
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+
+    <!-- TOAST -->
+    <Style x:Key="DefaultToastStyle"
+           TargetType="local:Toast"
+           BasedOn="{ StaticResource PopupBaseStyle }">
+        <Setter Property="Title"
+                Value="Toast Title"/>
+        <Setter Property="IconText"
+                Value="{ DynamicResource UXDPopupsCheckCircleIconButton }"/>
+        <Setter Property="IconColor"
+                Value="{DynamicResource PrimaryColor}"/>
+        <Setter Property="BackgroundColor"
+                Value="Transparent"/>
+        <Setter Property="AppearingAnimation"
+                Value="{uxd:FadeInPopupAnimation Duration=400 }"/>
+        <Setter Property="DisappearingAnimation"
+                Value="{ uxd:FadeOutPopupAnimation Duration=300}"/>
+        <Setter Property="ControlTemplate">
+            <ControlTemplate>
+                <!-- Content -->
+                <Grid
+                    x:DataType="local:Toast"
+                    Margin="{DynamicResource AirSpacingSmallTop}"
+                    ColumnDefinitions="Auto,*"
+                    ColumnSpacing="{DynamicResource SpacingSmall}"
+                    Padding="24,16"
+                    VerticalOptions="Start"
+                    HorizontalOptions="Center"
+                    IgnoreSafeArea="True">
+                    <!-- Popup Background -->
+                    <Border
+                        BackgroundColor="{DynamicResource BackgroundColor}"
+                        Stroke="{DynamicResource PopupBorderColor}"
+                        StrokeShape="RoundRectangle 32"
+                        StrokeThickness="1"
+                        Margin="-24,-16"
+                        Grid.ColumnSpan="2"/>
+                    <!-- Icon -->
+                    <Label
+                        IsVisible="{Binding IconText, Source={RelativeSource TemplatedParent}, Converter={StaticResource IsNotEmptyStringConverter}}"
+                        Text="{Binding IconText, Source={RelativeSource TemplatedParent}}"
+                        TextColor="{Binding IconColor, Source={RelativeSource TemplatedParent}}"
+                        FontFamily="{DynamicResource IconsFontFamily}"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"
+                        FontSize="{OnIdiom Phone=20, Tablet=26, Desktop=26}"/>
+                    <!-- Icon default -->
+                    <Grid
+                        IsVisible="{Binding IconText, Source={RelativeSource TemplatedParent}, Converter={StaticResource IsEmptyStringConverter}}"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center">
+                        <shapes:Path
+                            WidthRequest="24"
+                            HeightRequest="24"
+                            Data="M12,2 A10,10 0 1,1 12,22 A10,10 0 1,1 12,2 M8,12.5 L11.5,16 L16.5,9.5"
+                            Fill="Transparent"
+                            Stroke="{Binding IconColor, Source={RelativeSource TemplatedParent}}"
+                            StrokeThickness="1"
+                            StrokeLineJoin="Round"
+                            StrokeLineCap="Round"/>
+                    </Grid>
+                    <!-- Title -->
+                    <Label
+                        Grid.Column="1"
+                        Text="{Binding Title, Source={RelativeSource TemplatedParent}}"
+                        Style="{DynamicResource TitleStyle}"
+                        VerticalTextAlignment="Center"/>
+
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+    <!-- DEFAULT STYLES -->
+    <Style TargetType="local:ActionModalPopup"
+           BasedOn="{ StaticResource DefaultActionModalPopupStyle }"
+           ApplyToDerivedTypes="True"/>
+    <Style TargetType="local:FloaterPopup"
+           BasedOn="{ StaticResource DefaultFloaterPopupStyle }"
+           ApplyToDerivedTypes="True"/>
+    <Style TargetType="local:FormPopup"
+           BasedOn="{ StaticResource DefaultFormPopupStyle }"
+           ApplyToDerivedTypes="True"/>
+    <Style TargetType="local:IconTextPopup"
+           BasedOn="{ StaticResource DefaultIconTextPopupStyle }"
+           ApplyToDerivedTypes="True"/>
+    <Style TargetType="local:ListActionPopup"
+           BasedOn="{ StaticResource DefaultListActionPopupStyle }"
+           ApplyToDerivedTypes="True"/>
+    <Style TargetType="local:OptionSheetPopup"
+           BasedOn="{ StaticResource DefaultOptionSheetPopupStyle }"
+           ApplyToDerivedTypes="True"/>
+    <Style TargetType="local:SimpleActionPopup"
+           BasedOn="{ StaticResource DefaultSimpleActionPopupStyle }"
+           ApplyToDerivedTypes="True"/>
+    <Style TargetType="local:SimpleTextPopup"
+           BasedOn="{ StaticResource DefaultSimpleTextPopupStyle }"
+           ApplyToDerivedTypes="True"/>
+    <Style TargetType="local:Toast"
+           BasedOn="{ StaticResource DefaultToastStyle }"
+           ApplyToDerivedTypes="True"/>
+</ResourceDictionary>

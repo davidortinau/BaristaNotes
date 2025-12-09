@@ -7,6 +7,7 @@ using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using BaristaNotes.Components.FormFields;
 using BaristaNotes.Components;
+using BaristaNotes.Integrations.Popups;
 using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups.Services;
 using Fonts;
@@ -49,6 +50,9 @@ class ShotLoggingState
     public int? SelectedMachineId { get; set; }
     public int? SelectedGrinderId { get; set; }
     public List<int> SelectedAccessoryIds { get; set; } = new();
+
+    // Bean tracking for inline creation (T001)
+    public List<BeanDto> AvailableBeans { get; set; } = new();
 }
 
 class ShotLoggingPageProps
@@ -101,6 +105,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             var bags = await _bagService.GetActiveBagsForShotLoggingAsync();
             var users = await _userProfileService.GetAllProfilesAsync();
             var equipment = await _equipmentService.GetAllActiveEquipmentAsync();
+            var beans = await _beanService.GetAllActiveBeansAsync(); // T002: Load beans for inline creation
 
             // Edit mode: Load existing shot
             if (Props.ShotId.HasValue)
@@ -118,6 +123,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     s.AvailableBags = bags;
                     s.AvailableUsers = users;
                     s.AvailableEquipment = equipment.ToList();
+                    s.AvailableBeans = beans; // T002: Track beans for inline creation
 
                     // Populate from existing shot
                     s.Timestamp = shot.Timestamp;
@@ -156,6 +162,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     s.AvailableBags = bags;
                     s.AvailableUsers = users;
                     s.AvailableEquipment = equipment.ToList();
+                    s.AvailableBeans = beans; // T002: Track beans for inline creation
 
                     if (lastShot != null)
                     {
@@ -331,6 +338,115 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         }
     }
 
+    #region Inline Bean/Bag Creation (T011-T017, T018-T022)
+
+    /// <summary>
+    /// Shows combined bean+bag creation popup for inline creation flow.
+    /// Used when no beans exist in the system - creates both in one step.
+    /// </summary>
+    async Task ShowBeanAndBagCreationPopup()
+    {
+        var popup = new BeanAndBagCreationPopup(_beanService, _bagService)
+        {
+            OnCreated = HandleBagCreated  // Reuse existing handler
+        };
+
+        await IPopupService.Current.PushAsync(popup);
+    }
+
+    /// <summary>
+    /// Shows bag creation popup with bean picker (T019).
+    /// Used when beans exist but no active bags.
+    /// </summary>
+    async Task ShowBagCreationPopupWithPicker()
+    {
+        var popup = new BagCreationPopup(_bagService)
+        {
+            AvailableBeans = State.AvailableBeans,
+            OnBagCreated = HandleBagCreated
+        };
+        popup.Build();  // Build content after setting properties
+
+        await IPopupService.Current.PushAsync(popup);
+    }
+
+    /// <summary>
+    /// Handles successful bag creation - refreshes data and auto-selects bag (T016, T017, T024).
+    /// </summary>
+    void HandleBagCreated(BagSummaryDto newBag)
+    {
+        // Refresh data and auto-select the new bag (T017, T024)
+        _ = RefreshAndSelectBag(newBag.Id);
+    }
+
+    /// <summary>
+    /// Refreshes data after bag creation and auto-selects the new bag (T017, T023, T024).
+    /// </summary>
+    async Task RefreshAndSelectBag(int newBagId)
+    {
+        await LoadDataAsync();
+
+        // Find and select the new bag (T024)
+        var newBagIndex = State.AvailableBags.FindIndex(b => b.Id == newBagId);
+        if (newBagIndex >= 0)
+        {
+            SetState(s =>
+            {
+                s.SelectedBagIndex = newBagIndex;
+                s.SelectedBagId = newBagId;
+            });
+
+            // Load best shot settings for the new bag
+            await LoadBestShotSettingsAsync(newBagId);
+        }
+    }
+
+    /// <summary>
+    /// Renders the "no beans" empty state with Create Bean CTA (T012).
+    /// Shown when AvailableBeans.Count == 0.
+    /// </summary>
+    VisualNode RenderNoBeanEmptyState()
+    {
+        var isLightTheme = Application.Current?.RequestedTheme == AppTheme.Light;
+        var primaryColor = isLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary;
+        var textColor = isLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+        var secondaryTextColor = isLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+
+        return VStack(spacing: 16,
+            // Coffee bean icon - MUST use MaterialSymbolsFont per Constitution Principle III
+            Label(MaterialSymbolsFont.Coffee)
+                .FontFamily(MaterialSymbolsFont.FontFamily)
+                .FontSize(48)
+                .TextColor(textColor)
+                .HCenter(),
+
+            Label("No beans configured")
+                .FontSize(20)
+                .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
+                .TextColor(textColor)
+                .HCenter(),
+
+            Label("Create your first bean to start logging shots")
+                .FontSize(14)
+                .TextColor(secondaryTextColor)
+                .HCenter()
+                .HorizontalTextAlignment(TextAlignment.Center),
+
+            Button("Add Coffee")
+                .OnClicked(async () => await ShowBeanAndBagCreationPopup())
+                .BackgroundColor(primaryColor)
+                .TextColor(Colors.White)
+                .HeightRequest(50)
+                .WidthRequest(200)
+                .HCenter()
+        )
+        .VCenter()
+        .HCenter()
+        .Padding(32);
+    }
+
+    #endregion
+
     public override VisualNode Render()
     {
         if (State.IsLoading && !State.AvailableBags.Any())
@@ -344,6 +460,17 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 )
                 .VCenter()
                 .HCenter()
+            )
+            .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
+            .OnAppearing(() => OnPageAppearing());
+        }
+
+        // T011: Show "no beans" empty state when no beans exist (new users)
+        // Only for add mode - edit mode should still show the form
+        if (!Props.ShotId.HasValue && !State.IsLoading && State.AvailableBeans.Count == 0)
+        {
+            return ContentPage("New Shot",
+                RenderNoBeanEmptyState()
             )
             .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
             .OnAppearing(() => OnPageAppearing());
@@ -411,17 +538,19 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                                     _ = LoadBestShotSettingsAsync(bagId);
                                 }
                             }) :
+                        // T018: Enhanced "no active bags" empty state with inline bag creation
                         VStack(spacing: 12,
                             Label("No active bags available")
                                 .ThemeKey(ThemeKeys.SecondaryText)
                                 .FontSize(16)
                                 .HCenter(),
-                            Label("Add a bag to start logging shots")
+                            Label("Create a bag to start logging shots")
                                 .ThemeKey(ThemeKeys.MutedText)
                                 .FontSize(14)
                                 .HCenter(),
+                            // T019: Use inline bag creation popup with bean picker
                             Button("Add New Bag")
-                                .OnClicked(async () => await Navigation.PushAsync<BagFormPage>())
+                                .OnClicked(async () => await ShowBagCreationPopupWithPicker())
                                 .HCenter()
                         ).Padding(16),
 

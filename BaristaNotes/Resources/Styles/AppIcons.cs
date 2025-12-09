@@ -61,12 +61,20 @@ public static class AppIcons
         Color = IconColor
     };
 
-    public static FontImageSource Remove => new()
+    public static FontImageSource Increment => new()
+    {
+        FontFamily = MaterialSymbolsFont.FontFamily,
+        Glyph = MaterialSymbolsFont.Add,
+        Size = 12,
+        Color = ApplicationTheme.IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary
+    };
+
+    public static FontImageSource Decrement => new()
     {
         FontFamily = MaterialSymbolsFont.FontFamily,
         Glyph = MaterialSymbolsFont.Remove,
-        Size = 24,
-        Color = IconColor
+        Size = 12,
+        Color = ApplicationTheme.IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary
     };
 
     // Rating icons (0-4 scale: Terrible to Excellent)

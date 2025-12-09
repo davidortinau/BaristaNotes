@@ -655,9 +655,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             ).VCenter().HCenter().TranslationY(10),
 
             // Add/subtract buttons
-            ImageButton().Source(AppIcons.Remove).HStart().VEnd().TranslationY(10).Opacity(0)
+            ImageButton().Source(AppIcons.Decrement).HStart().VEnd().TranslationY(10).Aspect(Aspect.Center)
                 .OnClicked(() => onValueChanged(Math.Round(value - 0.1, 1))),
-            ImageButton().Source(AppIcons.Add).HEnd().VEnd().TranslationY(10).Opacity(0)
+            ImageButton().Source(AppIcons.Increment).HEnd().VEnd().TranslationY(10).Aspect(Aspect.Center)
                 .OnClicked(() => onValueChanged(Math.Round(value + 0.1, 1)))
 
         ).HeightRequest(160).WidthRequest(160).HCenter();

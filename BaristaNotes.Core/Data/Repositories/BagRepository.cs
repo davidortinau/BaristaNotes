@@ -22,7 +22,13 @@ public class BagRepository : IBagRepository
     {
         bag.CreatedAt = DateTime.Now;
         bag.LastModifiedAt = DateTime.Now;
-        
+
+        // Generate SyncId if not already set (required for UNIQUE constraint)
+        if (bag.SyncId == Guid.Empty)
+        {
+            bag.SyncId = Guid.NewGuid();
+        }
+
         _context.Bags.Add(bag);
         await _context.SaveChangesAsync();
         return bag;
@@ -120,7 +126,7 @@ public class BagRepository : IBagRepository
     public async Task<Bag> UpdateAsync(Bag bag)
     {
         bag.LastModifiedAt = DateTime.Now;
-        
+
         _context.Bags.Update(bag);
         await _context.SaveChangesAsync();
         return bag;

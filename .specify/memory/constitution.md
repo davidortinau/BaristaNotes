@@ -1,37 +1,37 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version Change: 1.1.0 → 1.2.0
-Constitution Type: Minor Amendment
+Version Change: 1.2.0 → 1.3.0
+Constitution Type: Minor Amendment (Enforcement Strengthening)
 
-Core Principles Added:
-  VI. Technology Stack Consistency - New principle establishing architectural constraint authority
+Principle III (User Experience Consistency) - STRENGTHENED:
+  - "Icon Usage" rule elevated to "🚫 NO EMOJIS (NON-NEGOTIABLE HARD RULE)"
+  - Added explicit prohibition language: "ABSOLUTELY PROHIBITED", "NO EXCEPTIONS"
+  - Added examples of banned emoji characters
+  - Added "Font Icons Required" as separate enforcement point
+  - Rationale expanded to explain professional/accessibility concerns
 
-Document Relationship Clarified:
-  - Constitution (this file): Governance principles and "WHY"
-  - ARCHITECTURE_CONSTRAINTS.md: Technical implementation rules and "HOW"
-  - Cross-references established between documents
-  
-Sections Refactored:
-  - EF Core implementation details moved to ARCHITECTURE_CONSTRAINTS.md
-  - Data Preservation principles retained at governance level
-  - Development Standards section streamlined (removed redundant EF migration details)
+Principle V (Rating Scale Standard) - CORRECTED:
+  - Removed contradictory emoji reference (☕) from "Coffee Cup Icon Standard"
+  - Changed to explicitly require MaterialSymbolsFont.Coffee
+  - Added specific MaterialSymbolsFont icon names for all rating levels
+  - Cross-referenced AppIcons.RatingGlyphs for implementation
 
 Templates Status:
-  ✅ plan-template.md - Constitution Check references all 6 principles
-  ✅ spec-template.md - Requirements sections align with all standards
-  ✅ tasks-template.md - References both constitution and architecture constraints
-  ⚠️  ARCHITECTURE_CONSTRAINTS.md - Updated with EF Core details from constitution
+  ✅ plan-template.md - No emoji references, UX consistency check intact
+  ✅ spec-template.md - No emoji references, accessibility requirements intact
+  ✅ tasks-template.md - No emoji references
+  ✅ ARCHITECTURE_CONSTRAINTS.md - Will add explicit emoji prohibition rule
   
-Follow-up Actions:
-  - Update ARCHITECTURE_CONSTRAINTS.md with consolidated EF Core migration patterns
-  - Verify plan-template.md includes architecture constraint compliance check
+Code Fixes Applied:
+  ✅ ShotLoggingPage.cs - Replaced ☕ emoji with MaterialSymbolsFont.Coffee
+  ✅ specs/001-inline-bean-creation/quickstart.md - Replaced emoji in diagram
 
-Rationale for Version 1.2.0 (MINOR bump):
-  - Added new Principle VI (Technology Stack Consistency)
-  - Clarified document separation of concerns (governance vs implementation)
-  - Streamlined constitution by moving technical details to appropriate document
-  - No breaking changes to existing principles
+Rationale for Version 1.3.0 (MINOR bump):
+  - Strengthened existing principle (not adding new principle)
+  - Fixed internal contradiction in Rating Scale Standard
+  - Clarified enforcement language for emoji prohibition
+  - No breaking changes to governance structure
 -->
 
 # BaristaNotes Constitution
@@ -70,14 +70,15 @@ Test-Driven Development is the mandatory development methodology:
 User-facing functionality MUST provide a consistent, high-quality experience:
 
 - **Design System Adherence**: All UI components MUST follow the established design system. Custom components require design review.
-- **Icon Usage (NON-NEGOTIABLE)**: NEVER use emojis (☕, ⭐, etc.) in UI. Always use font icons (MaterialSymbolsFont, custom font icons) unless a specific PNG or SVG file is explicitly specified. Emojis render inconsistently across platforms and break accessibility.
+- **🚫 NO EMOJIS (NON-NEGOTIABLE HARD RULE)**: Emojis are **ABSOLUTELY PROHIBITED** in all user interface code. This includes but is not limited to: ☕, ⭐, ⚠️, ✓, ✕, ℹ️, and ANY Unicode emoji character. ALWAYS use `MaterialSymbolsFont` icons or explicit PNG/SVG assets. NO EXCEPTIONS. Emojis render inconsistently across platforms, break accessibility, and violate professional UI standards.
+- **Font Icons Required**: All iconography MUST use `MaterialSymbolsFont.FontFamily` with the appropriate glyph constant (e.g., `MaterialSymbolsFont.Coffee`, `MaterialSymbolsFont.Warning`). See `Resources/Fonts/MaterialSymbolsFont.cs` for available icons.
 - **Accessibility Standards**: WCAG 2.1 Level AA compliance is mandatory. All interactive elements must be keyboard navigable and screen-reader compatible.
 - **Error Handling**: User-facing errors MUST be clear, actionable, and never expose technical details. Provide recovery steps when possible.
 - **Responsive Design**: All interfaces MUST function on mobile, tablet, and desktop form factors. Touch targets minimum 44x44px.
 - **Loading States**: All async operations MUST provide immediate feedback. No action should appear unresponsive.
 - **Consistent Patterns**: Navigation, forms, validation, and feedback mechanisms use consistent patterns across the entire application.
 
-**Rationale**: Inconsistent UX increases cognitive load, training costs, and user frustration. Consistency builds user trust and reduces support burden.
+**Rationale**: Inconsistent UX increases cognitive load, training costs, and user frustration. Consistency builds user trust and reduces support burden. Emojis in particular create accessibility nightmares, render differently on every platform/device, and give the application an unprofessional appearance.
 
 ### IV. Performance Requirements
 
@@ -109,7 +110,8 @@ All rating systems MUST follow project-wide consistency standards:
   - 2 = Average
   - 3 = Good
   - 4 = Excellent
-- **Coffee Cup Icon Standard**: Coffee cup icon (☕) represents rating levels throughout UI. Use font icons (MaterialSymbolsFont) for consistency.
+- **Rating Icon Standard**: Use `MaterialSymbolsFont` sentiment icons for rating levels (see `AppIcons.RatingGlyphs`). NEVER use emoji characters. The icons are: `Sentiment_very_dissatisfied` (0), `Sentiment_dissatisfied` (1), `Sentiment_neutral` (2), `Sentiment_satisfied` (3), `Sentiment_very_satisfied` (4).
+- **Coffee Cup Icon**: When a coffee cup icon is needed, use `MaterialSymbolsFont.Coffee` - NEVER the ☕ emoji.
 - **Rating Display Order**: Display ratings in descending order (4 → 0) for rating distributions and summary views.
 - **No Alternative Scales**: Never use 1-5 scale, star ratings, or other rating systems. Consistency across all features is mandatory.
 
@@ -294,4 +296,4 @@ For **technical implementation rules** (the "HOW"), see:
 
 Both documents are mandatory. Constitution violations require amendment process; Architecture Constraint violations require stakeholder approval.
 
-**Version**: 1.2.0 | **Ratified**: 2025-12-02 | **Last Amended**: 2025-12-08
+**Version**: 1.3.0 | **Ratified**: 2025-12-02 | **Last Amended**: 2025-12-09

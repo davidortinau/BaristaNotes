@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ResourceDictionary 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:UXDivers.Popups.Maui.Controls"
+    x:Class="UXDivers.Popups.Maui.Controls.DarkTheme">
+    
+    <!-- ##############   FONTS   ############## -->
+    
+    <x:String x:Key="IconsFontFamily">IconFont</x:String>
+    <x:String x:Key="AppFontFamily">Font</x:String>
+    <x:String x:Key="AppSemiBoldFamily">BoldFont</x:String>
+
+    <x:String x:Key="UXDPopupsCloseIconButton"></x:String>
+    <x:String x:Key="UXDPopupsCheckCircleIconButton"></x:String>
+    
+    <!-- ######################################## -->
+    
+    <!-- ##############   COLORS   ############## -->
+    
+    <!--  PRIMARY COLORS  -->
+    <Color x:Key="PrimaryColor">#3479FF</Color>
+    <Color x:Key="PrimaryVariantColor">#172949</Color>
+    
+    <!--  BACKGROUND COLORS  -->
+    <Color x:Key="BackgroundColor">#0A0A0A</Color>
+    <Color x:Key="BackgroundSecondaryColor">#181A1F</Color>
+    <Color x:Key="BackgroundTertiaryColor">#262930</Color>
+    <Color x:Key="PopupBackdropColor">#AA000000</Color>
+    
+    <!--  TEXT COLORS  -->
+    <Color x:Key="TextColor">#FFFFFF</Color>
+    <Color x:Key="TextSecondaryColor">#AAB3CD</Color>
+    <Color x:Key="TextTertiaryColor">#8B95AE</Color>
+    <Color x:Key="EntryPlaceholderColor">#5D5D5D</Color>
+        
+    <!--  Popup Specific COLORS  -->
+    <Color x:Key="PopupBorderColor">#262930</Color>   
+    
+    <!-- ######################################## -->
+    
+    <!-- #############   SPACING   ############## -->
+    
+    <Thickness x:Key="AirSpacing">30</Thickness>
+    <Thickness x:Key="AirSpacingOnlyTop">0,30,0,0</Thickness>
+    <Thickness x:Key="AirSpacingNoTop">30,0,30,30</Thickness>
+    <Thickness x:Key="AirSpacingSmallTop">30,20,30,30</Thickness>
+    <Thickness x:Key="VerticalAirSpacing">0,30</Thickness>
+    <Thickness x:Key="HorizontalAirSpacing">30,0</Thickness>
+    <Thickness x:Key="PopupAirSpacing">24</Thickness> 
+    
+    <x:Double x:Key="SpacingXBig">24</x:Double>
+    <x:Double x:Key="SpacingBig">20</x:Double>
+    <x:Double x:Key="SpacingMedium">16</x:Double>
+    <x:Double x:Key="SpacingSmall">12</x:Double>
+    
+    <!-- ######################################## -->
+    
+    <!-- ##########   CORNER RADIUS   ########### -->
+    
+    <CornerRadius x:Key="CornerRadiusXBig">20</CornerRadius>
+    <CornerRadius x:Key="CornerRadiusBig">16</CornerRadius>
+    <CornerRadius x:Key="BottomCornerRadiusLg">0,0,32,32</CornerRadius>
+    <x:Int32 x:Key="BaseButtonCornerRadius">20</x:Int32>
+    
+    <!-- ######################################## -->
+    
+    <!-- ############   FONT SIZES   ############ -->
+    
+    <OnIdiom x:Key="TinyFontSize" x:TypeArguments="x:Double" Phone="10" Tablet="14" Desktop="14" />
+    <OnIdiom x:Key="SmallFontSize" x:TypeArguments="x:Double" Phone="12" Tablet="16" Desktop="16"/>
+    <OnIdiom x:Key="BaseFontSize" x:TypeArguments="x:Double" Phone="14" Tablet="16" Desktop="16"/>     
+    <OnIdiom x:Key="LargeFontSize" x:TypeArguments="x:Double" Phone="16" Tablet="18" Desktop="18"/>
+    <OnIdiom x:Key="SmallTitleFontSize" x:TypeArguments="x:Double" Phone="18" Tablet="22" Desktop="22"/>
+    <OnIdiom x:Key="TitleFontSize" x:TypeArguments="x:Double" Phone="24" Tablet="32" Desktop="32"/>
+    
+    <OnIdiom x:Key="MainCardIconSize" x:TypeArguments="x:Double" Phone="24" Tablet="54" Desktop="54" />
+    <OnIdiom x:Key="MainCardTitleSize" x:TypeArguments="x:Double" Phone="16" Tablet="20" Desktop="20"/>
+    <OnIdiom x:Key="MainCardSubTitleSize" x:TypeArguments="x:Double" Phone="10" Tablet="14" Desktop="14"/>
+
+    <!-- ######################################## -->
+</ResourceDictionary>

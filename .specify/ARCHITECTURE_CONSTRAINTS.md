@@ -12,6 +12,49 @@ These constraints are **MANDATORY** and **CANNOT** be changed without explicit u
 
 ---
 
+## 🚫 Icons: MaterialSymbolsFont Only (NO EMOJIS)
+
+**RULE**: ALL icons in the UI **MUST** use `MaterialSymbolsFont`. Emojis are **ABSOLUTELY PROHIBITED**.
+
+**Why**: Emojis render inconsistently across platforms (iOS, Android, Windows, Mac), break accessibility (screen readers handle them poorly), and give the application an unprofessional appearance.
+
+**Examples**:
+```csharp
+// ✅ CORRECT - Use MaterialSymbolsFont
+Label(MaterialSymbolsFont.Coffee)
+    .FontFamily(MaterialSymbolsFont.FontFamily)
+    .FontSize(48)
+
+// ✅ CORRECT - Use MaterialSymbolsFont with color
+Label(MaterialSymbolsFont.Warning)
+    .FontFamily(MaterialSymbolsFont.FontFamily)
+    .TextColor(Colors.Orange)
+
+// ❌ WRONG - NEVER use emoji characters
+Label("☕")  // BANNED
+Label("⭐")  // BANNED
+Label("⚠️")  // BANNED
+Label("✓")   // BANNED
+Label("❌")  // BANNED
+```
+
+**Available Icons**: See `Resources/Fonts/MaterialSymbolsFont.cs` for the full list of available icons.
+
+**Common Icon Mappings**:
+| Intent | Correct | WRONG |
+|--------|---------|-------|
+| Coffee | `MaterialSymbolsFont.Coffee` | ☕ |
+| Warning | `MaterialSymbolsFont.Warning` | ⚠️ |
+| Star/Rating | `MaterialSymbolsFont.Star` | ⭐ |
+| Check | `MaterialSymbolsFont.Check` | ✓ ✔ |
+| Error | `MaterialSymbolsFont.Error` | ❌ ✕ |
+| Person | `MaterialSymbolsFont.Person` | 👤 |
+| Add | `MaterialSymbolsFont.Add` | ➕ |
+
+**NO EXCEPTIONS**: If an icon is needed that doesn't exist in MaterialSymbolsFont, request it be added to the font or use a PNG/SVG asset. NEVER fall back to emoji.
+
+---
+
 ## 🚫 UI Framework: MauiReactor
 
 **RULE**: All UI must use **MauiReactor** components, NOT standard MAUI XAML or C# UI patterns.

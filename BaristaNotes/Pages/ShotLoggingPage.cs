@@ -595,6 +595,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     new RadialAxis()
                         .Minimum(min)
                         .Maximum(max)
+                        .EnableLoadingAnimation(true)
                         .Interval((max - min) / 5)
                         .MinorTicksPerInterval(1)
                         .ShowLabels(true)
@@ -651,7 +652,14 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .FontSize(9)
                     .TextColor(secondaryTextColor)
                     .HCenter()
-            ).VCenter().HCenter().TranslationY(10)
+            ).VCenter().HCenter().TranslationY(10),
+
+            // Add/subtract buttons
+            ImageButton().Source(AppIcons.Remove).HStart().VEnd().TranslationY(10).Opacity(0)
+                .OnClicked(() => onValueChanged(Math.Round(value - 0.1, 1))),
+            ImageButton().Source(AppIcons.Add).HEnd().VEnd().TranslationY(10).Opacity(0)
+                .OnClicked(() => onValueChanged(Math.Round(value + 0.1, 1)))
+
         ).HeightRequest(160).WidthRequest(160).HCenter();
     }
 

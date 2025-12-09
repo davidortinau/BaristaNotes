@@ -61,6 +61,14 @@ public static class AppIcons
         Color = IconColor
     };
 
+    public static FontImageSource Remove => new()
+    {
+        FontFamily = MaterialSymbolsFont.FontFamily,
+        Glyph = MaterialSymbolsFont.Remove,
+        Size = 24,
+        Color = IconColor
+    };
+
     // Rating icons (0-4 scale: Terrible to Excellent)
     // Used consistently across ShotLoggingPage, ShotRecordCard, RatingDisplayComponent
     public static readonly string[] RatingIcons = new[]

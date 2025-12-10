@@ -138,10 +138,10 @@ public class ShotService : IShotService
             shot.ShotEquipments.Clear();
             foreach (var accessoryId in dto.AccessoryIds)
             {
-                shot.ShotEquipments.Add(new Models.ShotEquipment 
-                { 
-                    ShotRecordId = shot.Id, 
-                    EquipmentId = accessoryId 
+                shot.ShotEquipments.Add(new Models.ShotEquipment
+                {
+                    ShotRecordId = shot.Id,
+                    EquipmentId = accessoryId
                 });
             }
         }

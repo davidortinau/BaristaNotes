@@ -27,6 +27,9 @@ public class ShotRecord
     // Rating
     public int? Rating { get; set; }
     
+    // Tasting notes (optional free text)
+    public string? TastingNotes { get; set; }
+    
     // CoreSync metadata
     public Guid SyncId { get; set; }
     public DateTime LastModifiedAt { get; set; }

@@ -106,6 +106,11 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         await LoadShotsAsync();
     }
 
+    async void NavigateToDetail(int shotId)
+    {
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingPageProps>("shot-logging", props => props.ShotId = shotId);
+    }
+
     async void NavigateToEdit(int shotId)
     {
         await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingPageProps>("shot-logging", props => props.ShotId = shotId);
@@ -239,7 +244,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                             .Shot(shot)
                     )
                     .StrokeThickness(0)
-                    .OnTapped(() => NavigateToEdit(shot.Id))
+                    .OnTapped(() => NavigateToDetail(shot.Id))
                 )
                 .LeftItems(
                 [
@@ -247,6 +252,13 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                         .BackgroundColor(Colors.Transparent)
                         .IconImageSource(AppIcons.Delete)
                         .OnInvoked(async () => await ShowDeleteConfirmation(shot.Id))
+                ])
+                .RightItems(
+                [
+                    SwipeItem()
+                        .BackgroundColor(Colors.Transparent)
+                        .IconImageSource(AppIcons.Edit)
+                        .OnInvoked(() => NavigateToEdit(shot.Id))
                 ])
                 .Margin(0, 4)
             )

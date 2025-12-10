@@ -24,6 +24,7 @@ public record ShotRecordDto
     public decimal? PreinfusionTime { get; init; }
     
     public int? Rating { get; init; }
+    public string? TastingNotes { get; init; }
 }
 
 public record CreateShotDto
@@ -48,6 +49,7 @@ public record CreateShotDto
     public decimal? PreinfusionTime { get; init; }
     
     public int? Rating { get; init; }
+    public string? TastingNotes { get; init; }
 }
 
 /// <summary>
@@ -108,6 +110,11 @@ public record UpdateShotDto
     /// Required - cannot be null or empty.
     /// </summary>
     public string DrinkType { get; init; } = string.Empty;
+    
+    /// <summary>
+    /// Optional tasting notes (free text description of flavor, aroma, etc.)
+    /// </summary>
+    public string? TastingNotes { get; init; }
 }
 
 public record EquipmentDto

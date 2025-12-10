@@ -73,6 +73,7 @@ public class ShotService : IShotService
             ActualTime = dto.ActualTime,
             ActualOutput = dto.ActualOutput,
             Rating = dto.Rating,
+            TastingNotes = dto.TastingNotes,
             SyncId = Guid.NewGuid(),
             LastModifiedAt = DateTime.Now
         };
@@ -140,6 +141,7 @@ public class ShotService : IShotService
 
         shot.Rating = dto.Rating; // Can be null
         shot.DrinkType = dto.DrinkType;
+        shot.TastingNotes = dto.TastingNotes; // Can be null
         shot.LastModifiedAt = DateTime.Now;
 
         var updated = await _shotRepository.UpdateAsync(shot);
@@ -241,6 +243,77 @@ public class ShotService : IShotService
         return bestShot == null ? null : MapToDto(bestShot);
     }
 
+    public async Task<AIAdviceRequestDto?> GetShotContextForAIAsync(int shotId)
+    {
+        var shot = await _shotRepository.GetByIdAsync(shotId);
+        if (shot == null || shot.IsDeleted)
+            return null;
+
+        // Build current shot context
+        var currentShot = new ShotContextDto
+        {
+            DoseIn = shot.DoseIn,
+            ActualOutput = shot.ActualOutput,
+            ActualTime = shot.ActualTime,
+            GrindSetting = shot.GrindSetting,
+            Rating = shot.Rating,
+            TastingNotes = null, // TastingNotes field will be added in US4
+            Timestamp = shot.Timestamp
+        };
+
+        // Build bean context from bag
+        var bean = shot.Bag?.Bean;
+        var roastDate = shot.Bag?.RoastDate ?? DateTime.Now;
+        var beanContext = new BeanContextDto
+        {
+            Name = bean?.Name ?? "Unknown Bean",
+            Roaster = bean?.Roaster,
+            Origin = bean?.Origin,
+            RoastDate = roastDate,
+            DaysFromRoast = (int)(DateTime.Now - roastDate).TotalDays,
+            Notes = bean?.Notes
+        };
+
+        // Build equipment context
+        EquipmentContextDto? equipmentContext = null;
+        if (shot.Machine != null || shot.Grinder != null)
+        {
+            equipmentContext = new EquipmentContextDto
+            {
+                MachineName = shot.Machine?.Name,
+                GrinderName = shot.Grinder?.Name
+            };
+        }
+
+        // Get historical shots for same bag (up to 10, sorted by rating desc)
+        var allShots = await _shotRepository.GetAllAsync();
+        var historicalShots = allShots
+            .Where(s => s.BagId == shot.BagId && s.Id != shotId && !s.IsDeleted)
+            .OrderByDescending(s => s.Rating ?? -1)
+            .ThenByDescending(s => s.Timestamp)
+            .Take(10)
+            .Select(s => new ShotContextDto
+            {
+                DoseIn = s.DoseIn,
+                ActualOutput = s.ActualOutput,
+                ActualTime = s.ActualTime,
+                GrindSetting = s.GrindSetting,
+                Rating = s.Rating,
+                TastingNotes = null,
+                Timestamp = s.Timestamp
+            })
+            .ToList();
+
+        return new AIAdviceRequestDto
+        {
+            ShotId = shotId,
+            CurrentShot = currentShot,
+            HistoricalShots = historicalShots,
+            BeanInfo = beanContext,
+            Equipment = equipmentContext
+        };
+    }
+
     private ShotRecordDto MapToDto(ShotRecord shot) => new()
     {
         Id = shot.Id,
@@ -315,7 +388,8 @@ public class ShotService : IShotService
         DrinkType = shot.DrinkType,
         ActualTime = shot.ActualTime,
         ActualOutput = shot.ActualOutput,
-        Rating = shot.Rating
+        Rating = shot.Rating,
+        TastingNotes = shot.TastingNotes
     };
 
     private void ValidateCreateShot(CreateShotDto dto)

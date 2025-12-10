@@ -54,6 +54,15 @@
 
 		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+		
+		<!-- Platform-specific configuration files for Shiny -->
+		<!-- Android: Assets folder -->
+		<AndroidAsset Include="Platforms\Android\Assets\appsettings.json" />
+		<AndroidAsset Include="Platforms\Android\Assets\appsettings.Development.json" Condition="Exists('Platforms\Android\Assets\appsettings.Development.json')" />
+		
+		<!-- iOS: PROJECT ROOT with BundleResource (per Shiny docs) -->
+		<BundleResource Include="appsettings.json" Condition="$(TargetFramework.Contains('ios')) or $(TargetFramework.Contains('maccatalyst'))" />
+		<BundleResource Include="appsettings.Development.json" Condition="($(TargetFramework.Contains('ios')) or $(TargetFramework.Contains('maccatalyst'))) and Exists('appsettings.Development.json')" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -76,6 +85,7 @@
 		<!-- CoreSync (for future sync capability - using latest available version) -->
 		<PackageReference Include="CoreSync.Sqlite" Version="0.1.122" />
 		<PackageReference Include="CoreSync.Http.Client" Version="0.1.122" />
+		<PackageReference Include="Shiny.Extensions.Configuration" Version="3.3.4" />
 		<PackageReference Include="System.Reactive" Version="6.0.1" />
 		
 		<!-- UXDivers Popups for user feedback and modals -->
@@ -83,6 +93,11 @@
 
 		<!-- Syncfusion Radial Gauge for user input -->
 		<PackageReference Include="Syncfusion.Maui.Gauges" Version="31.2.16" />
+		
+		<!-- AI Advice Service -->
+		<PackageReference Include="Microsoft.Extensions.AI" Version="9.5.0-preview.1.25262.8" />
+		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="9.5.0-preview.1.25262.8" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>

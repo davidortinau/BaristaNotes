@@ -98,6 +98,10 @@ $RECYCLE.BIN/
 .env.local
 .env*.local
 
+# Development settings with API keys
+appsettings.Development.json
+**/appsettings.Development.json
+
 # NuGet Packages
 *.nupkg
 *.snupkg

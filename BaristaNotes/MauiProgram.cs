@@ -1,5 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
+using Shiny;
 using CommunityToolkit.Maui;
 using MauiReactor;
 using UXDivers.Popups.Maui;
@@ -66,11 +69,6 @@ public static class MauiProgram
 			.ConfigureMauiHandlers(handlers =>
 			{
 				ModifyEntrys();
-
-				// this sets the stage for Large Titles support in iOS
-				// #if IOS || MACCATALYST
-				// 				handlers.AddHandler<Microsoft.Maui.Controls.Shell, CustomShellRenderer>();
-				// #endif
 			})
 			.UseUXDiversPopups()
 			.UseMauiCommunityToolkit()
@@ -83,13 +81,27 @@ public static class MauiProgram
 				fonts.AddFont("coffee-icons.ttf", "coffee-icons");
 			});
 
-		// #if IOS || MACCATALYST
-		// 		// Custom shell renderer to enable large titles
-		// 		CustomShellRenderer.PrefersLargeTitles = true;
-		// #endif
-
 		// Register MauiReactor routes
 		RegisterRoutes();
+
+		// Load configuration using Shiny's platform bundle support
+		// This loads appsettings.json from platform-specific locations:
+		// - Android: Assets folder
+		// - iOS/Mac: Bundle Resources
+		// - Windows: Embedded resources
+		// In DEBUG mode, also loads appsettings.Development.json for local API keys
+#if DEBUG
+		builder.Configuration.AddJsonPlatformBundle("Development");
+#else
+		builder.Configuration.AddJsonPlatformBundle();
+#endif
+
+		// Register Syncfusion license
+		var sfKey = builder.Configuration["Syncfusion:Key"];
+		if (!string.IsNullOrEmpty(sfKey))
+		{
+			Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(sfKey);
+		}
 
 		// Database configuration
 		var dbPath = Path.Combine(FileSystem.AppDataDirectory, "barista_notes.db");
@@ -118,6 +130,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IPreferencesService, PreferencesService>();
 		builder.Services.AddSingleton<IFeedbackService, FeedbackService>();
 		builder.Services.AddSingleton<IThemeService, ThemeService>();
+		builder.Services.AddSingleton<IAIAdviceService, AIAdviceService>();
 
 		// Image services
 		builder.Services.AddSingleton<Microsoft.Maui.Media.IMediaPicker>(Microsoft.Maui.Media.MediaPicker.Default);

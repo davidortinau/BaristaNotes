@@ -53,6 +53,14 @@ public static class AppIcons
         Color = IconColor
     };
 
+    public static FontImageSource Ai => new()
+    {
+        FontFamily = MaterialSymbolsFont.FontFamily,
+        Glyph = MaterialSymbolsFont.Magic_button,
+        Size = 24,
+        Color = IconColor
+    };
+
     public static FontImageSource Add => new()
     {
         FontFamily = MaterialSymbolsFont.FontFamily,

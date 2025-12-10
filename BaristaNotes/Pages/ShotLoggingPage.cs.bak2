@@ -1,5 +1,4 @@
 using MauiReactor;
-using MauiReactor.Animations;
 using MauiReactor.Shapes;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
@@ -15,7 +14,6 @@ using Fonts;
 using Microsoft.Maui.Controls.PlatformConfiguration;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using Application = Microsoft.Maui.Controls.Application;
-using System.Diagnostics;
 
 
 namespace BaristaNotes.Pages;
@@ -56,14 +54,11 @@ class ShotLoggingState
 
     // Bean tracking for inline creation (T001)
     public List<BeanDto> AvailableBeans { get; set; } = new();
-
+    
     // AI advice state (for existing shots in edit/view mode)
     public bool IsLoadingAdvice { get; set; }
     public AIAdviceResponseDto? AdviceResponse { get; set; }
     public bool ShowAdviceSection { get; set; }
-
-    // Animation state for loading bar
-    public double LoadingBarPosition { get; set; } = -80;
 }
 
 class ShotLoggingPageProps
@@ -493,61 +488,46 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         }
 
         return ContentPage(Props.ShotId.HasValue ? "Edit Shot" : "New Shot",
-            Props.ShotId.HasValue ?
-                ToolbarItem("")
-                    .IconImageSource(AppIcons.Ai)
-                    .Order(MauiControls.ToolbarItemOrder.Primary)
-                    .OnClicked(async () => await RequestAdviceAsync())
-                : null,
+            ScrollView(
+                VStack(
+                    // Error message
+                    State.ErrorMessage != null ?
+                        Label(State.ErrorMessage)
+                            .TextColor(Colors.Red)
+                            .FontSize(14)
+                            .Margin(0, 8) :
+                        null,
 
-            Grid("Auto, *", "*",
-                // Row 0: Animated loading bar (outside ScrollView)
-                State.IsLoadingAdvice ? RenderAnimatedLoadingBar().GridRow(0) : null,
+                    // In/Out Gauges in 2-column grid
+                    RenderDoseGauges(),
 
-                // Row 1: Main scrollable content
-                ScrollView(
-                    VStack(
+                    new FormSliderField()
+                        .Label($"Time: {State.ActualTime?.ToString("F0") ?? "0"}s")
+                        .Minimum(0)
+                        .Maximum(60)
+                        .Value((double)(State.ActualTime ?? 0))
+                        .OnValueChanged(val => SetState(s => s.ActualTime = (decimal)val)),
 
-                        // AI Advice at top (inside ScrollView so it can scroll)
-                        State.ShowAdviceSection && State.AdviceResponse != null
-                            ? RenderAdviceDisplay()
-                            : null,
+                    // User Selection Row (Made By -> Made For)
+                    RenderUserSelectionRow(),
 
-                        // Error message
-                        State.ErrorMessage != null ?
-                            Label(State.ErrorMessage)
-                                .TextColor(Colors.Red)
-                                .FontSize(14)
-                                .Margin(0, 8) :
-                            null,
+                    // Rating
+                    RenderRatingSelector(),
 
-                        // In/Out Gauges in 2-column grid
-                        RenderDoseGauges(),
+                    // Tasting Notes (optional)
+                    VStack(spacing: 8,
+                        Label("Tasting Notes (optional)")
+                            .ThemeKey(ThemeKeys.FormLabel),
+                        Editor()
+                            .Text(State.TastingNotes ?? "")
+                            .OnTextChanged((s, e) => SetState(state => state.TastingNotes = e.NewTextValue))
+                            .Placeholder("E.g., bright, fruity, slightly sour...")
+                            .HeightRequest(80)
+                            .ThemeKey(ThemeKeys.Entry)
+                    ),
 
-                        new FormSliderField()
-                            .Label($"Time: {State.ActualTime?.ToString("F0") ?? "0"}s")
-                            .Minimum(0)
-                            .Maximum(60)
-                            .Value((double)(State.ActualTime ?? 0))
-                            .OnValueChanged(val => SetState(s => s.ActualTime = (decimal)val)),
-
-                        // User Selection Row (Made By -> Made For)
-                        RenderUserSelectionRow(),
-
-                        // Rating
-                        RenderRatingSelector(),
-
-                        // Tasting Notes (optional)
-                        VStack(spacing: 8,
-                            Label("Tasting Notes (optional)")
-                                .ThemeKey(ThemeKeys.FormLabel),
-                            Editor()
-                                .Text(State.TastingNotes ?? "")
-                                .OnTextChanged((s, e) => SetState(state => state.TastingNotes = e.NewTextValue))
-                                .Placeholder("E.g., bright, fruity, slightly sour...")
-                                .HeightRequest(80)
-                                .ThemeKey(ThemeKeys.Entry)
-                        ),
+                    // AI Advice Section (only show when editing/viewing existing shot)
+                    Props.ShotId.HasValue ? RenderAIAdviceSection() : null,
 
                     // Save Button
                     Button(Props.ShotId.HasValue ? "Update Shot" : "Add Shot")
@@ -648,65 +628,12 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
 
 
-                    ).Spacing(AppSpacing.M)
-                    .Padding(16, 0, 16, 32)
-                ).GridRow(1)
+                ).Spacing(AppSpacing.M)
+                .Padding(16, 0, 16, 32)
             )
         )
         .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
         .OnAppearing(() => OnPageAppearing());
-    }
-
-    VisualNode RenderAnimatedLoadingBar()
-    {
-        var isLightTheme = Application.Current?.RequestedTheme == AppTheme.Light;
-        var primaryColor = isLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary;
-        var surfaceColor = isLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
-
-        // Gradient brush: transparent at edges, solid color in center
-        var gradientBrush = new LinearGradientBrush
-        {
-            StartPoint = new Point(0, 0.5),
-            EndPoint = new Point(1, 0.5),
-            GradientStops = new GradientStopCollection
-            {
-                new GradientStop(Colors.Transparent, 0.0f),
-                new GradientStop(primaryColor, 0.5f),
-                new GradientStop(Colors.Transparent, 1.0f)
-            }
-        };
-
-        return Grid(
-            // Background track
-            BoxView()
-                .HeightRequest(4)
-                .Color(surfaceColor)
-                .HorizontalOptions(LayoutOptions.Fill),
-
-            // Animated bar segment with gradient - use lambda to read position reactively
-            BoxView()
-                .HeightRequest(4)
-                .WidthRequest(120)
-                .Background(gradientBrush)
-                .HorizontalOptions(LayoutOptions.Start)
-                .TranslationX(() => State.LoadingBarPosition),
-
-            // Animation controller for continuous looping
-            new AnimationController
-            {
-                new SequenceAnimation
-                {
-                    new DoubleAnimation()
-                        .StartValue(-120)
-                        .TargetValue(400) // Animate across screen width
-                        .Duration(TimeSpan.FromSeconds(1))
-                        .Easing(Easing.Linear)
-                        .OnTick(v => SetState(s => s.LoadingBarPosition = v, false))
-                }
-                .RepeatForever()
-            }
-            .IsEnabled(State.IsLoadingAdvice)
-        ).HeightRequest(4);
     }
 
     VisualNode RenderDoseGauges()
@@ -823,7 +750,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     new RadialAxis()
                         .Minimum(min)
                         .Maximum(max)
-                        .EnableLoadingAnimation(State.IsLoadingAdvice == false)
+                        .EnableLoadingAnimation(true)
                         .Interval((max - min) / 5)
                         .MinorTicksPerInterval(1)
                         .ShowLabels(true)
@@ -1285,111 +1212,34 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         public bool IsSelected { get; set; }
     }
 
-    VisualNode RenderAdviceDisplay()
+    // AI Advice Section for existing shots
+    VisualNode RenderAIAdviceSection()
     {
-        if (State.AdviceResponse == null) return null!;
-
-        var isLightTheme = Application.Current?.RequestedTheme == AppTheme.Light;
-        var secondaryTextColor = isLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
-
-        // Error state
-        if (!State.AdviceResponse.Success)
-        {
-            return Border(
-                VStack(spacing: 12,
-                    // Header with dismiss button
-                    Grid("Auto", "Auto, *, Auto",
-                        Label(MaterialSymbolsFont.Error)
-                            .FontFamily(MaterialSymbolsFont.FontFamily)
-                            .FontSize(24)
-                            .TextColor(Colors.Red)
-                            .VCenter()
-                            .GridColumn(0),
-                        Label("Could not get advice")
-                            .ThemeKey(ThemeKeys.CardTitle)
-                            .TextColor(Colors.Red)
-                            .VCenter()
-                            .Margin(8, 0, 0, 0)
-                            .GridColumn(1),
-                        // Dismiss button
-                        Border(
-                            Label(MaterialSymbolsFont.Close)
-                                .FontFamily(MaterialSymbolsFont.FontFamily)
-                                .FontSize(18)
-                                .TextColor(secondaryTextColor)
-                                .HCenter()
-                                .VCenter()
-                        )
-                        .StrokeThickness(0)
-                        .HeightRequest(32)
-                        .WidthRequest(32)
-                        .OnTapped(() => SetState(s => s.ShowAdviceSection = false))
-                        .GridColumn(2)
-                    ),
-
-                    Label(State.AdviceResponse.ErrorMessage ?? "An error occurred")
-                        .ThemeKey(ThemeKeys.SecondaryText)
-                        .LineBreakMode(Microsoft.Maui.LineBreakMode.WordWrap),
-
-                    Button("Try Again")
+        return VStack(spacing: 12,
+            HStack(spacing: 8,
+                Label("AI Advice")
+                    .ThemeKey(ThemeKeys.SubHeadline)
+                    .VCenter(),
+                
+                !State.IsLoadingAdvice && !State.ShowAdviceSection
+                    ? Button("Get Advice")
                         .OnClicked(async () => await RequestAdviceAsync())
-                        .HCenter()
-                )
-                .Padding(16)
-            )
-            .BackgroundColor(Colors.Red.WithAlpha(0.1f))
-            .Stroke(Colors.Red.WithAlpha(0.3f))
-            .StrokeThickness(1)
-            .Margin(0, 0, 0, AppSpacing.M);
-        }
-
-        // Success state
-        var primaryColor = isLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary;
-
-        return Border(
-            VStack(spacing: 12,
-                // Header with dismiss button
-                Grid("Auto", "Auto, *, Auto",
-                    Label(MaterialSymbolsFont.Auto_awesome)
-                        .FontFamily(MaterialSymbolsFont.FontFamily)
-                        .FontSize(20)
-                        .TextColor(primaryColor)
-                        .VCenter()
-                        .GridColumn(0),
-                    Label("AI Suggestions")
-                        .ThemeKey(ThemeKeys.CardTitle)
-                        .VCenter()
-                        .Margin(8, 0, 0, 0)
-                        .GridColumn(1),
-                    // Dismiss button
-                    Border(
-                        Label(MaterialSymbolsFont.Close)
-                            .FontFamily(MaterialSymbolsFont.FontFamily)
-                            .FontSize(18)
-                            .TextColor(secondaryTextColor)
-                            .HCenter()
-                            .VCenter()
-                    )
-                    .StrokeThickness(0)
-                    .HeightRequest(32)
-                    .WidthRequest(32)
-                    .OnTapped(() => SetState(s => s.ShowAdviceSection = false))
-                    .GridColumn(2)
-                ),
-
-                Label(State.AdviceResponse.Advice)
-                    .ThemeKey(ThemeKeys.PrimaryText)
-                    .LineBreakMode(Microsoft.Maui.LineBreakMode.WordWrap),
-
-                Button("Get New Advice")
-                    .OnClicked(async () => await RequestAdviceAsync())
-                    .HCenter()
-                    .Margin(0, 8, 0, 0)
-            )
-            .Padding(16)
+                        .HEnd()
+                    : null,
+                
+                State.IsLoadingAdvice
+                    ? ActivityIndicator().IsRunning(true).HEnd()
+                    : null
+            ),
+            
+            State.ShowAdviceSection
+                ? new AIAdviceDisplay()
+                    .IsLoading(State.IsLoadingAdvice)
+                    .Response(State.AdviceResponse)
+                    .OnRetry(async () => await RequestAdviceAsync())
+                : null
         )
-        .ThemeKey(ThemeKeys.CardBorder)
-        .Margin(0, 0, 0, AppSpacing.M);
+        .Margin(0, AppSpacing.L, 0, 0);
     }
 
     async Task RequestAdviceAsync()
@@ -1413,13 +1263,6 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             var response = await _aiAdviceService.GetAdviceForShotAsync(Props.ShotId.Value, cts.Token);
-
-            // var popup = new SimpleTextPopup
-            // {
-            //     Title = "AI Advice Retrieved",
-            //     Text = response.Advice ?? "No advice was generated."
-            // };
-            // await IPopupService.Current.PushAsync(popup);
 
             SetState(s =>
             {
@@ -1446,61 +1289,62 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 }
 
 // Converter classes
-class BoolToCheckIconConverter : IValueConverter
-{
-    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    class BoolToCheckIconConverter : IValueConverter
     {
-        return value is bool isSelected && isSelected
-            ? MaterialSymbolsFont.Check_circle
-            : MaterialSymbolsFont.Radio_button_unchecked;
+        public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            return value is bool isSelected && isSelected
+                ? MaterialSymbolsFont.Check_circle
+                : MaterialSymbolsFont.Radio_button_unchecked;
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
     }
 
-    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    // Converter to show check color based on selection state
+    class BoolToCheckColorConverter : IValueConverter
     {
-        throw new NotImplementedException();
-    }
-}
+        public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            return value is bool isSelected && isSelected
+                ? AppColors.Light.Primary
+                : Colors.Gray;
+        }
 
-// Converter to show check color based on selection state
-class BoolToCheckColorConverter : IValueConverter
-{
-    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
-    {
-        return value is bool isSelected && isSelected
-            ? AppColors.Light.Primary
-            : Colors.Gray;
-    }
-
-    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
-    {
-        throw new NotImplementedException();
-    }
-}
-
-// Converter to check if string is null or empty
-class NullOrEmptyConverter : IValueConverter
-{
-    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
-    {
-        return value == null || (value is string str && string.IsNullOrEmpty(str));
+        public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
     }
 
-    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    // Converter to check if string is null or empty
+    class NullOrEmptyConverter : IValueConverter
     {
-        throw new NotImplementedException();
-    }
-}
+        public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            return value == null || (value is string str && string.IsNullOrEmpty(str));
+        }
 
-// Converter to check if string is NOT null or empty
-class NotNullOrEmptyConverter : IValueConverter
-{
-    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
-    {
-        return value != null && value is string str && !string.IsNullOrEmpty(str);
+        public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
     }
 
-    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    // Converter to check if string is NOT null or empty
+    class NotNullOrEmptyConverter : IValueConverter
     {
-        throw new NotImplementedException();
+        public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            return value != null && value is string str && !string.IsNullOrEmpty(str);
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

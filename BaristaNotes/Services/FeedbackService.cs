@@ -76,7 +76,7 @@ public class FeedbackService : IFeedbackService
         };
 
         await IPopupService.Current.PushAsync(toast);
-        // await Task.Delay(2000);
-        // await IPopupService.Current.PopAsync(toast);
+        await Task.Delay(2000);
+        await IPopupService.Current.PopAsync(toast);
     }
 }

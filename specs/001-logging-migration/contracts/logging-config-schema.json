@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BaristaNotes Logging Configuration",
+  "description": "Configuration schema for Microsoft.Extensions.Logging in appsettings.json",
+  "type": "object",
+  "properties": {
+    "Logging": {
+      "type": "object",
+      "description": "Logging configuration section",
+      "properties": {
+        "LogLevel": {
+          "type": "object",
+          "description": "Log level configuration per category",
+          "properties": {
+            "Default": {
+              "type": "string",
+              "enum": ["Trace", "Debug", "Information", "Warning", "Error", "Critical"],
+              "default": "Information",
+              "description": "Default log level for all categories not explicitly configured"
+            },
+            "BaristaNotes": {
+              "type": "string",
+              "enum": ["Trace", "Debug", "Information", "Warning", "Error", "Critical"],
+              "description": "Log level for all BaristaNotes namespace classes"
+            },
+            "BaristaNotes.Services": {
+              "type": "string",
+              "enum": ["Trace", "Debug", "Information", "Warning", "Error", "Critical"],
+              "description": "Log level for all service classes"
+            },
+            "BaristaNotes.Pages": {
+              "type": "string",
+              "enum": ["Trace", "Debug", "Information", "Warning", "Error", "Critical"],
+              "description": "Log level for all page classes"
+            },
+            "Microsoft": {
+              "type": "string",
+              "enum": ["Trace", "Debug", "Information", "Warning", "Error", "Critical"],
+              "default": "Warning",
+              "description": "Log level for Microsoft framework classes"
+            }
+          },
+          "required": ["Default"],
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["Trace", "Debug", "Information", "Warning", "Error", "Critical"]
+          }
+        }
+      },
+      "required": ["LogLevel"]
+    }
+  },
+  "examples": [
+    {
+      "Logging": {
+        "LogLevel": {
+          "Default": "Information",
+          "BaristaNotes": "Information",
+          "Microsoft": "Warning"
+        }
+      }
+    },
+    {
+      "Logging": {
+        "LogLevel": {
+          "Default": "Debug",
+          "BaristaNotes": "Debug",
+          "BaristaNotes.Services": "Debug",
+          "Microsoft": "Warning"
+        }
+      }
+    }
+  ]
+}

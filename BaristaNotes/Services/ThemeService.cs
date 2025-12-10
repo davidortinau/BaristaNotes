@@ -1,10 +1,12 @@
 using BaristaNotes.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace BaristaNotes.Services;
 
 public class ThemeService : IThemeService
 {
     private readonly IPreferencesStore _preferencesStore;
+    private readonly ILogger<ThemeService> _logger;
     private const string ThemeModeKey = "AppThemeMode";
 
     private ThemeMode _currentMode = ThemeMode.System;
@@ -25,23 +27,24 @@ public class ThemeService : IThemeService
         }
     }
 
-    public ThemeService(IPreferencesStore preferencesStore)
+    public ThemeService(IPreferencesStore preferencesStore, ILogger<ThemeService> logger)
     {
         _preferencesStore = preferencesStore;
+        _logger = logger;
 
         // Initialize _currentMode from stored preferences
         var saved = _preferencesStore.Get(ThemeModeKey, string.Empty);
         if (!string.IsNullOrEmpty(saved) && Enum.TryParse<ThemeMode>(saved, out var mode))
         {
             _currentMode = mode;
-            System.Diagnostics.Debug.WriteLine($"[ThemeService] Loaded saved theme mode: {_currentMode}");
+            _logger.LogDebug("Loaded saved theme mode: {ThemeMode}", _currentMode);
         }
 
         // Subscribe to system theme changes
         if (Application.Current != null)
         {
             Application.Current.RequestedThemeChanged += OnSystemThemeChanged;
-            System.Diagnostics.Debug.WriteLine($"[ThemeService] Subscribed to RequestedThemeChanged event");
+            _logger.LogDebug("Subscribed to RequestedThemeChanged event");
         }
     }
 
@@ -57,7 +60,7 @@ public class ThemeService : IThemeService
 
     public Task SetThemeModeAsync(ThemeMode mode)
     {
-        System.Diagnostics.Debug.WriteLine($"[ThemeService] SetThemeModeAsync called with mode: {mode}");
+        _logger.LogDebug("SetThemeModeAsync called with mode: {Mode}", mode);
         _currentMode = mode;
         _preferencesStore.Set(ThemeModeKey, mode.ToString());
         ApplyTheme();
@@ -78,23 +81,25 @@ public class ThemeService : IThemeService
             _ => AppTheme.Unspecified
         };
 
-        System.Diagnostics.Debug.WriteLine($"[ThemeService] ApplyTheme: CurrentMode={_currentMode}, TargetTheme={targetTheme}, SystemTheme={Application.Current.RequestedTheme}");
+        _logger.LogDebug("ApplyTheme: CurrentMode={CurrentMode}, TargetTheme={TargetTheme}, SystemTheme={SystemTheme}", 
+            _currentMode, targetTheme, Application.Current.RequestedTheme);
         Application.Current.UserAppTheme = targetTheme;
     }
 
     private void OnSystemThemeChanged(object? sender, AppThemeChangedEventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine($"[ThemeService] OnSystemThemeChanged fired: NewTheme={e.RequestedTheme}, CurrentMode={_currentMode}");
+        _logger.LogDebug("OnSystemThemeChanged fired: NewTheme={NewTheme}, CurrentMode={CurrentMode}", 
+            e.RequestedTheme, _currentMode);
 
         // Only react to system theme changes if we're in System mode
         if (_currentMode == ThemeMode.System)
         {
-            System.Diagnostics.Debug.WriteLine($"[ThemeService] Applying theme because CurrentMode is System");
+            _logger.LogDebug("Applying theme because CurrentMode is System");
             ApplyTheme();
         }
         else
         {
-            System.Diagnostics.Debug.WriteLine($"[ThemeService] Ignoring system theme change because CurrentMode is {_currentMode}");
+            _logger.LogDebug("Ignoring system theme change because CurrentMode is {CurrentMode}", _currentMode);
         }
     }
 }

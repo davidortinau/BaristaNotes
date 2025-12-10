@@ -108,6 +108,9 @@ public static class MauiProgram
 		builder.Services.AddDbContext<BaristaNotesContext>(options =>
 			options.UseSqlite($"Data Source={dbPath}"));
 
+		// Bootstrap logging: Console.WriteLine used here because ILogger<T> is not available
+		// during DI container build phase (circular dependency). This is the only acceptable
+		// use of Console.WriteLine in the application.
 		Console.WriteLine($"Database path: {dbPath}");
 
 		// Register Repositories (scoped)

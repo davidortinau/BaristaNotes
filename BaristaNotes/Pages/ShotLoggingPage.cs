@@ -16,6 +16,7 @@ using Microsoft.Maui.Controls.PlatformConfiguration;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using Application = Microsoft.Maui.Controls.Application;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 
 namespace BaristaNotes.Pages;
@@ -96,6 +97,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
     [Inject]
     IAIAdviceService _aiAdviceService;
+
+    [Inject]
+    ILogger<ShotLoggingPage> _logger;
 
     protected override void OnMounted()
     {
@@ -226,12 +230,13 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     {
         try
         {
-            System.Diagnostics.Debug.WriteLine($"[ShotLoggingPage] LoadBestShotSettingsAsync called for bagId: {bagId}");
+            _logger.LogDebug("LoadBestShotSettingsAsync called for bagId: {BagId}", bagId);
             var bestShot = await _shotService.GetBestRatedShotByBagAsync(bagId);
 
             if (bestShot != null)
             {
-                System.Diagnostics.Debug.WriteLine($"[ShotLoggingPage] Found best shot: DoseIn={bestShot.DoseIn}, GrindSetting={bestShot.GrindSetting}, ExpectedOutput={bestShot.ExpectedOutput}, ExpectedTime={bestShot.ExpectedTime}");
+                _logger.LogDebug("Found best shot: DoseIn={DoseIn}g, GrindSetting={GrindSetting}, ExpectedOutput={ExpectedOutput}g, ExpectedTime={ExpectedTime}s",
+                    bestShot.DoseIn, bestShot.GrindSetting, bestShot.ExpectedOutput, bestShot.ExpectedTime);
                 SetState(s =>
                 {
                     s.DoseIn = bestShot.DoseIn;
@@ -243,13 +248,13 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"[ShotLoggingPage] No rated shots found for bagId: {bagId}");
+                _logger.LogDebug("No rated shots found for bagId: {BagId}", bagId);
                 await _feedbackService.ShowSuccessAsync("No rated shots found for this bag");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[ShotLoggingPage] Error loading best shot settings: {ex.Message}");
+            _logger.LogError(ex, "Error loading best shot settings");
             await _feedbackService.ShowErrorAsync("Failed to load shot settings");
         }
     }
@@ -288,13 +293,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
                 await _shotService.UpdateShotAsync(Props.ShotId.Value, updateDto);
 
-                System.Diagnostics.Debug.WriteLine("[ShotLoggingPage] About to call ShowSuccessAsync");
                 await _feedbackService.ShowSuccessAsync("Shot updated successfully");
-                System.Diagnostics.Debug.WriteLine("[ShotLoggingPage] ShowSuccessAsync completed");
 
-                System.Diagnostics.Debug.WriteLine("[ShotLoggingPage] About to navigate back");
                 // await Navigation.PopAsync();
-                System.Diagnostics.Debug.WriteLine("[ShotLoggingPage] Navigation completed");
             }
             // Add mode: Create new shot
             else

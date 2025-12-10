@@ -63,7 +63,25 @@ public record UpdateShotDto
     /// Optional - null means no change to existing value.
     /// Allows correcting bag selection mistakes.
     /// </summary>
-    public int? BagId { get; init; }  // Changed from BeanId - Phase 4 (T038)
+    public int? BagId { get; init; }
+    
+    /// <summary>
+    /// Machine used for the shot.
+    /// Optional - null means no change to existing value.
+    /// </summary>
+    public int? MachineId { get; init; }
+    
+    /// <summary>
+    /// Grinder used for the shot.
+    /// Optional - null means no change to existing value.
+    /// </summary>
+    public int? GrinderId { get; init; }
+    
+    /// <summary>
+    /// Accessories used for the shot.
+    /// Optional - null means no change to existing value.
+    /// </summary>
+    public List<int>? AccessoryIds { get; init; }
     
     /// <summary>
     /// User who pulled the shot (barista).
@@ -110,6 +128,30 @@ public record UpdateShotDto
     /// Required - cannot be null or empty.
     /// </summary>
     public string DrinkType { get; init; } = string.Empty;
+    
+    /// <summary>
+    /// Input dose weight in grams.
+    /// Optional - null means no change to existing value.
+    /// </summary>
+    public decimal? DoseIn { get; init; }
+    
+    /// <summary>
+    /// Grind setting used.
+    /// Optional - null means no change to existing value.
+    /// </summary>
+    public string? GrindSetting { get; init; }
+    
+    /// <summary>
+    /// Expected extraction time in seconds.
+    /// Optional - null means no change to existing value.
+    /// </summary>
+    public decimal? ExpectedTime { get; init; }
+    
+    /// <summary>
+    /// Expected output weight in grams.
+    /// Optional - null means no change to existing value.
+    /// </summary>
+    public decimal? ExpectedOutput { get; init; }
     
     /// <summary>
     /// Optional tasting notes (free text description of flavor, aroma, etc.)

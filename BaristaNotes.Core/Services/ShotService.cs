@@ -125,6 +125,27 @@ public class ShotService : IShotService
         if (dto.BagId.HasValue)
             shot.BagId = dto.BagId.Value;
 
+        // Update equipment if provided
+        if (dto.MachineId.HasValue)
+            shot.MachineId = dto.MachineId.Value;
+
+        if (dto.GrinderId.HasValue)
+            shot.GrinderId = dto.GrinderId.Value;
+
+        // Update accessories if provided
+        if (dto.AccessoryIds != null)
+        {
+            shot.ShotEquipments.Clear();
+            foreach (var accessoryId in dto.AccessoryIds)
+            {
+                shot.ShotEquipments.Add(new Models.ShotEquipment 
+                { 
+                    ShotRecordId = shot.Id, 
+                    EquipmentId = accessoryId 
+                });
+            }
+        }
+
         // Update maker/recipient if provided
         if (dto.MadeById.HasValue)
             shot.MadeById = dto.MadeById.Value;
@@ -132,7 +153,20 @@ public class ShotService : IShotService
         if (dto.MadeForId.HasValue)
             shot.MadeForId = dto.MadeForId.Value;
 
-        // Update only editable fields
+        // Update setup fields if provided
+        if (dto.DoseIn.HasValue)
+            shot.DoseIn = dto.DoseIn.Value;
+
+        if (dto.GrindSetting != null)
+            shot.GrindSetting = dto.GrindSetting;
+
+        if (dto.ExpectedTime.HasValue)
+            shot.ExpectedTime = dto.ExpectedTime.Value;
+
+        if (dto.ExpectedOutput.HasValue)
+            shot.ExpectedOutput = dto.ExpectedOutput.Value;
+
+        // Update result fields
         if (dto.ActualTime.HasValue)
             shot.ActualTime = dto.ActualTime.Value;
 

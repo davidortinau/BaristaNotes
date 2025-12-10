@@ -270,8 +270,15 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 var updateDto = new UpdateShotDto
                 {
                     BagId = State.SelectedBagId.Value,
+                    MachineId = State.SelectedMachineId,
+                    GrinderId = State.SelectedGrinderId,
+                    AccessoryIds = State.SelectedAccessoryIds,
                     MadeById = State.SelectedMaker?.Id,
                     MadeForId = State.SelectedRecipient?.Id,
+                    DoseIn = State.DoseIn,
+                    GrindSetting = State.GrindSetting,
+                    ExpectedTime = State.ExpectedTime,
+                    ExpectedOutput = State.ExpectedOutput,
                     ActualTime = State.ActualTime,
                     ActualOutput = State.ActualOutput,
                     Rating = State.Rating > 0 ? State.Rating : null,
@@ -492,6 +499,15 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             .OnAppearing(() => OnPageAppearing());
         }
 
+        SafeAreaEdges safeEdges = DeviceDisplay.Current.MainDisplayInfo.Rotation switch
+        {
+            DisplayRotation.Rotation0 => new(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None),
+            DisplayRotation.Rotation90 => new(SafeAreaRegions.All, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None),
+            DisplayRotation.Rotation180 => new(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None),
+            DisplayRotation.Rotation270 => new(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.All, SafeAreaRegions.None),
+            _ => new(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None)
+        };
+
         return ContentPage(Props.ShotId.HasValue ? "Edit Shot" : "New Shot",
             Props.ShotId.HasValue ?
                 ToolbarItem("")
@@ -651,7 +667,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     ).Spacing(AppSpacing.M)
                     .Padding(16, 0, 16, 32)
                 ).GridRow(1)
-            )
+            ).SafeAreaEdges(safeEdges)
         )
         .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
         .OnAppearing(() => OnPageAppearing());
@@ -823,7 +839,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     new RadialAxis()
                         .Minimum(min)
                         .Maximum(max)
-                        .EnableLoadingAnimation(State.IsLoadingAdvice == false)
+                        .EnableLoadingAnimation(State.ShowAdviceSection == false)
                         .Interval((max - min) / 5)
                         .MinorTicksPerInterval(1)
                         .ShowLabels(true)

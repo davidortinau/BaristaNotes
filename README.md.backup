@@ -11,7 +11,6 @@ BaristaNotes helps coffee enthusiasts track and analyze their espresso shots. Bu
 ### What You Can Do
 
 - **Track Espresso Shots**: Log detailed parameters including dose, grind setting, extraction time, output weight, and taste ratings (0-4 scale using sentiment icons)
-- **Get AI-Powered Espresso Advice**: Receive personalized improvement suggestions based on your shot parameters, equipment, and historical data using Microsoft.Extensions.AI integration with OpenAI
 - **Manage Coffee Beans**: Store information about different coffee beans with roaster and origin details
 - **Track Coffee Bags**: Manage multiple physical bags of the same bean variety, each with its own roast date and inventory status
 - **View Rating Aggregates**: See bean-level and bag-level rating statistics with distribution charts to identify your best beans and roasting batches
@@ -20,37 +19,6 @@ BaristaNotes helps coffee enthusiasts track and analyze their espresso shots. Bu
 - **User Profiles**: Support multiple users (maker and recipient) with custom avatars
 - **Activity Feed**: Review shot history with filtering and sorting capabilities
 - **Dark Mode**: Full theme support with coffee-inspired color palettes
-
-## AI Features
-
-BaristaNotes includes AI-powered espresso advice to help you improve your shots. Using Microsoft.Extensions.AI with OpenAI's GPT-4o-mini model, the app analyzes your shot parameters, equipment, bean characteristics, and historical data to provide personalized suggestions.
-
-### How It Works
-
-1. **Log Your Shot**: Record your espresso parameters as usual (dose, grind, time, output, taste rating, and optional tasting notes)
-2. **Get Advice**: Tap on any shot in your Activity Feed to view details, then tap "Get Advice"
-3. **Receive Suggestions**: The AI analyzes your shot against your historical data and provides context-aware recommendations for improvement
-
-### AI Service Architecture
-
-The AI advice feature is built on a clean, testable architecture:
-
-- **AIAdviceService**: Implements `IAIAdviceService` using Microsoft.Extensions.AI abstractions, making it easy to swap AI providers (OpenAI, Azure OpenAI, local models) without changing application code
-- **AIPromptBuilder**: Generates context-rich prompts from your shot data, including:
-  - Current shot parameters (dose, grind, extraction time, output)
-  - Bean information (origin, roast date, flavor notes)
-  - Equipment details (machine, grinder settings)
-  - Historical shot data (your past successes and experiments)
-  - Tasting notes for flavor context
-- **Context Generation**: Creates `ShotContextDto`, `BeanContextDto`, and `EquipmentContextDto` objects that provide the AI with relevant information for accurate advice
-
-### AI Model
-
-The app uses **OpenAI's GPT-4o-mini** model, which provides fast, cost-effective responses while maintaining high-quality espresso expertise. The model is prompted with detailed context about your specific setup and preferences.
-
-### Configuration
-
-AI features are optional and require an OpenAI API key for development. See the [Getting Started](#getting-started) section below for configuration instructions. For production apps, API keys should be retrieved from a secure backend rather than embedded in the app binary.
 
 ## Educational Purpose
 
@@ -89,9 +57,6 @@ This project serves as a learning resource for:
 - **UXDivers.Popups.Maui 0.9.0**: Modal dialogs and user feedback
 - **The49.Maui.BottomSheet 8.0.3**: Bottom sheet UI pattern
 - **Syncfusion.Maui.Gauges 31.2.16**: Radial gauge for interactive ratings
-- **Shiny.Extensions.Configuration 3.3.4**: Platform-aware configuration loading for cross-platform apps
-- **Microsoft.Extensions.AI 9.5.0-preview**: AI service abstractions for provider-agnostic integration
-- **Microsoft.Extensions.AI.OpenAI 9.5.0-preview**: OpenAI implementation for AI advice features
 
 ## Architecture
 
@@ -172,42 +137,6 @@ For detailed architecture documentation, see:
 ```bash
 dotnet test BaristaNotes.Tests/BaristaNotes.Tests.csproj
 ```
-
-### Configure AI Features (Optional)
-
-To use the AI-powered espresso advice feature, you'll need to configure an OpenAI API key:
-
-1. **Get an OpenAI API Key**:
-   - Sign up at [OpenAI Platform](https://platform.openai.com/)
-   - Navigate to API Keys section and create a new key
-   - Copy the key (starts with `sk-proj-...`)
-
-2. **Create Platform-Specific Configuration File**:
-
-   **For iOS/Mac**:
-   - Create a file named `appsettings.Development.json` in the `BaristaNotes/` directory (project root)
-   - Add the following content:
-     ```json
-     {
-         "OpenAI": {
-             "ApiKey": "sk-proj-YOUR_KEY_HERE"
-         }
-     }
-     ```
-
-   **For Android**:
-   - Create a file named `appsettings.Development.json` in `BaristaNotes/Platforms/Android/Assets/`
-   - Add the same JSON content as above
-
-3. **Verify File is Gitignored**:
-   - Run `git status` to confirm the Development file is not listed
-   - The `.gitignore` file includes `**/appsettings.Development.json` to prevent accidentally committing secrets
-
-4. **Build and Run**:
-   - The app automatically loads the Development configuration in DEBUG mode
-   - Run the app, log a shot, then tap "Get Advice" to test the AI feature
-
-⚠️ **Security Note**: Never commit API keys to source control. The Development configuration files are gitignored specifically to prevent this. For production apps, retrieve API keys from a secure backend API instead of embedding them in the app binary.
 
 ## Key Concepts Demonstrated
 
@@ -349,7 +278,7 @@ Reusable UI components following the composition pattern:
 
 BaristaNotes uses SQLite with Entity Framework Core. Key entities:
 
-- **ShotRecord**: Espresso shot data (dose, time, output, rating 0-4, timestamp, tastingNotes for AI context)
+- **ShotRecord**: Espresso shot data (dose, time, output, rating 0-4, timestamp)
 - **Bean**: Coffee bean variety information (name, roaster, origin)
 - **Bag**: Physical bag of a bean with specific roast date and completion status
 - **Equipment**: Machines, grinders, and accessories
@@ -362,8 +291,6 @@ Relationships:
 - Shot → UserProfile (maker and recipient, many-to-one each)
 
 **Bean-Bag-Shot Hierarchy**: This three-level structure allows tracking rating aggregates at both the bean level (across all bags) and individual bag level (per roasting batch), helping users identify which beans to reorder and which roast dates produced the best results.
-
-**TastingNotes Field**: The ShotRecord includes a `TastingNotes` string field that captures flavor observations (e.g., "bright, fruity, slightly sour"). This field provides valuable context for the AI advice feature, allowing the system to understand the flavor profile and suggest improvements tailored to taste preferences.
 
 For complete schema documentation, see [DATA_LAYER.md](docs/DATA_LAYER.md).
 

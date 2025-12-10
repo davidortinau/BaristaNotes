@@ -1,12 +1,20 @@
 using BaristaNotes.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace BaristaNotes.Services;
 
 public class ImageProcessingService : IImageProcessingService
 {
+    private readonly ILogger<ImageProcessingService> _logger;
+    
     private const int MaxFileSize = 1_048_576; // 1MB
     private const int MaxDimension = 400;
     private const int MinDimension = 100;
+
+    public ImageProcessingService(ILogger<ImageProcessingService> logger)
+    {
+        _logger = logger;
+    }
 
     public async Task<ImageValidationResult> ValidateImageAsync(Stream imageStream)
     {
@@ -34,7 +42,7 @@ public class ImageProcessingService : IImageProcessingService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Image validation error: {ex.Message}");
+            _logger.LogError(ex, "Image validation error");
             return ImageValidationResult.ProcessingFailed;
         }
     }
@@ -60,7 +68,7 @@ public class ImageProcessingService : IImageProcessingService
         using var fileStream = File.Create(path);
         await memoryStream.CopyToAsync(fileStream);
 
-        Console.WriteLine($"Image saved to: {path}, size: {memoryStream.Length} bytes");
+        _logger.LogDebug("Image saved to: {Path}, size: {SizeBytes} bytes", path, memoryStream.Length);
 
         return path;
     }

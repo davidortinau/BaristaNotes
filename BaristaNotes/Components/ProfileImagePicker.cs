@@ -125,7 +125,6 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
                 s.ErrorMessage = "Failed to update image";
                 s.IsLoading = false;
             });
-            Console.WriteLine($"Error: {ex.Message}");
         }
     }
 
@@ -160,7 +159,6 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
                 s.ErrorMessage = "Failed to remove image";
                 s.IsLoading = false;
             });
-            Console.WriteLine($"Error: {ex.Message}");
         }
     }
 

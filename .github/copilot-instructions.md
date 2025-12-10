@@ -37,6 +37,66 @@ tests/
 
 C# / .NET 10.0: Follow standard conventions
 
+## Logging Standards (MANDATORY)
+
+**REQUIRED**: All services and components MUST use Microsoft.Extensions.Logging for diagnostic output.
+
+### Core Rules
+
+1. **No Debug.WriteLine or Console.WriteLine** in new code (except MauiProgram.cs bootstrap only)
+2. **ILogger<T> injection** required for all new services via constructor dependency injection
+3. **Message templates** with named parameters (PascalCase) - NO string interpolation
+4. **Appropriate severity levels**: Debug (diagnostics), Information (significant events), Warning (recoverable issues), Error (failures with exceptions)
+
+### Pattern Examples
+
+```csharp
+// ✅ CORRECT: Constructor injection + message template
+public class MyService
+{
+    private readonly ILogger<MyService> _logger;
+    
+    public MyService(ILogger<MyService> logger)
+    {
+        _logger = logger;
+    }
+    
+    public async Task ProcessAsync(string bagId)
+    {
+        _logger.LogDebug("Processing bagId: {BagId}", bagId);
+        try 
+        {
+            // work
+            _logger.LogInformation("Processed {Count} items for bagId: {BagId}", count, bagId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing bagId: {BagId}", bagId);
+            throw;
+        }
+    }
+}
+
+// ❌ WRONG: Debug.WriteLine
+Debug.WriteLine($"Processing {bagId}"); // NEVER DO THIS
+
+// ❌ WRONG: Console.WriteLine  
+Console.WriteLine("Error: " + ex.Message); // NEVER DO THIS
+
+// ❌ WRONG: String interpolation in log message
+_logger.LogDebug($"Processing {bagId}"); // NEVER DO THIS
+```
+
+### Configuration
+
+- **Development**: Debug level enabled (appsettings.Development.json)
+- **Production**: Information level minimum (appsettings.json)
+- **Per-service overrides**: Supported via appsettings Logging.LogLevel section
+
+### Reference
+
+See `specs/001-logging-migration/quickstart.md` for complete patterns and examples.
+
 ## Recent Changes
 - 001-bean-rating-tracking: Added C# .NET 10.0 + .NET MAUI 10.0, Entity Framework Core 10.0, SQLite, Reactor.Maui 4.0.3-beta
 - 004-bean-detail-page: Added C# 12, .NET 10.0 + MauiReactor (UI), UXDivers.Popups.Maui (feedback), Microsoft.EntityFrameworkCore (data)

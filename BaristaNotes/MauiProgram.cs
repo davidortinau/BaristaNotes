@@ -215,5 +215,6 @@ public static class MauiProgram
 		MauiReactor.Routing.RegisterRoute<Pages.UserProfileManagementPage>("profiles");
 		MauiReactor.Routing.RegisterRoute<Pages.ProfileFormPage>("profile-form");
 		MauiReactor.Routing.RegisterRoute<Pages.ShotLoggingPage>("shot-logging");
+		MauiReactor.Routing.RegisterRoute<Pages.BagFormPage>("bag-form");
 	}
 }

@@ -380,9 +380,19 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 )
                 .Padding(16)
             )
-        ).Title(title);
+        ).Title(title)
+        .OnAppearing(OnPageAppearing);
 
         return page;
+    }
+
+    void OnPageAppearing()
+    {
+        // Refresh bags when returning from BagFormPage
+        if (State.BeanId.HasValue && State.BeanId.Value > 0)
+        {
+            _ = LoadBagsAsync();
+        }
     }
 
     VisualNode RenderForm()

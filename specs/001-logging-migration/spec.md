@@ -1,3 +1,4 @@
+<!--CLOSED: 2025-12-10-->
 # Feature Specification: Migrate to Structured Logging
 
 **Feature Branch**: `001-logging-migration`  

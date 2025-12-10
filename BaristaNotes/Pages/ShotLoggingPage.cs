@@ -293,7 +293,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 System.Diagnostics.Debug.WriteLine("[ShotLoggingPage] ShowSuccessAsync completed");
 
                 System.Diagnostics.Debug.WriteLine("[ShotLoggingPage] About to navigate back");
-                await Navigation.PopAsync();
+                // await Navigation.PopAsync();
                 System.Diagnostics.Debug.WriteLine("[ShotLoggingPage] Navigation completed");
             }
             // Add mode: Create new shot
@@ -1356,7 +1356,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             .BackgroundColor(Colors.Red.WithAlpha(0.1f))
             .Stroke(Colors.Red.WithAlpha(0.3f))
             .StrokeThickness(1)
-            .Margin(0, 0, 0, AppSpacing.M);
+            .Margin(0, AppSpacing.M, 0, AppSpacing.M);
         }
 
         // Success state

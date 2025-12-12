@@ -15,6 +15,7 @@ using Fonts;
 using BaristaNotes.Styles;
 using Microsoft.Maui.Handlers;
 using Syncfusion.Maui.Core.Hosting;
+// using Microsoft.Maui.Essentials.AI;
 
 #if IOS
 using BaristaNotes.Platforms.iOS;
@@ -112,6 +113,8 @@ public static class MauiProgram
 		// during DI container build phase (circular dependency). This is the only acceptable
 		// use of Console.WriteLine in the application.
 		Console.WriteLine($"Database path: {dbPath}");
+
+		// builder.Services.AddPlatformChatClient();
 
 		// Register Repositories (scoped)
 		builder.Services.AddScoped<IEquipmentRepository, EquipmentRepository>();

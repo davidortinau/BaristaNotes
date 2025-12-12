@@ -294,10 +294,6 @@ class ApplicationTheme : Theme
         // Additional semantic theme keys
 
         // Label themes for text hierarchy
-        LabelStyles.Themes[ThemeKeys.TextSecondary] = _ => _
-            .TextColor(IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)
-            .FontSize(14);
-
         LabelStyles.Themes[ThemeKeys.Caption] = _ => _
             .TextColor(IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)
             .FontSize(12);

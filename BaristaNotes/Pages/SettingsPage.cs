@@ -36,7 +36,7 @@ partial class SettingsPage : Component<SettingsPageState>
                 VStack(spacing: 16,
                     // Appearance section
                     Label("Appearance")
-                        .ThemeKey(ThemeKeys.TextSecondary)
+                        .ThemeKey(ThemeKeys.SecondaryText)
                         .Padding(16, 16, 16, 8),
 
                     // Theme selection - horizontal compact
@@ -49,7 +49,7 @@ partial class SettingsPage : Component<SettingsPageState>
 
                     // Manage section header
                     Label("Manage")
-                        .ThemeKey(ThemeKeys.TextSecondary)
+                        .ThemeKey(ThemeKeys.SecondaryText)
                         .Padding(16, 24, 16, 8),
 
                     // Equipment management option
@@ -72,7 +72,7 @@ partial class SettingsPage : Component<SettingsPageState>
 
                     // About section
                     Label("About")
-                        .ThemeKey(ThemeKeys.TextSecondary)
+                        .ThemeKey(ThemeKeys.SecondaryText)
                         .Padding(16, 24, 16, 8),
 
                     Border(
@@ -81,9 +81,9 @@ partial class SettingsPage : Component<SettingsPageState>
                                 .FontSize(16)
                                 .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold),
                             Label("Version 1.0")
-                                .ThemeKey(ThemeKeys.TextSecondary),
+                                .ThemeKey(ThemeKeys.SecondaryText),
                             Label("Track your espresso journey")
-                                .ThemeKey(ThemeKeys.TextSecondary)
+                                .ThemeKey(ThemeKeys.SecondaryText)
                         )
                         .Padding(16)
                     )
@@ -138,12 +138,12 @@ partial class SettingsPage : Component<SettingsPageState>
                         .FontSize(16)
                         .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold),
                     Label(description)
-                        .ThemeKey(ThemeKeys.TextSecondary)
+                        .ThemeKey(ThemeKeys.SecondaryText)
                 )
                 .VCenter(),
                 Label("›")
                     .FontSize(20)
-                    .ThemeKey(ThemeKeys.TextSecondary)
+                    .ThemeKey(ThemeKeys.SecondaryText)
                     .GridColumn(1)
                     .VCenter()
             )

@@ -826,9 +826,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
             // Ratio label (center column, bottom row)
             Label(ratio)
-                .TextColor(textColor)
-                .FontSize(16)
-                .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
+                .ThemeKey(ThemeKeys.SecondaryText)
                 .HCenter()
                 .VCenter()
                 .GridColumn(1)

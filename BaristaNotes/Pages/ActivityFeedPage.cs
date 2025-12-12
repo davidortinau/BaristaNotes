@@ -260,7 +260,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                         .IconImageSource(AppIcons.Edit)
                         .OnInvoked(() => NavigateToEdit(shot.Id))
                 ])
-                .Margin(0, 4)
+                .Margin(16, 4)
             )
             .RemainingItemsThreshold(5)
             .OnRemainingItemsThresholdReached(() =>
@@ -270,9 +270,11 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                     _ = LoadMoreShotsAsync();
                 }
             })
+            .Header(
+                ContentView().HeightRequest(16)
+            )
             .Footer(
                 ContentView().HeightRequest(80)
-            )
-            .Margin(16, 16, 16, 32);
+            );
     }
 }

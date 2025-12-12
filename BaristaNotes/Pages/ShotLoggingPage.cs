@@ -739,7 +739,12 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                            (State.SelectedGrinderId.HasValue ? 1 : 0) +
                            State.SelectedAccessoryIds.Count;
 
-        return Grid("Auto", "*, Auto, *",
+        // Calculate ratio
+        var ratio = State.DoseIn > 0 && State.ActualOutput.HasValue && State.ActualOutput.Value > 0
+            ? $"1:{(State.ActualOutput.Value / State.DoseIn):F1}"
+            : "1:0";
+
+        return Grid("Auto, Auto", "*, Auto, *",
             // In Gauge (left column)
             Grid(
                 RenderSingleGauge(
@@ -759,7 +764,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .FontSize(24)
                     .HCenter()
                     .VEnd()
-            ).GridColumn(0),
+            ).GridColumn(0).GridRow(0),
 
             // Equipment button (center column)
             Grid(
@@ -796,7 +801,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .VStart()
                     .Margin(0, -4, -4, 0) : null
             )
-            .GridColumn(1).VCenter(),
+            .GridColumn(1).GridRow(0).VCenter(),
 
             // Out Gauge (right column)
             Grid(
@@ -817,7 +822,18 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .FontSize(24)
                     .HCenter()
                     .VEnd()
-            ).GridColumn(2)
+            ).GridColumn(2).GridRow(0),
+
+            // Ratio label (center column, bottom row)
+            Label(ratio)
+                .TextColor(textColor)
+                .FontSize(16)
+                .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
+                .HCenter()
+                .VCenter()
+                .GridColumn(1)
+                .GridRow(1)
+                .Margin(0, 8, 0, 0)
         );
     }
 

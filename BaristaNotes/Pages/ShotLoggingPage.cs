@@ -739,16 +739,12 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                            (State.SelectedGrinderId.HasValue ? 1 : 0) +
                            State.SelectedAccessoryIds.Count;
 
-        // Calculate ratio
-        var ratio = State.DoseIn > 0 && State.ActualOutput.HasValue && State.ActualOutput.Value > 0
-            ? $"1:{(State.ActualOutput.Value / State.DoseIn):F1}"
-            : "1:0";
-
         return Grid("Auto, Auto", "*, Auto, *",
             // In Gauge (left column)
             Grid(
                 RenderSingleGauge(
                     value: (double)State.DoseIn,
+                    getValueText: () => State.DoseIn.ToString("F1"),
                     min: 15,
                     max: 20,
                     primaryColor: primaryColor,
@@ -807,6 +803,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             Grid(
                 RenderSingleGauge(
                     value: (double)(State.ActualOutput ?? 0),
+                    getValueText: () => (State.ActualOutput ?? 0).ToString("F1"),
                     min: 25,
                     max: 50,
                     primaryColor: primaryColor,
@@ -824,8 +821,10 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .VEnd()
             ).GridColumn(2).GridRow(0),
 
-            // Ratio label (center column, bottom row)
-            Label(ratio)
+            // Ratio label (center column, bottom row) - uses lambda binding for reactive updates
+            Label(() => State.DoseIn > 0 && State.ActualOutput.HasValue && State.ActualOutput.Value > 0
+                ? $"1:{(State.ActualOutput.Value / State.DoseIn):F1}"
+                : "1:0")
                 .ThemeKey(ThemeKeys.SecondaryText)
                 .HCenter()
                 .VCenter()
@@ -837,6 +836,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
     VisualNode RenderSingleGauge(
         double value,
+        Func<string> getValueText,
         double min,
         double max,
         Color primaryColor,
@@ -900,9 +900,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         )
                 ),
 
-            // Overlay center labels
+            // Overlay center labels - uses lambda binding for reactive updates
             VStack(spacing: 0,
-                Label(value.ToString("F1"))
+                Label(getValueText)
                     .FontSize(20)
                     .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
                     .TextColor(textColor)

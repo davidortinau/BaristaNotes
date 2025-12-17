@@ -66,19 +66,19 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.11" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.20" />
 		<!-- <PackageReference Include="Microsoft.Maui.Essentials.AI" Version="10.0.20-ci"/> -->
-		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.1" />
 		
 		<!-- Maui Reactor (latest preview) -->
-		<PackageReference Include="Reactor.Maui" Version="4.0.3-beta" />
+		<PackageReference Include="Reactor.Maui" Version="4.0.9-beta" />
 		
 		<!-- Community Toolkit -->
 		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
 		
 		<!-- Entity Framework Core + SQLite -->
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.1" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.1">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
@@ -96,9 +96,9 @@
 		<PackageReference Include="Syncfusion.Maui.Gauges" Version="31.2.16" />
 		
 		<!-- AI Advice Service -->
-		<PackageReference Include="Microsoft.Extensions.AI" Version="9.5.0-preview.1.25262.8" />
-		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="9.5.0-preview.1.25262.8" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+		<PackageReference Include="Microsoft.Extensions.AI" Version="10.1.1" />
+		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.1.1-preview.1.25612.2" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>

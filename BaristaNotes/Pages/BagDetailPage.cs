@@ -5,6 +5,8 @@ using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using Fonts;
 using MauiReactor;
+using UXDivers.Popups.Maui.Controls;
+using UXDivers.Popups.Services;
 
 namespace BaristaNotes.Pages;
 
@@ -175,24 +177,23 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
         if (!State.BagId.HasValue || State.BagId.Value <= 0) return;
         if (Application.Current?.MainPage == null) return;
 
-        var confirmed = await Application.Current.MainPage.DisplayAlert(
-            "Delete Bag",
-            $"Are you sure you want to delete this bag? This will also delete all {State.ShotCount} associated shot records. This action cannot be undone.",
-            "Delete",
-            "Cancel");
-
-        if (!confirmed) return;
-
-        try
+        var popup = new SimpleActionPopup
         {
-            await _bagService.DeleteBagAsync(State.BagId.Value);
-            await _feedbackService.ShowSuccessAsync("Bag deleted");
-            await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
-        }
-        catch (Exception ex)
-        {
-            SetState(s => s.ErrorMessage = $"Failed to delete: {ex.Message}");
-        }
+            Title = $"Delete Bag?",
+            Text = "Are you sure you want to delete this bag? This will also delete all {State.ShotCount} associated shot records. This action cannot be undone.",
+            ActionButtonText = "Delete",
+            SecondaryActionButtonText = "Cancel",
+            ActionButtonCommand = new Command(async () =>
+            {
+                await _bagService.DeleteBagAsync(State.BagId.Value);
+                await _feedbackService.ShowSuccessAsync("Bag deleted");
+                await IPopupService.Current.PopAsync();
+                await MauiControls.Shell.Current.GoToAsync("..");
+
+            })
+        };
+
+        await IPopupService.Current.PushAsync(popup);
     }
 
     async Task ToggleBagStatus()

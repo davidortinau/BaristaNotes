@@ -79,7 +79,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.20" />
-		<PackageReference Include="Microsoft.Maui.Essentials.AI" Version="10.0.20-dev"/>
+		<PackageReference Include="Microsoft.Maui.Essentials.AI" Version="10.0.20-dev" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.1" />
 		
 		<!-- Maui Reactor (latest preview) -->
@@ -106,7 +106,7 @@
 		<PackageReference Include="System.Reactive" Version="6.0.1" />
 		
 		<!-- UXDivers Popups for user feedback and modals -->
-		<PackageReference Include="UXDivers.Popups.Maui" Version="0.9.0" />
+		<PackageReference Include="UXDivers.Popups.Maui" Version="0.9.1" />
 
 		<!-- Syncfusion Radial Gauge for user input -->
 		<PackageReference Include="Syncfusion.Maui.Gauges" Version="31.2.16" />

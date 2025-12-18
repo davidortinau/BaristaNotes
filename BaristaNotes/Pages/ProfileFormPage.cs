@@ -3,6 +3,8 @@ using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
+using UXDivers.Popups.Maui.Controls;
+using UXDivers.Popups.Services;
 
 namespace BaristaNotes.Pages;
 
@@ -116,26 +118,23 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
 
         if (Microsoft.Maui.Controls.Application.Current?.MainPage == null) return;
 
-        var confirmed = await Microsoft.Maui.Controls.Application.Current.MainPage.DisplayAlert(
-            "Delete Profile",
-            $"Are you sure you want to delete '{State.Name}'? This action cannot be undone.",
-            "Delete",
-            "Cancel");
-
-        if (!confirmed) return;
-
-        try
+        var popup = new SimpleActionPopup
         {
-            await _profileService.DeleteProfileAsync(State.ProfileId.Value);
-            await _feedbackService.ShowSuccessAsync($"Profile '{State.Name}' deleted successfully");
+            Title = $"Delete Profile?",
+            Text = $"Are you sure you want to delete '{State.Name}'? This action cannot be undone.",
+            ActionButtonText = "Delete",
+            SecondaryActionButtonText = "Cancel",
+            ActionButtonCommand = new Command(async () =>
+            {
+                await _profileService.DeleteProfileAsync(State.ProfileId.Value);
+                await _feedbackService.ShowSuccessAsync($"Profile '{State.Name}' deleted");
+                await IPopupService.Current.PopAsync();
+                await MauiControls.Shell.Current.GoToAsync("..");
 
-            // Navigate back to profiles list
-            await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
-        }
-        catch (Exception ex)
-        {
-            SetState(s => s.ErrorMessage = $"Failed to delete profile: {ex.Message}");
-        }
+            })
+        };
+
+        await IPopupService.Current.PushAsync(popup);
     }
 
     public override VisualNode Render()

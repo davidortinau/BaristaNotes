@@ -60,9 +60,12 @@ public static class MauiProgram
 					// { "IconDarkBlue", Color.FromArgb("#6422FF") },
 					{ "BackgroundColor", AppColors.Dark.Surface },
 					{ "BackgroundSecondaryColor", AppColors.Dark.Surface },
-					{ "BackgroundTertiaryColor", Colors.Purple },
+					{ "BackgroundTertiaryColor", Colors.Red },
 					{ "PrimaryColor", AppColors.Dark.Primary },
+					{ "PrimaryVariantColor", AppColors.Dark.SurfaceElevated },
 					{ "TextColor", AppColors.Dark.TextPrimary },
+					{ "TextTertiaryColor", AppColors.Dark.TextSecondary },
+					{ "PopupBackgroundColor", AppColors.Dark.SurfaceElevated },
 					{ "PopupBorderColor", AppColors.Dark.Outline }
 				};
 				app.Resources.MergedDictionaries.Add(customResources);

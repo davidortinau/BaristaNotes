@@ -5,6 +5,8 @@ using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using BaristaNotes.Components.FormFields;
 using MauiReactor;
+using UXDivers.Popups.Maui.Controls;
+using UXDivers.Popups.Services;
 
 namespace BaristaNotes.Pages;
 
@@ -183,24 +185,23 @@ partial class EquipmentDetailPage : Component<EquipmentDetailPageState, Equipmen
 
         if (Application.Current?.MainPage == null) return;
 
-        var confirmed = await Application.Current.MainPage.DisplayAlert(
-            "Archive Equipment",
-            $"Are you sure you want to archive '{State.Name}'? It will no longer appear in your equipment list.",
-            "Archive",
-            "Cancel");
-
-        if (!confirmed) return;
-
-        try
+        var popup = new SimpleActionPopup
         {
-            await _equipmentService.ArchiveEquipmentAsync(State.EquipmentId.Value);
-            await _feedbackService.ShowSuccessAsync($"'{State.Name}' archived");
-            await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
-        }
-        catch (Exception ex)
-        {
-            SetState(s => s.ErrorMessage = $"Failed to archive: {ex.Message}");
-        }
+            Title = $"Archive Equipment?",
+            Text = $"Are you sure you want to archive '{State.Name}'? This action cannot be undone.",
+            ActionButtonText = "Archive",
+            SecondaryActionButtonText = "Cancel",
+            ActionButtonCommand = new Command(async () =>
+            {
+                await _equipmentService.ArchiveEquipmentAsync(State.EquipmentId.Value);
+                await _feedbackService.ShowSuccessAsync($"'{State.Name}' archived");
+                await IPopupService.Current.PopAsync();
+                await MauiControls.Shell.Current.GoToAsync("..");
+
+            })
+        };
+
+        await IPopupService.Current.PushAsync(popup);
     }
 
     public override VisualNode Render()

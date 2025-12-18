@@ -6,6 +6,8 @@ using BaristaNotes.Components;
 using BaristaNotes.Components.FormFields;
 using Fonts;
 using MauiReactor;
+using UXDivers.Popups.Services;
+using UXDivers.Popups.Maui.Controls;
 
 namespace BaristaNotes.Pages;
 
@@ -282,24 +284,23 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
 
         if (Application.Current?.MainPage == null) return;
 
-        var confirmed = await Application.Current.MainPage.DisplayAlert(
-            "Delete Bean",
-            $"Are you sure you want to delete '{State.Name}'? This action cannot be undone.",
-            "Delete",
-            "Cancel");
-
-        if (!confirmed) return;
-
-        try
+        var popup = new SimpleActionPopup
         {
-            await _beanService.DeleteBeanAsync(State.BeanId.Value);
-            await _feedbackService.ShowSuccessAsync($"Bean '{State.Name}' deleted");
-            await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
-        }
-        catch (Exception ex)
-        {
-            SetState(s => s.ErrorMessage = $"Failed to delete: {ex.Message}");
-        }
+            Title = $"Delete Bean?",
+            Text = $"Are you sure you want to delete '{State.Name}'? This action cannot be undone.",
+            ActionButtonText = "Delete",
+            SecondaryActionButtonText = "Cancel",
+            ActionButtonCommand = new Command(async () =>
+            {
+                await _beanService.DeleteBeanAsync(State.BeanId.Value);
+                await _feedbackService.ShowSuccessAsync($"Bean '{State.Name}' deleted");
+                await IPopupService.Current.PopAsync();
+                await MauiControls.Shell.Current.GoToAsync("..");
+
+            })
+        };
+
+        await IPopupService.Current.PushAsync(popup);
     }
 
     async void NavigateToShot(int shotId)

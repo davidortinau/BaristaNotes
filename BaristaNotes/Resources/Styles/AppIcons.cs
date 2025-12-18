@@ -49,7 +49,7 @@ public static class AppIcons
     {
         FontFamily = MaterialSymbolsFont.FontFamily,
         Glyph = MaterialSymbolsFont.Delete,
-        Size = 18,
+        Size = 24,
         Color = IconColor
     };
 

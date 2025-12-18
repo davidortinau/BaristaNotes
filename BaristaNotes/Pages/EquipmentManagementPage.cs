@@ -160,7 +160,13 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
                 ? RenderEmptyState()
                 : CollectionView()
                     .ItemsSource(State.Equipment, RenderEquipmentItem)
-                    .Margin(16, 16, 16, 32)
+                    .Header(
+                        ContentView().HeightRequest(16)
+                    )
+                    .Footer(
+                        ContentView().HeightRequest(80)
+                    )
+                    .Margin(16, 0)
         )
         .OnAppearing(() => OnPageAppearing());
     }
@@ -185,7 +191,7 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
 
     VisualNode RenderEquipmentItem(EquipmentDto equipment)
     {
-        return SwipeView(
+        return
             Border(
                 VStack(spacing: 4,
                     Label(equipment.Name)
@@ -197,14 +203,6 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
             )
             .ThemeKey(ThemeKeys.CardBorder)
             .OnTapped(() => NavigateToEditEquipment(equipment))
-        )
-        .LeftItems(
-        [
-            SwipeItem()
-                .BackgroundColor(Colors.Transparent)
-                .IconImageSource(AppIcons.Delete)
-                .OnInvoked(async () => await ShowArchiveConfirmation(equipment))
-        ])
-        .Margin(0, 4);
+            .Margin(0, 4);
     }
 }

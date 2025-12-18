@@ -10,23 +10,29 @@ namespace BaristaNotes.Pages;
 
 class BagDetailPageProps
 {
-    public int BagId { get; set; }
+    public int? BagId { get; set; }  // If null/0, we're creating; otherwise editing
+    public int BeanId { get; set; }
+    public string BeanName { get; set; } = "";
 }
 
 class BagDetailPageState
 {
-    public int BagId { get; set; }
+    // Form fields
+    public int? BagId { get; set; }
+    public int BeanId { get; set; }
     public string BeanName { get; set; } = "";
-    public DateTime RoastDate { get; set; }
-    public string? Notes { get; set; }
+    public DateTime RoastDate { get; set; } = DateTime.Now;
+    public string Notes { get; set; } = "";
     public bool IsComplete { get; set; }
+
+    // Read-only info
     public int ShotCount { get; set; }
-    
-    public bool IsLoading { get; set; }
-    public string? ErrorMessage { get; set; }
-    public bool IsTogglingStatus { get; set; }
-    
     public RatingAggregateDto? RatingAggregate { get; set; }
+
+    // Form state
+    public bool IsLoading { get; set; }
+    public bool IsSaving { get; set; }
+    public string? ErrorMessage { get; set; }
 }
 
 partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
@@ -34,27 +40,35 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
     [Inject] IBagService _bagService;
     [Inject] IRatingService _ratingService;
     [Inject] IFeedbackService _feedbackService;
-    
+
     protected override void OnMounted()
     {
         base.OnMounted();
-        
+
+        var isEditMode = Props.BagId.HasValue && Props.BagId.Value > 0;
+
         SetState(s =>
         {
             s.BagId = Props.BagId;
-            s.IsLoading = true;
+            s.BeanId = Props.BeanId;
+            s.BeanName = Props.BeanName;
+            s.IsLoading = isEditMode;
         });
-        
-        _ = LoadBagAsync();
+
+        if (isEditMode)
+        {
+            _ = LoadBagAsync();
+        }
     }
-    
+
     async Task LoadBagAsync()
     {
+        if (!State.BagId.HasValue || State.BagId.Value <= 0) return;
+
         try
         {
-            var bags = await _bagService.GetBagSummariesForBeanAsync(State.BagId, includeCompleted: true);
-            var bag = bags.FirstOrDefault(b => b.Id == State.BagId);
-            
+            var bag = await _bagService.GetBagByIdAsync(State.BagId.Value);
+
             if (bag == null)
             {
                 SetState(s =>
@@ -64,16 +78,17 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
                 });
                 return;
             }
-            
-            var rating = await _ratingService.GetBagRatingAsync(State.BagId);
-            
+
+            var rating = await _ratingService.GetBagRatingAsync(State.BagId.Value);
+
             SetState(s =>
             {
-                s.BeanName = bag.BeanName;
+                s.BeanId = bag.BeanId;
+                s.BeanName = bag.Bean?.Name ?? Props.BeanName;
                 s.RoastDate = bag.RoastDate;
-                s.Notes = bag.Notes;
+                s.Notes = bag.Notes ?? "";
                 s.IsComplete = bag.IsComplete;
-                s.ShotCount = bag.ShotCount;
+                s.ShotCount = bag.ShotRecords?.Count ?? 0;
                 s.RatingAggregate = rating;
                 s.IsLoading = false;
             });
@@ -87,137 +102,281 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
             });
         }
     }
-    
-    async Task ToggleBagStatus()
+
+    bool ValidateForm()
     {
+        if (State.RoastDate.Date > DateTime.Now.Date)
+        {
+            SetState(s => s.ErrorMessage = "Roast date cannot be in the future");
+            return false;
+        }
+
+        if (!string.IsNullOrEmpty(State.Notes) && State.Notes.Length > 500)
+        {
+            SetState(s => s.ErrorMessage = "Notes cannot exceed 500 characters");
+            return false;
+        }
+
+        SetState(s => s.ErrorMessage = null);
+        return true;
+    }
+
+    async Task SaveBagAsync()
+    {
+        if (!ValidateForm()) return;
+
+        SetState(s =>
+        {
+            s.IsSaving = true;
+            s.ErrorMessage = null;
+        });
+
         try
         {
-            SetState(s => s.IsTogglingStatus = true);
-            
-            if (State.IsComplete)
+            var bag = new Core.Models.Bag
             {
-                await _bagService.ReactivateBagAsync(State.BagId);
-                await _feedbackService.ShowSuccessAsync("Bag reactivated");
+                Id = State.BagId ?? 0,
+                BeanId = State.BeanId,
+                RoastDate = State.RoastDate,
+                Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes,
+                IsComplete = State.IsComplete
+            };
+
+            var isEditMode = State.BagId.HasValue && State.BagId.Value > 0;
+            var result = isEditMode
+                ? await _bagService.UpdateBagAsync(bag)
+                : await _bagService.CreateBagAsync(bag);
+
+            if (!result.Success)
+            {
+                SetState(s =>
+                {
+                    s.IsSaving = false;
+                    s.ErrorMessage = result.ErrorMessage ?? "Failed to save bag";
+                });
+                return;
             }
-            else
-            {
-                await _bagService.MarkBagCompleteAsync(State.BagId);
-                await _feedbackService.ShowSuccessAsync("Bag marked as complete");
-            }
-            
-            SetState(s =>
-            {
-                s.IsComplete = !s.IsComplete;
-                s.IsTogglingStatus = false;
-            });
+
+            await _feedbackService.ShowSuccessAsync(isEditMode ? "Bag updated" : $"Bag added for {State.BeanName}");
+            await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
         }
         catch (Exception ex)
         {
             SetState(s =>
             {
-                s.IsTogglingStatus = false;
-                s.ErrorMessage = $"Failed to update bag status: {ex.Message}";
+                s.IsSaving = false;
+                s.ErrorMessage = $"Failed to save bag: {ex.Message}";
             });
         }
     }
-    
+
+    async Task DeleteBagAsync()
+    {
+        if (!State.BagId.HasValue || State.BagId.Value <= 0) return;
+        if (Application.Current?.MainPage == null) return;
+
+        var confirmed = await Application.Current.MainPage.DisplayAlert(
+            "Delete Bag",
+            $"Are you sure you want to delete this bag? This will also delete all {State.ShotCount} associated shot records. This action cannot be undone.",
+            "Delete",
+            "Cancel");
+
+        if (!confirmed) return;
+
+        try
+        {
+            await _bagService.DeleteBagAsync(State.BagId.Value);
+            await _feedbackService.ShowSuccessAsync("Bag deleted");
+            await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
+        }
+        catch (Exception ex)
+        {
+            SetState(s => s.ErrorMessage = $"Failed to delete: {ex.Message}");
+        }
+    }
+
+    async Task ToggleBagStatus()
+    {
+        if (!State.BagId.HasValue) return;
+
+        try
+        {
+            if (State.IsComplete)
+            {
+                await _bagService.ReactivateBagAsync(State.BagId.Value);
+                await _feedbackService.ShowSuccessAsync("Bag reactivated");
+            }
+            else
+            {
+                await _bagService.MarkBagCompleteAsync(State.BagId.Value);
+                await _feedbackService.ShowSuccessAsync("Bag marked as complete");
+            }
+
+            SetState(s => s.IsComplete = !s.IsComplete);
+        }
+        catch (Exception ex)
+        {
+            SetState(s => s.ErrorMessage = $"Failed to update status: {ex.Message}");
+        }
+    }
+
     public override VisualNode Render()
     {
+        var isEditMode = State.BagId.HasValue && State.BagId.Value > 0;
+        var title = isEditMode ? "Edit Bag" : "Add Bag";
+
         if (State.IsLoading)
         {
             return ContentPage(
                 VStack(
-                    ActivityIndicator()
-                        .IsRunning(true)
+                    ActivityIndicator().IsRunning(true)
                 )
                 .Center()
             )
-            .Title("Loading...");
+            .Title(title);
         }
-        
-        if (!string.IsNullOrEmpty(State.ErrorMessage))
-        {
-            return ContentPage(
-                VStack(spacing: 16,
-                    Label(State.ErrorMessage)
-                        .HCenter(),
-                    Button("Go Back")
-                        .OnClicked(async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync(".."))
-                        .ThemeKey(ThemeKeys.SecondaryButton)
-                )
-                .Padding(16)
-                .Center()
-            )
-            .Title("Error");
-        }
-        
+
         return ContentPage(
+            isEditMode
+                ? ToolbarItem().Text("Delete").IconImageSource(AppIcons.Delete).Order(ToolbarItemOrder.Secondary).OnClicked(async () => await DeleteBagAsync())
+                : null,
             ScrollView(
-                VStack(spacing: 24,
-                    
-                    // Header with bean name and roast date
-                    VStack(spacing: 8,
-                        Label(State.BeanName)
-                            .ThemeKey(ThemeKeys.Headline),
-                        Label($"Roasted {State.RoastDate:MMM dd, yyyy}")
-                            .ThemeKey(ThemeKeys.SecondaryText)
-                    ),
-                    
-                    // Status badge
-                    HStack(spacing: 8,
-                        Label(State.IsComplete ? "Complete" : "Active")
-                            .ThemeKey(ThemeKeys.SecondaryText)
-                            .Padding(8, 4)
-                    ),
-                    
-                    // Notes if present
-                    !string.IsNullOrEmpty(State.Notes)
-                        ? VStack(spacing: 8,
-                            Label("Notes")
-                                .ThemeKey(ThemeKeys.SecondaryText),
-                            Label(State.Notes ?? "")
-                                .ThemeKey(ThemeKeys.SecondaryText)
-                        )
-                        : null,
-                    
-                    // Shot count
-                    VStack(spacing: 8,
-                        Label("Shots Logged")
-                            .ThemeKey(ThemeKeys.SecondaryText),
-                        Label(State.ShotCount.ToString())
-                            .ThemeKey(ThemeKeys.CardTitle)
-                    ),
-                    
-                    // Rating aggregate
-                    State.RatingAggregate != null
-                        ? VStack(spacing: 16,
-                            Label("Bag Ratings")
-                                .ThemeKey(ThemeKeys.SubHeadline),
-                            new RatingDisplayComponent()
-                                .RatingAggregate(State.RatingAggregate)
-                        )
-                        : null,
-                    
-                    // Empty state for no ratings
-                    (State.RatingAggregate == null || !State.RatingAggregate.HasRatings)
-                        ? Label("No ratings yet")
-                            .ThemeKey(ThemeKeys.SecondaryText)
-                            .HCenter()
-                        : null,
-                    
-                    // Toggle status button
-                    Button(
-                        State.IsTogglingStatus 
-                            ? "Updating..." 
-                            : (State.IsComplete ? "Reactivate Bag" : "Mark as Complete")
-                    )
-                        .OnClicked(ToggleBagStatus)
-                        .IsEnabled(!State.IsTogglingStatus)
-                        .ThemeKey(State.IsComplete ? ThemeKeys.PrimaryButton : ThemeKeys.SecondaryButton)
+                VStack(spacing: 16,
+                    // Form section
+                    RenderForm(),
+
+                    // Status section (edit mode only)
+                    isEditMode ? RenderStatusSection() : null,
+
+                    // Stats section (edit mode only)
+                    isEditMode ? RenderStatsSection() : null,
+
+                    // Rating section (edit mode only)
+                    isEditMode ? RenderRatings() : null
                 )
                 .Padding(16)
             )
         )
-        .Title("Bag Details");
+        .Title(title);
+    }
+
+    VisualNode RenderForm()
+    {
+        return VStack(spacing: 16,
+            // Bean name (read-only display)
+            VStack(spacing: 4,
+                Label("Bean")
+                    .ThemeKey(ThemeKeys.SecondaryText),
+                Label(State.BeanName)
+                    .ThemeKey(ThemeKeys.CardTitle)
+            ),
+
+            // Roast Date picker
+            VStack(spacing: 8,
+                Label("Roast Date")
+                    .ThemeKey(ThemeKeys.SecondaryText),
+                Border(
+                    DatePicker()
+                        .Date(State.RoastDate)
+                        .MaximumDate(DateTime.Now)
+                        .OnDateSelected((s, e) => SetState(state => state.RoastDate = e.NewDate ?? DateTime.Now))
+                )
+                .Padding(8)
+                .ThemeKey(ThemeKeys.CardBorder)
+            ),
+
+            // Notes field
+            VStack(spacing: 8,
+                Label("Notes (optional)")
+                    .ThemeKey(ThemeKeys.SecondaryText),
+                Border(
+                    Editor()
+                        .Text(State.Notes)
+                        .OnTextChanged((s, e) => SetState(state => state.Notes = e.NewTextValue))
+                        .Placeholder("e.g., From Trader Joe's, Gift from friend")
+                        .PlaceholderColor(Colors.Gray)
+                        .HeightRequest(100)
+                        .BackgroundColor(Colors.Transparent)
+                )
+                .Padding(8)
+                .ThemeKey(ThemeKeys.CardBorder)
+            ),
+
+            // Error message
+            !string.IsNullOrEmpty(State.ErrorMessage)
+                ? Border(
+                    Label(State.ErrorMessage).TextColor(Colors.Red).Padding(12)
+                )
+                .BackgroundColor(Colors.Red.WithAlpha(0.1f))
+                .StrokeThickness(1)
+                .Stroke(Colors.Red)
+                : null,
+
+            // Save button
+            Button(State.IsSaving ? "Saving..." : (State.BagId.HasValue && State.BagId.Value > 0 ? "Save Changes" : "Add Bag"))
+                .OnClicked(async () => await SaveBagAsync())
+                .IsEnabled(!State.IsSaving)
+                .HeightRequest(48)
+        );
+    }
+
+    VisualNode RenderStatusSection()
+    {
+        return VStack(spacing: 12,
+            BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
+
+            Label("Status")
+                .ThemeKey(ThemeKeys.SubHeadline),
+
+            HStack(spacing: 12,
+                Label(State.IsComplete ? "Complete" : "Active")
+                    .ThemeKey(ThemeKeys.PrimaryText)
+                    .VCenter(),
+
+                Button(State.IsComplete ? "Reactivate" : "Mark Complete")
+                    .OnClicked(async () => await ToggleBagStatus())
+                    .ThemeKey(ThemeKeys.SecondaryButton)
+                    .HEnd()
+            )
+        );
+    }
+
+    VisualNode RenderStatsSection()
+    {
+        return VStack(spacing: 12,
+            BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
+
+            HStack(spacing: 24,
+                VStack(spacing: 4,
+                    Label("Shots Logged")
+                        .ThemeKey(ThemeKeys.SecondaryText),
+                    Label(State.ShotCount.ToString())
+                        .ThemeKey(ThemeKeys.CardTitle)
+                )
+            )
+        );
+    }
+
+    VisualNode RenderRatings()
+    {
+        if (State.RatingAggregate == null || !State.RatingAggregate.HasRatings)
+        {
+            return VStack(spacing: 12,
+                BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
+                Label("No ratings yet")
+                    .ThemeKey(ThemeKeys.SecondaryText)
+                    .HCenter()
+            );
+        }
+
+        return VStack(spacing: 12,
+            BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
+
+            Label("Bag Ratings")
+                .ThemeKey(ThemeKeys.SubHeadline),
+
+            new RatingDisplayComponent()
+                .RatingAggregate(State.RatingAggregate)
+        );
     }
 }

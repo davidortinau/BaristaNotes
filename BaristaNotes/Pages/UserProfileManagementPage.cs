@@ -1,11 +1,8 @@
-using BaristaNotes.Components;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using Fonts;
-using UXDivers.Popups.Maui.Controls;
-using UXDivers.Popups.Services;
 
 namespace BaristaNotes.Pages;
 
@@ -70,64 +67,6 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
         await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ProfileFormPageProps>("profile-form", props => props.ProfileId = profile.Id);
     }
 
-    async Task ShowDeleteConfirmation(UserProfileDto profile)
-    {
-        // Check if this is the last profile - prevent deletion
-        var isLastProfile = State.Profiles.Count <= 1;
-
-        if (isLastProfile)
-        {
-            await ShowLastProfileWarning();
-            return;
-        }
-
-        var popup = new SimpleActionPopup
-        {
-            Title = $"Delete \"{profile.Name}\"?",
-            Text = "This action cannot be undone.",
-            ActionButtonText = "Delete",
-            SecondaryActionButtonText = "Cancel",
-            ActionButtonCommand = new Command(async () =>
-            {
-                // Delete logic here
-                DeleteProfile(profile);
-                await IPopupService.Current.PopAsync();
-            })
-        };
-
-        await IPopupService.Current.PushAsync(popup);
-    }
-
-    async Task ShowLastProfileWarning()
-    {
-        var popup = new SimpleActionPopup
-        {
-            Title = "Cannot Delete",
-            Text = "This is your last profile. You must have at least one profile to log shots.\n\nCreate another profile first if you want to delete this one.",
-            ActionButtonText = "OK",
-            ShowSecondaryActionButton = false
-        };
-
-        await IPopupService.Current.PushAsync(popup);
-    }
-
-    async Task DeleteProfile(UserProfileDto profile)
-    {
-        try
-        {
-            await _profileService.DeleteProfileAsync(profile.Id);
-
-            await _feedbackService.ShowSuccessAsync($"{profile.Name} deleted successfully");
-            await LoadDataAsync();
-        }
-        catch (Exception ex)
-        {
-
-            await _feedbackService.ShowErrorAsync("Failed to delete profile", "Please try again");
-            SetState(s => s.ErrorMessage = ex.Message);
-        }
-    }
-
     public override VisualNode Render()
     {
         if (State.IsLoading)
@@ -178,7 +117,13 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                 ? RenderEmptyState()
                 : CollectionView()
                     .ItemsSource(State.Profiles, RenderProfileItem)
-                    .Margin(16, 16, 16, 32)
+                    .Header(
+                        ContentView().HeightRequest(16)
+                    )
+                    .Footer(
+                        ContentView().HeightRequest(80)
+                    )
+                    .Margin(16, 0)
         ).Title("Profiles")
         .OnAppearing(() => OnPageAppearing());
     }
@@ -204,8 +149,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
     VisualNode RenderProfileItem(UserProfileDto profile)
     {
-        return SwipeView(
-            Border(
+        return Border(
                 VStack(spacing: 4,
                     Label(profile.Name)
                         .ThemeKey(ThemeKeys.CardTitle),
@@ -216,14 +160,6 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
             )
             .ThemeKey(ThemeKeys.CardBorder)
             .OnTapped(async () => await ShowEditProfileSheet(profile))
-        )
-        .LeftItems(
-        [
-            SwipeItem()
-                .BackgroundColor(Colors.Transparent)
-                .IconImageSource(AppIcons.Delete)
-                .OnInvoked(async () => await ShowDeleteConfirmation(profile))
-        ])
-        .Margin(0, 4);
+            .Margin(0, 4);
     }
 }

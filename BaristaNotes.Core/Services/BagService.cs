@@ -90,7 +90,13 @@ public class BagService : IBagService
 
         try
         {
-            var updated = await _bagRepository.UpdateAsync(bag);
+            // Update the tracked entity's properties instead of passing a new entity
+            existing.RoastDate = bag.RoastDate;
+            existing.Notes = bag.Notes;
+            existing.IsComplete = bag.IsComplete;
+            existing.LastModifiedAt = DateTime.Now;
+
+            var updated = await _bagRepository.UpdateAsync(existing);
             return OperationResult<Bag>.Ok(updated);
         }
         catch (Exception ex)

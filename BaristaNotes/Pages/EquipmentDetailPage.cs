@@ -222,6 +222,13 @@ partial class EquipmentDetailPage : Component<EquipmentDetailPageState, Equipmen
         }
 
         return ContentPage(
+            isEditMode ?
+                ToolbarItem()
+                    .Text("Delete")
+                    .IconImageSource(AppIcons.Delete)
+                    .Order(Microsoft.Maui.Controls.ToolbarItemOrder.Secondary)
+                    .OnClicked(async () => await ArchiveEquipmentAsync())
+                    : null,
             ScrollView(
                 VStack(spacing: 16,
                     RenderForm()
@@ -279,24 +286,10 @@ partial class EquipmentDetailPage : Component<EquipmentDetailPageState, Equipmen
                 .Stroke(Colors.Red)
                 : null,
 
-            // Action buttons
-            VStack(spacing: 12,
-                Button(State.IsSaving ? "Saving..." : (isEditMode ? "Save Changes" : "Add Equipment"))
-                    .OnClicked(async () => await SaveEquipmentAsync())
-                    .IsEnabled(!State.IsSaving),
+            Button(State.IsSaving ? "Saving..." : (isEditMode ? "Save Changes" : "Add Equipment"))
+                .OnClicked(async () => await SaveEquipmentAsync())
+                .IsEnabled(!State.IsSaving)
 
-                Button("Cancel")
-                    .OnClicked(async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync(".."))
-                    .IsEnabled(!State.IsSaving)
-                    .BackgroundColor(Colors.Gray),
-
-                isEditMode
-                    ? Button("Archive Equipment")
-                        .OnClicked(async () => await ArchiveEquipmentAsync())
-                        .IsEnabled(!State.IsSaving)
-                        .BackgroundColor(Colors.Orange)
-                    : null
-            )
         );
     }
 }

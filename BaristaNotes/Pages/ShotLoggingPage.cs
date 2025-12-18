@@ -517,6 +517,13 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .OnClicked(async () => await RequestAdviceAsync())
                 : null,
 
+            Props.ShotId.HasValue ?
+                ToolbarItem("Delete")
+                    .IconImageSource(AppIcons.Delete)
+                    .Order(MauiControls.ToolbarItemOrder.Secondary)
+                    .OnClicked(async () => await DeleteShotAsync())
+                : null,
+
             Grid("Auto, *", "*",
                 // Row 0: Animated loading bar (outside ScrollView)
                 State.IsLoadingAdvice ? RenderAnimatedLoadingBar().GridRow(0) : null,
@@ -672,6 +679,29 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         )
         .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
         .OnAppearing(() => OnPageAppearing());
+    }
+
+    private async Task DeleteShotAsync()
+    {
+        if (Props.ShotId == null)
+            return;
+
+        var popup = new SimpleActionPopup
+        {
+            Title = $"Delete Shot?",
+            Text = "This action cannot be undone.",
+            ActionButtonText = "Delete",
+            SecondaryActionButtonText = "Cancel",
+            ActionButtonCommand = new Command(async () =>
+            {
+                // Delete logic here
+                await _shotService.DeleteShotAsync(Props.ShotId.Value);
+                await IPopupService.Current.PopAsync();
+                await MauiControls.Shell.Current.GoToAsync("..");
+            })
+        };
+
+        await IPopupService.Current.PushAsync(popup);
     }
 
     VisualNode RenderAnimatedLoadingBar()

@@ -116,7 +116,13 @@ partial class BeanManagementPage : Component<BeanManagementState>
                 ? RenderEmptyState()
                 : CollectionView()
                     .ItemsSource(State.Beans, RenderBeanItem)
-                    .Margin(16, 16, 16, 32)
+                    .Header(
+                        ContentView().HeightRequest(16)
+                    )
+                    .Footer(
+                        ContentView().HeightRequest(80)
+                    )
+                    .Margin(16, 0)
 
         ).Title("Beans")
         .OnAppearing(() => OnPageAppearing());

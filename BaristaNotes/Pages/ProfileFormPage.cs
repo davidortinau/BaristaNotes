@@ -23,17 +23,17 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
 {
     [Inject]
     IUserProfileService _profileService;
-    
+
     [Inject]
     IImagePickerService _imagePickerService;
-    
+
     [Inject]
     IFeedbackService _feedbackService;
-    
+
     protected override void OnMounted()
     {
         base.OnMounted();
-        
+
         // If ProfileId is set via props, load the profile data
         if (Props.ProfileId.HasValue && Props.ProfileId.Value > 0)
         {
@@ -41,15 +41,15 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
             _ = LoadProfileAsync();
         }
     }
-    
+
     async Task LoadProfileAsync()
     {
         if (!State.ProfileId.HasValue || State.ProfileId.Value <= 0) return;
-        
+
         try
         {
             var profile = await _profileService.GetProfileByIdAsync(State.ProfileId.Value);
-            
+
             SetState(s =>
             {
                 s.ProfileId = profile.Id;
@@ -61,7 +61,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
             SetState(s => s.ErrorMessage = $"Failed to load profile: {ex.Message}");
         }
     }
-    
+
     async Task SaveProfile()
     {
         try
@@ -72,20 +72,20 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
                 SetState(s => s.ErrorMessage = "Please enter a profile name");
                 return;
             }
-            
-            SetState(s => 
+
+            SetState(s =>
             {
                 s.IsSaving = true;
                 s.ErrorMessage = null;
             });
-            
+
             if (State.ProfileId.HasValue && State.ProfileId.Value > 0)
             {
                 // Update existing profile
                 await _profileService.UpdateProfileAsync(
                     State.ProfileId.Value,
                     new UpdateUserProfileDto { Name = State.Name });
-                
+
                 await _feedbackService.ShowSuccessAsync($"Profile '{State.Name}' updated successfully");
             }
             else
@@ -93,10 +93,10 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
                 // Create new profile
                 await _profileService.CreateProfileAsync(
                     new CreateUserProfileDto { Name = State.Name });
-                
+
                 await _feedbackService.ShowSuccessAsync($"Profile '{State.Name}' created successfully");
             }
-            
+
             // Navigate back to profiles list
             await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
         }
@@ -109,26 +109,26 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
             });
         }
     }
-    
+
     async Task DeleteProfile()
     {
         if (!State.ProfileId.HasValue || State.ProfileId.Value <= 0) return;
-        
+
         if (Microsoft.Maui.Controls.Application.Current?.MainPage == null) return;
-        
+
         var confirmed = await Microsoft.Maui.Controls.Application.Current.MainPage.DisplayAlert(
             "Delete Profile",
             $"Are you sure you want to delete '{State.Name}'? This action cannot be undone.",
             "Delete",
             "Cancel");
-        
+
         if (!confirmed) return;
-        
+
         try
         {
             await _profileService.DeleteProfileAsync(State.ProfileId.Value);
             await _feedbackService.ShowSuccessAsync($"Profile '{State.Name}' deleted successfully");
-            
+
             // Navigate back to profiles list
             await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
         }
@@ -137,15 +137,22 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
             SetState(s => s.ErrorMessage = $"Failed to delete profile: {ex.Message}");
         }
     }
-    
+
     public override VisualNode Render()
     {
         var isEditMode = State.ProfileId.HasValue && State.ProfileId.Value > 0;
-        var title = isEditMode 
-            ? (string.IsNullOrEmpty(State.Name) ? "Edit Profile" : $"Edit {State.Name}") 
+        var title = isEditMode
+            ? (string.IsNullOrEmpty(State.Name) ? "Edit Profile" : $"Edit {State.Name}")
             : "Add Profile";
-        
+
         return ContentPage(
+            isEditMode ?
+                ToolbarItem()
+                    .Text("Delete")
+                    .IconImageSource(AppIcons.Delete)
+                    .Order(Microsoft.Maui.Controls.ToolbarItemOrder.Secondary)
+                    .OnClicked(DeleteProfile)
+                    : null,
             ScrollView(
                 VStack(spacing: 24,
                     // Header
@@ -153,7 +160,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
                         .FontSize(24)
                         .FontAttributes(MauiControls.FontAttributes.Bold)
                         .Padding(16, 16, 16, 0),
-                    
+
                     // Profile image picker (only shown in edit mode since we need a profile ID)
                     isEditMode && State.ProfileId.HasValue
                         ? VStack(spacing: 16,
@@ -177,14 +184,14 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
                                 .TextColor(Colors.Gray)
                                 .Padding(16, 0)
                         ),
-                    
+
                     // Name input
                     VStack(spacing: 12,
                         Label("Profile Name")
                             .FontSize(16)
                             .FontAttributes(MauiControls.FontAttributes.Bold)
                             .Padding(16, 0),
-                        
+
                         Border(
                             Entry()
                                 .Placeholder("Enter profile name")
@@ -197,7 +204,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
                         .Margin(16, 0)
                         .ThemeKey(ThemeKeys.CardBorder)
                     ),
-                    
+
                     // Error message
                     State.ErrorMessage != null
                         ? Border(
@@ -210,7 +217,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
                         .StrokeThickness(1)
                         .Stroke(Colors.Red)
                         : null,
-                    
+
                     // Action buttons
                     VStack(spacing: 12,
                         Button(State.IsSaving ? "Saving..." : (isEditMode ? "Save Changes" : "Create Profile"))
@@ -218,21 +225,12 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
                             .IsEnabled(!State.IsSaving)
                             .Margin(16, 0)
                             .AutomationId("SaveProfileButton"),
-                        
+
                         Button("Cancel")
                             .OnClicked(async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync(".."))
                             .IsEnabled(!State.IsSaving)
                             .Margin(16, 0)
-                            .BackgroundColor(Colors.Gray),
-                        
-                        // Delete button only in edit mode
-                        isEditMode
-                            ? Button("Delete Profile")
-                                .OnClicked(DeleteProfile)
-                                .IsEnabled(!State.IsSaving)
-                                .Margin(16, 0, 16, 16)
-                                .BackgroundColor(Colors.Red)
-                            : null
+                            .BackgroundColor(Colors.Gray)
                     )
                 )
             )

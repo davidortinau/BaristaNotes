@@ -15,7 +15,7 @@ using Fonts;
 using BaristaNotes.Styles;
 using Microsoft.Maui.Handlers;
 using Syncfusion.Maui.Core.Hosting;
-// using Microsoft.Maui.Essentials.AI;
+using Microsoft.Maui.Essentials.AI;
 
 #if IOS
 using BaristaNotes.Platforms.iOS;
@@ -114,7 +114,7 @@ public static class MauiProgram
 		// use of Console.WriteLine in the application.
 		Console.WriteLine($"Database path: {dbPath}");
 
-		// builder.Services.AddPlatformChatClient();
+		builder.Services.AddPlatformChatClient();
 
 		// Register Repositories (scoped)
 		builder.Services.AddScoped<IEquipmentRepository, EquipmentRepository>();
@@ -230,10 +230,10 @@ public static class MauiProgram
 		MauiReactor.Routing.RegisterRoute<Pages.EquipmentManagementPage>("equipment");
 		MauiReactor.Routing.RegisterRoute<Pages.BeanManagementPage>("beans");
 		MauiReactor.Routing.RegisterRoute<Pages.BeanDetailPage>("bean-detail");
+		MauiReactor.Routing.RegisterRoute<Pages.BagDetailPage>("bag-detail");
 		MauiReactor.Routing.RegisterRoute<Pages.EquipmentDetailPage>("equipment-detail");
 		MauiReactor.Routing.RegisterRoute<Pages.UserProfileManagementPage>("profiles");
 		MauiReactor.Routing.RegisterRoute<Pages.ProfileFormPage>("profile-form");
 		MauiReactor.Routing.RegisterRoute<Pages.ShotLoggingPage>("shot-logging");
-		MauiReactor.Routing.RegisterRoute<Pages.BagFormPage>("bag-form");
 	}
 }

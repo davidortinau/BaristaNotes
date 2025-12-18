@@ -23,11 +23,11 @@ public class AppShell : Component
                     .RenderContent(() => new ActivityFeedPage()),
 
 
-ShellContent("Settings")
+                ShellContent("Settings")
                     .Icon(AppIcons.Settings)
                     .Route("settings")
                     .RenderContent(() => new SettingsPage())
             )
-        );
+        ).FlyoutBehavior(FlyoutBehavior.Disabled);
     }
 }

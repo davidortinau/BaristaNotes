@@ -1,13 +1,8 @@
-using MauiReactor;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
-using BaristaNotes.Core.Services.Exceptions;
 using BaristaNotes.Components;
-using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using Fonts;
-using UXDivers.Popups.Maui.Controls;
-using UXDivers.Popups.Services;
 
 namespace BaristaNotes.Pages;
 
@@ -27,9 +22,6 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
 {
     [Inject]
     IShotService _shotService;
-
-    [Inject]
-    IFeedbackService _feedbackService;
 
     protected override void OnMounted()
     {
@@ -97,77 +89,18 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         }
     }
 
-    async Task LoadMoreShotsAsync()
-    {
-        if (State.IsLoading || !State.HasMore)
-            return;
-
-        SetState(s => s.PageIndex = s.PageIndex + 1);
-        await LoadShotsAsync();
-    }
-
     async void NavigateToDetail(int shotId)
     {
         await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingPageProps>("shot-logging", props => props.ShotId = shotId);
     }
 
-    async void NavigateToEdit(int shotId)
-    {
-        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingPageProps>("shot-logging", props => props.ShotId = shotId);
-    }
-
-    async Task ShowDeleteConfirmation(int shotId)
-    {
-        var popup = new SimpleActionPopup
-        {
-            Title = $"Delete Shot?",
-            Text = "This action cannot be undone.",
-            ActionButtonText = "Delete",
-            SecondaryActionButtonText = "Cancel",
-            ActionButtonCommand = new Command(async () =>
-            {
-                // Delete logic here
-                await DeleteShot(shotId);
-                await IPopupService.Current.PopAsync();
-            })
-        };
-
-        await IPopupService.Current.PushAsync(popup);
-    }
-
-    async Task DeleteShot(int shotId)
-    {
-        try
-        {
-            await _shotService.DeleteShotAsync(shotId);
-            await _feedbackService.ShowSuccessAsync("Shot deleted");
-
-            // Refresh the list
-            await LoadShotsAsync(isRefresh: true);
-        }
-        catch (EntityNotFoundException)
-        {
-            await _feedbackService.ShowErrorAsync("Shot not found");
-        }
-        catch (Exception ex)
-        {
-            await _feedbackService.ShowErrorAsync($"Error deleting shot: {ex.Message}");
-        }
-        finally
-        {
-            SetState(s => s.ShotToDelete = null);
-        }
-    }
-
     public override VisualNode Render()
     {
         return ContentPage("Shot History",
-            RefreshView(
+            Grid(
                 RenderContent()
             )
             .SafeAreaEdges(SafeAreaEdges.None)
-            .IsRefreshing(State.IsRefreshing)
-            .OnRefreshing(async () => await LoadShotsAsync(isRefresh: true))
         )
         .OnAppearing(() => OnPageAppearing());
     }
@@ -238,38 +171,22 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
 
         return CollectionView()
             .ItemsSource(State.ShotRecords, shot =>
-                SwipeView(
-                    Border(
-                        new ShotRecordCard()
-                            .Shot(shot)
-                    )
-                    .StrokeThickness(0)
-                    .OnTapped(() => NavigateToDetail(shot.Id))
+                Border(
+                    new ShotRecordCard()
+                        .Shot(shot)
                 )
-                .LeftItems(
-                [
-                    SwipeItem()
-                        .BackgroundColor(Colors.Transparent)
-                        .IconImageSource(AppIcons.Delete)
-                        .OnInvoked(async () => await ShowDeleteConfirmation(shot.Id))
-                ])
-                .RightItems(
-                [
-                    SwipeItem()
-                        .BackgroundColor(Colors.Transparent)
-                        .IconImageSource(AppIcons.Edit)
-                        .OnInvoked(() => NavigateToEdit(shot.Id))
-                ])
+                .StrokeThickness(0)
+                .OnTapped(() => NavigateToDetail(shot.Id))
                 .Margin(16, 4)
             )
-            .RemainingItemsThreshold(5)
-            .OnRemainingItemsThresholdReached(() =>
-            {
-                if (State.HasMore && !State.IsLoading)
-                {
-                    _ = LoadMoreShotsAsync();
-                }
-            })
+            // .RemainingItemsThreshold(5)
+            // .OnRemainingItemsThresholdReached(() =>
+            // {
+            //     if (State.HasMore && !State.IsLoading)
+            //     {
+            //         _ = LoadMoreShotsAsync();
+            //     }
+            // })
             .Header(
                 ContentView().HeightRequest(16)
             )

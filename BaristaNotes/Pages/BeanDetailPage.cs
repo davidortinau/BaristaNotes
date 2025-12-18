@@ -21,8 +21,6 @@ class BeanDetailPageState
     public string Name { get; set; } = "";
     public string Roaster { get; set; } = "";
     public string Origin { get; set; } = "";
-    public bool TrackRoastDate { get; set; }
-    public DateTime RoastDate { get; set; } = DateTime.Now;
     public string Notes { get; set; } = "";
 
     // Form state
@@ -92,8 +90,6 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 s.Name = bean.Name;
                 s.Roaster = bean.Roaster ?? "";
                 s.Origin = bean.Origin ?? "";
-                s.TrackRoastDate = bean.RoastDate.HasValue;
-                s.RoastDate = bean.RoastDate ?? DateTime.Now;
                 s.Notes = bean.Notes ?? "";
                 s.RatingAggregate = bean.RatingAggregate;
                 s.IsLoading = false;
@@ -213,12 +209,6 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
             return false;
         }
 
-        if (State.TrackRoastDate && State.RoastDate > DateTime.Now)
-        {
-            SetState(s => s.ErrorMessage = "Roast date cannot be in the future");
-            return false;
-        }
-
         SetState(s => s.ErrorMessage = null);
         return true;
     }
@@ -243,7 +233,6 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                     Name = State.Name,
                     Roaster = string.IsNullOrWhiteSpace(State.Roaster) ? null : State.Roaster,
                     Origin = string.IsNullOrWhiteSpace(State.Origin) ? null : State.Origin,
-                    RoastDate = State.TrackRoastDate ? State.RoastDate : null,
                     Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes
                 };
 
@@ -258,7 +247,6 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                     Name = State.Name,
                     Roaster = string.IsNullOrWhiteSpace(State.Roaster) ? null : State.Roaster,
                     Origin = string.IsNullOrWhiteSpace(State.Origin) ? null : State.Origin,
-                    RoastDate = State.TrackRoastDate ? State.RoastDate : null,
                     Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes
                 };
 
@@ -327,6 +315,8 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
         await Microsoft.Maui.Controls.Shell.Current.GoToAsync<BagDetailPageProps>("bag-detail", props =>
         {
             props.BagId = bagId;
+            props.BeanId = State.BeanId ?? 0;
+            props.BeanName = State.Name;
         });
     }
 
@@ -334,8 +324,9 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
     {
         if (!State.BeanId.HasValue) return;
 
-        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<BagFormPageProps>("bag-form", props =>
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<BagDetailPageProps>("bag-detail", props =>
         {
+            props.BagId = null;  // null means create new
             props.BeanId = State.BeanId.Value;
             props.BeanName = State.Name;
         });
@@ -361,9 +352,9 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
 
         var page = ContentPage(
             (isEditMode) ?
-                ToolbarItem().Text("Add Bag").Order(ToolbarItemOrder.Secondary).OnClicked(NavigateToAddBag) : null,
+                ToolbarItem().Text("Add Bag").IconImageSource(AppIcons.Add).Order(ToolbarItemOrder.Secondary).OnClicked(NavigateToAddBag) : null,
             (isEditMode) ?
-                ToolbarItem().Text("Delete").Order(ToolbarItemOrder.Secondary).OnClicked(DeleteBeanAsync) : null,
+                ToolbarItem().Text("Delete").IconImageSource(AppIcons.Delete).Order(ToolbarItemOrder.Secondary).OnClicked(DeleteBeanAsync) : null,
             ScrollView(
                 VStack(spacing: 16,
                     // Form section
@@ -420,22 +411,6 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 .Placeholder("Country or region of origin")
                 .Text(State.Origin)
                 .OnTextChanged(text => SetState(s => s.Origin = text)),
-
-            // Roast date toggle
-            HStack(spacing: 8,
-                Label("Track Roast Date").ThemeKey(ThemeKeys.SecondaryText).VCenter(),
-                Switch()
-                    .IsToggled(State.TrackRoastDate)
-                    .OnToggled(args => SetState(s => s.TrackRoastDate = args.Value))
-            ),
-
-            // Date picker (conditional)
-            State.TrackRoastDate
-                ? DatePicker()
-                    .MaximumDate(DateTime.Now)
-                    .Date(State.RoastDate)
-                    .OnDateSelected(date => SetState(s => s.RoastDate = date ?? DateTime.Now))
-                : null,
 
             // Notes field
             new FormEditorField()

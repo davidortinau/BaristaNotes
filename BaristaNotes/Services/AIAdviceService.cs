@@ -37,11 +37,13 @@ Be encouraging and practical. Avoid technical jargon unless necessary.";
     public AIAdviceService(
         IShotService shotService,
         IFeedbackService feedbackService,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IChatClient chatClient)
     {
         _shotService = shotService;
         _feedbackService = feedbackService;
         _configuration = configuration;
+        _chatClient = chatClient;
     }
 
     /// <inheritdoc />

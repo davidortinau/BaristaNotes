@@ -1,5 +1,6 @@
 using MauiReactor;
 using BaristaNotes.Styles;
+using MauiReactor.Shapes;
 
 namespace BaristaNotes.Components.FormFields;
 
@@ -61,11 +62,12 @@ public class FormEntryField : Component
                 .Text(_label)
                 .Margin(AppSpacing.M, 0, 0, AppSpacing.XS),
 
-            // Row 1: BoxView background with rounded ends
-            BoxView()
-                .BackgroundColor(backgroundColor)
+            // Row 1: Border background with rounded ends
+            Border()
+                .Background(backgroundColor)
                 .HeightRequest(50)
-                .CornerRadius(25)
+                .StrokeThickness(0)
+                .StrokeShape(RoundRectangle().CornerRadius(25))
                 .GridRow(1),
 
             // Row 1: Entry on top of BoxView

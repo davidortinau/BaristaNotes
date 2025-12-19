@@ -106,6 +106,18 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         base.OnMounted();
         SetState(s => s.IsLoading = true);
         _ = LoadDataAsync();
+        DeviceDisplay.Current.MainDisplayInfoChanged += OnMainDisplayInfoChanged;
+    }
+
+    protected override void OnWillUnmount()
+    {
+        DeviceDisplay.Current.MainDisplayInfoChanged -= OnMainDisplayInfoChanged;
+        base.OnWillUnmount();
+    }
+
+    private void OnMainDisplayInfoChanged(object? sender, DisplayInfoChangedEventArgs e)
+    {
+        Invalidate();
     }
 
     void OnPageAppearing()
@@ -678,9 +690,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     ).Spacing(AppSpacing.M)
                     .Padding(16, 0, 16, 32)
                 ).GridRow(1)
-            ).SafeAreaEdges(SafeAreaEdges.None)
+            ).SafeAreaEdges(safeEdges)
         )
-        .SafeAreaEdges(SafeAreaEdges.None)
+        .SafeAreaEdges(safeEdges)
         .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always))
         .OnAppearing(() => OnPageAppearing());
     }

@@ -1,4 +1,5 @@
 using MauiReactor;
+using MauiReactor.Shapes;
 using BaristaNotes.Styles;
 
 namespace BaristaNotes.Components.FormFields;
@@ -68,10 +69,11 @@ public class FormPickerField : Component
                 .Margin(AppSpacing.M, 0, 0, AppSpacing.XS),
 
             // Row 1: BoxView background with rounded ends
-            BoxView()
-                .BackgroundColor(backgroundColor)
+            Border()
+                .Background(backgroundColor)
                 .HeightRequest(50)
-                .CornerRadius(25)
+                .StrokeThickness(0)
+                .StrokeShape(RoundRectangle().CornerRadius(25))
                 .GridRow(1),
 
             // Row 1: Picker on top of BoxView

@@ -269,6 +269,7 @@ class ApplicationTheme : Theme
             .BackgroundColor(IsLightTheme ? AppColors.Light.Background : AppColors.Dark.Background);
 
         ShellStyles.Default = _ => _
+            // going transparent for Large Titles and edge to edge
             // .Set(MauiControls.Shell.BackgroundColorProperty, IsLightTheme ? AppColors.Light.Background : AppColors.Dark.Background)
             .Set(MauiControls.Shell.BackgroundColorProperty, Colors.Transparent)
             .Set(MauiControls.Shell.ForegroundColorProperty, IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)

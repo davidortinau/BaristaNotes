@@ -37,6 +37,75 @@ tests/
 
 C# / .NET 10.0: Follow standard conventions
 
+## MAUI UI Guidelines (MANDATORY)
+
+### Deprecated APIs - DO NOT USE
+
+The following APIs are deprecated and must NOT be used in new code:
+
+- **Frame** - Use `Border` instead
+- **ListView** - Use `CollectionView` instead
+- **TableView** - Use `CollectionView` or custom layouts instead
+
+### Rounded Corners - Use Border, NOT BoxView
+
+**NEVER** use `BoxView` with `CornerRadius` for rounded container backgrounds. The corner radius gets distorted during device rotation (portrait ↔ landscape).
+
+```csharp
+// ❌ WRONG: BoxView corner radius distorts on rotation
+BoxView()
+    .BackgroundColor(backgroundColor)
+    .HeightRequest(50)
+    .CornerRadius(25)
+
+// ✅ CORRECT: Border with RoundRectangle maintains proper corners
+Border()
+    .BackgroundColor(backgroundColor)
+    .HeightRequest(50)
+    .StrokeThickness(0)
+    .StrokeShape(new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 25 })
+```
+
+### Orientation Rotation Handling
+
+When UI elements need to respond to orientation changes, use `DeviceDisplay.MainDisplayInfoChanged` event:
+
+```csharp
+// In component state
+private class State
+{
+    public DisplayOrientation Orientation { get; set; } = DisplayOrientation.Portrait;
+}
+
+// Subscribe in OnMounted
+protected override void OnMounted()
+{
+    DeviceDisplay.MainDisplayInfoChanged += OnDisplayInfoChanged;
+    SetState(s => s.Orientation = DeviceDisplay.MainDisplayInfo.Orientation);
+    base.OnMounted();
+}
+
+// Unsubscribe in OnWillUnmount
+protected override void OnWillUnmount()
+{
+    DeviceDisplay.MainDisplayInfoChanged -= OnDisplayInfoChanged;
+    base.OnWillUnmount();
+}
+
+// Handler triggers state update to invalidate/re-render
+private void OnDisplayInfoChanged(object? sender, DisplayInfoChangedEventArgs e)
+{
+    SetState(s => s.Orientation = e.DisplayInfo.Orientation);
+}
+
+// Use in Render() for orientation-specific layouts
+public override VisualNode Render()
+{
+    var isLandscape = State.Orientation == DisplayOrientation.Landscape;
+    // Adjust layout based on orientation...
+}
+```
+
 ## Logging Standards (MANDATORY)
 
 **REQUIRED**: All services and components MUST use Microsoft.Extensions.Logging for diagnostic output.

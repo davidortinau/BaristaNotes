@@ -4,6 +4,7 @@ using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using Fonts;
+using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups.Services;
 
@@ -161,13 +162,14 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
                 : CollectionView()
                     .ItemsSource(State.Equipment, RenderEquipmentItem)
                     .Header(
-                        ContentView().HeightRequest(16)
+                        ContentView().HeightRequest(DeviceInfo.Platform == DevicePlatform.iOS ? 180 : 16)
                     )
                     .Footer(
                         ContentView().HeightRequest(80)
                     )
                     .Margin(16, 0)
         )
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always))
         .OnAppearing(() => OnPageAppearing());
     }
 

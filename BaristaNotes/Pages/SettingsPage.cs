@@ -3,6 +3,7 @@ using MauiReactor.Shapes;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using Fonts;
+using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 
 namespace BaristaNotes.Pages;
 
@@ -91,7 +92,7 @@ partial class SettingsPage : Component<SettingsPageState>
                     .Margin(16, 0, 16, 16)
                 )
             )
-        );
+        ).OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always));
     }
 
     VisualNode RenderThemeOption(ThemeMode mode, string icon, string title)

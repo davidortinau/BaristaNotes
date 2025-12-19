@@ -3,6 +3,7 @@ using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
+using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups.Services;
 
@@ -116,8 +117,6 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
     {
         if (!State.ProfileId.HasValue || State.ProfileId.Value <= 0) return;
 
-        if (Microsoft.Maui.Controls.Application.Current?.MainPage == null) return;
-
         var popup = new SimpleActionPopup
         {
             Title = $"Delete Profile?",
@@ -155,10 +154,10 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
             ScrollView(
                 VStack(spacing: 24,
                     // Header
-                    Label(title)
-                        .FontSize(24)
-                        .FontAttributes(MauiControls.FontAttributes.Bold)
-                        .Padding(16, 16, 16, 0),
+                    // Label(title)
+                    //     .FontSize(24)
+                    //     .FontAttributes(MauiControls.FontAttributes.Bold)
+                    //     .Padding(16, 16, 16, 0),
 
                     // Profile image picker (only shown in edit mode since we need a profile ID)
                     isEditMode && State.ProfileId.HasValue
@@ -233,6 +232,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
                     )
                 )
             )
-        ).Title(title);
+        ).Title(title)
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always));
     }
 }

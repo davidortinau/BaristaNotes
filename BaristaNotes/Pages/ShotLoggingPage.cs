@@ -509,6 +509,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             _ => new(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None)
         };
 
+        // MauiControls.Shell.Current.BackgroundColor = Colors.Transparent;
+        // MauiControls.Shell.Current.Background = Colors.Transparent;
+
         return ContentPage(Props.ShotId.HasValue ? "Edit Shot" : "New Shot",
             Props.ShotId.HasValue ?
                 ToolbarItem("")
@@ -675,9 +678,10 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     ).Spacing(AppSpacing.M)
                     .Padding(16, 0, 16, 32)
                 ).GridRow(1)
-            ).SafeAreaEdges(safeEdges)
+            ).SafeAreaEdges(SafeAreaEdges.None)
         )
-        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
+        .SafeAreaEdges(SafeAreaEdges.None)
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always))
         .OnAppearing(() => OnPageAppearing());
     }
 

@@ -3,6 +3,7 @@ using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using Fonts;
+using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 
 namespace BaristaNotes.Pages;
 
@@ -118,13 +119,14 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                 : CollectionView()
                     .ItemsSource(State.Profiles, RenderProfileItem)
                     .Header(
-                        ContentView().HeightRequest(16)
+                        ContentView().HeightRequest(DeviceInfo.Platform == DevicePlatform.iOS ? 180 : 16)
                     )
                     .Footer(
                         ContentView().HeightRequest(80)
                     )
                     .Margin(16, 0)
         ).Title("Profiles")
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always))
         .OnAppearing(() => OnPageAppearing());
     }
 

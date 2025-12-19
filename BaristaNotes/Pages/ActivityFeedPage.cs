@@ -3,6 +3,7 @@ using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Components;
 using BaristaNotes.Styles;
 using Fonts;
+using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 
 namespace BaristaNotes.Pages;
 
@@ -97,11 +98,12 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
     public override VisualNode Render()
     {
         return ContentPage("Shot History",
-            Grid(
-                RenderContent()
-            )
-            .SafeAreaEdges(SafeAreaEdges.None)
+            // Grid(
+            RenderContent()
+        // )
+        // .SafeAreaEdges(new(SafeAreaRegions.None, SafeAreaRegions.Default, SafeAreaRegions.None, SafeAreaRegions.None))
         )
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always))
         .OnAppearing(() => OnPageAppearing());
     }
 
@@ -179,16 +181,8 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                 .OnTapped(() => NavigateToDetail(shot.Id))
                 .Margin(16, 4)
             )
-            // .RemainingItemsThreshold(5)
-            // .OnRemainingItemsThresholdReached(() =>
-            // {
-            //     if (State.HasMore && !State.IsLoading)
-            //     {
-            //         _ = LoadMoreShotsAsync();
-            //     }
-            // })
             .Header(
-                ContentView().HeightRequest(16)
+                ContentView().HeightRequest(DeviceInfo.Platform == DevicePlatform.iOS ? 180 : 16)
             )
             .Footer(
                 ContentView().HeightRequest(80)

@@ -28,6 +28,8 @@ public class AppShell : Component
                     .Route("settings")
                     .RenderContent(() => new SettingsPage())
             )
-        ).FlyoutBehavior(FlyoutBehavior.Disabled);
+        )
+        .BackgroundColor(Colors.Transparent)
+        .FlyoutBehavior(FlyoutBehavior.Disabled);
     }
 }

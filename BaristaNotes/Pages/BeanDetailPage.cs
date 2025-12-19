@@ -8,6 +8,7 @@ using Fonts;
 using MauiReactor;
 using UXDivers.Popups.Services;
 using UXDivers.Popups.Maui.Controls;
+using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 
 namespace BaristaNotes.Pages;
 
@@ -282,8 +283,6 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
     {
         if (!State.BeanId.HasValue || State.BeanId.Value <= 0) return;
 
-        if (Application.Current?.MainPage == null) return;
-
         var popup = new SimpleActionPopup
         {
             Title = $"Delete Bean?",
@@ -373,6 +372,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 .Padding(16)
             )
         ).Title(title)
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always))
         .OnAppearing(OnPageAppearing);
 
         return page;

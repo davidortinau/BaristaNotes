@@ -5,6 +5,7 @@ using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using Fonts;
 using MauiReactor;
+using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups.Services;
 
@@ -175,7 +176,6 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
     async Task DeleteBagAsync()
     {
         if (!State.BagId.HasValue || State.BagId.Value <= 0) return;
-        if (Application.Current?.MainPage == null) return;
 
         var popup = new SimpleActionPopup
         {
@@ -258,7 +258,8 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
                 .Padding(16)
             )
         )
-        .Title(title);
+        .Title(title)
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always));
     }
 
     VisualNode RenderForm()

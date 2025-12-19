@@ -269,7 +269,8 @@ class ApplicationTheme : Theme
             .BackgroundColor(IsLightTheme ? AppColors.Light.Background : AppColors.Dark.Background);
 
         ShellStyles.Default = _ => _
-            .Set(MauiControls.Shell.BackgroundColorProperty, IsLightTheme ? AppColors.Light.Background : AppColors.Dark.Background)
+            // .Set(MauiControls.Shell.BackgroundColorProperty, IsLightTheme ? AppColors.Light.Background : AppColors.Dark.Background)
+            .Set(MauiControls.Shell.BackgroundColorProperty, Colors.Transparent)
             .Set(MauiControls.Shell.ForegroundColorProperty, IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)
             .Set(MauiControls.Shell.TitleColorProperty, IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)
             .Set(MauiControls.Shell.DisabledColorProperty, IsLightTheme ? AppColors.Light.TextMuted : AppColors.Dark.TextMuted)

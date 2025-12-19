@@ -4,6 +4,7 @@ using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using Fonts;
 using MauiReactor;
+using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 
 namespace BaristaNotes.Pages;
 
@@ -117,7 +118,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
                 : CollectionView()
                     .ItemsSource(State.Beans, RenderBeanItem)
                     .Header(
-                        ContentView().HeightRequest(16)
+                        ContentView().HeightRequest(DeviceInfo.Platform == DevicePlatform.iOS ? 180 : 16)
                     )
                     .Footer(
                         ContentView().HeightRequest(80)
@@ -125,6 +126,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
                     .Margin(16, 0)
 
         ).Title("Beans")
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always))
         .OnAppearing(() => OnPageAppearing());
     }
 

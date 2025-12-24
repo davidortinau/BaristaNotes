@@ -1,8 +1,13 @@
 # BaristaNotes Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-12-02
+Auto-generated from all feature plans. Last updated: 2025-12-24
 
 ## Active Technologies
+- C# 12 / .NET 10.0 + MauiReactor 4.0.3-beta, Microsoft.Extensions.AI, Microsoft.Extensions.AI.OpenAI, OpenAI SDK, Entity Framework Core 8.0 (001-ai-shot-advice)
+- SQLite via EF Core (existing) - adding TastingNotes field to ShotRecord (001-ai-shot-advice)
+- C# 12 / .NET 10.0 + Microsoft.Extensions.Logging.Debug 10.0.0 (already installed), Microsoft.Extensions.DependencyInjection (MAUI framework) (001-logging-migration)
+- N/A (logging only, no data persistence changes) (001-logging-migration)
+- C# 12 / .NET 10.0 + MauiReactor 4.0.3-beta, UXDivers.Popups.Maui 0.9.0, Entity Framework Core 8.0.0 (001-inline-bean-creation)
 - C# / .NET 10.0 + MauiReactor (Reactor.Maui 4.0.3-beta), Plugin.Maui.BottomSheet (NEW), CommunityToolkit.Maui 9.1.1, Entity Framework Core 8.0.0 (002-crud-settings-modals)
 - SQLite (local database via EF Core) (002-crud-settings-modals)
 - C# 12 / .NET 9 + .NET MAUI, MauiReactor (preview), UXDivers.Popups.Maui, CommunityToolkit.Maui (001-crud-feedback)
@@ -167,6 +172,9 @@ _logger.LogDebug($"Processing {bagId}"); // NEVER DO THIS
 See `specs/001-logging-migration/quickstart.md` for complete patterns and examples.
 
 ## Recent Changes
+- 001-inline-bean-creation: Added C# 12 / .NET 10.0 + MauiReactor 4.0.3-beta, UXDivers.Popups.Maui 0.9.0, Entity Framework Core 8.0.0
+- 001-logging-migration: Added C# 12 / .NET 10.0 + Microsoft.Extensions.Logging.Debug 10.0.0 (already installed), Microsoft.Extensions.DependencyInjection (MAUI framework)
+- 001-ai-shot-advice: Added C# 12 / .NET 10.0 + MauiReactor 4.0.3-beta, Microsoft.Extensions.AI, Microsoft.Extensions.AI.OpenAI, OpenAI SDK, Entity Framework Core 8.0
 - 001-bean-rating-tracking: Added C# .NET 10.0 + .NET MAUI 10.0, Entity Framework Core 10.0, SQLite, Reactor.Maui 4.0.3-beta
 - 004-bean-detail-page: Added C# 12, .NET 10.0 + MauiReactor (UI), UXDivers.Popups.Maui (feedback), Microsoft.EntityFrameworkCore (data)
 - 003-profile-image-picker: Added C# 12 / .NET 10.0

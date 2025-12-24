@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using OpenAI;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
@@ -8,18 +9,33 @@ using BaristaNotes.Core.Services.DTOs;
 namespace BaristaNotes.Services;
 
 /// <summary>
-/// Service for generating AI-powered espresso shot advice using OpenAI gpt-5-nano.
-/// API key is app-provided via IConfiguration, not user-configured.
+/// Service for generating AI-powered espresso shot advice.
+/// Tries on-device AI first (Apple Intelligence), falls back to OpenAI if available.
+/// Once local client fails, it is disabled for the remainder of the app session.
 /// </summary>
 public class AIAdviceService : IAIAdviceService
 {
     private readonly IShotService _shotService;
     private readonly IFeedbackService _feedbackService;
     private readonly IConfiguration _configuration;
-    private IChatClient? _chatClient;
+    private readonly ILogger<AIAdviceService> _logger;
 
-    private const string ModelId = "gpt-4o-mini";//"gpt-5-nano";
-    private const int TimeoutSeconds = 10;
+    // Injected on-device client (from AddPlatformChatClient)
+    private readonly IChatClient? _localClient;
+
+    // OpenAI client created on demand
+    private IChatClient? _openAIClient;
+
+    // Session-level flag: once local client fails, don't retry until app restart
+    private bool _localClientDisabled = false;
+
+    private const string ModelId = "gpt-4o-mini";
+    private const int LocalTimeoutSeconds = 3;
+    private const int CloudTimeoutSeconds = 10;
+
+    // Source strings for transparency
+    private const string SourceOnDevice = "via Apple Intelligence";
+    private const string SourceCloud = "via OpenAI";
 
     private const string SystemPrompt = @"You are an expert barista assistant helping home espresso enthusiasts improve their shots. 
 You have deep knowledge of espresso extraction, grind settings, dosing, and timing.
@@ -38,19 +54,23 @@ Be encouraging and practical. Avoid technical jargon unless necessary.";
         IShotService shotService,
         IFeedbackService feedbackService,
         IConfiguration configuration,
-        IChatClient chatClient)
+        ILogger<AIAdviceService> logger,
+        IChatClient? chatClient = null)
     {
         _shotService = shotService;
         _feedbackService = feedbackService;
         _configuration = configuration;
-        _chatClient = chatClient;
+        _logger = logger;
+        _localClient = chatClient;
     }
 
     /// <inheritdoc />
     public Task<bool> IsConfiguredAsync()
     {
-        var apiKey = _configuration["OpenAI:ApiKey"];
-        var isConfigured = !string.IsNullOrWhiteSpace(apiKey);
+        // Available if local client works (and not disabled) OR OpenAI key exists
+        var hasLocalClient = _localClient != null && !_localClientDisabled;
+        var hasOpenAIKey = !string.IsNullOrWhiteSpace(_configuration["OpenAI:ApiKey"]);
+        var isConfigured = hasLocalClient || hasOpenAIKey;
         return Task.FromResult(isConfigured);
     }
 
@@ -85,35 +105,21 @@ Be encouraging and practical. Avoid technical jargon unless necessary.";
             // Build the prompt using shared utility
             var userMessage = AIPromptBuilder.BuildPrompt(context);
 
-            // Get or create the chat client
-            var client = GetOrCreateClient();
-            if (client == null)
-            {
-                return new AIAdviceResponseDto
-                {
-                    Success = false,
-                    ErrorMessage = "AI advice is temporarily unavailable. Please try again later."
-                };
-            }
-
-            // Create timeout cancellation
-            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeoutCts.CancelAfter(TimeSpan.FromSeconds(TimeoutSeconds));
-
-            // Call the AI
+            // Build messages
             var messages = new List<ChatMessage>
             {
                 new ChatMessage(ChatRole.System, SystemPrompt),
                 new ChatMessage(ChatRole.User, userMessage)
             };
 
-            var response = await client.GetResponseAsync(
+            // Try to get response with fallback
+            var (response, source) = await TryGetResponseWithFallbackAsync(
                 messages,
-                cancellationToken: timeoutCts.Token);
+                LocalTimeoutSeconds,
+                CloudTimeoutSeconds,
+                cancellationToken);
 
-            var advice = response?.Text;
-
-            if (string.IsNullOrWhiteSpace(advice))
+            if (string.IsNullOrWhiteSpace(response))
             {
                 return new AIAdviceResponseDto
                 {
@@ -125,16 +131,17 @@ Be encouraging and practical. Avoid technical jargon unless necessary.";
             return new AIAdviceResponseDto
             {
                 Success = true,
-                Advice = advice,
+                Advice = response,
+                Source = source,
                 GeneratedAt = DateTime.UtcNow
             };
         }
-        catch (OperationCanceledException oce)
+        catch (OperationCanceledException)
         {
             return new AIAdviceResponseDto
             {
                 Success = false,
-                ErrorMessage = $"Request timed out. Please try again. {oce.Message}"
+                ErrorMessage = "Request timed out. Please try again."
             };
         }
         catch (HttpRequestException)
@@ -154,8 +161,9 @@ Be encouraging and practical. Avoid technical jargon unless necessary.";
                 ErrorMessage = "Too many requests. Please wait a moment."
             };
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Unexpected error getting AI advice for shot {ShotId}", shotId);
             return new AIAdviceResponseDto
             {
                 Success = false,
@@ -186,16 +194,7 @@ Be encouraging and practical. Avoid technical jargon unless necessary.";
                 return null;
             }
 
-            // For passive insights, use a shorter prompt for quick response
-            var client = GetOrCreateClient();
-            if (client == null)
-            {
-                return null;
-            }
-
             var passivePrompt = AIPromptBuilder.BuildPassivePrompt(context);
-
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
             var messages = new List<ChatMessage>
             {
@@ -203,9 +202,14 @@ Be encouraging and practical. Avoid technical jargon unless necessary.";
                 new ChatMessage(ChatRole.User, passivePrompt)
             };
 
-            var response = await client.GetResponseAsync(messages, cancellationToken: cts.Token);
+            // Use shorter timeouts for passive insights (2s local, 5s cloud)
+            var (response, _) = await TryGetResponseWithFallbackAsync(
+                messages,
+                localTimeoutSeconds: 2,
+                cloudTimeoutSeconds: 5,
+                CancellationToken.None);
 
-            return response?.Text;
+            return response;
         }
         catch
         {
@@ -215,13 +219,94 @@ Be encouraging and practical. Avoid technical jargon unless necessary.";
     }
 
     /// <summary>
-    /// Gets or creates the IChatClient instance.
+    /// Tries to get a response from available AI clients with fallback.
+    /// Tries local client first (if not disabled), then falls back to OpenAI.
     /// </summary>
-    private IChatClient? GetOrCreateClient()
+    /// <returns>Tuple of (response text, source string) or (null, null) if all fail.</returns>
+    private async Task<(string? Response, string? Source)> TryGetResponseWithFallbackAsync(
+        List<ChatMessage> messages,
+        int localTimeoutSeconds,
+        int cloudTimeoutSeconds,
+        CancellationToken cancellationToken)
     {
-        if (_chatClient != null)
+        // Try local client first if available and not disabled
+        if (_localClient != null && !_localClientDisabled)
         {
-            return _chatClient;
+            try
+            {
+                _logger.LogDebug("Attempting on-device AI request");
+
+                using var localCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                localCts.CancelAfter(TimeSpan.FromSeconds(localTimeoutSeconds));
+
+                var localResponse = await _localClient.GetResponseAsync(
+                    messages,
+                    cancellationToken: localCts.Token);
+
+                if (!string.IsNullOrWhiteSpace(localResponse?.Text))
+                {
+                    _logger.LogDebug("On-device AI request succeeded");
+                    return (localResponse.Text, SourceOnDevice);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Local client failed - disable for remainder of session
+                _localClientDisabled = true;
+                _logger.LogWarning(ex, "On-device AI failed, disabling for session. Falling back to OpenAI.");
+            }
+        }
+
+        // Try OpenAI as fallback
+        var openAIClient = GetOrCreateOpenAIClient();
+        if (openAIClient != null)
+        {
+            // Check if user explicitly cancelled before attempting fallback
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogDebug("Skipping OpenAI fallback - request was cancelled");
+                return (null, null);
+            }
+
+            try
+            {
+                _logger.LogDebug("Attempting OpenAI request");
+
+                // Create independent timeout for OpenAI - don't link to potentially-cancelled local token
+                using var cloudCts = new CancellationTokenSource();
+                cloudCts.CancelAfter(TimeSpan.FromSeconds(cloudTimeoutSeconds));
+
+                // Also cancel if user cancels during the call
+                using var registration = cancellationToken.Register(() => cloudCts.Cancel());
+
+                var cloudResponse = await openAIClient.GetResponseAsync(
+                    messages,
+                    cancellationToken: cloudCts.Token);
+
+                if (!string.IsNullOrWhiteSpace(cloudResponse?.Text))
+                {
+                    _logger.LogDebug("OpenAI request succeeded");
+                    return (cloudResponse.Text, SourceCloud);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "OpenAI request failed");
+                throw; // Re-throw to be handled by caller's error handling
+            }
+        }
+
+        return (null, null);
+    }
+
+    /// <summary>
+    /// Gets or creates the OpenAI client instance.
+    /// </summary>
+    private IChatClient? GetOrCreateOpenAIClient()
+    {
+        if (_openAIClient != null)
+        {
+            return _openAIClient;
         }
 
         var apiKey = _configuration["OpenAI:ApiKey"];
@@ -233,11 +318,12 @@ Be encouraging and practical. Avoid technical jargon unless necessary.";
         try
         {
             var openAIClient = new OpenAIClient(apiKey);
-            _chatClient = openAIClient.GetChatClient(ModelId).AsIChatClient();
-            return _chatClient;
+            _openAIClient = openAIClient.GetChatClient(ModelId).AsIChatClient();
+            return _openAIClient;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to create OpenAI client");
             return null;
         }
     }

@@ -21,6 +21,12 @@ public record AIAdviceResponseDto
     public string? ErrorMessage { get; init; }
 
     /// <summary>
+    /// The source of the AI response for transparency.
+    /// Values: "via Apple Intelligence", "via OpenAI", or null if failed.
+    /// </summary>
+    public string? Source { get; init; }
+
+    /// <summary>
     /// Timestamp of response.
     /// </summary>
     public DateTime GeneratedAt { get; init; } = DateTime.UtcNow;

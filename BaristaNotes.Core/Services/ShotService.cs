@@ -348,6 +348,104 @@ public class ShotService : IShotService
         };
     }
 
+    /// <inheritdoc />
+    public async Task<int?> GetMostRecentBeanIdAsync()
+    {
+        var mostRecentShot = await _shotRepository.GetMostRecentAsync();
+        if (mostRecentShot?.Bag?.BeanId == null)
+            return null;
+        
+        return mostRecentShot.Bag.BeanId;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> BeanHasHistoryAsync(int beanId)
+    {
+        var allShots = await _shotRepository.GetAllAsync();
+        return allShots.Any(s => s.Bag?.BeanId == beanId && !s.IsDeleted);
+    }
+
+    /// <inheritdoc />
+    public async Task<BeanRecommendationContextDto?> GetBeanRecommendationContextAsync(int beanId)
+    {
+        // Get bean from any bag with this bean ID
+        var allShots = await _shotRepository.GetAllAsync();
+        var shotsForBean = allShots
+            .Where(s => s.Bag?.BeanId == beanId && !s.IsDeleted)
+            .ToList();
+
+        // Try to get bean info from bags for this bean
+        var bagsForBean = await _bagRepository.GetBagsForBeanAsync(beanId, includeCompleted: true);
+        var bag = bagsForBean.FirstOrDefault(b => !b.IsDeleted);
+        
+        if (bag?.Bean == null)
+            return null;
+
+        var bean = bag.Bean;
+        var hasHistory = shotsForBean.Any();
+
+        // Get historical shots (up to 10, sorted by rating desc)
+        List<ShotContextDto>? historicalShots = null;
+        if (hasHistory)
+        {
+            historicalShots = shotsForBean
+                .OrderByDescending(s => s.Rating ?? -1)
+                .ThenByDescending(s => s.Timestamp)
+                .Take(10)
+                .Select(s => new ShotContextDto
+                {
+                    DoseIn = s.DoseIn,
+                    ActualOutput = s.ActualOutput,
+                    ActualTime = s.ActualTime,
+                    GrindSetting = s.GrindSetting,
+                    Rating = s.Rating,
+                    TastingNotes = null,
+                    Timestamp = s.Timestamp
+                })
+                .ToList();
+        }
+
+        // Get most recent bag's roast date
+        var mostRecentBag = bagsForBean
+            .Where(b => !b.IsDeleted)
+            .OrderByDescending(b => b.RoastDate)
+            .FirstOrDefault();
+
+        var roastDate = mostRecentBag?.RoastDate;
+        int? daysFromRoast = roastDate.HasValue 
+            ? (int)(DateTime.Now - roastDate.Value).TotalDays 
+            : null;
+
+        // Get equipment context from most recent shot if available
+        EquipmentContextDto? equipment = null;
+        var recentShot = shotsForBean
+            .OrderByDescending(s => s.Timestamp)
+            .FirstOrDefault();
+        
+        if (recentShot?.Machine != null || recentShot?.Grinder != null)
+        {
+            equipment = new EquipmentContextDto
+            {
+                MachineName = recentShot.Machine?.Name,
+                GrinderName = recentShot.Grinder?.Name
+            };
+        }
+
+        return new BeanRecommendationContextDto
+        {
+            BeanId = beanId,
+            BeanName = bean.Name,
+            Roaster = bean.Roaster,
+            Origin = bean.Origin,
+            Notes = bean.Notes,
+            RoastDate = roastDate,
+            DaysFromRoast = daysFromRoast,
+            HasHistory = hasHistory,
+            HistoricalShots = historicalShots,
+            Equipment = equipment
+        };
+    }
+
     private ShotRecordDto MapToDto(ShotRecord shot) => new()
     {
         Id = shot.Id,

@@ -383,4 +383,174 @@ Be encouraging and practical. Avoid technical jargon unless necessary.";
 
         return false;
     }
+
+    /// <summary>
+    /// System prompt for bean recommendations.
+    /// </summary>
+    private const string RecommendationSystemPrompt = @"You are an expert barista assistant. 
+Based on the bean characteristics and any historical shot data provided, recommend starting extraction parameters.
+Use standard espresso ratios (1:2 to 1:2.5) and typical extraction times (25-35 seconds).
+Adjust for roast level and freshness. Darker roasts typically need coarser grind.
+Respond ONLY with valid JSON - no other text.";
+
+    /// <inheritdoc />
+    public async Task<AIRecommendationDto> GetRecommendationsForBeanAsync(
+        int beanId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Check configuration
+            if (!await IsConfiguredAsync())
+            {
+                return new AIRecommendationDto
+                {
+                    Success = false,
+                    ErrorMessage = "AI recommendations are temporarily unavailable. Please try again later."
+                };
+            }
+
+            // Get bean context
+            var context = await _shotService.GetBeanRecommendationContextAsync(beanId);
+            if (context == null)
+            {
+                return new AIRecommendationDto
+                {
+                    Success = false,
+                    ErrorMessage = "Bean not found."
+                };
+            }
+
+            // Build prompt based on whether bean has history
+            var userMessage = context.HasHistory
+                ? AIPromptBuilder.BuildReturningBeanPrompt(context)
+                : AIPromptBuilder.BuildNewBeanPrompt(context);
+
+            var recommendationType = context.HasHistory
+                ? RecommendationType.ReturningBean
+                : RecommendationType.NewBean;
+
+            // Build messages
+            var messages = new List<ChatMessage>
+            {
+                new ChatMessage(ChatRole.System, RecommendationSystemPrompt),
+                new ChatMessage(ChatRole.User, userMessage)
+            };
+
+            // Try to get response with fallback
+            var (response, source) = await TryGetResponseWithFallbackAsync(
+                messages,
+                LocalTimeoutSeconds,
+                CloudTimeoutSeconds,
+                cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(response))
+            {
+                return new AIRecommendationDto
+                {
+                    Success = false,
+                    ErrorMessage = "AI service error. Please try again later."
+                };
+            }
+
+            // Parse the JSON response
+            return ParseRecommendationResponse(response, recommendationType, source);
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // Re-throw cancellation to caller
+        }
+        catch (HttpRequestException)
+        {
+            return new AIRecommendationDto
+            {
+                Success = false,
+                ErrorMessage = "Unable to connect. Please check your internet connection."
+            };
+        }
+        catch (Exception ex) when (ex.Message.Contains("rate", StringComparison.OrdinalIgnoreCase) ||
+                                    ex.Message.Contains("429"))
+        {
+            return new AIRecommendationDto
+            {
+                Success = false,
+                ErrorMessage = "Too many requests. Please wait a moment."
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error getting AI recommendations for bean {BeanId}", beanId);
+            return new AIRecommendationDto
+            {
+                Success = false,
+                ErrorMessage = "An unexpected error occurred. Please try again."
+            };
+        }
+    }
+
+    /// <summary>
+    /// Parses the AI JSON response into an AIRecommendationDto.
+    /// </summary>
+    private AIRecommendationDto ParseRecommendationResponse(
+        string response, 
+        RecommendationType recommendationType, 
+        string? source)
+    {
+        try
+        {
+            // Clean up response - AI sometimes wraps JSON in markdown code blocks
+            var jsonText = response.Trim();
+            if (jsonText.StartsWith("```json"))
+                jsonText = jsonText.Substring(7);
+            else if (jsonText.StartsWith("```"))
+                jsonText = jsonText.Substring(3);
+            if (jsonText.EndsWith("```"))
+                jsonText = jsonText.Substring(0, jsonText.Length - 3);
+            jsonText = jsonText.Trim();
+
+            using var doc = System.Text.Json.JsonDocument.Parse(jsonText);
+            var root = doc.RootElement;
+
+            var dose = root.TryGetProperty("dose", out var doseEl) 
+                ? doseEl.GetDecimal() 
+                : 18m; // Default
+            var grind = root.TryGetProperty("grind", out var grindEl) 
+                ? grindEl.GetString() ?? "medium" 
+                : "medium";
+            var output = root.TryGetProperty("output", out var outputEl) 
+                ? outputEl.GetDecimal() 
+                : 36m; // Default
+            var duration = root.TryGetProperty("duration", out var durationEl) 
+                ? durationEl.GetDecimal() 
+                : 30m; // Default
+
+            return new AIRecommendationDto
+            {
+                Success = true,
+                Dose = dose,
+                GrindSetting = grind,
+                Output = output,
+                Duration = duration,
+                RecommendationType = recommendationType,
+                Source = source
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse AI recommendation response: {Response}", response);
+            
+            // Return defaults on parse failure
+            return new AIRecommendationDto
+            {
+                Success = true,
+                Dose = 18m,
+                GrindSetting = "medium",
+                Output = 36m,
+                Duration = 30m,
+                RecommendationType = recommendationType,
+                Source = source,
+                Confidence = "Using default values due to parsing issue"
+            };
+        }
+    }
 }

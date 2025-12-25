@@ -23,4 +23,24 @@ public interface IShotService
     /// <param name="shotId">The shot to get context for.</param>
     /// <returns>AI advice request context, or null if shot not found.</returns>
     Task<AIAdviceRequestDto?> GetShotContextForAIAsync(int shotId);
+
+    /// <summary>
+    /// Gets the bean ID of the most recently logged shot.
+    /// </summary>
+    /// <returns>Bean ID of most recent shot, or null if no shots exist.</returns>
+    Task<int?> GetMostRecentBeanIdAsync();
+
+    /// <summary>
+    /// Checks if a bean has any shot history.
+    /// </summary>
+    /// <param name="beanId">The bean ID to check.</param>
+    /// <returns>True if the bean has at least one logged shot.</returns>
+    Task<bool> BeanHasHistoryAsync(int beanId);
+
+    /// <summary>
+    /// Builds the context required for AI bean recommendations.
+    /// </summary>
+    /// <param name="beanId">The ID of the bean.</param>
+    /// <returns>Bean recommendation context, or null if bean not found.</returns>
+    Task<BeanRecommendationContextDto?> GetBeanRecommendationContextAsync(int beanId);
 }

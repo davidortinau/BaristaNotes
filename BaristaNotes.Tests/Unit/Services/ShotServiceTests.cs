@@ -679,4 +679,236 @@ public class ShotServiceTests
     }
 
     #endregion
+
+    #region AI Bean Recommendations Tests (T011-T014, T022-T023)
+
+    [Fact]
+    public async Task BeanHasHistoryAsync_NewBeanWithNoShots_ReturnsFalse()
+    {
+        // Arrange - T011
+        var beanId = 99;
+        _mockShotRepository.Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<BaristaNotes.Core.Models.ShotRecord>());
+
+        // Act
+        var result = await _service.BeanHasHistoryAsync(beanId);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task BeanHasHistoryAsync_BeanWithShots_ReturnsTrue()
+    {
+        // Arrange
+        var beanId = 1;
+        var bag = new BaristaNotes.Core.Models.Bag { Id = 1, BeanId = beanId };
+        var shots = new List<BaristaNotes.Core.Models.ShotRecord>
+        {
+            new() { Id = 1, BagId = 1, Bag = bag, IsDeleted = false, DoseIn = 18, GrindSetting = "5", DrinkType = "Espresso", SyncId = Guid.NewGuid() }
+        };
+        _mockShotRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(shots);
+
+        // Act
+        var result = await _service.BeanHasHistoryAsync(beanId);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task BeanHasHistoryAsync_BeanWithOnlyDeletedShots_ReturnsFalse()
+    {
+        // Arrange
+        var beanId = 1;
+        var bag = new BaristaNotes.Core.Models.Bag { Id = 1, BeanId = beanId };
+        var shots = new List<BaristaNotes.Core.Models.ShotRecord>
+        {
+            new() { Id = 1, BagId = 1, Bag = bag, IsDeleted = true, DoseIn = 18, GrindSetting = "5", DrinkType = "Espresso", SyncId = Guid.NewGuid() }
+        };
+        _mockShotRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(shots);
+
+        // Act
+        var result = await _service.BeanHasHistoryAsync(beanId);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task GetMostRecentBeanIdAsync_WithShots_ReturnsCorrectBeanId()
+    {
+        // Arrange - T022
+        var expectedBeanId = 42;
+        var bag = new BaristaNotes.Core.Models.Bag { Id = 1, BeanId = expectedBeanId };
+        var mostRecentShot = new BaristaNotes.Core.Models.ShotRecord
+        {
+            Id = 1,
+            BagId = 1,
+            Bag = bag,
+            Timestamp = DateTime.Now,
+            DoseIn = 18,
+            GrindSetting = "5",
+            DrinkType = "Espresso",
+            SyncId = Guid.NewGuid()
+        };
+        _mockShotRepository.Setup(r => r.GetMostRecentAsync()).ReturnsAsync(mostRecentShot);
+
+        // Act
+        var result = await _service.GetMostRecentBeanIdAsync();
+
+        // Assert
+        Assert.Equal(expectedBeanId, result);
+    }
+
+    [Fact]
+    public async Task GetMostRecentBeanIdAsync_NoShots_ReturnsNull()
+    {
+        // Arrange
+        _mockShotRepository.Setup(r => r.GetMostRecentAsync()).ReturnsAsync((BaristaNotes.Core.Models.ShotRecord?)null);
+
+        // Act
+        var result = await _service.GetMostRecentBeanIdAsync();
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetBeanRecommendationContextAsync_NewBeanWithoutHistory_ReturnsContextWithHasHistoryFalse()
+    {
+        // Arrange - T012
+        var beanId = 1;
+        var bean = new BaristaNotes.Core.Models.Bean 
+        { 
+            Id = beanId, 
+            Name = "Test Bean", 
+            Roaster = "Test Roaster",
+            Origin = "Ethiopia",
+            Notes = "Fruity"
+        };
+        var bag = new BaristaNotes.Core.Models.Bag 
+        { 
+            Id = 1, 
+            BeanId = beanId, 
+            Bean = bean,
+            RoastDate = DateTime.Now.AddDays(-7),
+            IsDeleted = false
+        };
+        
+        _mockShotRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<BaristaNotes.Core.Models.ShotRecord>());
+        _mockBagRepository.Setup(r => r.GetBagsForBeanAsync(beanId, true)).ReturnsAsync(new List<BaristaNotes.Core.Models.Bag> { bag });
+
+        // Act
+        var result = await _service.GetBeanRecommendationContextAsync(beanId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.HasHistory);
+        Assert.Null(result.HistoricalShots);
+        Assert.Equal("Test Bean", result.BeanName);
+        Assert.Equal("Test Roaster", result.Roaster);
+        Assert.Equal("Ethiopia", result.Origin);
+    }
+
+    [Fact]
+    public async Task GetBeanRecommendationContextAsync_BeanWithHistory_ReturnsContextWithHistoricalShots()
+    {
+        // Arrange - T023
+        var beanId = 1;
+        var bean = new BaristaNotes.Core.Models.Bean { Id = beanId, Name = "Test Bean" };
+        var bag = new BaristaNotes.Core.Models.Bag 
+        { 
+            Id = 1, 
+            BeanId = beanId, 
+            Bean = bean,
+            RoastDate = DateTime.Now.AddDays(-7),
+            IsDeleted = false
+        };
+        
+        var shots = new List<BaristaNotes.Core.Models.ShotRecord>
+        {
+            new() { Id = 1, BagId = 1, Bag = bag, Rating = 4, DoseIn = 18, GrindSetting = "5", ActualOutput = 36, ActualTime = 28, DrinkType = "Espresso", IsDeleted = false, Timestamp = DateTime.Now.AddDays(-1), SyncId = Guid.NewGuid() },
+            new() { Id = 2, BagId = 1, Bag = bag, Rating = 3, DoseIn = 18, GrindSetting = "6", ActualOutput = 38, ActualTime = 30, DrinkType = "Espresso", IsDeleted = false, Timestamp = DateTime.Now.AddDays(-2), SyncId = Guid.NewGuid() },
+            new() { Id = 3, BagId = 1, Bag = bag, Rating = 2, DoseIn = 18, GrindSetting = "4", ActualOutput = 34, ActualTime = 26, DrinkType = "Espresso", IsDeleted = false, Timestamp = DateTime.Now.AddDays(-3), SyncId = Guid.NewGuid() }
+        };
+        
+        _mockShotRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(shots);
+        _mockBagRepository.Setup(r => r.GetBagsForBeanAsync(beanId, true)).ReturnsAsync(new List<BaristaNotes.Core.Models.Bag> { bag });
+
+        // Act
+        var result = await _service.GetBeanRecommendationContextAsync(beanId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(result.HasHistory);
+        Assert.NotNull(result.HistoricalShots);
+        Assert.Equal(3, result.HistoricalShots.Count);
+        // Verify sorted by rating descending
+        Assert.Equal(4, result.HistoricalShots[0].Rating);
+        Assert.Equal(3, result.HistoricalShots[1].Rating);
+        Assert.Equal(2, result.HistoricalShots[2].Rating);
+    }
+
+    [Fact]
+    public async Task GetBeanRecommendationContextAsync_LimitsHistoricalShotsToTen()
+    {
+        // Arrange
+        var beanId = 1;
+        var bean = new BaristaNotes.Core.Models.Bean { Id = beanId, Name = "Test Bean" };
+        var bag = new BaristaNotes.Core.Models.Bag 
+        { 
+            Id = 1, 
+            BeanId = beanId, 
+            Bean = bean,
+            RoastDate = DateTime.Now.AddDays(-30),
+            IsDeleted = false
+        };
+        
+        // Create 15 shots
+        var shots = Enumerable.Range(1, 15)
+            .Select(i => new BaristaNotes.Core.Models.ShotRecord
+            {
+                Id = i,
+                BagId = 1,
+                Bag = bag,
+                Rating = i % 5,
+                DoseIn = 18,
+                GrindSetting = "5",
+                DrinkType = "Espresso",
+                IsDeleted = false,
+                Timestamp = DateTime.Now.AddDays(-i),
+                SyncId = Guid.NewGuid()
+            })
+            .ToList();
+        
+        _mockShotRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(shots);
+        _mockBagRepository.Setup(r => r.GetBagsForBeanAsync(beanId, true)).ReturnsAsync(new List<BaristaNotes.Core.Models.Bag> { bag });
+
+        // Act
+        var result = await _service.GetBeanRecommendationContextAsync(beanId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(result.HasHistory);
+        Assert.NotNull(result.HistoricalShots);
+        Assert.Equal(10, result.HistoricalShots.Count); // Limited to 10
+    }
+
+    [Fact]
+    public async Task GetBeanRecommendationContextAsync_NonExistentBean_ReturnsNull()
+    {
+        // Arrange
+        var beanId = 999;
+        _mockShotRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<BaristaNotes.Core.Models.ShotRecord>());
+        _mockBagRepository.Setup(r => r.GetBagsForBeanAsync(beanId, true)).ReturnsAsync(new List<BaristaNotes.Core.Models.Bag>());
+
+        // Act
+        var result = await _service.GetBeanRecommendationContextAsync(beanId);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    #endregion
 }

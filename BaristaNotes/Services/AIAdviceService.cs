@@ -37,18 +37,11 @@ public class AIAdviceService : IAIAdviceService
     private const string SourceOnDevice = "via Apple Intelligence";
     private const string SourceCloud = "via OpenAI";
 
-    private const string SystemPrompt = @"You are an expert barista assistant helping home espresso enthusiasts improve their shots. 
-You have deep knowledge of espresso extraction, grind settings, dosing, and timing.
-
-When analyzing shots, consider:
-- Extraction ratio (dose in vs yield out) - typical target is 1:2 to 1:2.5
-- Extraction time - typical range is 25-35 seconds for a balanced shot
-- Grind setting adjustments - finer grind slows extraction, coarser speeds it up
-- Bean age affects extraction - fresher beans may need coarser grind
-- Rating patterns from history indicate user preferences
-
-Provide concise, actionable advice. Focus on 1-3 specific adjustments the user can try.
-Be encouraging and practical. Avoid technical jargon unless necessary.";
+    private const string SystemPrompt = @"You are an expert barista assistant helping improve espresso shots.
+Analyze the shot data and provide 1-3 specific parameter adjustments.
+Consider extraction ratio (target 1:2 to 1:2.5), time (25-35s), grind, and dose.
+Be practical and specific with amounts (e.g., '0.5g', '2 clicks finer', '3 seconds').
+Provide brief reasoning in one sentence.";
 
     public AIAdviceService(
         IShotService shotService,
@@ -112,14 +105,14 @@ Be encouraging and practical. Avoid technical jargon unless necessary.";
                 new ChatMessage(ChatRole.User, userMessage)
             };
 
-            // Try to get response with fallback
-            var (response, source) = await TryGetResponseWithFallbackAsync(
+            // Try to get typed response with fallback
+            var (advice, source) = await TryGetTypedResponseWithFallbackAsync<ShotAdviceJson>(
                 messages,
                 LocalTimeoutSeconds,
                 CloudTimeoutSeconds,
                 cancellationToken);
 
-            if (string.IsNullOrWhiteSpace(response))
+            if (advice == null)
             {
                 return new AIAdviceResponseDto
                 {
@@ -131,7 +124,8 @@ Be encouraging and practical. Avoid technical jargon unless necessary.";
             return new AIAdviceResponseDto
             {
                 Success = true,
-                Advice = response,
+                Adjustments = advice.Adjustments,
+                Reasoning = advice.Reasoning,
                 Source = source,
                 GeneratedAt = DateTime.UtcNow
             };
@@ -219,7 +213,90 @@ Be encouraging and practical. Avoid technical jargon unless necessary.";
     }
 
     /// <summary>
-    /// Tries to get a response from available AI clients with fallback.
+    /// Tries to get a typed response from available AI clients with fallback.
+    /// Uses IChatClient.GetResponseAsync{T}() for structured JSON output.
+    /// Tries local client first (if not disabled), then falls back to OpenAI.
+    /// </summary>
+    /// <typeparam name="T">The type to deserialize the response to.</typeparam>
+    /// <returns>Tuple of (typed response, source string) or (null, null) if all fail.</returns>
+    private async Task<(T? Response, string? Source)> TryGetTypedResponseWithFallbackAsync<T>(
+        List<ChatMessage> messages,
+        int localTimeoutSeconds,
+        int cloudTimeoutSeconds,
+        CancellationToken cancellationToken) where T : class
+    {
+        // Try local client first if available and not disabled
+        if (_localClient != null && !_localClientDisabled)
+        {
+            try
+            {
+                _logger.LogDebug("Attempting on-device AI request for type {ResponseType}", typeof(T).Name);
+
+                using var localCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                localCts.CancelAfter(TimeSpan.FromSeconds(localTimeoutSeconds));
+
+                var localResponse = await _localClient.GetResponseAsync<T>(
+                    messages,
+                    cancellationToken: localCts.Token);
+
+                if (localResponse?.Result != null)
+                {
+                    _logger.LogDebug("On-device AI request succeeded for type {ResponseType}", typeof(T).Name);
+                    return (localResponse.Result, SourceOnDevice);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Local client failed - disable for remainder of session
+                _localClientDisabled = true;
+                _logger.LogWarning(ex, "On-device AI failed for type {ResponseType}, disabling for session. Falling back to OpenAI.", typeof(T).Name);
+            }
+        }
+
+        // Try OpenAI as fallback
+        var openAIClient = GetOrCreateOpenAIClient();
+        if (openAIClient != null)
+        {
+            // Check if user explicitly cancelled before attempting fallback
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogDebug("Skipping OpenAI fallback - request was cancelled");
+                return (null, null);
+            }
+
+            try
+            {
+                _logger.LogDebug("Attempting OpenAI request for type {ResponseType}", typeof(T).Name);
+
+                // Create independent timeout for OpenAI - don't link to potentially-cancelled local token
+                using var cloudCts = new CancellationTokenSource();
+                cloudCts.CancelAfter(TimeSpan.FromSeconds(cloudTimeoutSeconds));
+
+                // Also cancel if user cancels during the call
+                using var registration = cancellationToken.Register(() => cloudCts.Cancel());
+
+                var cloudResponse = await openAIClient.GetResponseAsync<T>(
+                    messages,
+                    cancellationToken: cloudCts.Token);
+
+                if (cloudResponse?.Result != null)
+                {
+                    _logger.LogDebug("OpenAI request succeeded for type {ResponseType}", typeof(T).Name);
+                    return (cloudResponse.Result, SourceCloud);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "OpenAI request failed for type {ResponseType}", typeof(T).Name);
+                throw; // Re-throw to be handled by caller's error handling
+            }
+        }
+
+        return (null, null);
+    }
+
+    /// <summary>
+    /// Tries to get a text response from available AI clients with fallback.
     /// Tries local client first (if not disabled), then falls back to OpenAI.
     /// </summary>
     /// <returns>Tuple of (response text, source string) or (null, null) if all fail.</returns>
@@ -387,11 +464,10 @@ Be encouraging and practical. Avoid technical jargon unless necessary.";
     /// <summary>
     /// System prompt for bean recommendations.
     /// </summary>
-    private const string RecommendationSystemPrompt = @"You are an expert barista assistant. 
-Based on the bean characteristics and any historical shot data provided, recommend starting extraction parameters.
-Use standard espresso ratios (1:2 to 1:2.5) and typical extraction times (25-35 seconds).
-Adjust for roast level and freshness. Darker roasts typically need coarser grind.
-Respond ONLY with valid JSON - no other text.";
+    private const string RecommendationSystemPrompt = @"You are an expert barista assistant.
+Recommend espresso extraction parameters based on bean characteristics.
+Use standard ratios (1:2 to 1:2.5), typical times (25-35s).
+Adjust for roast level: darker roasts need coarser grind.";
 
     /// <inheritdoc />
     public async Task<AIRecommendationDto> GetRecommendationsForBeanAsync(
@@ -437,14 +513,14 @@ Respond ONLY with valid JSON - no other text.";
                 new ChatMessage(ChatRole.User, userMessage)
             };
 
-            // Try to get response with fallback
-            var (response, source) = await TryGetResponseWithFallbackAsync(
+            // Try to get typed response with fallback
+            var (recommendation, source) = await TryGetTypedResponseWithFallbackAsync<BeanRecommendationJson>(
                 messages,
                 LocalTimeoutSeconds,
                 CloudTimeoutSeconds,
                 cancellationToken);
 
-            if (string.IsNullOrWhiteSpace(response))
+            if (recommendation == null)
             {
                 return new AIRecommendationDto
                 {
@@ -453,8 +529,16 @@ Respond ONLY with valid JSON - no other text.";
                 };
             }
 
-            // Parse the JSON response
-            return ParseRecommendationResponse(response, recommendationType, source);
+            return new AIRecommendationDto
+            {
+                Success = true,
+                Dose = recommendation.Dose,
+                GrindSetting = recommendation.Grind,
+                Output = recommendation.Output,
+                Duration = recommendation.Duration,
+                RecommendationType = recommendationType,
+                Source = source
+            };
         }
         catch (OperationCanceledException)
         {
@@ -488,69 +572,4 @@ Respond ONLY with valid JSON - no other text.";
         }
     }
 
-    /// <summary>
-    /// Parses the AI JSON response into an AIRecommendationDto.
-    /// </summary>
-    private AIRecommendationDto ParseRecommendationResponse(
-        string response, 
-        RecommendationType recommendationType, 
-        string? source)
-    {
-        try
-        {
-            // Clean up response - AI sometimes wraps JSON in markdown code blocks
-            var jsonText = response.Trim();
-            if (jsonText.StartsWith("```json"))
-                jsonText = jsonText.Substring(7);
-            else if (jsonText.StartsWith("```"))
-                jsonText = jsonText.Substring(3);
-            if (jsonText.EndsWith("```"))
-                jsonText = jsonText.Substring(0, jsonText.Length - 3);
-            jsonText = jsonText.Trim();
-
-            using var doc = System.Text.Json.JsonDocument.Parse(jsonText);
-            var root = doc.RootElement;
-
-            var dose = root.TryGetProperty("dose", out var doseEl) 
-                ? doseEl.GetDecimal() 
-                : 18m; // Default
-            var grind = root.TryGetProperty("grind", out var grindEl) 
-                ? grindEl.GetString() ?? "medium" 
-                : "medium";
-            var output = root.TryGetProperty("output", out var outputEl) 
-                ? outputEl.GetDecimal() 
-                : 36m; // Default
-            var duration = root.TryGetProperty("duration", out var durationEl) 
-                ? durationEl.GetDecimal() 
-                : 30m; // Default
-
-            return new AIRecommendationDto
-            {
-                Success = true,
-                Dose = dose,
-                GrindSetting = grind,
-                Output = output,
-                Duration = duration,
-                RecommendationType = recommendationType,
-                Source = source
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to parse AI recommendation response: {Response}", response);
-            
-            // Return defaults on parse failure
-            return new AIRecommendationDto
-            {
-                Success = true,
-                Dose = 18m,
-                GrindSetting = "medium",
-                Output = 36m,
-                Duration = 30m,
-                RecommendationType = recommendationType,
-                Source = source,
-                Confidence = "Using default values due to parsing issue"
-            };
-        }
-    }
 }

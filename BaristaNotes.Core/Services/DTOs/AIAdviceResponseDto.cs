@@ -13,7 +13,18 @@ public record AIAdviceResponseDto
     /// <summary>
     /// The AI-generated advice text.
     /// </summary>
+    [Obsolete("Use Adjustments and Reasoning properties for structured advice output.")]
     public string? Advice { get; init; }
+
+    /// <summary>
+    /// List of specific parameter adjustments recommended by AI.
+    /// </summary>
+    public List<ShotAdjustment> Adjustments { get; init; } = [];
+
+    /// <summary>
+    /// Brief reasoning explaining why these adjustments are recommended.
+    /// </summary>
+    public string? Reasoning { get; init; }
 
     /// <summary>
     /// Error message if failed.

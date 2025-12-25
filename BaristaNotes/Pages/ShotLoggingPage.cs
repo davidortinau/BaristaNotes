@@ -1548,19 +1548,94 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .GridColumn(2)
                 ),
 
-                Label(State.AdviceResponse.Advice)
-                    .ThemeKey(ThemeKeys.PrimaryText)
-                    .LineBreakMode(Microsoft.Maui.LineBreakMode.WordWrap),
-
-                Button("Get New Advice")
-                    .OnClicked(async () => await RequestAdviceAsync())
-                    .HCenter()
-                    .Margin(0, 8, 0, 0)
+                // Display structured adjustments
+                RenderAdviceContent()
             )
             .Padding(16)
         )
         .ThemeKey(ThemeKeys.CardBorder)
         .Margin(0, 0, 0, AppSpacing.M);
+    }
+
+    /// <summary>
+    /// Renders the structured AI advice content with adjustments and reasoning.
+    /// </summary>
+    VisualNode RenderAdviceContent()
+    {
+        var response = State.AdviceResponse;
+        if (response == null)
+            return Label("").IsVisible(false);
+
+        var adjustments = response.Adjustments ?? [];
+        var reasoning = response.Reasoning;
+        var source = response.Source;
+
+        var children = new List<VisualNode>();
+
+        // Adjustments list
+        if (adjustments.Count > 0)
+        {
+            foreach (var adj in adjustments)
+            {
+                children.Add(
+                    HStack(spacing: 8,
+                        Label("•")
+                            .ThemeKey(ThemeKeys.SecondaryText)
+                            .FontSize(14),
+                        Label($"{FormatAdjustmentDirection(adj.Direction)} {adj.Parameter} by {adj.Amount}")
+                            .ThemeKey(ThemeKeys.PrimaryText)
+                            .FontSize(14)
+                            .LineBreakMode(Microsoft.Maui.LineBreakMode.WordWrap)
+                    )
+                );
+            }
+        }
+        else
+        {
+            children.Add(
+                Label("No specific adjustments suggested.")
+                    .ThemeKey(ThemeKeys.SecondaryText)
+                    .FontSize(14)
+            );
+        }
+
+        // Reasoning
+        if (!string.IsNullOrWhiteSpace(reasoning))
+        {
+            children.Add(
+                Label(reasoning)
+                    .ThemeKey(ThemeKeys.SecondaryText)
+                    .FontSize(13)
+                    .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Italic)
+                    .Margin(0, 4, 0, 0)
+                    .LineBreakMode(Microsoft.Maui.LineBreakMode.WordWrap)
+            );
+        }
+
+        // Source attribution
+        if (!string.IsNullOrWhiteSpace(source))
+        {
+            children.Add(
+                Label(source)
+                    .ThemeKey(ThemeKeys.SecondaryText)
+                    .FontSize(11)
+                    .Opacity(0.7)
+                    .Margin(0, 4, 0, 0)
+                    .HEnd()
+            );
+        }
+
+        return VStack(spacing: 8, children.ToArray());
+    }
+
+    /// <summary>
+    /// Formats the adjustment direction for display (capitalizes first letter).
+    /// </summary>
+    static string FormatAdjustmentDirection(string direction)
+    {
+        if (string.IsNullOrWhiteSpace(direction))
+            return string.Empty;
+        return char.ToUpper(direction[0]) + direction.Substring(1).ToLower();
     }
 
     async Task RequestAdviceAsync()

@@ -101,6 +101,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     [Inject]
     ILogger<ShotLoggingPage> _logger;
 
+    // Cancellation token for AI recommendation requests
+    private CancellationTokenSource? _recommendationCts;
+
     protected override void OnMounted()
     {
         base.OnMounted();
@@ -111,6 +114,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
     protected override void OnWillUnmount()
     {
+        _recommendationCts?.Cancel();
+        _recommendationCts?.Dispose();
         DeviceDisplay.Current.MainDisplayInfoChanged -= OnMainDisplayInfoChanged;
         base.OnWillUnmount();
     }
@@ -268,6 +273,92 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         {
             _logger.LogError(ex, "Error loading best shot settings");
             await _feedbackService.ShowErrorAsync("Failed to load shot settings");
+        }
+    }
+
+    /// <summary>
+    /// Requests AI recommendations for a bean when selected.
+    /// Shows loading bar, populates fields with recommendations, and displays toast.
+    /// </summary>
+    async Task RequestAIRecommendationsAsync(int beanId)
+    {
+        // Cancel any pending request
+        _recommendationCts?.Cancel();
+        _recommendationCts = new CancellationTokenSource();
+
+        SetState(s => s.IsLoadingAdvice = true);
+
+        try
+        {
+            var result = await _aiAdviceService.GetRecommendationsForBeanAsync(
+                beanId, _recommendationCts.Token);
+
+            if (result.Success)
+            {
+                SetState(s =>
+                {
+                    s.DoseIn = result.Dose;
+                    s.GrindSetting = result.GrindSetting;
+                    s.ExpectedOutput = result.Output;
+                    s.ExpectedTime = result.Duration;
+                });
+
+                var message = result.RecommendationType == RecommendationType.NewBean
+                    ? $"We didn't have any shots for this bean, so we've created a recommended starting point: {result.Dose}g dose, {result.GrindSetting} grind, {result.Output}g output, {result.Duration}s."
+                    : $"I see you're switching beans, so here's a recommended starting point: {result.Dose}g dose, {result.GrindSetting} grind, {result.Output}g output, {result.Duration}s.";
+
+                await _feedbackService.ShowInfoAsync(message);
+            }
+            else
+            {
+                _logger.LogWarning("AI recommendations failed: {Error}", result.ErrorMessage);
+                await _feedbackService.ShowErrorAsync("Couldn't get AI recommendations. Enter values manually or try again.");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Request was cancelled (user switched beans), ignore
+            _logger.LogDebug("AI recommendation request cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting AI recommendations for bean {BeanId}", beanId);
+            await _feedbackService.ShowErrorAsync("Couldn't get AI recommendations. Enter values manually or try again.");
+        }
+        finally
+        {
+            SetState(s => s.IsLoadingAdvice = false);
+        }
+    }
+
+    /// <summary>
+    /// Handles bag selection - determines whether to use AI recommendations or load best shot settings.
+    /// Uses AI when: (1) bean has no history, or (2) switching to a different bean than most recent.
+    /// </summary>
+    async Task HandleBagSelectionAsync(int beanId, int bagId)
+    {
+        try
+        {
+            // Check if bean has history and if it's the most recent bean
+            var hasHistory = await _shotService.BeanHasHistoryAsync(beanId);
+            var mostRecentBeanId = await _shotService.GetMostRecentBeanIdAsync();
+
+            if (!hasHistory || beanId != mostRecentBeanId)
+            {
+                // New bean or switching beans - get AI recommendations
+                await RequestAIRecommendationsAsync(beanId);
+            }
+            else
+            {
+                // Same bean as most recent - load best shot settings
+                await LoadBestShotSettingsAsync(bagId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling bag selection for bean {BeanId}", beanId);
+            // Fall back to loading best shot settings
+            await LoadBestShotSettingsAsync(bagId);
         }
     }
 
@@ -614,13 +705,16 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                             {
                                 if (idx >= 0 && idx < State.AvailableBags.Count)
                                 {
-                                    var bagId = State.AvailableBags[idx].Id;
+                                    var bag = State.AvailableBags[idx];
+                                    var bagId = bag.Id;
+                                    var beanId = bag.BeanId;
                                     SetState(s =>
                                     {
                                         s.SelectedBagIndex = idx;
                                         s.SelectedBagId = bagId;
                                     });
-                                    _ = LoadBestShotSettingsAsync(bagId);
+                                    // Check if we need AI recommendations
+                                    _ = HandleBagSelectionAsync(beanId, bagId);
                                 }
                             }) :
                         // T018: Enhanced "no active bags" empty state with inline bag creation

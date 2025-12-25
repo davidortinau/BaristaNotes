@@ -135,4 +135,104 @@ public static class AIPromptBuilder
 
         return sb.ToString();
     }
+
+    /// <summary>
+    /// Builds a prompt for new bean recommendations (no shot history).
+    /// </summary>
+    public static string BuildNewBeanPrompt(BeanRecommendationContextDto context)
+    {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine("## Bean Information");
+        sb.AppendLine($"- Name: {context.BeanName}");
+        if (!string.IsNullOrWhiteSpace(context.Roaster))
+            sb.AppendLine($"- Roaster: {context.Roaster}");
+        if (!string.IsNullOrWhiteSpace(context.Origin))
+            sb.AppendLine($"- Origin: {context.Origin}");
+        if (context.DaysFromRoast.HasValue)
+            sb.AppendLine($"- Days since roast: {context.DaysFromRoast}");
+        if (!string.IsNullOrWhiteSpace(context.Notes))
+            sb.AppendLine($"- Flavor notes: {context.Notes}");
+
+        if (context.Equipment != null)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Equipment");
+            if (!string.IsNullOrWhiteSpace(context.Equipment.MachineName))
+                sb.AppendLine($"- Machine: {context.Equipment.MachineName}");
+            if (!string.IsNullOrWhiteSpace(context.Equipment.GrinderName))
+                sb.AppendLine($"- Grinder: {context.Equipment.GrinderName}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("I have no previous shots with this bean. Based on the bean characteristics above, recommend starting extraction parameters.");
+        sb.AppendLine();
+        sb.AppendLine("Respond ONLY with a JSON object in this exact format (no other text):");
+        sb.AppendLine("{");
+        sb.AppendLine("  \"dose\": <number in grams, typically 18-20>,");
+        sb.AppendLine("  \"grind\": \"<grinder setting as string>\",");
+        sb.AppendLine("  \"output\": <number in grams, typically 36-50>,");
+        sb.AppendLine("  \"duration\": <number in seconds, typically 25-35>");
+        sb.AppendLine("}");
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Builds a prompt for returning bean recommendations (with shot history).
+    /// </summary>
+    public static string BuildReturningBeanPrompt(BeanRecommendationContextDto context)
+    {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine("## Bean Information");
+        sb.AppendLine($"- Name: {context.BeanName}");
+        if (!string.IsNullOrWhiteSpace(context.Roaster))
+            sb.AppendLine($"- Roaster: {context.Roaster}");
+        if (!string.IsNullOrWhiteSpace(context.Origin))
+            sb.AppendLine($"- Origin: {context.Origin}");
+        if (context.DaysFromRoast.HasValue)
+            sb.AppendLine($"- Days since roast: {context.DaysFromRoast}");
+        if (!string.IsNullOrWhiteSpace(context.Notes))
+            sb.AppendLine($"- Flavor notes: {context.Notes}");
+
+        if (context.Equipment != null)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Equipment");
+            if (!string.IsNullOrWhiteSpace(context.Equipment.MachineName))
+                sb.AppendLine($"- Machine: {context.Equipment.MachineName}");
+            if (!string.IsNullOrWhiteSpace(context.Equipment.GrinderName))
+                sb.AppendLine($"- Grinder: {context.Equipment.GrinderName}");
+        }
+
+        if (context.HistoricalShots?.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Previous Shots (sorted by rating)");
+            foreach (var shot in context.HistoricalShots)
+            {
+                var details = new List<string>();
+                details.Add($"{shot.DoseIn}g in");
+                if (shot.ActualOutput.HasValue) details.Add($"{shot.ActualOutput}g out");
+                if (shot.ActualTime.HasValue) details.Add($"{shot.ActualTime}s");
+                if (!string.IsNullOrWhiteSpace(shot.GrindSetting)) details.Add($"grind {shot.GrindSetting}");
+                if (shot.Rating.HasValue) details.Add($"rated {shot.Rating}/4");
+                sb.AppendLine($"- {string.Join(", ", details)}");
+            }
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("Based on my shot history with this bean, recommend optimal extraction parameters.");
+        sb.AppendLine();
+        sb.AppendLine("Respond ONLY with a JSON object in this exact format (no other text):");
+        sb.AppendLine("{");
+        sb.AppendLine("  \"dose\": <number in grams>,");
+        sb.AppendLine("  \"grind\": \"<grinder setting as string>\",");
+        sb.AppendLine("  \"output\": <number in grams>,");
+        sb.AppendLine("  \"duration\": <number in seconds>");
+        sb.AppendLine("}");
+
+        return sb.ToString();
+    }
 }

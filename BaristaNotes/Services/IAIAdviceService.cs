@@ -31,4 +31,14 @@ public interface IAIAdviceService
     /// <param name="shotId">The ID of the shot to check.</param>
     /// <returns>Brief insight string, or null if no significant deviation.</returns>
     Task<string?> GetPassiveInsightAsync(int shotId);
+
+    /// <summary>
+    /// Gets AI-powered extraction parameter recommendations for a selected bean.
+    /// </summary>
+    /// <param name="beanId">The ID of the selected bean.</param>
+    /// <param name="cancellationToken">Cancellation token for request cancellation.</param>
+    /// <returns>Recommendation with suggested dose, grind, output, and duration.</returns>
+    Task<AIRecommendationDto> GetRecommendationsForBeanAsync(
+        int beanId,
+        CancellationToken cancellationToken = default);
 }

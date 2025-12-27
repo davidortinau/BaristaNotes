@@ -36,6 +36,11 @@ public record ShotContextDto
     public string? TastingNotes { get; init; }
 
     /// <summary>
+    /// Type of drink (e.g., "Espresso", "Latte", "Americano").
+    /// </summary>
+    public string? DrinkType { get; init; }
+
+    /// <summary>
     /// When shot was logged.
     /// </summary>
     public DateTime Timestamp { get; init; }

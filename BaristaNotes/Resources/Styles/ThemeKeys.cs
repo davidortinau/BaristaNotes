@@ -25,6 +25,7 @@ public static class ThemeKeys
     public const string CardVariant = nameof(CardVariant);
     public const string InputBorder = nameof(InputBorder);
     public const string BottomSheet = nameof(BottomSheet);
+    public const string PromptDetails = nameof(PromptDetails);
 
     // Button theme keys
     public const string PrimaryButton = nameof(PrimaryButton);

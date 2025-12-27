@@ -1,0 +1,29 @@
+# BaristaNotes Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2025-12-24
+
+## Active Technologies
+
+- C# 12 / .NET 10.0 + MauiReactor 4.0.3-beta, Microsoft.Extensions.AI, Microsoft.Extensions.AI.OpenAI, OpenAI SDK, Entity Framework Core 8.0, UXDivers.Popups.Maui (001-ai-bean-recommendations)
+
+## Project Structure
+
+```text
+src/
+tests/
+```
+
+## Commands
+
+# Add commands for C# 12 / .NET 10.0
+
+## Code Style
+
+C# 12 / .NET 10.0: Follow standard conventions
+
+## Recent Changes
+
+- 001-ai-bean-recommendations: Added C# 12 / .NET 10.0 + MauiReactor 4.0.3-beta, Microsoft.Extensions.AI, Microsoft.Extensions.AI.OpenAI, OpenAI SDK, Entity Framework Core 8.0, UXDivers.Popups.Maui
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->

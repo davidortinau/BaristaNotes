@@ -62,6 +62,7 @@ class ShotLoggingState
     public bool IsLoadingAdvice { get; set; }
     public AIAdviceResponseDto? AdviceResponse { get; set; }
     public bool ShowAdviceSection { get; set; }
+    public bool ShowPromptDetails { get; set; }
 
     // Animation state for loading bar
     public double LoadingBarPosition { get; set; } = -80;
@@ -1612,20 +1613,108 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             );
         }
 
-        // Source attribution
-        if (!string.IsNullOrWhiteSpace(source))
-        {
-            children.Add(
-                Label(source)
-                    .ThemeKey(ThemeKeys.SecondaryText)
-                    .FontSize(11)
-                    .Opacity(0.7)
-                    .Margin(0, 4, 0, 0)
+        // Source attribution and visibility toggle row
+        children.Add(
+            HStack(spacing: 8,
+                // Visibility toggle button
+                ImageButton()
+                    .Source(State.ShowPromptDetails ? AppIcons.VisibilityOff : AppIcons.Visibility)
+                    .HeightRequest(28)
+                    .WidthRequest(28)
+                    .Aspect(Aspect.Center)
+                    .VCenter()
+                    .BackgroundColor(Colors.Transparent)
+                    .OnClicked(() => SetState(s => s.ShowPromptDetails = !s.ShowPromptDetails)),
+
+                // Source attribution (pushed to right)
+                Label(source ?? "")
+                    .ThemeKey(ThemeKeys.MutedText)
                     .HEnd()
-            );
+                    .VCenter()
+                    .HorizontalOptions(Microsoft.Maui.Controls.LayoutOptions.Fill)
+            )
+            .HEnd()
+            .Margin(0, 8, 0, 0)
+        );
+
+        // Prompt details (collapsible)
+        if (State.ShowPromptDetails && !string.IsNullOrWhiteSpace(response.PromptSent))
+        {
+            children.Add(RenderPromptDetails(response));
         }
 
         return VStack(spacing: 8, children.ToArray());
+    }
+
+    /// <summary>
+    /// Renders the prompt details for transparency, with abbreviated history.
+    /// </summary>
+    VisualNode RenderPromptDetails(AIAdviceResponseDto response)
+    {
+        var formattedPrompt = FormatPromptForDisplay(response.PromptSent!, response.HistoricalShotsCount);
+
+        return Border(
+            VStack(spacing: 4,
+                Label("Information sent to AI:")
+                    .ThemeKey(ThemeKeys.MutedText)
+                    .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold),
+                Label(formattedPrompt)
+                    .ThemeKey(ThemeKeys.MutedText)
+                    .LineBreakMode(Microsoft.Maui.LineBreakMode.WordWrap)
+            )
+        )
+        .ThemeKey(ThemeKeys.PromptDetails)
+        .Margin(0, 8, 0, 0);
+    }
+
+    /// <summary>
+    /// Formats the prompt for display, abbreviating long shot history.
+    /// </summary>
+    static string FormatPromptForDisplay(string prompt, int totalHistoricalShots)
+    {
+        var lines = prompt.Split('\n').ToList();
+        var result = new List<string>();
+        var inHistorySection = false;
+        var historyLinesShown = 0;
+        const int maxHistoryLines = 3;
+
+        foreach (var line in lines)
+        {
+            // Detect history section headers
+            if (line.Contains("Previous Shots") || line.Contains("Best rated shots") || line.Contains("Most recent shots"))
+            {
+                inHistorySection = true;
+                historyLinesShown = 0;
+                result.Add(line);
+                continue;
+            }
+
+            // Detect section change (new ## header or question)
+            if (line.StartsWith("##") || line.StartsWith("Based on"))
+            {
+                // If we were in history and have more shots, add summary
+                if (inHistorySection && totalHistoricalShots > maxHistoryLines)
+                {
+                    result.Add($"  ... and {totalHistoricalShots - maxHistoryLines} more shots");
+                }
+                inHistorySection = false;
+            }
+
+            // In history section, limit lines shown
+            if (inHistorySection && line.TrimStart().StartsWith("-"))
+            {
+                historyLinesShown++;
+                if (historyLinesShown <= maxHistoryLines)
+                {
+                    result.Add(line);
+                }
+                continue;
+            }
+
+            result.Add(line);
+        }
+
+        return string.Join("\n", result);
     }
 
     /// <summary>

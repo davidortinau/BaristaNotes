@@ -158,6 +158,13 @@ class ApplicationTheme : Theme
             .StrokeShape(new RoundRectangle().CornerRadius(8))
             .Padding(12);
 
+        BorderStyles.Themes[ThemeKeys.PromptDetails] = _ => _
+            .BackgroundColor(IsLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant)
+            .Stroke(IsLightTheme ? AppColors.Light.Outline : AppColors.Dark.Outline)
+            .StrokeThickness(1)
+            .StrokeShape(new RoundRectangle().CornerRadius(8))
+            .Padding(12);
+
         // Button Theme Keys
         ButtonStyles.Themes[ThemeKeys.SecondaryButton] = _ => _
             .TextColor(IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)

@@ -291,7 +291,8 @@ public class ShotService : IShotService
             ActualTime = shot.ActualTime,
             GrindSetting = shot.GrindSetting,
             Rating = shot.Rating,
-            TastingNotes = null, // TastingNotes field will be added in US4
+            TastingNotes = shot.TastingNotes,
+            DrinkType = shot.DrinkType,
             Timestamp = shot.Timestamp
         };
 
@@ -333,7 +334,8 @@ public class ShotService : IShotService
                 ActualTime = s.ActualTime,
                 GrindSetting = s.GrindSetting,
                 Rating = s.Rating,
-                TastingNotes = null,
+                TastingNotes = s.TastingNotes,
+                DrinkType = s.DrinkType,
                 Timestamp = s.Timestamp
             })
             .ToList();
@@ -354,7 +356,7 @@ public class ShotService : IShotService
         var mostRecentShot = await _shotRepository.GetMostRecentAsync();
         if (mostRecentShot?.Bag?.BeanId == null)
             return null;
-        
+
         return mostRecentShot.Bag.BeanId;
     }
 
@@ -377,7 +379,7 @@ public class ShotService : IShotService
         // Try to get bean info from bags for this bean
         var bagsForBean = await _bagRepository.GetBagsForBeanAsync(beanId, includeCompleted: true);
         var bag = bagsForBean.FirstOrDefault(b => !b.IsDeleted);
-        
+
         if (bag?.Bean == null)
             return null;
 
@@ -412,8 +414,8 @@ public class ShotService : IShotService
             .FirstOrDefault();
 
         var roastDate = mostRecentBag?.RoastDate;
-        int? daysFromRoast = roastDate.HasValue 
-            ? (int)(DateTime.Now - roastDate.Value).TotalDays 
+        int? daysFromRoast = roastDate.HasValue
+            ? (int)(DateTime.Now - roastDate.Value).TotalDays
             : null;
 
         // Get equipment context from most recent shot if available
@@ -421,7 +423,7 @@ public class ShotService : IShotService
         var recentShot = shotsForBean
             .OrderByDescending(s => s.Timestamp)
             .FirstOrDefault();
-        
+
         if (recentShot?.Machine != null || recentShot?.Grinder != null)
         {
             equipment = new EquipmentContextDto

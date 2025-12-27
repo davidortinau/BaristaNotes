@@ -38,6 +38,16 @@ public record AIAdviceResponseDto
     public string? Source { get; init; }
 
     /// <summary>
+    /// The prompt that was sent to the AI for transparency.
+    /// </summary>
+    public string? PromptSent { get; init; }
+
+    /// <summary>
+    /// Count of historical shots included in the prompt.
+    /// </summary>
+    public int HistoricalShotsCount { get; init; }
+
+    /// <summary>
     /// Timestamp of response.
     /// </summary>
     public DateTime GeneratedAt { get; init; } = DateTime.UtcNow;

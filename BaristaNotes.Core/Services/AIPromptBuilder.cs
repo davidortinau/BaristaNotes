@@ -18,6 +18,8 @@ public static class AIPromptBuilder
 
         // Current shot info
         sb.AppendLine("## Current Shot");
+        if (!string.IsNullOrWhiteSpace(context.CurrentShot.DrinkType))
+            sb.AppendLine($"- Drink type: {context.CurrentShot.DrinkType}");
         sb.AppendLine($"- Dose: {context.CurrentShot.DoseIn}g in");
         if (context.CurrentShot.ActualOutput.HasValue)
             sb.AppendLine($"- Yield: {context.CurrentShot.ActualOutput}g out");
@@ -100,7 +102,7 @@ public static class AIPromptBuilder
         }
 
         sb.AppendLine();
-        sb.AppendLine("Based on this shot and my history, what adjustments would you suggest to improve my next shot?");
+        sb.AppendLine("Based on this shot, the drink type, and my history, what adjustments would you suggest to improve my next shot?");
 
         return sb.ToString();
     }
@@ -142,7 +144,7 @@ public static class AIPromptBuilder
     public static string BuildNewBeanPrompt(BeanRecommendationContextDto context)
     {
         var sb = new StringBuilder();
-        
+
         sb.AppendLine("## Bean Information");
         sb.AppendLine($"- Name: {context.BeanName}");
         if (!string.IsNullOrWhiteSpace(context.Roaster))
@@ -184,7 +186,7 @@ public static class AIPromptBuilder
     public static string BuildReturningBeanPrompt(BeanRecommendationContextDto context)
     {
         var sb = new StringBuilder();
-        
+
         sb.AppendLine("## Bean Information");
         sb.AppendLine($"- Name: {context.BeanName}");
         if (!string.IsNullOrWhiteSpace(context.Roaster))

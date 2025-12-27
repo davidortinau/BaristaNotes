@@ -30,8 +30,8 @@ public class AIAdviceService : IAIAdviceService
     private bool _localClientDisabled = false;
 
     private const string ModelId = "gpt-4o-mini";
-    private const int LocalTimeoutSeconds = 3;
-    private const int CloudTimeoutSeconds = 10;
+    private const int LocalTimeoutSeconds = 10;
+    private const int CloudTimeoutSeconds = 20;
 
     // Source strings for transparency
     private const string SourceOnDevice = "via Apple Intelligence";
@@ -127,6 +127,8 @@ Provide brief reasoning in one sentence.";
                 Adjustments = advice.Adjustments,
                 Reasoning = advice.Reasoning,
                 Source = source,
+                PromptSent = userMessage,
+                HistoricalShotsCount = context.HistoricalShots.Count,
                 GeneratedAt = DateTime.UtcNow
             };
         }
@@ -199,8 +201,8 @@ Provide brief reasoning in one sentence.";
             // Use shorter timeouts for passive insights (2s local, 5s cloud)
             var (response, _) = await TryGetResponseWithFallbackAsync(
                 messages,
-                localTimeoutSeconds: 2,
-                cloudTimeoutSeconds: 5,
+                localTimeoutSeconds: 10,
+                cloudTimeoutSeconds: 20,
                 CancellationToken.None);
 
             return response;

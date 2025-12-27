@@ -12,6 +12,7 @@ public static class AppIcons
         Color = IconColor
     };
     private static Color IconColor => ApplicationTheme.IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+    private static Color SecondaryIconColor => ApplicationTheme.IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
 
     public static FontImageSource CoffeeCup => new()
     {
@@ -67,6 +68,22 @@ public static class AppIcons
         Glyph = MaterialSymbolsFont.Add,
         Size = 24,
         Color = IconColor
+    };
+
+    public static FontImageSource Visibility => new()
+    {
+        FontFamily = MaterialSymbolsFont.FontFamily,
+        Glyph = MaterialSymbolsFont.Visibility,
+        Size = 16,
+        Color = SecondaryIconColor
+    };
+
+    public static FontImageSource VisibilityOff => new()
+    {
+        FontFamily = MaterialSymbolsFont.FontFamily,
+        Glyph = MaterialSymbolsFont.Visibility_off,
+        Size = 16,
+        Color = SecondaryIconColor
     };
 
     public static FontImageSource Increment => new()

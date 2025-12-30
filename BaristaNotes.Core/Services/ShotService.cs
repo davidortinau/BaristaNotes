@@ -10,15 +10,21 @@ public class ShotService : IShotService
     private readonly IShotRecordRepository _shotRepository;
     private readonly IPreferencesService _preferences;
     private readonly IBagRepository _bagRepository;
+    private readonly IBeanRepository _beanRepository;
+    private readonly IUserProfileRepository _userProfileRepository;
 
     public ShotService(
         IShotRecordRepository shotRepository,
         IPreferencesService preferences,
-        IBagRepository bagRepository)
+        IBagRepository bagRepository,
+        IBeanRepository beanRepository,
+        IUserProfileRepository userProfileRepository)
     {
         _shotRepository = shotRepository;
         _preferences = preferences;
         _bagRepository = bagRepository;
+        _beanRepository = beanRepository;
+        _userProfileRepository = userProfileRepository;
     }
 
     public async Task<ShotRecordDto?> GetMostRecentShotAsync()
@@ -247,6 +253,60 @@ public class ShotService : IShotService
             PageIndex = pageIndex,
             PageSize = pageSize
         };
+    }
+
+    public async Task<PagedResult<ShotRecordDto>> GetFilteredShotHistoryAsync(
+        ShotFilterCriteriaDto? criteria,
+        int pageIndex,
+        int pageSize)
+    {
+        var shots = await _shotRepository.GetFilteredAsync(criteria, pageIndex, pageSize);
+        var filteredCount = await _shotRepository.GetFilteredCountAsync(criteria);
+        var totalCount = await _shotRepository.GetTotalCountAsync();
+
+        return new PagedResult<ShotRecordDto>
+        {
+            Items = shots.Select(MapToDto).ToList(),
+            TotalCount = criteria?.HasFilters == true ? filteredCount : totalCount,
+            PageIndex = pageIndex,
+            PageSize = pageSize
+        };
+    }
+
+    public async Task<List<BeanFilterOptionDto>> GetBeansWithShotsAsync()
+    {
+        var beanIds = await _shotRepository.GetBeanIdsWithShotsAsync();
+        if (!beanIds.Any())
+            return new List<BeanFilterOptionDto>();
+
+        var beans = await _beanRepository.GetAllAsync();
+        return beans
+            .Where(b => beanIds.Contains(b.Id) && !b.IsDeleted)
+            .Select(b => new BeanFilterOptionDto
+            {
+                Id = b.Id,
+                Name = b.Name
+            })
+            .ToList();
+    }
+
+    public async Task<List<UserProfileDto>> GetPeopleWithShotsAsync()
+    {
+        var userIds = await _shotRepository.GetMadeForIdsWithShotsAsync();
+        if (!userIds.Any())
+            return new List<UserProfileDto>();
+
+        var users = await _userProfileRepository.GetAllAsync();
+        return users
+            .Where(u => userIds.Contains(u.Id) && !u.IsDeleted)
+            .Select(u => new UserProfileDto
+            {
+                Id = u.Id,
+                Name = u.Name,
+                AvatarPath = u.AvatarPath,
+                CreatedAt = u.CreatedAt
+            })
+            .ToList();
     }
 
     public async Task<ShotRecordDto?> GetShotByIdAsync(int id)

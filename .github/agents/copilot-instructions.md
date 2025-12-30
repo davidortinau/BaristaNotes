@@ -3,6 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2025-12-24
 
 ## Active Technologies
+- C# 12 / .NET 10.0 + MauiReactor 4.0.9-beta, UXDivers.Popups.Maui 0.9.1, Entity Framework Core 8.0 (001-shot-history-filter)
+- SQLite via EF Core (existing ShotRecord, Bean, UserProfile entities) (001-shot-history-filter)
 
 - C# 12 / .NET 10.0 + MauiReactor 4.0.3-beta, Microsoft.Extensions.AI, Microsoft.Extensions.AI.OpenAI, OpenAI SDK, Entity Framework Core 8.0, UXDivers.Popups.Maui (001-ai-bean-recommendations)
 
@@ -22,6 +24,7 @@ tests/
 C# 12 / .NET 10.0: Follow standard conventions
 
 ## Recent Changes
+- 001-shot-history-filter: Added C# 12 / .NET 10.0 + MauiReactor 4.0.9-beta, UXDivers.Popups.Maui 0.9.1, Entity Framework Core 8.0
 
 - 001-ai-bean-recommendations: Added C# 12 / .NET 10.0 + MauiReactor 4.0.3-beta, Microsoft.Extensions.AI, Microsoft.Extensions.AI.OpenAI, OpenAI SDK, Entity Framework Core 8.0, UXDivers.Popups.Maui
 

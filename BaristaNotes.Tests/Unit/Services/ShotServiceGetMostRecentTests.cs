@@ -11,6 +11,8 @@ public class ShotServiceGetMostRecentTests
     private readonly Mock<IShotRecordRepository> _mockShotRepository;
     private readonly Mock<IPreferencesService> _mockPreferences;
     private readonly Mock<IBagRepository> _mockBagRepository;
+    private readonly Mock<IBeanRepository> _mockBeanRepository;
+    private readonly Mock<IUserProfileRepository> _mockUserProfileRepository;
     private readonly ShotService _service;
     
     public ShotServiceGetMostRecentTests()
@@ -18,7 +20,14 @@ public class ShotServiceGetMostRecentTests
         _mockShotRepository = new Mock<IShotRecordRepository>();
         _mockPreferences = new Mock<IPreferencesService>();
         _mockBagRepository = new Mock<IBagRepository>();
-        _service = new ShotService(_mockShotRepository.Object, _mockPreferences.Object, _mockBagRepository.Object);
+        _mockBeanRepository = new Mock<IBeanRepository>();
+        _mockUserProfileRepository = new Mock<IUserProfileRepository>();
+        _service = new ShotService(
+            _mockShotRepository.Object, 
+            _mockPreferences.Object, 
+            _mockBagRepository.Object,
+            _mockBeanRepository.Object,
+            _mockUserProfileRepository.Object);
     }
     
     [Fact]

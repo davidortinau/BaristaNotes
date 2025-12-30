@@ -3,6 +3,7 @@ using MauiReactor.Animations;
 using MauiReactor.Shapes;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
+using BaristaNotes.Core.Services.Exceptions;
 using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
@@ -170,7 +171,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     s.ExpectedOutput = shot.ExpectedOutput;
                     s.ActualTime = shot.ActualTime;
                     s.ActualOutput = shot.ActualOutput;
-                    s.Rating = shot.Rating ?? 0;
+                    // Convert from 1-5 service scale to 0-4 UI index (Rating 1 -> Index 0, Rating 5 -> Index 4)
+                    s.Rating = shot.Rating.HasValue ? Math.Max(0, shot.Rating.Value - 1) : 2;
                     s.DrinkType = shot.DrinkType;
                     s.SelectedBagId = shot.Bag?.Id;
                     s.SelectedBagIndex = shot.Bag != null ? s.AvailableBags.FindIndex(b => b.Id == shot.Bag.Id) : -1;
@@ -390,7 +392,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     ExpectedOutput = State.ExpectedOutput,
                     ActualTime = State.ActualTime,
                     ActualOutput = State.ActualOutput,
-                    Rating = State.Rating > 0 ? State.Rating : null,
+                    // Convert from 0-4 UI index to 1-5 service scale
+                    Rating = State.Rating + 1,
                     DrinkType = State.DrinkType,
                     TastingNotes = State.TastingNotes
                 };
@@ -432,7 +435,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     ActualTime = State.ActualTime,
                     ActualOutput = State.ActualOutput,
                     DrinkType = State.DrinkType,
-                    Rating = State.Rating,
+                    // Convert from 0-4 UI index to 1-5 service scale
+                    Rating = State.Rating + 1,
                     TastingNotes = State.TastingNotes
                 };
 
@@ -454,9 +458,32 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 await LoadDataAsync();
             }
         }
+        catch (ValidationException vex)
+        {
+            // Extract all validation error messages into a single readable string
+            var errorMessages = vex.Errors
+                .SelectMany(e => e.Value)
+                .ToList();
+            
+            var errorDetails = errorMessages.Count == 1 
+                ? errorMessages.First() 
+                : string.Join("\n• ", errorMessages.Prepend(""));
+            
+            _logger.LogWarning(vex, "Validation failed when saving shot: {Errors}", string.Join(", ", errorMessages));
+            
+            await _feedbackService.ShowErrorAsync(
+                "Validation Error", 
+                errorMessages.Count == 1 ? errorMessages.First() : errorDetails.TrimStart());
+            
+            SetState(s =>
+            {
+                s.IsLoading = false;
+                s.ErrorMessage = string.Join(", ", errorMessages);
+            });
+        }
         catch (Exception ex)
         {
-
+            _logger.LogError(ex, "Failed to save shot");
             await _feedbackService.ShowErrorAsync(Props.ShotId.HasValue ? "Failed to update shot" : "Failed to save shot", "Please try again");
             SetState(s =>
             {

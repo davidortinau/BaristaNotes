@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using BaristaNotes.Core.Models;
+using BaristaNotes.Core.Services.DTOs;
 
 namespace BaristaNotes.Core.Data.Repositories;
 
@@ -131,5 +132,102 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
     public async Task<int> GetTotalCountAsync()
     {
         return await _dbSet.Where(s => !s.IsDeleted).CountAsync();
+    }
+    
+    public async Task<List<ShotRecord>> GetFilteredAsync(ShotFilterCriteriaDto? criteria, int pageIndex, int pageSize)
+    {
+        var allShots = await _dbSet
+            .AsNoTracking()
+            .Include(s => s.Bag)
+                .ThenInclude(b => b.Bean)
+            .Include(s => s.Machine)
+            .Include(s => s.Grinder)
+            .Include(s => s.MadeBy)
+            .Include(s => s.MadeFor)
+            .Include(s => s.ShotEquipments)
+                .ThenInclude(se => se.Equipment)
+            .Where(s => !s.IsDeleted)
+            .ToListAsync();
+        
+        // Apply filters in memory after loading (SQLite limitations with complex queries)
+        var filtered = allShots.AsEnumerable();
+        
+        if (criteria?.BeanIds?.Count > 0)
+        {
+            filtered = filtered.Where(s => s.Bag != null && criteria.BeanIds.Contains(s.Bag.BeanId));
+        }
+        
+        if (criteria?.MadeForIds?.Count > 0)
+        {
+            filtered = filtered.Where(s => s.MadeForId != null && criteria.MadeForIds.Contains(s.MadeForId.Value));
+        }
+        
+        if (criteria?.Ratings?.Count > 0)
+        {
+            filtered = filtered.Where(s => s.Rating != null && criteria.Ratings.Contains(s.Rating.Value));
+        }
+        
+        return filtered
+            .OrderByDescending(s => s.Timestamp)
+            .Skip(pageIndex * pageSize)
+            .Take(pageSize)
+            .ToList();
+    }
+    
+    public async Task<int> GetFilteredCountAsync(ShotFilterCriteriaDto? criteria)
+    {
+        var allShots = await _dbSet
+            .AsNoTracking()
+            .Include(s => s.Bag)
+            .Where(s => !s.IsDeleted)
+            .ToListAsync();
+        
+        var filtered = allShots.AsEnumerable();
+        
+        if (criteria?.BeanIds?.Count > 0)
+        {
+            filtered = filtered.Where(s => s.Bag != null && criteria.BeanIds.Contains(s.Bag.BeanId));
+        }
+        
+        if (criteria?.MadeForIds?.Count > 0)
+        {
+            filtered = filtered.Where(s => s.MadeForId != null && criteria.MadeForIds.Contains(s.MadeForId.Value));
+        }
+        
+        if (criteria?.Ratings?.Count > 0)
+        {
+            filtered = filtered.Where(s => s.Rating != null && criteria.Ratings.Contains(s.Rating.Value));
+        }
+        
+        return filtered.Count();
+    }
+    
+    public async Task<List<int>> GetBeanIdsWithShotsAsync()
+    {
+        var shots = await _dbSet
+            .AsNoTracking()
+            .Include(s => s.Bag)
+            .Where(s => !s.IsDeleted && s.Bag != null)
+            .ToListAsync();
+        
+        return shots
+            .Where(s => s.Bag != null)
+            .Select(s => s.Bag!.BeanId)
+            .Distinct()
+            .ToList();
+    }
+    
+    public async Task<List<int>> GetMadeForIdsWithShotsAsync()
+    {
+        var shots = await _dbSet
+            .AsNoTracking()
+            .Where(s => !s.IsDeleted && s.MadeForId != null)
+            .ToListAsync();
+        
+        return shots
+            .Where(s => s.MadeForId != null)
+            .Select(s => s.MadeForId!.Value)
+            .Distinct()
+            .ToList();
     }
 }

@@ -17,6 +17,32 @@ public interface IShotService
     Task<ShotRecordDto?> GetBestRatedShotByBagAsync(int bagId);
     
     /// <summary>
+    /// Gets shot history filtered by specified criteria with pagination.
+    /// </summary>
+    /// <param name="criteria">Filter criteria (null or empty lists = no filter)</param>
+    /// <param name="pageIndex">Zero-based page index</param>
+    /// <param name="pageSize">Number of items per page</param>
+    /// <returns>Paged result with filtered shots</returns>
+    Task<PagedResult<ShotRecordDto>> GetFilteredShotHistoryAsync(
+        ShotFilterCriteriaDto? criteria,
+        int pageIndex,
+        int pageSize);
+    
+    /// <summary>
+    /// Gets beans that have at least one shot record.
+    /// Used to populate filter options.
+    /// </summary>
+    /// <returns>List of beans with shot history</returns>
+    Task<List<BeanFilterOptionDto>> GetBeansWithShotsAsync();
+    
+    /// <summary>
+    /// Gets user profiles that have been marked as "Made For" on at least one shot.
+    /// Used to populate filter options.
+    /// </summary>
+    /// <returns>List of people with shot history</returns>
+    Task<List<UserProfileDto>> GetPeopleWithShotsAsync();
+    
+    /// <summary>
     /// Gets shot context data formatted for AI analysis.
     /// Includes current shot, historical shots for same bag, and bean info.
     /// </summary>

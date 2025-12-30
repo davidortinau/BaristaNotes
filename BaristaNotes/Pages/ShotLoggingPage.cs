@@ -464,17 +464,17 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             var errorMessages = vex.Errors
                 .SelectMany(e => e.Value)
                 .ToList();
-            
-            var errorDetails = errorMessages.Count == 1 
-                ? errorMessages.First() 
+
+            var errorDetails = errorMessages.Count == 1
+                ? errorMessages.First()
                 : string.Join("\n• ", errorMessages.Prepend(""));
-            
+
             _logger.LogWarning(vex, "Validation failed when saving shot: {Errors}", string.Join(", ", errorMessages));
-            
+
             await _feedbackService.ShowErrorAsync(
-                "Validation Error", 
+                "Validation Error",
                 errorMessages.Count == 1 ? errorMessages.First() : errorDetails.TrimStart());
-            
+
             SetState(s =>
             {
                 s.IsLoading = false;

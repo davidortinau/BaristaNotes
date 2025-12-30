@@ -102,6 +102,24 @@ public static class AppIcons
         Color = ApplicationTheme.IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary
     };
 
+    public static FontImageSource Filter => new()
+    {
+        FontFamily = MaterialSymbolsFont.FontFamily,
+        Glyph = MaterialSymbolsFont.Filter_list,
+        Size = 24,
+        Color = IconColor
+    };
+
+    public static FontImageSource FilterActive => new()
+    {
+        FontFamily = MaterialSymbolsFont.FontFamily,
+        Glyph = MaterialSymbolsFont.Filter_list,
+        Size = 24,
+        Color = ApplicationTheme.IsLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary
+    };
+
+    public static FontImageSource GetFilterIcon(bool isActive) => isActive ? FilterActive : Filter;
+
     // Rating icons (0-4 scale: Terrible to Excellent)
     // Used consistently across ShotLoggingPage, ShotRecordCard, RatingDisplayComponent
     public static readonly string[] RatingIcons = new[]

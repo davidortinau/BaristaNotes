@@ -20,14 +20,14 @@ class ActivityFeedState
     public int PageSize { get; set; } = 50;
     public bool HasMore { get; set; } = true;
     public int? ShotToDelete { get; set; }
-    
+
     // Filter state
     public ShotFilterCriteria ActiveFilters { get; set; } = new();
     public int TotalShotCount { get; set; }
     public int FilteredShotCount { get; set; }
-    
+
     public bool HasActiveFilters => ActiveFilters.HasFilters;
-    public string ResultCountText => HasActiveFilters 
+    public string ResultCountText => HasActiveFilters
         ? $"Showing {FilteredShotCount} of {TotalShotCount} shots"
         : $"{TotalShotCount} shots";
 }
@@ -106,7 +106,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                     s.ErrorMessage = null;
                 });
             }
-            
+
             // Get total count for display
             if (isRefresh || State.TotalShotCount == 0)
             {
@@ -129,13 +129,13 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
     {
         await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingPageProps>("shot-logging", props => props.ShotId = shotId);
     }
-    
+
     async Task OpenFilterPopup()
     {
         // Load filter options
         var beans = await _shotService.GetBeansWithShotsAsync();
         var people = await _shotService.GetPeopleWithShotsAsync();
-        
+
         var popup = new ShotFilterPopup
         {
             CurrentFilters = State.ActiveFilters.Clone(),
@@ -145,10 +145,10 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
             OnFiltersCleared = OnFiltersCleared
         };
         popup.Build();
-        
+
         await IPopupService.Current.PushAsync(popup);
     }
-    
+
     void OnFiltersApplied(ShotFilterCriteria filters)
     {
         SetState(s =>
@@ -159,7 +159,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         });
         _ = LoadShotsAsync(isRefresh: true);
     }
-    
+
     void OnFiltersCleared()
     {
         SetState(s =>
@@ -176,17 +176,10 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         return ContentPage("Shot History",
             // Filter toolbar item
             ToolbarItem()
-                .IconImageSource(new FontImageSource
-                {
-                    FontFamily = MaterialSymbolsFont.FontFamily,
-                    Glyph = MaterialSymbolsFont.Filter_list,
-                    Color = State.HasActiveFilters ? AppColors.Dark.Primary : AppColors.Dark.TextPrimary,
-                    Size = 24
-                })
+                .IconImageSource(AppIcons.GetFilterIcon(State.HasActiveFilters))
                 .Order(MauiControls.ToolbarItemOrder.Primary)
-                .OnClicked(async () => await OpenFilterPopup())
-                .Set(MauiControls.AutomationProperties.NameProperty, "Filter shots"),
-            
+                .OnClicked(async () => await OpenFilterPopup()),
+
             RenderContent()
         )
         .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always))
@@ -255,7 +248,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                     Label("Try adjusting or clearing your filters")
                         .ThemeKey(ThemeKeys.CardSubtitle)
                         .HCenter(),
-                    
+
                     Button("Clear Filters")
                         .OnClicked(() => OnFiltersCleared())
                         .HeightRequest(48)
@@ -265,7 +258,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                 .HCenter()
                 .Padding(24);
             }
-            
+
             return VStack(spacing: 12,
                 Label(MaterialSymbolsFont.Coffee)
                     .FontFamily(MaterialSymbolsFont.FontFamily)

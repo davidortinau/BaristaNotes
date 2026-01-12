@@ -82,9 +82,10 @@
 		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.20" />
 		<PackageReference Include="Microsoft.Maui.Essentials.AI" Version="10.0.20-dev" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.1" />
+		<PackageReference Include="Microsoft.Recognizers.Text.Number" Version="1.8.9" />
 		
 		<!-- Maui Reactor (latest preview) -->
-		<PackageReference Include="Reactor.Maui" Version="4.0.9-beta" />
+		<PackageReference Include="Reactor.Maui" Version="4.0.11-beta" />
 		
 		<!-- Community Toolkit -->
 		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
@@ -110,7 +111,7 @@
 		<PackageReference Include="UXDivers.Popups.Maui" Version="0.9.1" />
 
 		<!-- Syncfusion Radial Gauge for user input -->
-		<PackageReference Include="Syncfusion.Maui.Gauges" Version="31.2.16" />
+		<PackageReference Include="Syncfusion.Maui.Gauges" Version="32.1.22" />
 		
 		<!-- AI Advice Service -->
 		<PackageReference Include="Microsoft.Extensions.AI" Version="10.1.1" />

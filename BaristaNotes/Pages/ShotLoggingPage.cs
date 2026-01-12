@@ -67,6 +67,26 @@ class ShotLoggingState
 
     // Animation state for loading bar
     public double LoadingBarPosition { get; set; } = -80;
+
+    // Voice command state
+    public bool IsVoiceSheetOpen { get; set; } // Whether the bottom sheet is visible
+    public bool IsRecording { get; set; } // Whether actively recording
+    public string VoiceTranscript { get; set; } = ""; // Current recording transcript
+    public SpeechRecognitionState VoiceState { get; set; } = SpeechRecognitionState.Idle;
+    public bool VoiceCommandCommitted { get; set; } // Flag to prevent double-processing
+    public double VoicePulseScale { get; set; } = 1.0; // Animation scale for pulsing mic icon
+    public List<VoiceChatMessage> VoiceChatHistory { get; set; } = new(); // Conversation history
+}
+
+/// <summary>
+/// Represents a message in the voice chat history.
+/// </summary>
+class VoiceChatMessage
+{
+    public bool IsUser { get; set; } // true = user spoke, false = AI response
+    public string Text { get; set; } = "";
+    public DateTime Timestamp { get; set; } = DateTime.Now;
+    public bool IsError { get; set; } // For error messages
 }
 
 class ShotLoggingPageProps
@@ -103,8 +123,20 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     [Inject]
     ILogger<ShotLoggingPage> _logger;
 
+    [Inject]
+    IDataChangeNotifier _dataChangeNotifier;
+
+    [Inject]
+    ISpeechRecognitionService _speechRecognitionService;
+
+    [Inject]
+    IVoiceCommandService _voiceCommandService;
+
     // Cancellation token for AI recommendation requests
     private CancellationTokenSource? _recommendationCts;
+
+    // Cancellation token for voice commands
+    private CancellationTokenSource? _voiceCts;
 
     protected override void OnMounted()
     {
@@ -112,19 +144,363 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         SetState(s => s.IsLoading = true);
         _ = LoadDataAsync();
         DeviceDisplay.Current.MainDisplayInfoChanged += OnMainDisplayInfoChanged;
+
+        // Subscribe to data changes from voice commands
+        _dataChangeNotifier.DataChanged += OnDataChanged;
     }
 
     protected override void OnWillUnmount()
     {
         _recommendationCts?.Cancel();
         _recommendationCts?.Dispose();
+        _voiceCts?.Cancel();
+        _voiceCts?.Dispose();
         DeviceDisplay.Current.MainDisplayInfoChanged -= OnMainDisplayInfoChanged;
+        _dataChangeNotifier.DataChanged -= OnDataChanged;
         base.OnWillUnmount();
     }
 
     private void OnMainDisplayInfoChanged(object? sender, DisplayInfoChangedEventArgs e)
     {
         Invalidate();
+    }
+
+    /// <summary>
+    /// Handle data changes from voice commands (or other sources).
+    /// Refreshes relevant pickers when new beans/bags/equipment/profiles are created.
+    /// </summary>
+    private void OnDataChanged(object? sender, DataChangedEventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            switch (e.ChangeType)
+            {
+                case DataChangeType.BeanCreated:
+                case DataChangeType.BagCreated:
+                    // Refresh bags when beans or bags are added via voice
+                    var bags = await _bagService.GetActiveBagsForShotLoggingAsync();
+                    var beans = await _beanService.GetAllActiveBeansAsync();
+                    SetState(s =>
+                    {
+                        s.AvailableBags = bags;
+                        s.AvailableBeans = beans;
+                    });
+                    break;
+
+                case DataChangeType.EquipmentCreated:
+                    // Refresh equipment when added via voice
+                    var equipment = await _equipmentService.GetAllActiveEquipmentAsync();
+                    SetState(s => s.AvailableEquipment = equipment.ToList());
+                    break;
+
+                case DataChangeType.ProfileCreated:
+                    // Refresh users when profile added via voice
+                    var users = await _userProfileService.GetAllProfilesAsync();
+                    SetState(s => s.AvailableUsers = users);
+                    break;
+            }
+        });
+    }
+
+    /// <summary>
+    /// Toggles the voice chat sheet open/closed.
+    /// When opening, automatically starts recording and hides the tab bar.
+    /// </summary>
+    private async Task ToggleVoiceSheetAsync()
+    {
+        if (State.IsVoiceSheetOpen)
+        {
+            // Close the sheet
+            if (State.IsRecording)
+            {
+                await StopRecordingAsync();
+            }
+            SetState(s => s.IsVoiceSheetOpen = false);
+
+            // Restore the tab bar
+            SetTabBarVisibility(true);
+        }
+        else
+        {
+            // Hide the tab bar for better UX
+            SetTabBarVisibility(false);
+
+            // Open the sheet and start recording
+            SetState(s => s.IsVoiceSheetOpen = true);
+            await StartRecordingAsync();
+        }
+    }
+
+    /// <summary>
+    /// Sets the Shell tab bar visibility.
+    /// </summary>
+    private void SetTabBarVisibility(bool isVisible)
+    {
+        try
+        {
+            var currentPage = MauiControls.Shell.Current?.CurrentPage;
+            if (currentPage != null)
+            {
+                MauiControls.Shell.SetTabBarIsVisible(currentPage, isVisible);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to set tab bar visibility to {IsVisible}", isVisible);
+        }
+    }
+
+    /// <summary>
+    /// Toggles recording on/off within the voice sheet.
+    /// </summary>
+    private async Task ToggleRecordingAsync()
+    {
+        if (State.IsRecording)
+        {
+            await StopAndProcessRecordingAsync();
+        }
+        else
+        {
+            await StartRecordingAsync();
+        }
+    }
+
+    /// <summary>
+    /// Starts voice recording.
+    /// </summary>
+    private async Task StartRecordingAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Starting voice recording");
+
+            // Check permissions
+            var permissionStatus = await _speechRecognitionService.RequestPermissionsAsync();
+            if (!permissionStatus)
+            {
+                _logger.LogWarning("Speech recognition permission denied");
+                AddChatMessage("Microphone permission is required. Please enable it in Settings.", isUser: false, isError: true);
+                return;
+            }
+
+            _voiceCts = new CancellationTokenSource();
+
+            SetState(s =>
+            {
+                s.IsRecording = true;
+                s.VoiceTranscript = "";
+                s.VoiceState = SpeechRecognitionState.Listening;
+                s.VoiceCommandCommitted = false;
+            });
+
+            // Subscribe to partial results
+            _speechRecognitionService.PartialResultReceived += OnPartialResultReceived;
+
+            // Start listening in background - don't await completion
+            _ = ListenForSpeechAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error starting voice recording");
+            AddChatMessage("Failed to start recording. Please try again.", isUser: false, isError: true);
+        }
+    }
+
+    /// <summary>
+    /// Background task that listens for speech until stopped.
+    /// </summary>
+    private async Task ListenForSpeechAsync()
+    {
+        try
+        {
+            var result = await _speechRecognitionService.StartListeningAsync(_voiceCts?.Token ?? CancellationToken.None);
+
+            // Unsubscribe from partial results
+            _speechRecognitionService.PartialResultReceived -= OnPartialResultReceived;
+
+            // If already committed via button, don't process again
+            if (State.VoiceCommandCommitted)
+            {
+                return;
+            }
+
+            // Natural completion (timeout or silence) - process if we have transcript
+            if (!string.IsNullOrWhiteSpace(State.VoiceTranscript))
+            {
+                await ProcessCurrentTranscriptAsync();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogDebug("Voice recording cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during speech listening");
+        }
+        finally
+        {
+            _speechRecognitionService.PartialResultReceived -= OnPartialResultReceived;
+            SetState(s =>
+            {
+                s.IsRecording = false;
+                s.VoiceState = SpeechRecognitionState.Idle;
+            });
+        }
+    }
+
+    /// <summary>
+    /// Stops recording without processing.
+    /// </summary>
+    private async Task StopRecordingAsync()
+    {
+        _voiceCts?.Cancel();
+        await _speechRecognitionService.StopListeningAsync();
+        _speechRecognitionService.PartialResultReceived -= OnPartialResultReceived;
+        SetState(s =>
+        {
+            s.IsRecording = false;
+            s.VoiceState = SpeechRecognitionState.Idle;
+        });
+    }
+
+    /// <summary>
+    /// Stops recording and processes the transcript.
+    /// </summary>
+    private async Task StopAndProcessRecordingAsync()
+    {
+        var transcript = State.VoiceTranscript;
+
+        // Mark as committed to prevent double-processing
+        SetState(s => s.VoiceCommandCommitted = true);
+
+        // Stop listening
+        await _speechRecognitionService.StopListeningAsync();
+        _voiceCts?.Cancel();
+        _speechRecognitionService.PartialResultReceived -= OnPartialResultReceived;
+
+        SetState(s =>
+        {
+            s.IsRecording = false;
+            s.VoiceState = SpeechRecognitionState.Idle;
+        });
+
+        if (!string.IsNullOrWhiteSpace(transcript))
+        {
+            await ProcessTranscriptAsync(transcript);
+        }
+    }
+
+    /// <summary>
+    /// Processes the current transcript from state.
+    /// </summary>
+    private async Task ProcessCurrentTranscriptAsync()
+    {
+        var transcript = State.VoiceTranscript;
+        if (!string.IsNullOrWhiteSpace(transcript))
+        {
+            await ProcessTranscriptAsync(transcript);
+        }
+    }
+
+    /// <summary>
+    /// Processes a transcript and adds messages to chat history.
+    /// </summary>
+    private async Task ProcessTranscriptAsync(string transcript)
+    {
+        _logger.LogInformation("Processing voice command: {Transcript}", transcript);
+
+        // Add user message to chat
+        AddChatMessage(transcript, isUser: true);
+
+        // Show processing state
+        SetState(s => s.VoiceState = SpeechRecognitionState.Processing);
+
+        try
+        {
+            // Process the voice command
+            var commandResult = await _voiceCommandService.ProcessCommandAsync(
+                new VoiceCommandRequestDto(transcript, 1.0),
+                CancellationToken.None);
+
+            // Add AI response to chat
+            AddChatMessage(commandResult.Message, isUser: false, isError: !commandResult.Success);
+
+            // Clear transcript for next recording
+            SetState(s =>
+            {
+                s.VoiceTranscript = "";
+                s.VoiceState = SpeechRecognitionState.Idle;
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing voice command");
+            AddChatMessage("Sorry, something went wrong. Please try again.", isUser: false, isError: true);
+            SetState(s => s.VoiceState = SpeechRecognitionState.Idle);
+        }
+    }
+
+    /// <summary>
+    /// Adds a message to the voice chat history.
+    /// </summary>
+    private void AddChatMessage(string text, bool isUser, bool isError = false)
+    {
+        SetState(s =>
+        {
+            s.VoiceChatHistory.Add(new VoiceChatMessage
+            {
+                IsUser = isUser,
+                Text = text,
+                Timestamp = DateTime.Now,
+                IsError = isError
+            });
+        });
+    }
+
+    /// <summary>
+    /// Shows a dialog explaining permission denial with option to open Settings.
+    /// </summary>
+    private async Task ShowPermissionDeniedDialogAsync()
+    {
+        var openSettings = await Application.Current!.Windows[0].Page!.DisplayAlertAsync(
+            "Permission Required",
+            "Speech recognition requires microphone and speech permissions. Please enable them in Settings.",
+            "Open Settings",
+            "Cancel");
+
+        if (openSettings)
+        {
+            AppInfo.ShowSettingsUI();
+        }
+    }
+
+    /// <summary>
+    /// Handles partial speech recognition results for live transcript display.
+    /// On iOS, partial results come as individual words that need to be accumulated.
+    /// </summary>
+    private void OnPartialResultReceived(object? sender, string partialText)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            SetState(s =>
+            {
+#if IOS
+                // iOS sends individual words, so append with space
+                if (!string.IsNullOrEmpty(s.VoiceTranscript) && !string.IsNullOrEmpty(partialText))
+                {
+                    s.VoiceTranscript += " " + partialText;
+                }
+                else
+                {
+                    s.VoiceTranscript = partialText;
+                }
+#else
+                // Android/other platforms send the full transcript so far
+                s.VoiceTranscript = partialText;
+#endif
+            });
+        });
     }
 
     void OnPageAppearing()
@@ -644,6 +1020,20 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         // MauiControls.Shell.Current.Background = Colors.Transparent;
 
         return ContentPage(Props.ShotId.HasValue ? "Edit Shot" : "New Shot",
+            // Voice command toolbar item (available for new shots)
+            !Props.ShotId.HasValue ?
+                ToolbarItem("Voice")
+                    .IconImageSource(new FontImageSource
+                    {
+                        FontFamily = MaterialSymbolsFont.FontFamily,
+                        Glyph = MaterialSymbolsFont.Mic,
+                        Color = State.IsVoiceSheetOpen ? Colors.Red : AppColors.Dark.TextPrimary,
+                        Size = 24
+                    })
+                    .Order(MauiControls.ToolbarItemOrder.Primary)
+                    .OnClicked(async () => await ToggleVoiceSheetAsync())
+                : null,
+
             Props.ShotId.HasValue ?
                 ToolbarItem("")
                     .IconImageSource(AppIcons.Ai)
@@ -658,7 +1048,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .OnClicked(async () => await DeleteShotAsync())
                 : null,
 
-            Grid("Auto, *", "*",
+            Grid("Auto, *, Auto", "*",
                 // Row 0: Animated loading bar (outside ScrollView)
                 State.IsLoadingAdvice ? RenderAnimatedLoadingBar().GridRow(0) : null,
 
@@ -811,7 +1201,10 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
                     ).Spacing(AppSpacing.M)
                     .Padding(16, 0, 16, 32)
-                ).GridRow(1)
+                ).GridRow(1),
+
+                // Row 2: Voice overlay when active
+                State.IsVoiceSheetOpen ? RenderVoiceOverlay().GridRow(2) : null
             ).SafeAreaEdges(safeEdges)
         )
         .SafeAreaEdges(safeEdges)
@@ -892,6 +1285,214 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             }
             .IsEnabled(State.IsLoadingAdvice)
         ).HeightRequest(4);
+    }
+
+    /// <summary>
+    /// Renders the voice command overlay as a chat-style bottom sheet.
+    /// </summary>
+    VisualNode RenderVoiceOverlay()
+    {
+        var isLightTheme = Application.Current?.RequestedTheme == AppTheme.Light;
+        var backgroundColor = isLightTheme ? AppColors.Light.SurfaceElevated : AppColors.Dark.SurfaceElevated;
+        var textColor = isLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+        var secondaryTextColor = isLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+        var accentColor = isLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary;
+        var userBubbleColor = accentColor;
+        var aiBubbleColor = isLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
+        var errorColor = Colors.Red;
+
+        // Calculate half screen height
+        var screenHeight = DeviceDisplay.MainDisplayInfo.Height / DeviceDisplay.MainDisplayInfo.Density;
+        var sheetHeight = screenHeight * 0.55; // 55% of screen height
+
+        // Safe area edges - only apply bottom safe area for the button area
+        var bottomSafeAreaEdges = new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.All);
+
+        return Border(
+            Grid("Auto, *, Auto", "*",
+                // Row 0: Header with close button
+                Grid("*", "Auto, *, Auto",
+                    // Close button (X) at left
+                    Button(MaterialSymbolsFont.Close)
+                        .FontFamily(MaterialSymbolsFont.FontFamily)
+                        .FontSize(24)
+                        .TextColor(textColor)
+                        .BackgroundColor(Colors.Transparent)
+                        .OnClicked(async () => await ToggleVoiceSheetAsync())
+                        .GridColumn(0),
+
+                    // Title
+                    Label("Voice Commands")
+                        .FontSize(18)
+                        .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
+                        .TextColor(textColor)
+                        .HCenter()
+                        .VCenter()
+                        .GridColumn(1),
+
+                    // Clear history button
+                    Button(MaterialSymbolsFont.Delete_sweep)
+                        .FontFamily(MaterialSymbolsFont.FontFamily)
+                        .FontSize(20)
+                        .TextColor(secondaryTextColor)
+                        .BackgroundColor(Colors.Transparent)
+                        .OnClicked(() => SetState(s => s.VoiceChatHistory.Clear()))
+                        .GridColumn(2)
+                ).GridRow(0).Padding(0, 0, 0, 8),
+
+                // Row 1: Chat history + current transcript
+                ScrollView(
+                    RenderChatContent(textColor, secondaryTextColor, userBubbleColor, aiBubbleColor, errorColor, accentColor)
+                )
+                .GridRow(1),
+
+                // Row 2: Record/Stop button - wrapped in ContentView with bottom safe area
+                ContentView(
+                    Grid("*", "*",
+                        // Large circular mic button
+                        Button(State.IsRecording ? MaterialSymbolsFont.Stop : MaterialSymbolsFont.Mic)
+                            .FontFamily(MaterialSymbolsFont.FontFamily)
+                            .FontSize(32)
+                            .TextColor(Colors.White)
+                            .BackgroundColor(State.IsRecording ? Colors.Red : accentColor)
+                            .WidthRequest(64)
+                            .HeightRequest(64)
+                            .CornerRadius(32)
+                            .OnClicked(async () => await ToggleRecordingAsync())
+                            .ScaleX(() => State.VoicePulseScale)
+                            .ScaleY(() => State.VoicePulseScale)
+                            .HCenter()
+                            .VCenter()
+                    ).Padding(0, 16, 0, 8).SafeAreaEdges(SafeAreaEdges.None)
+                )
+                .SafeAreaEdges(SafeAreaEdges.None)
+                .GridRow(2),
+
+                // Pulsing animation for mic button when recording
+                State.IsRecording ?
+                    new AnimationController
+                    {
+                        new SequenceAnimation
+                        {
+                            new DoubleAnimation()
+                                .StartValue(1.0)
+                                .TargetValue(1.15)
+                                .Duration(TimeSpan.FromMilliseconds(600))
+                                .Easing(Easing.SinInOut)
+                                .OnTick(v => SetState(s => s.VoicePulseScale = v, false)),
+                            new DoubleAnimation()
+                                .StartValue(1.15)
+                                .TargetValue(1.0)
+                                .Duration(TimeSpan.FromMilliseconds(600))
+                                .Easing(Easing.SinInOut)
+                                .OnTick(v => SetState(s => s.VoicePulseScale = v, false))
+                        }
+                        .RepeatForever()
+                    }
+                    .IsEnabled(true)
+                : null
+            )
+            .Padding(16, 16, 16, 0)
+            .SafeAreaEdges(SafeAreaEdges.None)
+        )
+        .SafeAreaEdges(SafeAreaEdges.None)
+        .BackgroundColor(backgroundColor)
+        .StrokeThickness(0)
+        .StrokeShape(new RoundRectangle().CornerRadius(20, 20, 0, 0))
+        .Margin(0)
+        .HeightRequest(sheetHeight);
+    }
+
+    /// <summary>
+    /// Renders a single chat message bubble.
+    /// </summary>
+    VisualNode RenderChatMessage(VoiceChatMessage msg, Color textColor, Color userBubbleColor, Color aiBubbleColor, Color errorColor)
+    {
+        var bubbleColor = msg.IsUser ? userBubbleColor : (msg.IsError ? errorColor.WithAlpha(0.2f) : aiBubbleColor);
+        var messageTextColor = msg.IsUser ? Colors.White : (msg.IsError ? errorColor : textColor);
+        var cornerRadius = msg.IsUser
+            ? new CornerRadius(12, 12, 0, 12)  // User: bottom-right sharp
+            : new CornerRadius(12, 12, 12, 0); // AI: bottom-left sharp
+
+        return HStack(
+            Border(
+                Label(msg.Text)
+                    .FontSize(14)
+                    .TextColor(messageTextColor)
+                    .LineBreakMode(LineBreakMode.WordWrap)
+            )
+            .BackgroundColor(bubbleColor)
+            .StrokeThickness(0)
+            .StrokeShape(new RoundRectangle().CornerRadius(cornerRadius))
+            .Padding(12, 8)
+            .MaximumWidthRequest(280)
+        )
+        .HorizontalOptions(msg.IsUser ? LayoutOptions.End : LayoutOptions.Start);
+    }
+
+    /// <summary>
+    /// Renders the chat content including history, live transcript, and processing indicator.
+    /// </summary>
+    VisualNode RenderChatContent(Color textColor, Color secondaryTextColor, Color userBubbleColor, Color aiBubbleColor, Color errorColor, Color accentColor)
+    {
+        var children = new List<VisualNode>();
+
+        // Hint text if no history and not recording
+        if (State.VoiceChatHistory.Count == 0 && !State.IsRecording && string.IsNullOrEmpty(State.VoiceTranscript))
+        {
+            children.Add(
+                Label("Say something like:\n\"Log shot 18 in 36 out 28 seconds\"\n\"Add bean Ethiopia from Counter Culture\"\n\"Rate my last shot 4 stars\"")
+                    .FontSize(14)
+                    .TextColor(secondaryTextColor)
+                    .HCenter()
+                    .Margin(20, 40)
+            );
+        }
+
+        // Chat messages
+        foreach (var msg in State.VoiceChatHistory)
+        {
+            children.Add(RenderChatMessage(msg, textColor, userBubbleColor, aiBubbleColor, errorColor));
+        }
+
+        // Current live transcript (if recording and has text)
+        if (State.IsRecording && !string.IsNullOrEmpty(State.VoiceTranscript))
+        {
+            children.Add(
+                HStack(
+                    Border(
+                        Label(State.VoiceTranscript)
+                            .FontSize(14)
+                            .TextColor(Colors.White)
+                            .LineBreakMode(LineBreakMode.WordWrap)
+                    )
+                    .BackgroundColor(userBubbleColor.WithAlpha(0.7f))
+                    .StrokeThickness(0)
+                    .StrokeShape(new RoundRectangle().CornerRadius(12, 12, 0, 12))
+                    .Padding(12, 8)
+                    .MaximumWidthRequest(280)
+                ).HEnd()
+            );
+        }
+
+        // Processing indicator
+        if (State.VoiceState == SpeechRecognitionState.Processing)
+        {
+            children.Add(
+                HStack(spacing: 8,
+                    ActivityIndicator()
+                        .IsRunning(true)
+                        .Color(accentColor)
+                        .HeightRequest(16)
+                        .WidthRequest(16),
+                    Label("Processing...")
+                        .FontSize(12)
+                        .TextColor(secondaryTextColor)
+                ).HStart().Margin(0, 4)
+            );
+        }
+
+        return VStack(spacing: 12, children.ToArray()).Padding(8, 0);
     }
 
     VisualNode RenderDoseGauges()

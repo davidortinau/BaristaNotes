@@ -30,5 +30,9 @@
 	<string>Assets.xcassets/appicon.appiconset</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>BaristaNotes needs access to your photo library to set profile pictures</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>BaristaNotes uses speech recognition to let you log shots hands-free while brewing.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>BaristaNotes needs microphone access to hear your voice commands.</string>
 </dict>
 </plist>

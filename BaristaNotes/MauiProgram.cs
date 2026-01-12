@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using Shiny;
 using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Media;
 using MauiReactor;
 using UXDivers.Popups.Maui;
 using BaristaNotes.Core.Data;
@@ -145,6 +146,12 @@ public static class MauiProgram
 		builder.Services.AddSingleton<Microsoft.Maui.Media.IMediaPicker>(Microsoft.Maui.Media.MediaPicker.Default);
 		builder.Services.AddSingleton<IImagePickerService, ImagePickerService>();
 		builder.Services.AddSingleton<IImageProcessingService, ImageProcessingService>();
+
+		// Voice command services
+		builder.Services.AddSingleton<ISpeechToText>(SpeechToText.Default);
+		builder.Services.AddSingleton<ISpeechRecognitionService, SpeechRecognitionService>();
+		builder.Services.AddSingleton<IDataChangeNotifier, DataChangeNotifier>();
+		builder.Services.AddScoped<IVoiceCommandService, VoiceCommandService>();
 
 #if DEBUG
 		builder.Logging.AddDebug();

@@ -137,6 +137,11 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
     // Cancellation token for voice commands
     private CancellationTokenSource? _voiceCts;
+    
+    // Silence detection timer - fires when user stops speaking
+    private System.Timers.Timer? _silenceTimer;
+    private const double SilenceTimeoutMs = 1500; // 1.5 seconds of silence triggers processing
+    private readonly object _silenceLock = new();
 
     protected override void OnMounted()
     {
@@ -255,9 +260,13 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     /// </summary>
     private async Task ToggleRecordingAsync()
     {
+        _logger.LogInformation("ToggleRecordingAsync called, IsRecording={IsRecording}", State.IsRecording);
+        
         if (State.IsRecording)
         {
-            await StopAndProcessRecordingAsync();
+            _logger.LogInformation("Stopping recording, current transcript: '{Transcript}'", State.VoiceTranscript);
+            // Just stop recording - any pending utterance will be processed
+            await StopRecordingAsync();
         }
         else
         {
@@ -307,32 +316,70 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     }
 
     /// <summary>
-    /// Background task that listens for speech until stopped.
+    /// Background task that listens for speech in continuous mode.
+    /// Processes utterances as they complete and restarts listening automatically.
     /// </summary>
     private async Task ListenForSpeechAsync()
     {
+        _logger.LogInformation("ListenForSpeechAsync started");
         try
         {
-            var result = await _speechRecognitionService.StartListeningAsync(_voiceCts?.Token ?? CancellationToken.None);
-
-            // Unsubscribe from partial results
-            _speechRecognitionService.PartialResultReceived -= OnPartialResultReceived;
-
-            // If already committed via button, don't process again
-            if (State.VoiceCommandCommitted)
+            while (State.IsRecording && !(_voiceCts?.Token.IsCancellationRequested ?? true))
             {
-                return;
-            }
+                _logger.LogDebug("Starting speech recognition cycle, IsRecording={IsRecording}, IsCancelled={IsCancelled}", 
+                    State.IsRecording, _voiceCts?.Token.IsCancellationRequested ?? true);
+                
+                var result = await _speechRecognitionService.StartListeningAsync(_voiceCts?.Token ?? CancellationToken.None);
 
-            // Natural completion (timeout or silence) - process if we have transcript
-            if (!string.IsNullOrWhiteSpace(State.VoiceTranscript))
-            {
-                await ProcessCurrentTranscriptAsync();
+                _logger.LogInformation("Speech recognition returned: Success={Success}, Transcript='{Transcript}', Error={Error}",
+                    result.Success, result.Transcript ?? "(null)", result.ErrorMessage ?? "(none)");
+
+                // Check if cancelled
+                if (_voiceCts?.Token.IsCancellationRequested ?? true)
+                {
+                    _logger.LogInformation("Voice recording cancelled during listening, breaking loop");
+                    break;
+                }
+
+                // If we got a result with text, process it
+                if (result.Success && !string.IsNullOrWhiteSpace(result.Transcript))
+                {
+                    _logger.LogInformation("Got successful utterance, will process: '{Text}'", result.Transcript);
+                    
+                    // Use the final transcript from recognition, not the partial
+                    var transcript = result.Transcript;
+                    
+                    // Clear the live transcript and process
+                    SetState(s => s.VoiceTranscript = "");
+                    
+                    // Process in background so we can restart listening quickly
+                    _ = ProcessTranscriptAsync(transcript);
+                }
+                else if (!string.IsNullOrWhiteSpace(State.VoiceTranscript))
+                {
+                    // Recognition ended but we have partial text - process it
+                    _logger.LogInformation("Recognition ended with partial text, will process: '{Text}'", State.VoiceTranscript);
+                    var transcript = State.VoiceTranscript;
+                    SetState(s => s.VoiceTranscript = "");
+                    _ = ProcessTranscriptAsync(transcript);
+                }
+                else
+                {
+                    _logger.LogDebug("Recognition ended with no usable text, restarting cycle");
+                }
+
+                // Small delay before restarting to avoid tight loop
+                if (State.IsRecording && !(_voiceCts?.Token.IsCancellationRequested ?? true))
+                {
+                    _logger.LogDebug("Delaying 100ms before next cycle");
+                    await Task.Delay(100, _voiceCts?.Token ?? CancellationToken.None);
+                }
             }
+            _logger.LogInformation("ListenForSpeechAsync loop ended, IsRecording={IsRecording}", State.IsRecording);
         }
         catch (OperationCanceledException)
         {
-            _logger.LogDebug("Voice recording cancelled");
+            _logger.LogInformation("ListenForSpeechAsync cancelled via OperationCanceledException");
         }
         catch (Exception ex)
         {
@@ -340,6 +387,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         }
         finally
         {
+            _logger.LogInformation("ListenForSpeechAsync finally block, cleaning up");
+            StopSilenceTimer();
             _speechRecognitionService.PartialResultReceived -= OnPartialResultReceived;
             SetState(s =>
             {
@@ -350,94 +399,87 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     }
 
     /// <summary>
-    /// Stops recording without processing.
+    /// Stops recording and processes any pending transcript.
     /// </summary>
     private async Task StopRecordingAsync()
     {
+        _logger.LogInformation("StopRecordingAsync called");
+        
+        // Stop silence detection
+        StopSilenceTimer();
+        
+        // Capture any pending transcript before stopping
+        var pendingTranscript = State.VoiceTranscript;
+        _logger.LogInformation("Pending transcript captured: '{Transcript}'", pendingTranscript ?? "(null)");
+        
         _voiceCts?.Cancel();
+        _logger.LogDebug("CancellationToken cancelled");
+        
         await _speechRecognitionService.StopListeningAsync();
+        _logger.LogDebug("StopListeningAsync completed");
+        
         _speechRecognitionService.PartialResultReceived -= OnPartialResultReceived;
         SetState(s =>
         {
             s.IsRecording = false;
+            s.VoiceTranscript = "";
             s.VoiceState = SpeechRecognitionState.Idle;
         });
-    }
-
-    /// <summary>
-    /// Stops recording and processes the transcript.
-    /// </summary>
-    private async Task StopAndProcessRecordingAsync()
-    {
-        var transcript = State.VoiceTranscript;
-
-        // Mark as committed to prevent double-processing
-        SetState(s => s.VoiceCommandCommitted = true);
-
-        // Stop listening
-        await _speechRecognitionService.StopListeningAsync();
-        _voiceCts?.Cancel();
-        _speechRecognitionService.PartialResultReceived -= OnPartialResultReceived;
-
-        SetState(s =>
+        
+        // Process pending transcript if we have one
+        if (!string.IsNullOrWhiteSpace(pendingTranscript))
         {
-            s.IsRecording = false;
-            s.VoiceState = SpeechRecognitionState.Idle;
-        });
-
-        if (!string.IsNullOrWhiteSpace(transcript))
-        {
-            await ProcessTranscriptAsync(transcript);
+            _logger.LogInformation("Processing pending transcript on stop: '{Text}'", pendingTranscript);
+            await ProcessTranscriptAsync(pendingTranscript);
         }
-    }
-
-    /// <summary>
-    /// Processes the current transcript from state.
-    /// </summary>
-    private async Task ProcessCurrentTranscriptAsync()
-    {
-        var transcript = State.VoiceTranscript;
-        if (!string.IsNullOrWhiteSpace(transcript))
+        else
         {
-            await ProcessTranscriptAsync(transcript);
+            _logger.LogInformation("No pending transcript to process on stop");
         }
     }
 
     /// <summary>
     /// Processes a transcript and adds messages to chat history.
+    /// Does not stop recording - allows continuous conversation.
     /// </summary>
     private async Task ProcessTranscriptAsync(string transcript)
     {
-        _logger.LogInformation("Processing voice command: {Transcript}", transcript);
+        _logger.LogInformation("ProcessTranscriptAsync START: '{Transcript}'", transcript);
 
         // Add user message to chat
         AddChatMessage(transcript, isUser: true);
+        _logger.LogDebug("Added user message to chat");
 
-        // Show processing state
+        // Show processing state (but don't stop listening)
         SetState(s => s.VoiceState = SpeechRecognitionState.Processing);
 
         try
         {
+            _logger.LogInformation("Calling VoiceCommandService.ProcessCommandAsync");
             // Process the voice command
             var commandResult = await _voiceCommandService.ProcessCommandAsync(
                 new VoiceCommandRequestDto(transcript, 1.0),
                 CancellationToken.None);
 
+            _logger.LogInformation("VoiceCommandService returned: Success={Success}, Message='{Message}'", 
+                commandResult.Success, commandResult.Message);
+
             // Add AI response to chat
             AddChatMessage(commandResult.Message, isUser: false, isError: !commandResult.Success);
 
-            // Clear transcript for next recording
+            // Return to listening state if still recording
             SetState(s =>
             {
                 s.VoiceTranscript = "";
-                s.VoiceState = SpeechRecognitionState.Idle;
+                s.VoiceState = s.IsRecording ? SpeechRecognitionState.Listening : SpeechRecognitionState.Idle;
             });
+            _logger.LogInformation("ProcessTranscriptAsync END: Success");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing voice command");
             AddChatMessage("Sorry, something went wrong. Please try again.", isUser: false, isError: true);
-            SetState(s => s.VoiceState = SpeechRecognitionState.Idle);
+            SetState(s => s.VoiceState = s.IsRecording ? SpeechRecognitionState.Listening : SpeechRecognitionState.Idle);
         }
     }
 
@@ -478,9 +520,15 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     /// <summary>
     /// Handles partial speech recognition results for live transcript display.
     /// On iOS, partial results come as individual words that need to be accumulated.
+    /// Resets the silence timer on each partial result.
     /// </summary>
     private void OnPartialResultReceived(object? sender, string partialText)
     {
+        _logger.LogDebug("OnPartialResultReceived: '{PartialText}'", partialText);
+        
+        // Reset silence timer - user is still speaking
+        ResetSilenceTimer();
+        
         MainThread.BeginInvokeOnMainThread(() =>
         {
             SetState(s =>
@@ -495,11 +543,90 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 {
                     s.VoiceTranscript = partialText;
                 }
+                _logger.LogDebug("iOS accumulated transcript: '{Transcript}'", s.VoiceTranscript);
 #else
                 // Android/other platforms send the full transcript so far
                 s.VoiceTranscript = partialText;
 #endif
             });
+        });
+    }
+    
+    /// <summary>
+    /// Resets the silence detection timer. Called when partial results arrive.
+    /// </summary>
+    private void ResetSilenceTimer()
+    {
+        lock (_silenceLock)
+        {
+            if (_silenceTimer == null)
+            {
+                _silenceTimer = new System.Timers.Timer(SilenceTimeoutMs);
+                _silenceTimer.AutoReset = false;
+                _silenceTimer.Elapsed += OnSilenceDetected;
+                _logger.LogInformation("SILENCE: Created new timer with {Timeout}ms timeout", SilenceTimeoutMs);
+            }
+            
+            _silenceTimer.Stop();
+            _silenceTimer.Start();
+            _logger.LogInformation("SILENCE: Timer reset/started - waiting for {Timeout}ms of silence", SilenceTimeoutMs);
+        }
+    }
+    
+    /// <summary>
+    /// Stops and disposes the silence detection timer.
+    /// </summary>
+    private void StopSilenceTimer()
+    {
+        lock (_silenceLock)
+        {
+            if (_silenceTimer != null)
+            {
+                _silenceTimer.Stop();
+                _silenceTimer.Elapsed -= OnSilenceDetected;
+                _silenceTimer.Dispose();
+                _silenceTimer = null;
+                _logger.LogInformation("SILENCE: Timer stopped and disposed");
+            }
+            else
+            {
+                _logger.LogDebug("SILENCE: StopSilenceTimer called but timer was null");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Called when silence is detected (no partial results for SilenceTimeoutMs).
+    /// Processes the accumulated transcript.
+    /// </summary>
+    private void OnSilenceDetected(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        _logger.LogInformation("SILENCE: >>> Timer elapsed! Silence detected after {Timeout}ms <<<", SilenceTimeoutMs);
+        _logger.LogInformation("SILENCE: Current state - IsRecording={IsRecording}, VoiceTranscript='{Transcript}'", 
+            State.IsRecording, State.VoiceTranscript ?? "(null)");
+        
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            _logger.LogInformation("SILENCE: On main thread, checking conditions...");
+            _logger.LogInformation("SILENCE: IsRecording={IsRecording}, HasTranscript={HasTranscript}, Transcript='{Transcript}'",
+                State.IsRecording, !string.IsNullOrWhiteSpace(State.VoiceTranscript), State.VoiceTranscript ?? "(null)");
+            
+            // Only process if we're still recording and have text
+            if (State.IsRecording && !string.IsNullOrWhiteSpace(State.VoiceTranscript))
+            {
+                var transcript = State.VoiceTranscript;
+                _logger.LogInformation("SILENCE: Conditions met! Processing transcript: '{Transcript}'", transcript);
+                
+                SetState(s => s.VoiceTranscript = "");
+                _logger.LogInformation("SILENCE: Cleared VoiceTranscript, calling ProcessTranscriptAsync");
+                await ProcessTranscriptAsync(transcript);
+                _logger.LogInformation("SILENCE: ProcessTranscriptAsync completed");
+            }
+            else
+            {
+                _logger.LogWarning("SILENCE: Conditions NOT met - skipping processing. IsRecording={IsRecording}, Transcript='{Transcript}'", 
+                    State.IsRecording, State.VoiceTranscript ?? "(null)");
+            }
         });
     }
 
@@ -1340,11 +1467,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         .GridColumn(2)
                 ).GridRow(0).Padding(0, 0, 0, 8),
 
-                // Row 1: Chat history + current transcript
-                ScrollView(
-                    RenderChatContent(textColor, secondaryTextColor, userBubbleColor, aiBubbleColor, errorColor, accentColor)
-                )
-                .GridRow(1),
+                // Row 1: Chat history using CollectionView with auto-scroll to bottom
+                RenderChatCollectionView(textColor, secondaryTextColor, userBubbleColor, aiBubbleColor, errorColor, accentColor),
 
                 // Row 2: Record/Stop button - wrapped in ContentView with bottom safe area
                 ContentView(
@@ -1404,95 +1528,95 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     }
 
     /// <summary>
-    /// Renders a single chat message bubble.
+    /// Renders the chat interface using CollectionView with auto-scroll to bottom.
     /// </summary>
-    VisualNode RenderChatMessage(VoiceChatMessage msg, Color textColor, Color userBubbleColor, Color aiBubbleColor, Color errorColor)
+    VisualNode RenderChatCollectionView(Color textColor, Color secondaryTextColor, Color userBubbleColor, Color aiBubbleColor, Color errorColor, Color accentColor)
     {
-        var bubbleColor = msg.IsUser ? userBubbleColor : (msg.IsError ? errorColor.WithAlpha(0.2f) : aiBubbleColor);
-        var messageTextColor = msg.IsUser ? Colors.White : (msg.IsError ? errorColor : textColor);
-        var cornerRadius = msg.IsUser
-            ? new CornerRadius(12, 12, 0, 12)  // User: bottom-right sharp
-            : new CornerRadius(12, 12, 12, 0); // AI: bottom-left sharp
+        // Build the list of items to display (messages + live transcript + processing indicator)
+        var displayItems = new List<object>();
 
-        return HStack(
-            Border(
-                Label(msg.Text)
-                    .FontSize(14)
-                    .TextColor(messageTextColor)
-                    .LineBreakMode(LineBreakMode.WordWrap)
-            )
-            .BackgroundColor(bubbleColor)
-            .StrokeThickness(0)
-            .StrokeShape(new RoundRectangle().CornerRadius(cornerRadius))
-            .Padding(12, 8)
-            .MaximumWidthRequest(280)
-        )
-        .HorizontalOptions(msg.IsUser ? LayoutOptions.End : LayoutOptions.Start);
-    }
+        // Add chat history
+        displayItems.AddRange(State.VoiceChatHistory);
 
-    /// <summary>
-    /// Renders the chat content including history, live transcript, and processing indicator.
-    /// </summary>
-    VisualNode RenderChatContent(Color textColor, Color secondaryTextColor, Color userBubbleColor, Color aiBubbleColor, Color errorColor, Color accentColor)
-    {
-        var children = new List<VisualNode>();
-
-        // Hint text if no history and not recording
-        if (State.VoiceChatHistory.Count == 0 && !State.IsRecording && string.IsNullOrEmpty(State.VoiceTranscript))
+        // Add live transcript as a special item if recording
+        if (State.IsRecording && !string.IsNullOrEmpty(State.VoiceTranscript))
         {
-            children.Add(
-                Label("Say something like:\n\"Log shot 18 in 36 out 28 seconds\"\n\"Add bean Ethiopia from Counter Culture\"\n\"Rate my last shot 4 stars\"")
+            displayItems.Add(new VoiceChatMessage
+            {
+                IsUser = true,
+                Text = State.VoiceTranscript,
+                Timestamp = DateTime.Now,
+                IsError = false
+            });
+        }
+
+        // Add processing indicator as special marker
+        if (State.VoiceState == SpeechRecognitionState.Processing)
+        {
+            displayItems.Add("__PROCESSING__");
+        }
+
+        // Show hint if empty
+        if (displayItems.Count == 0)
+        {
+            return VStack(
+                Label("Say something like:\n\"Log shot 18 in 36 out 28 seconds\"\n\"What was my last shot?\"\n\"Find shots with Ethiopia\"")
                     .FontSize(14)
                     .TextColor(secondaryTextColor)
                     .HCenter()
                     .Margin(20, 40)
-            );
+            ).GridRow(1);
         }
 
-        // Chat messages
-        foreach (var msg in State.VoiceChatHistory)
-        {
-            children.Add(RenderChatMessage(msg, textColor, userBubbleColor, aiBubbleColor, errorColor));
-        }
+        return CollectionView()
+            .ItemsSource(displayItems, item =>
+            {
+                // Handle processing indicator
+                if (item is string marker && marker == "__PROCESSING__")
+                {
+                    return HStack(spacing: 8,
+                        ActivityIndicator()
+                            .IsRunning(true)
+                            .Color(accentColor)
+                            .HeightRequest(16)
+                            .WidthRequest(16),
+                        Label("Processing...")
+                            .FontSize(12)
+                            .TextColor(secondaryTextColor)
+                    ).HStart().Margin(8, 4);
+                }
 
-        // Current live transcript (if recording and has text)
-        if (State.IsRecording && !string.IsNullOrEmpty(State.VoiceTranscript))
-        {
-            children.Add(
-                HStack(
-                    Border(
-                        Label(State.VoiceTranscript)
-                            .FontSize(14)
-                            .TextColor(Colors.White)
-                            .LineBreakMode(LineBreakMode.WordWrap)
-                    )
-                    .BackgroundColor(userBubbleColor.WithAlpha(0.7f))
-                    .StrokeThickness(0)
-                    .StrokeShape(new RoundRectangle().CornerRadius(12, 12, 0, 12))
-                    .Padding(12, 8)
-                    .MaximumWidthRequest(280)
-                ).HEnd()
-            );
-        }
+                // Handle chat messages
+                if (item is VoiceChatMessage msg)
+                {
+                    var bubbleColor = msg.IsUser ? userBubbleColor : (msg.IsError ? errorColor.WithAlpha(0.2f) : aiBubbleColor);
+                    var messageTextColor = msg.IsUser ? Colors.White : (msg.IsError ? errorColor : textColor);
+                    var bubbleOpacity = (State.IsRecording && !string.IsNullOrEmpty(State.VoiceTranscript) && msg == displayItems.LastOrDefault())
+                        ? 0.7f : 1.0f;
 
-        // Processing indicator
-        if (State.VoiceState == SpeechRecognitionState.Processing)
-        {
-            children.Add(
-                HStack(spacing: 8,
-                    ActivityIndicator()
-                        .IsRunning(true)
-                        .Color(accentColor)
-                        .HeightRequest(16)
-                        .WidthRequest(16),
-                    Label("Processing...")
-                        .FontSize(12)
-                        .TextColor(secondaryTextColor)
-                ).HStart().Margin(0, 4)
-            );
-        }
+                    return Grid("*", "*",
+                        Border(
+                            Label(msg.Text)
+                                .FontSize(14)
+                                .TextColor(messageTextColor)
+                                .LineBreakMode(LineBreakMode.WordWrap)
+                        )
+                        .BackgroundColor(bubbleColor.WithAlpha(bubbleOpacity))
+                        .StrokeThickness(0)
+                        .StrokeShape(new RoundRectangle().CornerRadius(msg.IsUser
+                            ? new CornerRadius(12, 12, 0, 12)
+                            : new CornerRadius(12, 12, 12, 0)))
+                        .Padding(12, 8)
+                        .MaximumWidthRequest(280)
+                        .HorizontalOptions(msg.IsUser ? LayoutOptions.End : LayoutOptions.Start)
+                    ).Padding(8, 4);
+                }
 
-        return VStack(spacing: 12, children.ToArray()).Padding(8, 0);
+                return null;
+            })
+            .ItemsUpdatingScrollMode(MauiControls.ItemsUpdatingScrollMode.KeepLastItemInView)
+            .SelectionMode(MauiControls.SelectionMode.None)
+            .GridRow(1);
     }
 
     VisualNode RenderDoseGauges()

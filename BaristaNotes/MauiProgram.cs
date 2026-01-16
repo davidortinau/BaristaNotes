@@ -148,10 +148,15 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IImageProcessingService, ImageProcessingService>();
 
 		// Voice command services
+		// Use online SpeechToText for better accuracy (uses Apple's cloud services like Notes app)
 		builder.Services.AddSingleton<ISpeechToText>(SpeechToText.Default);
 		builder.Services.AddSingleton<ISpeechRecognitionService, SpeechRecognitionService>();
 		builder.Services.AddSingleton<IDataChangeNotifier, DataChangeNotifier>();
+		builder.Services.AddSingleton<INavigationRegistry, NavigationRegistry>();
 		builder.Services.AddScoped<IVoiceCommandService, VoiceCommandService>();
+
+		// Voice overlay using WindowOverlay pattern (cross-platform)
+		builder.UseVoiceOverlay();
 
 #if DEBUG
 		builder.Logging.AddDebug();

@@ -1,4 +1,5 @@
 using BaristaNotes.Services;
+using BaristaNotes.Styles;
 using MauiReactor;
 
 namespace BaristaNotes;
@@ -16,6 +17,7 @@ public partial class BaristaApp : Component
 
     public override VisualNode Render()
     {
+        // Shell is the root - overlay is handled natively via IOverlayService
         return new AppShell();
     }
 }

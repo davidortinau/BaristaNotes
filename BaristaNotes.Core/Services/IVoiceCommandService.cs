@@ -36,4 +36,10 @@ public interface IVoiceCommandService
     Task<VoiceToolResultDto> ProcessCommandAsync(
         VoiceCommandRequestDto request,
         CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Clears the conversation history for the current session.
+    /// Call this when starting a new voice session.
+    /// </summary>
+    void ClearConversationHistory();
 }

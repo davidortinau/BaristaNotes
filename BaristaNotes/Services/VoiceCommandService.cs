@@ -9,6 +9,7 @@ using OpenAI;
 using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
+using BaristaNotes.Pages;
 using IConfiguration = Microsoft.Extensions.Configuration.IConfiguration;
 
 namespace BaristaNotes.Services;
@@ -42,6 +43,9 @@ public class VoiceCommandService : IVoiceCommandService
 
     // Session-level flag: once local client fails, don't retry until app restart
     private bool _localClientDisabled = false;
+    
+    // Conversation history for the current voice session
+    private readonly List<ChatMessage> _conversationHistory = new();
 
     private const string ModelId = "gpt-4o-mini";
     private const int LocalTimeoutSeconds = 15;
@@ -52,16 +56,80 @@ public class VoiceCommandService : IVoiceCommandService
 
         CONTEXT:
         - Rating scale is 0-4 (0=terrible, 1=bad, 2=average, 3=good, 4=excellent)
-        - Common terms: dose (coffee in), yield/output (coffee out), pull time, extraction
+        - Common terms: dose (coffee in), yield/output (coffee out), pull time, extraction, grind size
         - "Pretty good" = rating 3, "excellent/amazing" = rating 4, "not great/meh" = rating 2, "okay" = rating 2
         - "this morning" or "last shot" refers to most recent shot
+        - A "bean" is a type of coffee (e.g., "Ethiopia Yirgacheffe", "Prologue Blend")
+        - A "bag" is a physical bag of a bean with a specific roast date
+
+        SPEECH RECOGNITION CORRECTIONS (the user likely meant):
+        - "crime" or "grand" or "grime" or "grimes" or "Ryan" → "grind" (as in grind size)
+        - "does" or "those" → "dose" (as in coffee dose)
+        - "pulled" or "pool" → "pull" (as in pull time)
+        - "yelled" or "yeild" → "yield" (as in coffee yield/output)
+        - "story" or "Storey" → "Storyville" (coffee roaster)
+        - "pro" or "prolog" → "Prologue" (coffee name)
+        - "extra action" → "extraction"
+        - "grams" may be heard as "grants" or "grands"
+        - "be" or "being" or "beings" or "beams" or "beam" or "bead" or "beat" → "bean" or "beans" (coffee beans)
+        - "bags" may be heard as "back" or "backs"
+        When you see these misrecognitions, interpret them as the coffee terms.
+
+        INTENT DETECTION - CRITICAL:
+        Distinguish between NAVIGATION intent and QUERY intent based on how the user phrases their request:
+
+        NAVIGATION INTENT ("show me", "take me to", "go to", "open", "navigate to"):
+        - "Show me the user profiles" → NavigateTo 'profiles' page
+        - "Show me my beans" → NavigateTo 'beans' page
+        - "Take me to settings" → NavigateTo 'settings' page
+        - "Open my equipment" → NavigateTo 'equipment' page
+        - "Go to activity" → NavigateTo 'history' page
+        - "Show me my shot history" → NavigateTo 'history' page
+        For navigation requests, use GetAvailablePages if unsure, then NavigateTo the appropriate page.
+
+        QUERY INTENT ("what", "how many", "list", "tell me", "find"):
+        - "What user profiles do I have?" → Use FindProfiles, return text response
+        - "How many shots today?" → Use GetShotCount, return text response
+        - "What was my last shot?" → Use GetLastShot, return text response
+        - "List my beans" → Use FindBeans, return text response
+        After answering a query, you may offer: "Would you like me to show you the [X] page?"
+
+        HYBRID (query + specific item → navigate to detail if possible):
+        - "Show me the last shot I made for Angie" → First use FindShots(madeFor="Angie") to get the shot ID, then call NavigateToShotDetail(shotId)
+        - "Show me my last shot" → Use GetLastShot to get the shot ID, then call NavigateToShotDetail(shotId)
+        - "Show me the shot from yesterday" → Use FindShots(period="yesterday") to get shots, pick the first ID, then NavigateToShotDetail(shotId)
+        - "Show me Angie's profile" → Use FindProfiles(name="Angie") to get the profile ID, then call NavigateToProfileDetail(profileId)
+        - "Show me the Ethiopia bean" → NavigateTo 'bean-detail' with that bean (if detail navigation is supported)
 
         QUERY CAPABILITIES:
-        - "What was my last shot?" or "Tell me about my last shot" - returns full details of most recent shot
-        - "Find shots with Ethiopia" - searches by bean name
-        - "Show me 4-star shots" - filters by rating
-        - "What shots did I make for Sarah?" - filters by made for
-        - "Find my shots from this week" - filters by time period
+        Shots:
+        - "How many shots?" or "How many shots made by David?" - use GetShotCount for counting
+        - "What was my last shot?" - returns full details of most recent shot
+        - "Find shots with Ethiopia" - searches by bean name (returns list)
+        - "What shots did I make for Sarah?" - filters by made for (returns list)
+        - "Find my shots from this week" - filters by time period (returns list)
+        
+        Beans:
+        - "How many beans have I tried?" - counts unique beans
+        - "What beans from Storyville have I used?" - lists beans by roaster
+        - "Find Ethiopian beans" - searches beans by origin
+        - "What beans do I have?" - lists all beans
+        
+        Bags:
+        - "How many bags do I have?" - counts bags (active and completed)
+        - "What bags are active?" - lists current/active bags
+        - "Find bags of Prologue" - searches bags by bean name
+        
+        Equipment:
+        - "How many pieces of equipment do I have?" - counts equipment
+        - "What grinders do I have?" - lists equipment by type (machine, grinder, tamper, puck screen, other)
+        - "What equipment do I have?" - lists all equipment
+        - "Find equipment named Niche" - searches equipment by name
+        
+        Profiles:
+        - "How many profiles are there?" - counts user profiles
+        - "What profiles do I have?" - lists all user profiles
+        - "Find profile named David" - searches profiles by name
 
         RULES:
         1. Always use available tools to complete actions immediately
@@ -70,7 +138,12 @@ public class VoiceCommandService : IVoiceCommandService
         4. Execute the tool immediately with provided values, don't ask for confirmation
         5. Keep responses concise - just confirm what was done in one sentence
         6. For queries, return the information directly from the tool response
+        7. For "show me" requests about a category (profiles, beans, etc.), NAVIGATE to that page
+        8. For "what/how many" questions, provide a TEXT response
         """;
+
+    private readonly INavigationRegistry _navigationRegistry;
+    private readonly IOverlayService? _overlayService;
 
     public VoiceCommandService(
         IShotService shotService,
@@ -79,9 +152,11 @@ public class VoiceCommandService : IVoiceCommandService
         IEquipmentService equipmentService,
         IUserProfileService userProfileService,
         IDataChangeNotifier dataChangeNotifier,
+        INavigationRegistry navigationRegistry,
         IConfiguration configuration,
         ILogger<VoiceCommandService> logger,
-        IChatClient? chatClient = null)
+        IChatClient? chatClient = null,
+        IOverlayService? overlayService = null)
     {
         _shotService = shotService;
         _beanService = beanService;
@@ -89,9 +164,11 @@ public class VoiceCommandService : IVoiceCommandService
         _equipmentService = equipmentService;
         _userProfileService = userProfileService;
         _dataChangeNotifier = dataChangeNotifier;
+        _navigationRegistry = navigationRegistry;
         _configuration = configuration;
         _logger = logger;
         _localClient = chatClient;
+        _overlayService = overlayService;
     }
 
     /// <inheritdoc />
@@ -116,14 +193,34 @@ public class VoiceCommandService : IVoiceCommandService
                 };
             }
 
+            // Build messages with conversation history for context
             var messages = new List<ChatMessage>
             {
-                new(ChatRole.System, SystemPrompt),
-                new(ChatRole.User, normalizedTranscript)
+                new(ChatRole.System, SystemPrompt)
             };
+            
+            // Add conversation history (keeps context from previous exchanges in this session)
+            messages.AddRange(_conversationHistory);
+            
+            // Add the new user message
+            var userMessage = new ChatMessage(ChatRole.User, normalizedTranscript);
+            messages.Add(userMessage);
+
+            _logger.LogDebug("Sending request with {HistoryCount} history messages", _conversationHistory.Count);
 
             var chatOptions = CreateChatOptions();
             var response = await client.GetResponseAsync(messages, chatOptions, cancellationToken);
+
+            // Store the exchange in conversation history for future context
+            _conversationHistory.Add(userMessage);
+            _conversationHistory.Add(new ChatMessage(ChatRole.Assistant, response.Text ?? "Command processed."));
+            
+            // Limit history to last 20 exchanges (40 messages) to avoid token limits
+            while (_conversationHistory.Count > 40)
+            {
+                _conversationHistory.RemoveAt(0);
+                _conversationHistory.RemoveAt(0);
+            }
 
             return new VoiceCommandResponseDto
             {
@@ -204,6 +301,13 @@ public class VoiceCommandService : IVoiceCommandService
             Success = true,
             Message = interpretation.ConfirmationMessage
         };
+    }
+
+    /// <inheritdoc />
+    public void ClearConversationHistory()
+    {
+        _conversationHistory.Clear();
+        _logger.LogDebug("Conversation history cleared");
     }
 
     private IChatClient? GetChatClientWithTools()
@@ -440,10 +544,21 @@ public class VoiceCommandService : IVoiceCommandService
                 AIFunctionFactory.Create(AddEquipmentToolAsync),
                 AIFunctionFactory.Create(AddProfileToolAsync),
                 AIFunctionFactory.Create(GetShotCountToolAsync),
+                AIFunctionFactory.Create(GetAvailablePagesToolAsync),
                 AIFunctionFactory.Create(NavigateToToolAsync),
+                AIFunctionFactory.Create(NavigateToShotDetailToolAsync),
+                AIFunctionFactory.Create(NavigateToProfileDetailToolAsync),
                 AIFunctionFactory.Create(FilterShotsToolAsync),
                 AIFunctionFactory.Create(GetLastShotToolAsync),
                 AIFunctionFactory.Create(FindShotsToolAsync),
+                AIFunctionFactory.Create(GetBeanCountToolAsync),
+                AIFunctionFactory.Create(FindBeansToolAsync),
+                AIFunctionFactory.Create(GetBagCountToolAsync),
+                AIFunctionFactory.Create(FindBagsToolAsync),
+                AIFunctionFactory.Create(GetEquipmentCountToolAsync),
+                AIFunctionFactory.Create(FindEquipmentToolAsync),
+                AIFunctionFactory.Create(GetProfileCountToolAsync),
+                AIFunctionFactory.Create(FindProfilesToolAsync),
             ]
         };
     }
@@ -802,9 +917,14 @@ public class VoiceCommandService : IVoiceCommandService
 
     [Description("Gets shot count for a time period")]
     private async Task<string> GetShotCountToolAsync(
-        [Description("Period: 'today', 'this week', 'this month', or 'all time'")] string period = "today")
+        [Description("Period: 'today', 'this week', 'this month', or 'all time' (default 'all time')")] string period = "all time",
+        [Description("Filter by bean name")] string? beanName = null,
+        [Description("Filter by who made the shot")] string? madeBy = null,
+        [Description("Filter by who the shot was made for")] string? madeFor = null,
+        [Description("Filter by minimum rating (0-4)")] int? minRating = null)
     {
-        _logger.LogInformation("GetShotCount tool called: {Period}", period);
+        _logger.LogInformation("GetShotCount tool called: Period={Period}, Bean={Bean}, MadeBy={MadeBy}, MadeFor={MadeFor}, MinRating={MinRating}", 
+            period, beanName, madeBy, madeFor, minRating);
 
         try
         {
@@ -813,32 +933,79 @@ public class VoiceCommandService : IVoiceCommandService
 
             // Filter by period
             var now = DateTime.UtcNow;
-            var shots = result.Items;
-            int count;
+            var shots = result.Items.AsEnumerable();
 
-            var lowerPeriod = period?.ToLowerInvariant().Trim() ?? "today";
+            var lowerPeriod = period?.ToLowerInvariant().Trim() ?? "all time";
             switch (lowerPeriod)
             {
                 case "today":
-                    count = shots.Count(s => s.Timestamp.Date == now.Date);
+                    shots = shots.Where(s => s.Timestamp.Date == now.Date);
                     break;
                 case "this week" or "week":
                     var weekStart = now.AddDays(-(int)now.DayOfWeek);
-                    count = shots.Count(s => s.Timestamp >= weekStart);
+                    shots = shots.Where(s => s.Timestamp >= weekStart);
                     break;
                 case "this month" or "month":
-                    count = shots.Count(s => s.Timestamp.Year == now.Year && s.Timestamp.Month == now.Month);
+                    shots = shots.Where(s => s.Timestamp.Year == now.Year && s.Timestamp.Month == now.Month);
                     break;
                 case "all time" or "all":
-                    count = result.TotalCount;
+                    // No date filtering
                     break;
                 default:
-                    count = shots.Count(s => s.Timestamp.Date == now.Date);
+                    // Default to all time for unrecognized periods
                     break;
             }
 
-            _logger.LogInformation("Shot count queried via voice for period: {Period}, count: {Count}", period, count);
-            return $"You've pulled {count} shot{(count != 1 ? "s" : "")} {lowerPeriod}";
+            // Apply bean filter
+            if (!string.IsNullOrEmpty(beanName))
+            {
+                shots = shots.Where(s => 
+                    s.Bean?.Name?.Contains(beanName, StringComparison.OrdinalIgnoreCase) == true ||
+                    s.Bag?.BeanName?.Contains(beanName, StringComparison.OrdinalIgnoreCase) == true);
+            }
+
+            // Apply made by filter
+            if (!string.IsNullOrEmpty(madeBy))
+            {
+                shots = shots.Where(s => 
+                    s.MadeBy?.Name?.Contains(madeBy, StringComparison.OrdinalIgnoreCase) == true);
+            }
+
+            // Apply made for filter
+            if (!string.IsNullOrEmpty(madeFor))
+            {
+                shots = shots.Where(s => 
+                    s.MadeFor?.Name?.Contains(madeFor, StringComparison.OrdinalIgnoreCase) == true);
+            }
+
+            // Apply rating filter (convert from 0-4 to 1-5 for comparison)
+            if (minRating.HasValue)
+            {
+                var minRatingService = minRating.Value + 1;
+                shots = shots.Where(s => s.Rating.HasValue && s.Rating.Value >= minRatingService);
+            }
+
+            var count = shots.Count();
+            
+            // Build description
+            var filterParts = new List<string>();
+            if (!string.IsNullOrEmpty(beanName)) filterParts.Add($"with {beanName}");
+            if (!string.IsNullOrEmpty(madeBy)) filterParts.Add($"made by {madeBy}");
+            if (!string.IsNullOrEmpty(madeFor)) filterParts.Add($"made for {madeFor}");
+            if (minRating.HasValue) filterParts.Add($"rated {minRating}+ stars");
+            
+            var filterDesc = filterParts.Count > 0 ? " " + string.Join(" ", filterParts) : "";
+            var periodDesc = lowerPeriod == "all time" || lowerPeriod == "all" ? "" : $" {lowerPeriod}";
+
+            _logger.LogInformation("Shot count queried via voice: Period={Period}, Filters={Filters}, Count={Count}", 
+                period, filterDesc, count);
+            
+            if (!string.IsNullOrEmpty(madeBy))
+            {
+                return $"{madeBy} has made {count} shot{(count != 1 ? "s" : "")}{periodDesc}";
+            }
+            
+            return $"You've pulled {count} shot{(count != 1 ? "s" : "")}{filterDesc}{periodDesc}";
         }
         catch (Exception ex)
         {
@@ -891,19 +1058,54 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
-    [Description("Navigates to a specific page in the app")]
+    [Description("Gets available pages in the app that can be navigated to. Call this to discover navigation options before navigating.")]
+    private Task<string> GetAvailablePagesToolAsync()
+    {
+        _logger.LogInformation("GetAvailablePages tool called");
+
+        try
+        {
+            var destinations = _navigationRegistry.GetDestinations();
+            if (!destinations.Any())
+            {
+                return Task.FromResult("No pages discovered. The app may still be initializing.");
+            }
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("Available pages:");
+            foreach (var dest in destinations)
+            {
+                sb.AppendLine($"- {dest.DisplayName} (route: {dest.Route}): {dest.Description}");
+            }
+
+            return Task.FromResult(sb.ToString());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting available pages");
+            return Task.FromResult("Error discovering available pages.");
+        }
+    }
+
+    [Description("Navigates to a specific page in the app. Use GetAvailablePages first if unsure what pages exist.")]
     private Task<string> NavigateToToolAsync(
-        [Description("Page to navigate to: 'home', 'activity', 'shots', 'beans', 'equipment', 'settings', 'profile'")] string pageName)
+        [Description("Page name or alias to navigate to (e.g., 'activity', 'new shot', 'settings')")] string pageName)
     {
         _logger.LogInformation("NavigateTo tool called: {Page}", pageName);
 
         try
         {
-            var route = ParsePageRoute(pageName);
-            if (route == null)
+            // Use the navigation registry to find the destination
+            var destination = _navigationRegistry.FindDestination(pageName);
+            if (destination == null)
             {
-                return Task.FromResult($"Unknown page '{pageName}'. Try: home, activity, beans, equipment, settings, or profile.");
+                // List available options
+                var destinations = _navigationRegistry.GetDestinations();
+                var availablePages = string.Join(", ", destinations.Select(d => d.DisplayName));
+                return Task.FromResult($"Unknown page '{pageName}'. Available pages: {availablePages}. Use GetAvailablePages for more details.");
             }
+
+            var route = destination.Route;
 
             // Navigate on main thread
             MainThread.BeginInvokeOnMainThread(async () =>
@@ -918,8 +1120,8 @@ public class VoiceCommandService : IVoiceCommandService
                 }
             });
 
-            _logger.LogInformation("Navigating via voice to: {Route}", route);
-            return Task.FromResult($"Opening {pageName}");
+            _logger.LogInformation("Navigating via voice to: {Route} ({DisplayName})", route, destination.DisplayName);
+            return Task.FromResult($"I've taken you to {destination.DisplayName}.");
         }
         catch (Exception ex)
         {
@@ -928,23 +1130,70 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
-    /// <summary>
-    /// Parses page name to Shell route.
-    /// </summary>
-    private string? ParsePageRoute(string pageName)
+    [Description("Navigate to a specific shot's detail page by shot ID. Use this after finding a shot with FindShots or GetLastShot when the user says 'show me' a specific shot.")]
+    private Task<string> NavigateToShotDetailToolAsync(
+        [Description("The shot ID (integer) to navigate to")] int shotId)
     {
-        var lowerPage = pageName?.ToLowerInvariant().Trim() ?? "";
+        _logger.LogInformation("NavigateToShotDetail tool called: {ShotId}", shotId);
 
-        return lowerPage switch
+        try
         {
-            "home" or "main" => "//MainPage",
-            "activity" or "shots" or "history" or "feed" => "//ActivityFeedPage",
-            "beans" or "bean" or "coffee beans" => "//BeanListPage",
-            "equipment" or "gear" => "//EquipmentPage",
-            "settings" => "//SettingsPage",
-            "profile" or "profiles" or "users" => "//ProfilePage",
-            _ => null
-        };
+            // Navigate on main thread using the ShotLoggingPage with ShotId prop
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                try
+                {
+                    await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingPageProps>(
+                        "shot-logging", 
+                        props => props.ShotId = shotId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error navigating to shot detail {ShotId}", shotId);
+                }
+            });
+
+            _logger.LogInformation("Navigating via voice to shot detail: {ShotId}", shotId);
+            return Task.FromResult($"I've opened the shot details.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error navigating to shot detail via voice");
+            return Task.FromResult("Sorry, I couldn't open that shot. Please try again.");
+        }
+    }
+
+    [Description("Navigate to a specific profile's detail/edit page by profile ID. Use this after finding a profile with FindProfiles when the user says 'show me' a specific profile.")]
+    private Task<string> NavigateToProfileDetailToolAsync(
+        [Description("The profile ID (integer) to navigate to")] int profileId)
+    {
+        _logger.LogInformation("NavigateToProfileDetail tool called: {ProfileId}", profileId);
+
+        try
+        {
+            // Navigate on main thread using the ProfileFormPage with ProfileId prop
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                try
+                {
+                    await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ProfileFormPageProps>(
+                        "profile-form", 
+                        props => props.ProfileId = profileId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error navigating to profile detail {ProfileId}", profileId);
+                }
+            });
+
+            _logger.LogInformation("Navigating via voice to profile detail: {ProfileId}", profileId);
+            return Task.FromResult($"I've opened the profile details.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error navigating to profile detail via voice");
+            return Task.FromResult("Sorry, I couldn't open that profile. Please try again.");
+        }
     }
 
     [Description("Filters shots by criteria and navigates to activity feed")]
@@ -976,7 +1225,7 @@ public class VoiceCommandService : IVoiceCommandService
                 queryParams.Add($"minRating={minRating}");
             }
 
-            var route = "//ActivityFeedPage";
+            var route = "//history";
             if (queryParams.Count > 0)
             {
                 route += "?" + string.Join("&", queryParams);
@@ -1034,7 +1283,7 @@ public class VoiceCommandService : IVoiceCommandService
             // Build a comprehensive summary of the last shot
             var details = new List<string>
             {
-                $"Last shot ({lastShot.Timestamp:MMM d} at {lastShot.Timestamp:h:mm tt}):",
+                $"Last shot (ID: {lastShot.Id}, {lastShot.Timestamp:MMM d} at {lastShot.Timestamp:h:mm tt}):",
                 $"• Dose: {lastShot.DoseIn:F1}g in → {lastShot.ActualOutput ?? lastShot.ExpectedOutput:F1}g out",
                 $"• Time: {lastShot.ActualTime ?? lastShot.ExpectedTime:F0} seconds",
                 $"• Grind: {lastShot.GrindSetting}",
@@ -1185,7 +1434,7 @@ public class VoiceCommandService : IVoiceCommandService
             {
                 var rating = shot.Rating.HasValue ? $" ({shot.Rating.Value - 1}/4)" : "";
                 var beanInfo = shot.Bean?.Name ?? shot.Bag?.BeanName ?? "unknown bean";
-                summary.Add($"• {shot.Timestamp:MMM d}: {shot.DoseIn:F1}g→{shot.ActualOutput ?? shot.ExpectedOutput:F1}g, {shot.ActualTime ?? shot.ExpectedTime:F0}s{rating} [{beanInfo}]");
+                summary.Add($"• ID:{shot.Id} {shot.Timestamp:MMM d}: {shot.DoseIn:F1}g→{shot.ActualOutput ?? shot.ExpectedOutput:F1}g, {shot.ActualTime ?? shot.ExpectedTime:F0}s{rating} [{beanInfo}]");
             }
 
             _logger.LogInformation("Found {Count} shots via voice query", results.Count);
@@ -1207,6 +1456,407 @@ public class VoiceCommandService : IVoiceCommandService
         if (minRating.HasValue) parts.Add($"{minRating}+ rating");
         if (!string.IsNullOrEmpty(period)) parts.Add(period);
         return parts.Count > 0 ? string.Join(", ", parts) : "all";
+    }
+
+    [Description("Gets the count of unique beans the user has tried")]
+    private async Task<string> GetBeanCountToolAsync(
+        [Description("Optional roaster name to filter by")] string? roaster = null,
+        [Description("Optional origin to filter by (e.g., 'Ethiopia', 'Colombia')")] string? origin = null)
+    {
+        _logger.LogInformation("GetBeanCount tool called: Roaster={Roaster}, Origin={Origin}", roaster, origin);
+
+        try
+        {
+            var beans = await _beanService.GetAllActiveBeansAsync();
+            
+            // Apply filters
+            if (!string.IsNullOrWhiteSpace(roaster))
+            {
+                beans = beans.Where(b => b.Roaster != null && 
+                    b.Roaster.Contains(roaster, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+            
+            if (!string.IsNullOrWhiteSpace(origin))
+            {
+                beans = beans.Where(b => b.Origin != null && 
+                    b.Origin.Contains(origin, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+
+            var count = beans.Count;
+            var filterDesc = BuildBeanFilterDescription(roaster, origin);
+            
+            _logger.LogInformation("Bean count queried via voice: {Count} beans {Filter}", count, filterDesc);
+            return $"You have {count} unique bean{(count != 1 ? "s" : "")} {filterDesc}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting bean count via voice");
+            return "Sorry, I couldn't get that information. Please try again.";
+        }
+    }
+
+    [Description("Finds and lists beans matching the search criteria")]
+    private async Task<string> FindBeansToolAsync(
+        [Description("Optional roaster name to filter by (e.g., 'Storyville', 'Blue Bottle')")] string? roaster = null,
+        [Description("Optional origin to filter by (e.g., 'Ethiopia', 'Colombia', 'Kenya')")] string? origin = null,
+        [Description("Optional bean name to search for")] string? name = null,
+        [Description("Maximum number of results to return (default 5)")] int limit = 5)
+    {
+        _logger.LogInformation("FindBeans tool called: Roaster={Roaster}, Origin={Origin}, Name={Name}, Limit={Limit}", 
+            roaster, origin, name, limit);
+
+        try
+        {
+            var beans = await _beanService.GetAllActiveBeansAsync();
+            
+            // Apply filters
+            if (!string.IsNullOrWhiteSpace(roaster))
+            {
+                beans = beans.Where(b => b.Roaster != null && 
+                    b.Roaster.Contains(roaster, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+            
+            if (!string.IsNullOrWhiteSpace(origin))
+            {
+                beans = beans.Where(b => b.Origin != null && 
+                    b.Origin.Contains(origin, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+            
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                beans = beans.Where(b => b.Name.Contains(name, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+
+            var count = beans.Count;
+            if (count == 0)
+            {
+                var filterDesc = BuildBeanFilterDescription(roaster, origin, name);
+                return $"No beans found {filterDesc}";
+            }
+
+            // Take limited results
+            var results = beans.Take(limit).ToList();
+            var beanDescriptions = results.Select(b => 
+            {
+                var parts = new List<string> { b.Name };
+                if (!string.IsNullOrEmpty(b.Roaster)) parts.Add($"by {b.Roaster}");
+                if (!string.IsNullOrEmpty(b.Origin)) parts.Add($"from {b.Origin}");
+                if (b.RatingAggregate != null && b.RatingAggregate.AverageRating > 0)
+                    parts.Add($"({b.RatingAggregate.AverageRating:F1}★)");
+                return string.Join(" ", parts);
+            });
+
+            var filterDescription = BuildBeanFilterDescription(roaster, origin, name);
+            var resultText = string.Join("; ", beanDescriptions);
+            var moreText = count > limit ? $" (showing {limit} of {count})" : "";
+            
+            _logger.LogInformation("Beans queried via voice: {Count} results {Filter}", count, filterDescription);
+            return $"Found {count} bean{(count != 1 ? "s" : "")} {filterDescription}{moreText}: {resultText}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error finding beans via voice");
+            return "Sorry, I couldn't search for beans. Please try again.";
+        }
+    }
+
+    [Description("Gets the count of bags (physical bags of coffee) the user has")]
+    private async Task<string> GetBagCountToolAsync(
+        [Description("Whether to include completed/finished bags (default true)")] bool includeCompleted = true)
+    {
+        _logger.LogInformation("GetBagCount tool called: IncludeCompleted={IncludeCompleted}", includeCompleted);
+
+        try
+        {
+            var bags = await _bagService.GetActiveBagsForShotLoggingAsync();
+            
+            // GetActiveBagsForShotLoggingAsync returns only active bags
+            // For a complete count we need to iterate all beans
+            var allBeans = await _beanService.GetAllActiveBeansAsync();
+            var totalBags = 0;
+            var activeBags = 0;
+            
+            foreach (var bean in allBeans)
+            {
+                var beanBags = await _bagService.GetBagSummariesForBeanAsync(bean.Id, includeCompleted);
+                totalBags += beanBags.Count;
+                activeBags += beanBags.Count(b => !b.IsComplete);
+            }
+
+            if (includeCompleted)
+            {
+                _logger.LogInformation("Bag count queried via voice: {Total} total, {Active} active", totalBags, activeBags);
+                return $"You have {totalBags} bag{(totalBags != 1 ? "s" : "")} total ({activeBags} active, {totalBags - activeBags} finished)";
+            }
+            else
+            {
+                _logger.LogInformation("Bag count queried via voice: {Active} active bags", activeBags);
+                return $"You have {activeBags} active bag{(activeBags != 1 ? "s" : "")}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting bag count via voice");
+            return "Sorry, I couldn't get that information. Please try again.";
+        }
+    }
+
+    [Description("Finds and lists bags (physical bags of coffee) matching the search criteria")]
+    private async Task<string> FindBagsToolAsync(
+        [Description("Optional bean name to filter by")] string? beanName = null,
+        [Description("Optional roaster name to filter by")] string? roaster = null,
+        [Description("Whether to include only active (not completed) bags (default true)")] bool activeOnly = true,
+        [Description("Maximum number of results to return (default 5)")] int limit = 5)
+    {
+        _logger.LogInformation("FindBags tool called: BeanName={BeanName}, Roaster={Roaster}, ActiveOnly={ActiveOnly}, Limit={Limit}", 
+            beanName, roaster, activeOnly, limit);
+
+        try
+        {
+            var allBeans = await _beanService.GetAllActiveBeansAsync();
+            var matchingBags = new List<(BagSummaryDto Bag, BeanDto Bean)>();
+            
+            // Filter beans first if roaster or bean name specified
+            if (!string.IsNullOrWhiteSpace(roaster))
+            {
+                allBeans = allBeans.Where(b => b.Roaster != null && 
+                    b.Roaster.Contains(roaster, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+            
+            if (!string.IsNullOrWhiteSpace(beanName))
+            {
+                allBeans = allBeans.Where(b => 
+                    b.Name.Contains(beanName, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+
+            // Get bags for matching beans
+            foreach (var bean in allBeans)
+            {
+                var bags = await _bagService.GetBagSummariesForBeanAsync(bean.Id, !activeOnly);
+                if (activeOnly)
+                {
+                    bags = bags.Where(b => !b.IsComplete).ToList();
+                }
+                matchingBags.AddRange(bags.Select(bag => (bag, bean)));
+            }
+
+            // Sort by roast date descending
+            matchingBags = matchingBags.OrderByDescending(x => x.Bag.RoastDate).ToList();
+
+            var count = matchingBags.Count;
+            if (count == 0)
+            {
+                var filterDesc = BuildBagFilterDescription(beanName, roaster, activeOnly);
+                return $"No bags found {filterDesc}";
+            }
+
+            // Take limited results
+            var results = matchingBags.Take(limit).ToList();
+            var bagDescriptions = results.Select(x => 
+            {
+                var parts = new List<string> { x.Bean.Name };
+                parts.Add($"roasted {x.Bag.RoastDate:MMM d}");
+                if (x.Bag.ShotCount > 0)
+                    parts.Add($"{x.Bag.ShotCount} shots");
+                if (x.Bag.IsComplete)
+                    parts.Add("(finished)");
+                return string.Join(" ", parts);
+            });
+
+            var filterDescription = BuildBagFilterDescription(beanName, roaster, activeOnly);
+            var resultText = string.Join("; ", bagDescriptions);
+            var moreText = count > limit ? $" (showing {limit} of {count})" : "";
+            
+            _logger.LogInformation("Bags queried via voice: {Count} results {Filter}", count, filterDescription);
+            return $"Found {count} bag{(count != 1 ? "s" : "")} {filterDescription}{moreText}: {resultText}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error finding bags via voice");
+            return "Sorry, I couldn't search for bags. Please try again.";
+        }
+    }
+
+    private static string BuildBeanFilterDescription(string? roaster = null, string? origin = null, string? name = null)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(roaster)) parts.Add($"from {roaster}");
+        if (!string.IsNullOrEmpty(origin)) parts.Add($"origin {origin}");
+        if (!string.IsNullOrEmpty(name)) parts.Add($"named '{name}'");
+        return parts.Count > 0 ? string.Join(", ", parts) : "";
+    }
+
+    private static string BuildBagFilterDescription(string? beanName = null, string? roaster = null, bool activeOnly = true)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(beanName)) parts.Add($"of {beanName}");
+        if (!string.IsNullOrEmpty(roaster)) parts.Add($"from {roaster}");
+        if (activeOnly) parts.Add("(active only)");
+        return parts.Count > 0 ? string.Join(" ", parts) : "";
+    }
+
+    [Description("Gets the count of equipment items the user has")]
+    private async Task<string> GetEquipmentCountToolAsync(
+        [Description("Optional equipment type filter: 'machine', 'grinder', 'tamper', 'puck screen', or 'other'")] string? type = null)
+    {
+        _logger.LogInformation("GetEquipmentCount tool called: Type={Type}", type);
+
+        try
+        {
+            var equipment = await _equipmentService.GetAllActiveEquipmentAsync();
+            
+            // Apply type filter if specified
+            if (!string.IsNullOrWhiteSpace(type))
+            {
+                var equipmentType = ParseEquipmentType(type);
+                equipment = equipment.Where(e => e.Type == equipmentType).ToList();
+            }
+
+            var count = equipment.Count;
+            var typeDesc = !string.IsNullOrWhiteSpace(type) ? $" ({type})" : "";
+            
+            _logger.LogInformation("Equipment count queried via voice: {Count} items{Type}", count, typeDesc);
+            return $"You have {count} piece{(count != 1 ? "s" : "")} of equipment{typeDesc}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting equipment count via voice");
+            return "Sorry, I couldn't get that information. Please try again.";
+        }
+    }
+
+    [Description("Finds and lists equipment matching the search criteria")]
+    private async Task<string> FindEquipmentToolAsync(
+        [Description("Optional equipment type filter: 'machine', 'grinder', 'tamper', 'puck screen', or 'other'")] string? type = null,
+        [Description("Optional name to search for")] string? name = null,
+        [Description("Maximum number of results to return (default 5)")] int limit = 5)
+    {
+        _logger.LogInformation("FindEquipment tool called: Type={Type}, Name={Name}, Limit={Limit}", type, name, limit);
+
+        try
+        {
+            var equipment = await _equipmentService.GetAllActiveEquipmentAsync();
+            
+            // Apply type filter
+            if (!string.IsNullOrWhiteSpace(type))
+            {
+                var equipmentType = ParseEquipmentType(type);
+                equipment = equipment.Where(e => e.Type == equipmentType).ToList();
+            }
+            
+            // Apply name filter
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                equipment = equipment.Where(e => 
+                    e.Name.Contains(name, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+
+            var count = equipment.Count;
+            if (count == 0)
+            {
+                var filterDesc = BuildEquipmentFilterDescription(type, name);
+                return $"No equipment found {filterDesc}";
+            }
+
+            // Take limited results
+            var results = equipment.Take(limit).ToList();
+            var equipmentDescriptions = results.Select(e => 
+            {
+                var typeStr = e.Type switch
+                {
+                    EquipmentType.Machine => "machine",
+                    EquipmentType.Grinder => "grinder",
+                    EquipmentType.Tamper => "tamper",
+                    EquipmentType.PuckScreen => "puck screen",
+                    _ => "equipment"
+                };
+                return $"{e.Name} ({typeStr})";
+            });
+
+            var filterDescription = BuildEquipmentFilterDescription(type, name);
+            var resultText = string.Join("; ", equipmentDescriptions);
+            var moreText = count > limit ? $" (showing {limit} of {count})" : "";
+            
+            _logger.LogInformation("Equipment queried via voice: {Count} results {Filter}", count, filterDescription);
+            return $"Found {count} item{(count != 1 ? "s" : "")} {filterDescription}{moreText}: {resultText}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error finding equipment via voice");
+            return "Sorry, I couldn't search for equipment. Please try again.";
+        }
+    }
+
+    [Description("Gets the count of user profiles")]
+    private async Task<string> GetProfileCountToolAsync()
+    {
+        _logger.LogInformation("GetProfileCount tool called");
+
+        try
+        {
+            var profiles = await _userProfileService.GetAllProfilesAsync();
+            var count = profiles.Count;
+            
+            _logger.LogInformation("Profile count queried via voice: {Count} profiles", count);
+            return $"You have {count} user profile{(count != 1 ? "s" : "")}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting profile count via voice");
+            return "Sorry, I couldn't get that information. Please try again.";
+        }
+    }
+
+    [Description("Finds and lists user profiles")]
+    private async Task<string> FindProfilesToolAsync(
+        [Description("Optional name to search for")] string? name = null,
+        [Description("Maximum number of results to return (default 5)")] int limit = 5)
+    {
+        _logger.LogInformation("FindProfiles tool called: Name={Name}, Limit={Limit}", name, limit);
+
+        try
+        {
+            var profiles = await _userProfileService.GetAllProfilesAsync();
+            
+            // Apply name filter
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                profiles = profiles.Where(p => 
+                    p.Name.Contains(name, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+
+            var count = profiles.Count;
+            if (count == 0)
+            {
+                return string.IsNullOrWhiteSpace(name) 
+                    ? "No user profiles found" 
+                    : $"No profiles found matching '{name}'";
+            }
+
+            // Take limited results
+            var results = profiles.Take(limit).ToList();
+            var profileDetails = results.Select(p => $"ID:{p.Id} {p.Name}");
+
+            var resultText = string.Join(", ", profileDetails);
+            var moreText = count > limit ? $" (showing {limit} of {count})" : "";
+            var filterText = !string.IsNullOrWhiteSpace(name) ? $" matching '{name}'" : "";
+            
+            _logger.LogInformation("Profiles queried via voice: {Count} results", count);
+            return $"Found {count} profile{(count != 1 ? "s" : "")}{filterText}{moreText}: {resultText}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error finding profiles via voice");
+            return "Sorry, I couldn't search for profiles. Please try again.";
+        }
+    }
+
+    private static string BuildEquipmentFilterDescription(string? type = null, string? name = null)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(type)) parts.Add($"type '{type}'");
+        if (!string.IsNullOrEmpty(name)) parts.Add($"named '{name}'");
+        return parts.Count > 0 ? string.Join(", ", parts) : "";
     }
 
     #endregion

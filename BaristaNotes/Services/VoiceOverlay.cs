@@ -307,43 +307,49 @@ public class VoiceOverlayPanel : IWindowOverlayElement
             canvas.DrawString(_stateText, new RectF(Padding + 24, stateY, dirtyRect.Width - Padding * 2 - CloseButtonSize - 24, 30), 
                 HorizontalAlignment.Left, VerticalAlignment.Center);
 
-            // Draw transcript (user's speech)
-            float transcriptY = stateY + 50;
-            canvas.FontColor = _secondaryTextColor;
+            // Content area starts below state text
+            float contentY = stateY + 50;
+            float contentWidth = dirtyRect.Width - Padding * 2;
+            
+            // Calculate available height for content (above cancel button)
+            float cancelButtonHeight = 40f;
+            float availableContentHeight = PanelHeight - 50 - Padding - cancelButtonHeight - Padding - 20;
+            
             canvas.FontSize = 16;
             canvas.Font = new Microsoft.Maui.Graphics.Font("Arial", 400, FontStyleType.Normal); // Regular
             
-            float transcriptHeight = 60f; // Reduced height for transcript
-            var transcriptRect = new RectF(Padding, transcriptY, dirtyRect.Width - Padding * 2, transcriptHeight);
-            
-            // Simple text wrapping (draw what fits)
+            // Draw transcript (user's speech) if available
             if (!string.IsNullOrEmpty(_transcript))
             {
+                canvas.FontColor = _secondaryTextColor;
+                var transcriptRect = new RectF(Padding, contentY, contentWidth, 60f);
                 canvas.DrawString(_transcript, transcriptRect, HorizontalAlignment.Left, VerticalAlignment.Top);
+                contentY += 70f; // Move down for AI response
             }
-            else if (string.IsNullOrEmpty(_aiResponse))
-            {
-                canvas.FontColor = Color.FromArgb("#FF888888");
-                canvas.DrawString("Say something like \"Log shot 18 in, 36 out, 28 seconds\"", 
-                    transcriptRect, HorizontalAlignment.Left, VerticalAlignment.Top);
-            }
-
-            // Draw AI response if available
+            
+            // Draw AI response if available (positioned right after transcript, or at content start if no transcript)
             if (!string.IsNullOrEmpty(_aiResponse))
             {
-                float responseY = transcriptY + transcriptHeight + 10;
                 canvas.FontColor = _aiResponseColor;
                 canvas.FontSize = 15;
                 canvas.Font = new Microsoft.Maui.Graphics.Font("Arial", 400, FontStyleType.Italic);
                 
-                // More space for response text (panel height - header - transcript - cancel button area)
-                var responseRect = new RectF(Padding, responseY, dirtyRect.Width - Padding * 2, PanelHeight - 200);
+                // Use remaining space for response
+                float responseHeight = availableContentHeight - (contentY - (stateY + 50));
+                var responseRect = new RectF(Padding, contentY, contentWidth, responseHeight);
                 canvas.DrawString(_aiResponse, responseRect, HorizontalAlignment.Left, VerticalAlignment.Top);
+            }
+            else if (string.IsNullOrEmpty(_transcript))
+            {
+                // Show hint text when no transcript and no AI response
+                canvas.FontColor = Color.FromArgb("#FF888888");
+                var hintRect = new RectF(Padding, contentY, contentWidth, 60f);
+                canvas.DrawString("Say something like \"Log shot 18 in, 36 out, 28 seconds\"", 
+                    hintRect, HorizontalAlignment.Left, VerticalAlignment.Top);
             }
 
             // Draw cancel button at bottom
             float cancelButtonWidth = 100f;
-            float cancelButtonHeight = 40f;
             float cancelX = (dirtyRect.Width - cancelButtonWidth) / 2;
             float cancelY = panelY + PanelHeight - cancelButtonHeight - Padding;
             _cancelButtonRect = new RectF(cancelX, cancelY, cancelButtonWidth, cancelButtonHeight);

@@ -43,7 +43,7 @@ public class VoiceCommandService : IVoiceCommandService
 
     // Session-level flag: once local client fails, don't retry until app restart
     private bool _localClientDisabled = false;
-    
+
     // Conversation history for the current voice session
     private readonly List<ChatMessage> _conversationHistory = new();
 
@@ -178,12 +178,20 @@ public class VoiceCommandService : IVoiceCommandService
     {
         // Normalize the transcript to fix common speech-to-text issues
         var normalizedTranscript = NormalizeTranscript(request.Transcript);
-        _logger.LogDebug("Interpreting command: {Transcript} (normalized: {Normalized})", 
+        _logger.LogDebug("Interpreting command: {Transcript} (normalized: {Normalized})",
             request.Transcript, normalizedTranscript);
 
+        return await InterpretCommandInternalAsync(normalizedTranscript, forceOpenAI: false, cancellationToken);
+    }
+
+    private async Task<VoiceCommandResponseDto> InterpretCommandInternalAsync(
+        string normalizedTranscript,
+        bool forceOpenAI,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            var client = GetChatClientWithTools();
+            var client = GetChatClientWithTools(forceOpenAI);
             if (client == null)
             {
                 return new VoiceCommandResponseDto
@@ -198,10 +206,10 @@ public class VoiceCommandService : IVoiceCommandService
             {
                 new(ChatRole.System, SystemPrompt)
             };
-            
+
             // Add conversation history (keeps context from previous exchanges in this session)
             messages.AddRange(_conversationHistory);
-            
+
             // Add the new user message
             var userMessage = new ChatMessage(ChatRole.User, normalizedTranscript);
             messages.Add(userMessage);
@@ -214,7 +222,7 @@ public class VoiceCommandService : IVoiceCommandService
             // Store the exchange in conversation history for future context
             _conversationHistory.Add(userMessage);
             _conversationHistory.Add(new ChatMessage(ChatRole.Assistant, response.Text ?? "Command processed."));
-            
+
             // Limit history to last 20 exchanges (40 messages) to avoid token limits
             while (_conversationHistory.Count > 40)
             {
@@ -238,26 +246,35 @@ public class VoiceCommandService : IVoiceCommandService
                 ErrorMessage = "Cancelled"
             };
         }
+        catch (Exception ex) when (!forceOpenAI && IsLocalAIToolCallingError(ex))
+        {
+            // Local AI (Apple Intelligence) failed with a tool-calling related error
+            // Disable local client for this session and retry with OpenAI
+            _logger.LogWarning(ex, "Local AI failed with tool calling error, falling back to OpenAI. Error: {Message}", ex.Message);
+            _localClientDisabled = true;
+
+            return await InterpretCommandInternalAsync(normalizedTranscript, forceOpenAI: true, cancellationToken);
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error interpreting voice command: {Transcript}", request.Transcript);
-            
+            _logger.LogError(ex, "Error interpreting voice command: {Transcript}", normalizedTranscript);
+
             // Provide more specific error messages based on exception type
             var errorMessage = ex switch
             {
                 HttpRequestException => "Network error. Please check your connection and try again.",
                 TaskCanceledException => "Request timed out. Please try again.",
-                _ when ex.Message.Contains("API key", StringComparison.OrdinalIgnoreCase) => 
+                _ when ex.Message.Contains("API key", StringComparison.OrdinalIgnoreCase) =>
                     "Voice commands require an OpenAI API key. Please configure it in settings.",
-                _ when ex.Message.Contains("401", StringComparison.OrdinalIgnoreCase) || 
-                       ex.Message.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase) => 
+                _ when ex.Message.Contains("401", StringComparison.OrdinalIgnoreCase) ||
+                       ex.Message.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase) =>
                     "Invalid API key. Please check your OpenAI configuration.",
-                _ when ex.Message.Contains("429", StringComparison.OrdinalIgnoreCase) || 
-                       ex.Message.Contains("rate limit", StringComparison.OrdinalIgnoreCase) => 
+                _ when ex.Message.Contains("429", StringComparison.OrdinalIgnoreCase) ||
+                       ex.Message.Contains("rate limit", StringComparison.OrdinalIgnoreCase) =>
                     "Too many requests. Please wait a moment and try again.",
                 _ => $"Sorry, I couldn't process that command. Error: {ex.Message}"
             };
-            
+
             return new VoiceCommandResponseDto
             {
                 Intent = CommandIntent.Unknown,
@@ -310,24 +327,28 @@ public class VoiceCommandService : IVoiceCommandService
         _logger.LogDebug("Conversation history cleared");
     }
 
-    private IChatClient? GetChatClientWithTools()
+    private IChatClient? GetChatClientWithTools(bool forceOpenAI = false)
     {
-        // IMPORTANT: Apple Intelligence (local client) does NOT support function/tool calling.
-        // The FunctionCallContent type throws ArgumentException on Apple Intelligence.
-        // We must skip directly to OpenAI for voice commands that require tool execution.
-        //
-        // If we ever get a local AI that supports tools, we can re-enable this:
-        // if (_localClient != null && !_localClientDisabled && SupportsToolCalling(_localClient))
-        // {
-        //     ...
-        // }
-        
-        _logger.LogDebug("Using OpenAI for voice commands (local AI doesn't support tool calling)");
+        // Try Apple Intelligence (local client) first if available and not disabled
+        // Apple Intelligence now supports function/tool calling as of iOS 18.x
+        if (!forceOpenAI && _localClient != null && !_localClientDisabled)
+        {
+            _logger.LogDebug("Using local AI (Apple Intelligence) for voice commands with tool calling");
+            return new ChatClientBuilder(_localClient)
+                .UseFunctionInvocation()
+                .Build();
+        }
 
-        // Use OpenAI which supports function calling
+        if (_localClientDisabled)
+        {
+            _logger.LogDebug("Local AI disabled for this session, using OpenAI fallback");
+        }
+
+        // Fall back to OpenAI which supports function calling
         var openAIClient = GetOrCreateOpenAIClient();
         if (openAIClient != null)
         {
+            _logger.LogDebug("Using OpenAI for voice commands");
             return new ChatClientBuilder(openAIClient)
                 .UseFunctionInvocation()
                 .Build();
@@ -361,6 +382,80 @@ public class VoiceCommandService : IVoiceCommandService
             _logger.LogError(ex, "Failed to create OpenAI client");
             return null;
         }
+    }
+
+    /// <summary>
+    /// Determines if an exception indicates the local AI (Apple Intelligence) failed
+    /// in a way that warrants falling back to OpenAI.
+    /// </summary>
+    private bool IsLocalAIToolCallingError(Exception ex)
+    {
+        // Get the full exception text (includes inner exceptions and NSError details)
+        var fullText = ex.ToString();
+
+        // Check for Apple Intelligence / ChatClientNative specific errors
+        if (fullText.Contains("Model assets are unavailable", StringComparison.OrdinalIgnoreCase) ||
+            fullText.Contains("ChatClientNative", StringComparison.OrdinalIgnoreCase) ||
+            fullText.Contains("NSLocalizedDescription", StringComparison.OrdinalIgnoreCase) ||
+            fullText.Contains("assets have finished downloading", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        // Check for ArgumentException with FunctionCallContent (tool calling limitation)
+        if (ex is ArgumentException argEx &&
+            (argEx.Message.Contains("FunctionCall", StringComparison.OrdinalIgnoreCase) ||
+             argEx.Message.Contains("tool", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // Check for NotSupportedException which may indicate unsupported feature
+        if (ex is NotSupportedException)
+        {
+            return true;
+        }
+
+        // Check for PlatformNotSupportedException (Apple Intelligence not available)
+        if (ex is PlatformNotSupportedException)
+        {
+            return true;
+        }
+
+        // Check for InvalidOperationException (common for unavailable services)
+        if (ex is InvalidOperationException invalidOp &&
+            (invalidOp.Message.Contains("Apple", StringComparison.OrdinalIgnoreCase) ||
+             invalidOp.Message.Contains("Intelligence", StringComparison.OrdinalIgnoreCase) ||
+             invalidOp.Message.Contains("not available", StringComparison.OrdinalIgnoreCase) ||
+             invalidOp.Message.Contains("not supported", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // Check inner exceptions recursively
+        if (ex.InnerException != null && IsLocalAIToolCallingError(ex.InnerException))
+        {
+            return true;
+        }
+
+        // Check for generic errors that might indicate tool calling failure or unavailability
+        var message = ex.Message;
+        if (message.Contains("tool calling", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("function calling", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("Apple Intelligence", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("not available", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("not supported", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("Model assets are unavailable", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("assets are unavailable", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("ChatClientNative", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("unsupported", StringComparison.OrdinalIgnoreCase) &&
+            (message.Contains("tool", StringComparison.OrdinalIgnoreCase) ||
+             message.Contains("function", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -477,9 +572,9 @@ public class VoiceCommandService : IVoiceCommandService
         // PRE-PROCESSING: iOS speech recognition quirk - splits compound numbers like "34" into "30 4"
         // Pattern: tens digit (20,30,40...90) followed by space and single digit (1-9)
         // "30 4" -> "34", "20 8" -> "28", etc.
-        result = Regex.Replace(result, @"\b([2-9])0\s+([1-9])\b", 
+        result = Regex.Replace(result, @"\b([2-9])0\s+([1-9])\b",
             m => $"{m.Groups[1].Value}{m.Groups[2].Value}");
-        
+
         // Also handle: "30 four" -> "34" (tens digit + space + word digit)
         var onesWords = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -488,7 +583,7 @@ public class VoiceCommandService : IVoiceCommandService
         };
         foreach (var (word, digit) in onesWords)
         {
-            result = Regex.Replace(result, $@"\b([2-9])0\s+{word}\b", 
+            result = Regex.Replace(result, $@"\b([2-9])0\s+{word}\b",
                 m => $"{m.Groups[1].Value}{digit}", RegexOptions.IgnoreCase);
         }
 
@@ -499,7 +594,7 @@ public class VoiceCommandService : IVoiceCommandService
         // Filter out invalid values like infinity (recognizer sometimes misparses)
         var sortedResults = recognizedNumbers
             .Where(r => r.Resolution.ContainsKey("value"))
-            .Where(r => 
+            .Where(r =>
             {
                 var val = r.Resolution["value"]?.ToString();
                 // Skip infinity, NaN, or other invalid values
@@ -592,7 +687,7 @@ public class VoiceCommandService : IVoiceCommandService
             // Get the most recently used active bag as default
             var activeBags = await _bagService.GetActiveBagsForShotLoggingAsync();
             var defaultBag = activeBags.FirstOrDefault();
-            
+
             if (defaultBag == null)
             {
                 return "No active coffee bag found. Please add a bag first before logging shots.";
@@ -636,7 +731,7 @@ public class VoiceCommandService : IVoiceCommandService
             }
             result += $" (using {defaultBag.BeanName})";
 
-            _logger.LogInformation("Shot logged successfully via voice, ID: {ShotId}, BagId: {BagId}", 
+            _logger.LogInformation("Shot logged successfully via voice, ID: {ShotId}, BagId: {BagId}",
                 shot.Id, defaultBag.Id);
             return result;
         }
@@ -923,7 +1018,7 @@ public class VoiceCommandService : IVoiceCommandService
         [Description("Filter by who the shot was made for")] string? madeFor = null,
         [Description("Filter by minimum rating (0-4)")] int? minRating = null)
     {
-        _logger.LogInformation("GetShotCount tool called: Period={Period}, Bean={Bean}, MadeBy={MadeBy}, MadeFor={MadeFor}, MinRating={MinRating}", 
+        _logger.LogInformation("GetShotCount tool called: Period={Period}, Bean={Bean}, MadeBy={MadeBy}, MadeFor={MadeFor}, MinRating={MinRating}",
             period, beanName, madeBy, madeFor, minRating);
 
         try
@@ -959,7 +1054,7 @@ public class VoiceCommandService : IVoiceCommandService
             // Apply bean filter
             if (!string.IsNullOrEmpty(beanName))
             {
-                shots = shots.Where(s => 
+                shots = shots.Where(s =>
                     s.Bean?.Name?.Contains(beanName, StringComparison.OrdinalIgnoreCase) == true ||
                     s.Bag?.BeanName?.Contains(beanName, StringComparison.OrdinalIgnoreCase) == true);
             }
@@ -967,14 +1062,14 @@ public class VoiceCommandService : IVoiceCommandService
             // Apply made by filter
             if (!string.IsNullOrEmpty(madeBy))
             {
-                shots = shots.Where(s => 
+                shots = shots.Where(s =>
                     s.MadeBy?.Name?.Contains(madeBy, StringComparison.OrdinalIgnoreCase) == true);
             }
 
             // Apply made for filter
             if (!string.IsNullOrEmpty(madeFor))
             {
-                shots = shots.Where(s => 
+                shots = shots.Where(s =>
                     s.MadeFor?.Name?.Contains(madeFor, StringComparison.OrdinalIgnoreCase) == true);
             }
 
@@ -986,25 +1081,25 @@ public class VoiceCommandService : IVoiceCommandService
             }
 
             var count = shots.Count();
-            
+
             // Build description
             var filterParts = new List<string>();
             if (!string.IsNullOrEmpty(beanName)) filterParts.Add($"with {beanName}");
             if (!string.IsNullOrEmpty(madeBy)) filterParts.Add($"made by {madeBy}");
             if (!string.IsNullOrEmpty(madeFor)) filterParts.Add($"made for {madeFor}");
             if (minRating.HasValue) filterParts.Add($"rated {minRating}+ stars");
-            
+
             var filterDesc = filterParts.Count > 0 ? " " + string.Join(" ", filterParts) : "";
             var periodDesc = lowerPeriod == "all time" || lowerPeriod == "all" ? "" : $" {lowerPeriod}";
 
-            _logger.LogInformation("Shot count queried via voice: Period={Period}, Filters={Filters}, Count={Count}", 
+            _logger.LogInformation("Shot count queried via voice: Period={Period}, Filters={Filters}, Count={Count}",
                 period, filterDesc, count);
-            
+
             if (!string.IsNullOrEmpty(madeBy))
             {
                 return $"{madeBy} has made {count} shot{(count != 1 ? "s" : "")}{periodDesc}";
             }
-            
+
             return $"You've pulled {count} shot{(count != 1 ? "s" : "")}{filterDesc}{periodDesc}";
         }
         catch (Exception ex)
@@ -1035,8 +1130,8 @@ public class VoiceCommandService : IVoiceCommandService
 
             // Append to existing notes if any
             var existingNotes = lastShot.TastingNotes;
-            var newNotes = string.IsNullOrEmpty(existingNotes) 
-                ? notes 
+            var newNotes = string.IsNullOrEmpty(existingNotes)
+                ? notes
                 : $"{existingNotes}; {notes}";
 
             var updateDto = new UpdateShotDto
@@ -1144,7 +1239,7 @@ public class VoiceCommandService : IVoiceCommandService
                 try
                 {
                     await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingPageProps>(
-                        "shot-logging", 
+                        "shot-logging",
                         props => props.ShotId = shotId);
                 }
                 catch (Exception ex)
@@ -1177,7 +1272,7 @@ public class VoiceCommandService : IVoiceCommandService
                 try
                 {
                     await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ProfileFormPageProps>(
-                        "profile-form", 
+                        "profile-form",
                         props => props.ProfileId = profileId);
                 }
                 catch (Exception ex)
@@ -1253,8 +1348,8 @@ public class VoiceCommandService : IVoiceCommandService
             if (minRating.HasValue)
                 filterDesc.Add($"{minRating}+ stars");
 
-            var description = filterDesc.Count > 0 
-                ? string.Join(", ", filterDesc) 
+            var description = filterDesc.Count > 0
+                ? string.Join(", ", filterDesc)
                 : "all";
 
             _logger.LogInformation("Filtering shots via voice and navigating to activity feed: {Route}", route);
@@ -1298,7 +1393,7 @@ public class VoiceCommandService : IVoiceCommandService
 
             if (lastShot.Bean != null)
             {
-                details.Add($"• Bean: {lastShot.Bean.Name}" + 
+                details.Add($"• Bean: {lastShot.Bean.Name}" +
                     (lastShot.Bean.Roaster != null ? $" by {lastShot.Bean.Roaster}" : ""));
             }
 
@@ -1352,11 +1447,11 @@ public class VoiceCommandService : IVoiceCommandService
         try
         {
             var actualLimit = Math.Min(limit ?? 5, 10);
-            
+
             // Get shots from service (page 0, 100 items to have enough to filter)
             var pagedResult = await _shotService.GetShotHistoryAsync(0, 100);
             var allShots = pagedResult?.Items;
-            
+
             if (allShots == null || allShots.Count == 0)
             {
                 return "No shots found in your history.";
@@ -1367,7 +1462,7 @@ public class VoiceCommandService : IVoiceCommandService
             // Apply bean filter
             if (!string.IsNullOrEmpty(beanName))
             {
-                filtered = filtered.Where(s => 
+                filtered = filtered.Where(s =>
                     s.Bean?.Name?.Contains(beanName, StringComparison.OrdinalIgnoreCase) == true ||
                     s.Bag?.BeanName?.Contains(beanName, StringComparison.OrdinalIgnoreCase) == true);
             }
@@ -1375,14 +1470,14 @@ public class VoiceCommandService : IVoiceCommandService
             // Apply made by filter
             if (!string.IsNullOrEmpty(madeBy))
             {
-                filtered = filtered.Where(s => 
+                filtered = filtered.Where(s =>
                     s.MadeBy?.Name?.Contains(madeBy, StringComparison.OrdinalIgnoreCase) == true);
             }
 
             // Apply made for filter
             if (!string.IsNullOrEmpty(madeFor))
             {
-                filtered = filtered.Where(s => 
+                filtered = filtered.Where(s =>
                     s.MadeFor?.Name?.Contains(madeFor, StringComparison.OrdinalIgnoreCase) == true);
             }
 
@@ -1408,10 +1503,10 @@ public class VoiceCommandService : IVoiceCommandService
 
                 if (startDate != DateTime.MinValue)
                 {
-                    var endDate = period.ToLowerInvariant() == "yesterday" 
-                        ? now.Date 
+                    var endDate = period.ToLowerInvariant() == "yesterday"
+                        ? now.Date
                         : DateTime.MaxValue;
-                    
+
                     filtered = filtered.Where(s => s.Timestamp >= startDate && s.Timestamp < endDate);
                 }
             }
@@ -1427,7 +1522,7 @@ public class VoiceCommandService : IVoiceCommandService
             // Build summary
             var summary = new List<string>();
             var filterDescription = BuildFilterDescription(beanName, madeBy, madeFor, minRating, period);
-            summary.Add($"Found {results.Count} shot{(results.Count != 1 ? "s" : "")}" + 
+            summary.Add($"Found {results.Count} shot{(results.Count != 1 ? "s" : "")}" +
                 (filterDescription != "all" ? $" matching {filterDescription}" : "") + ":");
 
             foreach (var shot in results)
@@ -1468,23 +1563,23 @@ public class VoiceCommandService : IVoiceCommandService
         try
         {
             var beans = await _beanService.GetAllActiveBeansAsync();
-            
+
             // Apply filters
             if (!string.IsNullOrWhiteSpace(roaster))
             {
-                beans = beans.Where(b => b.Roaster != null && 
+                beans = beans.Where(b => b.Roaster != null &&
                     b.Roaster.Contains(roaster, StringComparison.OrdinalIgnoreCase)).ToList();
             }
-            
+
             if (!string.IsNullOrWhiteSpace(origin))
             {
-                beans = beans.Where(b => b.Origin != null && 
+                beans = beans.Where(b => b.Origin != null &&
                     b.Origin.Contains(origin, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
             var count = beans.Count;
             var filterDesc = BuildBeanFilterDescription(roaster, origin);
-            
+
             _logger.LogInformation("Bean count queried via voice: {Count} beans {Filter}", count, filterDesc);
             return $"You have {count} unique bean{(count != 1 ? "s" : "")} {filterDesc}";
         }
@@ -1502,26 +1597,26 @@ public class VoiceCommandService : IVoiceCommandService
         [Description("Optional bean name to search for")] string? name = null,
         [Description("Maximum number of results to return (default 5)")] int limit = 5)
     {
-        _logger.LogInformation("FindBeans tool called: Roaster={Roaster}, Origin={Origin}, Name={Name}, Limit={Limit}", 
+        _logger.LogInformation("FindBeans tool called: Roaster={Roaster}, Origin={Origin}, Name={Name}, Limit={Limit}",
             roaster, origin, name, limit);
 
         try
         {
             var beans = await _beanService.GetAllActiveBeansAsync();
-            
+
             // Apply filters
             if (!string.IsNullOrWhiteSpace(roaster))
             {
-                beans = beans.Where(b => b.Roaster != null && 
+                beans = beans.Where(b => b.Roaster != null &&
                     b.Roaster.Contains(roaster, StringComparison.OrdinalIgnoreCase)).ToList();
             }
-            
+
             if (!string.IsNullOrWhiteSpace(origin))
             {
-                beans = beans.Where(b => b.Origin != null && 
+                beans = beans.Where(b => b.Origin != null &&
                     b.Origin.Contains(origin, StringComparison.OrdinalIgnoreCase)).ToList();
             }
-            
+
             if (!string.IsNullOrWhiteSpace(name))
             {
                 beans = beans.Where(b => b.Name.Contains(name, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -1536,7 +1631,7 @@ public class VoiceCommandService : IVoiceCommandService
 
             // Take limited results
             var results = beans.Take(limit).ToList();
-            var beanDescriptions = results.Select(b => 
+            var beanDescriptions = results.Select(b =>
             {
                 var parts = new List<string> { b.Name };
                 if (!string.IsNullOrEmpty(b.Roaster)) parts.Add($"by {b.Roaster}");
@@ -1549,7 +1644,7 @@ public class VoiceCommandService : IVoiceCommandService
             var filterDescription = BuildBeanFilterDescription(roaster, origin, name);
             var resultText = string.Join("; ", beanDescriptions);
             var moreText = count > limit ? $" (showing {limit} of {count})" : "";
-            
+
             _logger.LogInformation("Beans queried via voice: {Count} results {Filter}", count, filterDescription);
             return $"Found {count} bean{(count != 1 ? "s" : "")} {filterDescription}{moreText}: {resultText}";
         }
@@ -1569,13 +1664,13 @@ public class VoiceCommandService : IVoiceCommandService
         try
         {
             var bags = await _bagService.GetActiveBagsForShotLoggingAsync();
-            
+
             // GetActiveBagsForShotLoggingAsync returns only active bags
             // For a complete count we need to iterate all beans
             var allBeans = await _beanService.GetAllActiveBeansAsync();
             var totalBags = 0;
             var activeBags = 0;
-            
+
             foreach (var bean in allBeans)
             {
                 var beanBags = await _bagService.GetBagSummariesForBeanAsync(bean.Id, includeCompleted);
@@ -1608,24 +1703,24 @@ public class VoiceCommandService : IVoiceCommandService
         [Description("Whether to include only active (not completed) bags (default true)")] bool activeOnly = true,
         [Description("Maximum number of results to return (default 5)")] int limit = 5)
     {
-        _logger.LogInformation("FindBags tool called: BeanName={BeanName}, Roaster={Roaster}, ActiveOnly={ActiveOnly}, Limit={Limit}", 
+        _logger.LogInformation("FindBags tool called: BeanName={BeanName}, Roaster={Roaster}, ActiveOnly={ActiveOnly}, Limit={Limit}",
             beanName, roaster, activeOnly, limit);
 
         try
         {
             var allBeans = await _beanService.GetAllActiveBeansAsync();
             var matchingBags = new List<(BagSummaryDto Bag, BeanDto Bean)>();
-            
+
             // Filter beans first if roaster or bean name specified
             if (!string.IsNullOrWhiteSpace(roaster))
             {
-                allBeans = allBeans.Where(b => b.Roaster != null && 
+                allBeans = allBeans.Where(b => b.Roaster != null &&
                     b.Roaster.Contains(roaster, StringComparison.OrdinalIgnoreCase)).ToList();
             }
-            
+
             if (!string.IsNullOrWhiteSpace(beanName))
             {
-                allBeans = allBeans.Where(b => 
+                allBeans = allBeans.Where(b =>
                     b.Name.Contains(beanName, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
@@ -1652,7 +1747,7 @@ public class VoiceCommandService : IVoiceCommandService
 
             // Take limited results
             var results = matchingBags.Take(limit).ToList();
-            var bagDescriptions = results.Select(x => 
+            var bagDescriptions = results.Select(x =>
             {
                 var parts = new List<string> { x.Bean.Name };
                 parts.Add($"roasted {x.Bag.RoastDate:MMM d}");
@@ -1666,7 +1761,7 @@ public class VoiceCommandService : IVoiceCommandService
             var filterDescription = BuildBagFilterDescription(beanName, roaster, activeOnly);
             var resultText = string.Join("; ", bagDescriptions);
             var moreText = count > limit ? $" (showing {limit} of {count})" : "";
-            
+
             _logger.LogInformation("Bags queried via voice: {Count} results {Filter}", count, filterDescription);
             return $"Found {count} bag{(count != 1 ? "s" : "")} {filterDescription}{moreText}: {resultText}";
         }
@@ -1704,7 +1799,7 @@ public class VoiceCommandService : IVoiceCommandService
         try
         {
             var equipment = await _equipmentService.GetAllActiveEquipmentAsync();
-            
+
             // Apply type filter if specified
             if (!string.IsNullOrWhiteSpace(type))
             {
@@ -1714,7 +1809,7 @@ public class VoiceCommandService : IVoiceCommandService
 
             var count = equipment.Count;
             var typeDesc = !string.IsNullOrWhiteSpace(type) ? $" ({type})" : "";
-            
+
             _logger.LogInformation("Equipment count queried via voice: {Count} items{Type}", count, typeDesc);
             return $"You have {count} piece{(count != 1 ? "s" : "")} of equipment{typeDesc}";
         }
@@ -1736,18 +1831,18 @@ public class VoiceCommandService : IVoiceCommandService
         try
         {
             var equipment = await _equipmentService.GetAllActiveEquipmentAsync();
-            
+
             // Apply type filter
             if (!string.IsNullOrWhiteSpace(type))
             {
                 var equipmentType = ParseEquipmentType(type);
                 equipment = equipment.Where(e => e.Type == equipmentType).ToList();
             }
-            
+
             // Apply name filter
             if (!string.IsNullOrWhiteSpace(name))
             {
-                equipment = equipment.Where(e => 
+                equipment = equipment.Where(e =>
                     e.Name.Contains(name, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
@@ -1760,7 +1855,7 @@ public class VoiceCommandService : IVoiceCommandService
 
             // Take limited results
             var results = equipment.Take(limit).ToList();
-            var equipmentDescriptions = results.Select(e => 
+            var equipmentDescriptions = results.Select(e =>
             {
                 var typeStr = e.Type switch
                 {
@@ -1776,7 +1871,7 @@ public class VoiceCommandService : IVoiceCommandService
             var filterDescription = BuildEquipmentFilterDescription(type, name);
             var resultText = string.Join("; ", equipmentDescriptions);
             var moreText = count > limit ? $" (showing {limit} of {count})" : "";
-            
+
             _logger.LogInformation("Equipment queried via voice: {Count} results {Filter}", count, filterDescription);
             return $"Found {count} item{(count != 1 ? "s" : "")} {filterDescription}{moreText}: {resultText}";
         }
@@ -1796,7 +1891,7 @@ public class VoiceCommandService : IVoiceCommandService
         {
             var profiles = await _userProfileService.GetAllProfilesAsync();
             var count = profiles.Count;
-            
+
             _logger.LogInformation("Profile count queried via voice: {Count} profiles", count);
             return $"You have {count} user profile{(count != 1 ? "s" : "")}";
         }
@@ -1817,19 +1912,19 @@ public class VoiceCommandService : IVoiceCommandService
         try
         {
             var profiles = await _userProfileService.GetAllProfilesAsync();
-            
+
             // Apply name filter
             if (!string.IsNullOrWhiteSpace(name))
             {
-                profiles = profiles.Where(p => 
+                profiles = profiles.Where(p =>
                     p.Name.Contains(name, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
             var count = profiles.Count;
             if (count == 0)
             {
-                return string.IsNullOrWhiteSpace(name) 
-                    ? "No user profiles found" 
+                return string.IsNullOrWhiteSpace(name)
+                    ? "No user profiles found"
                     : $"No profiles found matching '{name}'";
             }
 
@@ -1840,7 +1935,7 @@ public class VoiceCommandService : IVoiceCommandService
             var resultText = string.Join(", ", profileDetails);
             var moreText = count > limit ? $" (showing {limit} of {count})" : "";
             var filterText = !string.IsNullOrWhiteSpace(name) ? $" matching '{name}'" : "";
-            
+
             _logger.LogInformation("Profiles queried via voice: {Count} results", count);
             return $"Found {count} profile{(count != 1 ? "s" : "")}{filterText}{moreText}: {resultText}";
         }

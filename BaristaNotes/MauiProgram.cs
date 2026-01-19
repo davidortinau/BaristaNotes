@@ -118,7 +118,26 @@ public static class MauiProgram
 		// use of Console.WriteLine in the application.
 		Console.WriteLine($"Database path: {dbPath}");
 
-		builder.Services.AddPlatformChatClient();
+		// Register Apple Intelligence chat client (iOS only)
+		// Note: AppleIntelligenceChatClient requires iOS 26.0+, but VoiceCommandService
+		// gracefully falls back to OpenAI when local AI isn't available or fails
+#if IOS
+#pragma warning disable CA1416 // Validate platform compatibility
+		try
+		{
+			// Only register if we can successfully create the client
+			// This will fail on iOS < 26.0 or if Apple Intelligence is not available
+			var appleIntelligenceClient = new AppleIntelligenceChatClient();
+			builder.Services.AddSingleton<Microsoft.Extensions.AI.IChatClient>(appleIntelligenceClient);
+			Console.WriteLine("Apple Intelligence chat client registered successfully");
+		}
+		catch (Exception ex)
+		{
+			// Apple Intelligence not available - VoiceCommandService will use OpenAI fallback
+			Console.WriteLine($"Apple Intelligence not available, will use OpenAI: {ex.Message}");
+		}
+#pragma warning restore CA1416
+#endif
 
 		// Register Repositories (scoped)
 		builder.Services.AddScoped<IEquipmentRepository, EquipmentRepository>();

@@ -192,7 +192,7 @@ public class VoiceOverlayPanel : IWindowOverlayElement
         {
             return _fabRect.Contains(point);
         }
-        
+
         // When expanded, consume taps on the panel area
         return _panelRect.Contains(point);
     }
@@ -285,7 +285,7 @@ public class VoiceOverlayPanel : IWindowOverlayElement
             float closeX = dirtyRect.Width - Padding - CloseButtonSize;
             float closeY = panelY + Padding;
             _closeButtonRect = new RectF(closeX, closeY, CloseButtonSize, CloseButtonSize);
-            
+
             canvas.FontColor = _textColor;
             canvas.FontSize = 24;
             canvas.DrawString("✕", _closeButtonRect, HorizontalAlignment.Center, VerticalAlignment.Center);
@@ -295,29 +295,29 @@ public class VoiceOverlayPanel : IWindowOverlayElement
             canvas.FontColor = _textColor;
             canvas.FontSize = 20;
             canvas.Font = new Microsoft.Maui.Graphics.Font("Arial", 700, FontStyleType.Normal); // Bold
-            
+
             var indicatorText = (_isListening || _isProcessing) ? "● " : "";
             if (_isListening || _isProcessing)
             {
                 canvas.FontColor = _accentColor;
                 canvas.DrawString(indicatorText, new RectF(Padding, stateY, 24, 30), HorizontalAlignment.Left, VerticalAlignment.Center);
             }
-            
+
             canvas.FontColor = _textColor;
-            canvas.DrawString(_stateText, new RectF(Padding + 24, stateY, dirtyRect.Width - Padding * 2 - CloseButtonSize - 24, 30), 
+            canvas.DrawString(_stateText, new RectF(Padding + 24, stateY, dirtyRect.Width - Padding * 2 - CloseButtonSize - 24, 30),
                 HorizontalAlignment.Left, VerticalAlignment.Center);
 
             // Content area starts below state text
             float contentY = stateY + 50;
             float contentWidth = dirtyRect.Width - Padding * 2;
-            
+
             // Calculate available height for content (above cancel button)
             float cancelButtonHeight = 40f;
             float availableContentHeight = PanelHeight - 50 - Padding - cancelButtonHeight - Padding - 20;
-            
+
             canvas.FontSize = 16;
             canvas.Font = new Microsoft.Maui.Graphics.Font("Arial", 400, FontStyleType.Normal); // Regular
-            
+
             // Draw transcript (user's speech) if available
             if (!string.IsNullOrEmpty(_transcript))
             {
@@ -326,14 +326,14 @@ public class VoiceOverlayPanel : IWindowOverlayElement
                 canvas.DrawString(_transcript, transcriptRect, HorizontalAlignment.Left, VerticalAlignment.Top);
                 contentY += 70f; // Move down for AI response
             }
-            
+
             // Draw AI response if available (positioned right after transcript, or at content start if no transcript)
             if (!string.IsNullOrEmpty(_aiResponse))
             {
                 canvas.FontColor = _aiResponseColor;
                 canvas.FontSize = 15;
                 canvas.Font = new Microsoft.Maui.Graphics.Font("Arial", 400, FontStyleType.Italic);
-                
+
                 // Use remaining space for response
                 float responseHeight = availableContentHeight - (contentY - (stateY + 50));
                 var responseRect = new RectF(Padding, contentY, contentWidth, responseHeight);
@@ -344,7 +344,7 @@ public class VoiceOverlayPanel : IWindowOverlayElement
                 // Show hint text when no transcript and no AI response
                 canvas.FontColor = Color.FromArgb("#FF888888");
                 var hintRect = new RectF(Padding, contentY, contentWidth, 60f);
-                canvas.DrawString("Say something like \"Log shot 18 in, 36 out, 28 seconds\"", 
+                canvas.DrawString("Say something like \"Log shot 18 in, 36 out, 28 seconds\"",
                     hintRect, HorizontalAlignment.Left, VerticalAlignment.Top);
             }
 
@@ -353,7 +353,7 @@ public class VoiceOverlayPanel : IWindowOverlayElement
             float cancelX = (dirtyRect.Width - cancelButtonWidth) / 2;
             float cancelY = panelY + PanelHeight - cancelButtonHeight - Padding;
             _cancelButtonRect = new RectF(cancelX, cancelY, cancelButtonWidth, cancelButtonHeight);
-            
+
             canvas.FontColor = _accentColor;
             canvas.FontSize = 16;
             canvas.DrawString("Cancel", _cancelButtonRect,
@@ -381,12 +381,12 @@ public class VoiceOverlayPanel : IWindowOverlayElement
         canvas.FillColor = _textColor;
         float iconCenterX = fabX + FabSize / 2;
         float iconCenterY = fabY + FabSize / 2;
-        
+
         // Draw mic body (rounded rectangle approximation with circles)
         float micWidth = 12f;
         float micHeight = 18f;
         float micTop = iconCenterY - micHeight / 2 - 2;
-        
+
         // Mic body using rounded rect path
         var micPath = new PathF();
         float micLeft = iconCenterX - micWidth / 2;
@@ -409,7 +409,7 @@ public class VoiceOverlayPanel : IWindowOverlayElement
         float standTop = micTop + micHeight + 2;
         float standWidth = micWidth + 6;
         float standLeft = iconCenterX - standWidth / 2;
-        
+
         var standPath = new PathF();
         standPath.MoveTo(standLeft, micTop + micHeight / 2);
         standPath.LineTo(standLeft, standTop);

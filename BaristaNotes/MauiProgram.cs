@@ -28,6 +28,11 @@ public static class MauiProgram
 {
 	public static MauiApp CreateMauiApp()
 	{
+		var startupTimer = System.Diagnostics.Stopwatch.StartNew();
+		void LogTiming(string phase) => Console.WriteLine($"[STARTUP] {phase}: {startupTimer.ElapsedMilliseconds}ms");
+		
+		LogTiming("CreateMauiApp entered");
+		
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiReactorApp<BaristaApp>(app =>
@@ -86,6 +91,8 @@ public static class MauiProgram
 				fonts.AddFont("coffee-icons.ttf", "coffee-icons");
 			});
 
+		LogTiming("Builder configured");
+
 		// Register MauiReactor routes
 		RegisterRoutes();
 
@@ -112,6 +119,8 @@ public static class MauiProgram
 		var dbPath = Path.Combine(FileSystem.AppDataDirectory, "barista_notes.db");
 		builder.Services.AddDbContext<BaristaNotesContext>(options =>
 			options.UseSqlite($"Data Source={dbPath}"));
+
+		LogTiming("DbContext registered");
 
 		// Bootstrap logging: Console.WriteLine used here because ILogger<T> is not available
 		// during DI container build phase (circular dependency). This is the only acceptable
@@ -184,23 +193,14 @@ public static class MauiProgram
 		builder.Logging.AddDebug();
 #endif
 
+		LogTiming("Services registered, calling Build()");
 		var app = builder.Build();
+		LogTiming("Build() completed");
 
-		// Initialize theme service to load saved theme preference
-		var themeService = app.Services.GetRequiredService<IThemeService>();
-		Task.Run(async () =>
-		{
-			var savedMode = await themeService.GetThemeModeAsync();
-			await themeService.SetThemeModeAsync(savedMode);
-		}).Wait();
-
-		// Apply database migrations
-		using (var scope = app.Services.CreateScope())
-		{
-			var context = scope.ServiceProvider.GetRequiredService<BaristaNotesContext>();
-			context.Database.Migrate();
-		}
-
+		// Theme initialization moved to BaristaApp.OnMounted() to avoid blocking main thread
+		// Database migration moved to async startup to avoid iOS watchdog timeout
+		
+		LogTiming("CreateMauiApp returning (deferred: theme init, db migration)");
 		return app;
 	}
 

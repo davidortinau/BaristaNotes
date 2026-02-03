@@ -2,11 +2,11 @@ using System.ClientModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Azure.AI.OpenAI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Recognizers.Text;
 using Microsoft.Recognizers.Text.Number;
-using OpenAI;
 using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
@@ -377,14 +377,10 @@ public class VoiceCommandService : IVoiceCommandService
 
         try
         {
-            // Use OpenAI SDK with Azure endpoint configuration
-            var options = new OpenAIClientOptions
-            {
-                Endpoint = new Uri(endpoint)
-            };
-            var credential = new ApiKeyCredential(apiKey);
-            var openAIClient = new OpenAIClient(credential, options);
-            _azureOpenAIClient = openAIClient.GetChatClient(ModelId).AsIChatClient();
+            var azureClient = new AzureOpenAIClient(
+                new Uri(endpoint),
+                new ApiKeyCredential(apiKey));
+            _azureOpenAIClient = azureClient.GetChatClient(ModelId).AsIChatClient();
             return _azureOpenAIClient;
         }
         catch (Exception ex)

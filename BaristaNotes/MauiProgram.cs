@@ -197,26 +197,10 @@ public static class MauiProgram
 		var app = builder.Build();
 		LogTiming("Build() completed");
 
-		// Initialize theme service to load saved theme preference
-		LogTiming("Starting theme initialization (BLOCKING)");
-		var themeService = app.Services.GetRequiredService<IThemeService>();
-		Task.Run(async () =>
-		{
-			var savedMode = await themeService.GetThemeModeAsync();
-			await themeService.SetThemeModeAsync(savedMode);
-		}).Wait();
-		LogTiming("Theme initialization completed");
-
-		// Apply database migrations
-		LogTiming("Starting database migration (BLOCKING)");
-		using (var scope = app.Services.CreateScope())
-		{
-			var context = scope.ServiceProvider.GetRequiredService<BaristaNotesContext>();
-			context.Database.Migrate();
-		}
-		LogTiming("Database migration completed");
-
-		LogTiming("CreateMauiApp returning");
+		// Theme initialization moved to BaristaApp.OnMounted() to avoid blocking main thread
+		// Database migration moved to async startup to avoid iOS watchdog timeout
+		
+		LogTiming("CreateMauiApp returning (deferred: theme init, db migration)");
 		return app;
 	}
 

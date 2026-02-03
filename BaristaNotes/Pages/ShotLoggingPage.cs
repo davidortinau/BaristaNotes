@@ -136,6 +136,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     [Inject]
     IOverlayService _overlayService;
 
+    [Inject]
+    IVisionService _visionService;
+
     // Cancellation token for AI recommendation requests
     private CancellationTokenSource? _recommendationCts;
 
@@ -1312,6 +1315,20 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .OnClicked(async () => await ToggleVoiceSheetAsync())
                 : null,
 
+            // Camera toolbar item for vision/people counting (available for new shots)
+            !Props.ShotId.HasValue ?
+                ToolbarItem("Camera")
+                    .IconImageSource(new FontImageSource
+                    {
+                        FontFamily = MaterialSymbolsFont.FontFamily,
+                        Glyph = MaterialSymbolsFont.Photo_camera,
+                        Color = AppColors.Light.TextPrimary,
+                        Size = 24
+                    })
+                    .Order(MauiControls.ToolbarItemOrder.Primary)
+                    .OnClicked(async () => await CaptureAndAnalyzePhotoAsync())
+                : null,
+
             Props.ShotId.HasValue ?
                 ToolbarItem("")
                     .IconImageSource(AppIcons.Ai)
@@ -1510,6 +1527,74 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         };
 
         await IPopupService.Current.PushAsync(popup);
+    }
+
+    /// <summary>
+    /// Captures a photo and analyzes it to count people for coffee needs.
+    /// </summary>
+    private async Task CaptureAndAnalyzePhotoAsync()
+    {
+        try
+        {
+            // Check if capture is supported
+            if (!MediaPicker.Default.IsCaptureSupported)
+            {
+                await ContainerPage!.DisplayAlert("Camera Unavailable", 
+                    "Camera is not available on this device.", "OK");
+                return;
+            }
+
+            // Check if vision service is available
+            if (!await _visionService.IsAvailableAsync())
+            {
+                await ContainerPage!.DisplayAlert("Vision Unavailable", 
+                    "Vision service is not configured.", "OK");
+                return;
+            }
+
+            // Capture photo
+            var photo = await MediaPicker.Default.CapturePhotoAsync(new MediaPickerOptions
+            {
+                Title = "Take a photo of the room"
+            });
+
+            if (photo == null)
+            {
+                // User cancelled
+                return;
+            }
+
+            // Show analyzing state
+            await ContainerPage!.DisplayAlert("Analyzing", 
+                "Analyzing photo for people count...", "OK");
+
+            // Analyze the photo
+            using var stream = await photo.OpenReadAsync();
+            var result = await _visionService.AnalyzeImageAsync(
+                stream, 
+                "Count the people in this image and tell me how many cups of coffee I need to make.");
+
+            if (result.Success)
+            {
+                var message = result.Message ?? 
+                    $"I see {result.PeopleCount} {(result.PeopleCount == 1 ? "person" : "people")}. " +
+                    $"You'll need {result.CupsNeeded} {(result.CupsNeeded == 1 ? "cup" : "cups")} of coffee, " +
+                    $"which requires about {result.BeansNeededGrams}g of beans.";
+                
+                await ContainerPage!.DisplayAlert("Analysis Complete", message, "OK");
+            }
+            else
+            {
+                await ContainerPage!.DisplayAlert("Analysis Failed", 
+                    result.ErrorMessage ?? "Could not analyze the photo.", "OK");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error capturing and analyzing photo");
+            await ContainerPage!.DisplayAlert("Error", 
+                $"Failed to capture or analyze photo: {ex.Message}", "OK");
+        }
     }
 
     VisualNode RenderAnimatedLoadingBar()

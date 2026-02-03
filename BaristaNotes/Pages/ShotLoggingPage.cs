@@ -145,6 +145,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     // Cancellation token for voice commands
     private CancellationTokenSource? _voiceCts;
 
+    // Flag to pause speech recognition (e.g., during camera capture)
+    private bool _speechPaused = false;
+
     // Silence detection timer - fires when user stops speaking
     private System.Timers.Timer? _silenceTimer;
     private const double SilenceTimeoutMs = 1500; // 1.5 seconds of silence triggers processing
@@ -212,6 +215,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     private async void OnPauseSpeechRequested(object? sender, EventArgs e)
     {
         _logger.LogDebug("Pause speech requested - stopping listening for camera");
+        _speechPaused = true;
         if (State.IsRecording)
         {
             await _speechRecognitionService.StopListeningAsync();
@@ -227,22 +231,13 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
     /// <summary>
     /// Handle request to resume speech recognition (e.g., after camera closes).
+    /// Note: Currently not invoked - speech resume is handled via _speechPaused flag
+    /// in ProcessTranscriptAsync after full AI processing completes.
     /// </summary>
     private void OnResumeSpeechRequested(object? sender, EventArgs e)
     {
-        _logger.LogDebug("Resume speech requested - will restart listening loop");
-        // The listening will resume automatically via the existing recording loop
-        // Just update the overlay state
-        if (State.IsRecording)
-        {
-            _overlayService.UpdateContent(new OverlayContent(
-                StateText: "Analyzing...",
-                Transcript: State.VoiceTranscript,
-                IsListening: false,
-                IsProcessing: true,
-                AIResponse: State.LastAIResponse
-            ));
-        }
+        _logger.LogDebug("Resume speech requested via event");
+        _speechPaused = false;
     }
 
     private void OnMainDisplayInfoChanged(object? sender, DisplayInfoChangedEventArgs e)
@@ -414,6 +409,14 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         {
             while (State.IsRecording && !(_voiceCts?.Token.IsCancellationRequested ?? true))
             {
+                // Check if speech is paused (e.g., during camera capture)
+                if (_speechPaused)
+                {
+                    _logger.LogDebug("Speech is paused, waiting...");
+                    await Task.Delay(200, _voiceCts?.Token ?? CancellationToken.None);
+                    continue;
+                }
+
                 _logger.LogDebug("Starting speech recognition cycle, IsRecording={IsRecording}, IsCancelled={IsCancelled}",
                     State.IsRecording, _voiceCts?.Token.IsCancellationRequested ?? true);
 
@@ -422,11 +425,18 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 _logger.LogInformation("Speech recognition returned: Success={Success}, Transcript='{Transcript}', Error={Error}",
                     result.Success, result.Transcript ?? "(null)", result.ErrorMessage ?? "(none)");
 
-                // Check if cancelled
+                // Check if cancelled or paused
                 if (_voiceCts?.Token.IsCancellationRequested ?? true)
                 {
                     _logger.LogInformation("Voice recording cancelled during listening, breaking loop");
                     break;
+                }
+
+                // If paused during listening, skip processing
+                if (_speechPaused)
+                {
+                    _logger.LogDebug("Speech paused during recognition, skipping result");
+                    continue;
                 }
 
                 // If we got a result with text, process it
@@ -582,6 +592,13 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 s.VoiceState = s.IsRecording ? SpeechRecognitionState.Listening : SpeechRecognitionState.Idle;
             });
 
+            // Resume speech if it was paused (e.g., during camera capture)
+            if (_speechPaused)
+            {
+                _logger.LogDebug("Clearing speech pause flag after command processing");
+                _speechPaused = false;
+            }
+
             // Update overlay back to listening but KEEP the AI response visible
             if (State.IsRecording)
             {
@@ -615,6 +632,13 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             
             SetState(s => s.VoiceState = s.IsRecording ? SpeechRecognitionState.Listening : SpeechRecognitionState.Idle);
             
+            // Resume speech if it was paused (e.g., during camera capture)
+            if (_speechPaused)
+            {
+                _logger.LogDebug("Clearing speech pause flag after error");
+                _speechPaused = false;
+            }
+
             // Return to listening but keep error visible
             if (State.IsRecording)
             {
@@ -1555,7 +1579,10 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             // Capture photo
             var photo = await MediaPicker.Default.CapturePhotoAsync(new MediaPickerOptions
             {
-                Title = "Take a photo of the room"
+                Title = "Take a photo of the room",
+                MaximumWidth = 1024,
+                MaximumHeight = 1024,
+                CompressionQuality = 70
             });
 
             if (photo == null)

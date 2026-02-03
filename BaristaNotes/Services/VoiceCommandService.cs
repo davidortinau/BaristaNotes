@@ -2017,7 +2017,10 @@ public class VoiceCommandService : IVoiceCommandService
                 {
                     return await MediaPicker.Default.CapturePhotoAsync(new MediaPickerOptions
                     {
-                        Title = "Take a photo of the room"
+                        Title = "Take a photo of the room",
+                        MaximumWidth = 1024,
+                        MaximumHeight = 1024,
+                        CompressionQuality = 70
                     });
                 });
 
@@ -2052,12 +2055,13 @@ public class VoiceCommandService : IVoiceCommandService
 
                 return response;
             }
-            finally
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // Always signal to resume speech recognition
-                _logger.LogDebug("Requesting speech resume after camera capture");
-                ResumeSpeechRequested?.Invoke(this, EventArgs.Empty);
+                _logger.LogError(ex, "Error during camera capture");
+                return $"Failed to capture or process photo: {ex.Message}";
             }
+            // NOTE: Speech resume is handled by the caller (ShotLoggingPage) after 
+            // the full AI response is processed, not here in the tool.
         }
         catch (Exception ex)
         {

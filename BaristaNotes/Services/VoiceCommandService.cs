@@ -159,7 +159,6 @@ public class VoiceCommandService : IVoiceCommandService
     private readonly INavigationRegistry _navigationRegistry;
     private readonly IOverlayService? _overlayService;
     private readonly IVisionService? _visionService;
-    private readonly Microsoft.Maui.Media.IMediaPicker? _mediaPicker;
 
     public VoiceCommandService(
         IShotService shotService,
@@ -173,8 +172,7 @@ public class VoiceCommandService : IVoiceCommandService
         ILogger<VoiceCommandService> logger,
         IChatClient? chatClient = null,
         IOverlayService? overlayService = null,
-        IVisionService? visionService = null,
-        Microsoft.Maui.Media.IMediaPicker? mediaPicker = null)
+        IVisionService? visionService = null)
     {
         _shotService = shotService;
         _beanService = beanService;
@@ -188,7 +186,6 @@ public class VoiceCommandService : IVoiceCommandService
         _localClient = chatClient;
         _overlayService = overlayService;
         _visionService = visionService;
-        _mediaPicker = mediaPicker;
     }
 
     /// <inheritdoc />
@@ -2000,8 +1997,8 @@ public class VoiceCommandService : IVoiceCommandService
                 return "Vision service is not available. Please check your configuration.";
             }
 
-            // Check if media picker is available
-            if (_mediaPicker == null)
+            // Check if capture is supported
+            if (!MediaPicker.Default.IsCaptureSupported)
             {
                 return "Camera is not available on this device.";
             }
@@ -2010,15 +2007,15 @@ public class VoiceCommandService : IVoiceCommandService
             _logger.LogDebug("Requesting speech pause for camera capture");
             PauseSpeechRequested?.Invoke(this, EventArgs.Empty);
 
+            FileResult? photo = null;
             try
             {
-                // Capture photo - must run on main thread
+                // Capture photo on main thread - MediaPicker handles permissions internally
                 _logger.LogDebug("Requesting camera capture on main thread");
-                FileResult? photo = null;
                 
-                await MainThread.InvokeOnMainThreadAsync(async () =>
+                photo = await MainThread.InvokeOnMainThreadAsync(async () =>
                 {
-                    photo = await _mediaPicker.CapturePhotoAsync(new Microsoft.Maui.Media.MediaPickerOptions
+                    return await MediaPicker.Default.CapturePhotoAsync(new MediaPickerOptions
                     {
                         Title = "Take a photo of the room"
                     });
@@ -2030,7 +2027,7 @@ public class VoiceCommandService : IVoiceCommandService
                 }
 
                 // Analyze the photo
-                _logger.LogDebug("Photo captured, analyzing with vision service");
+                _logger.LogDebug("Photo captured: {FileName}, analyzing with vision service", photo.FileName);
                 using var stream = await photo.OpenReadAsync();
                 var result = await _visionService.AnalyzeImageAsync(stream, userQuestion);
 
@@ -2062,14 +2059,10 @@ public class VoiceCommandService : IVoiceCommandService
                 ResumeSpeechRequested?.Invoke(this, EventArgs.Empty);
             }
         }
-        catch (PermissionException)
-        {
-            return "Camera permission is required to take photos. Please enable camera access in settings.";
-        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in AnalyzeRoomForCoffee tool");
-            return "Sorry, I couldn't analyze the room. Please try again.";
+            return $"Sorry, I couldn't analyze the room: {ex.Message}";
         }
     }
 

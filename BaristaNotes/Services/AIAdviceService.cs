@@ -1,9 +1,9 @@
 using System.Text;
-using Azure;
-using Azure.AI.OpenAI;
+using System.ClientModel;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using OpenAI;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 
@@ -382,6 +382,7 @@ Provide brief reasoning in one sentence.";
 
     /// <summary>
     /// Gets or creates the Azure OpenAI client instance.
+    /// Uses OpenAI SDK with Azure endpoint configuration.
     /// </summary>
     private IChatClient? GetOrCreateAzureOpenAIClient()
     {
@@ -400,10 +401,14 @@ Provide brief reasoning in one sentence.";
 
         try
         {
-            var azureClient = new AzureOpenAIClient(
-                new Uri(endpoint),
-                new AzureKeyCredential(apiKey));
-            _azureOpenAIClient = azureClient.GetChatClient(ModelId).AsIChatClient();
+            // Use OpenAI SDK with Azure endpoint configuration
+            var options = new OpenAIClientOptions
+            {
+                Endpoint = new Uri(endpoint)
+            };
+            var credential = new ApiKeyCredential(apiKey);
+            var openAIClient = new OpenAIClient(credential, options);
+            _azureOpenAIClient = openAIClient.GetChatClient(ModelId).AsIChatClient();
             return _azureOpenAIClient;
         }
         catch (Exception ex)

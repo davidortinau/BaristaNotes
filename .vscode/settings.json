@@ -9,6 +9,22 @@
     "chat.tools.terminal.autoApprove": {
         ".specify/scripts/bash/": true,
         ".specify/scripts/powershell/": true
+    },
+    "presentation-mode.configBackup": {
+        "editor.fontSize": "undefined",
+        "editor.matchBrackets": "undefined",
+        "editor.minimap.enabled": "undefined",
+        "editor.scrollbar.verticalScrollbarSize": "undefined",
+        "workbench.activityBar.visible": "undefined",
+        "workbench.statusBar.visible": "undefined",
+        "workbench.colorTheme": "undefined",
+        "workbench.colorCustomizations": "undefined",
+        "window.zoomLevel": "undefined",
+        "dimmer.enabled": "undefined",
+        "dimmer.toggleDimmerCommandScope": "undefined",
+        "dimmer.opacity": "undefined",
+        "dimmer.context": "undefined",
+        "dimmer.when": "undefined",
+        "dimmer.delay": "undefined"
     }
 }
-

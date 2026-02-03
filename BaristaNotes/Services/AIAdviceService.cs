@@ -392,7 +392,7 @@ Provide brief reasoning in one sentence.";
 
         var endpoint = _configuration["AzureOpenAI:Endpoint"];
         var apiKey = _configuration["AzureOpenAI:ApiKey"];
-        
+
         if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
         {
             return null;

@@ -166,6 +166,9 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IImagePickerService, ImagePickerService>();
 		builder.Services.AddSingleton<IImageProcessingService, ImageProcessingService>();
 
+		// Vision service for image analysis
+		builder.Services.AddSingleton<IVisionService, VisionService>();
+
 		// Voice command services
 		// Use online SpeechToText for better accuracy (uses Apple's cloud services like Notes app)
 		builder.Services.AddSingleton<ISpeechToText>(SpeechToText.Default);

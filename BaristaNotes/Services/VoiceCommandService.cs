@@ -132,6 +132,14 @@ public class VoiceCommandService : IVoiceCommandService
         - "What profiles do I have?" - lists all user profiles
         - "Find profile named David" - searches profiles by name
 
+        VISION/CAMERA CAPABILITIES:
+        When the user asks you to "look at", "see", "count people in", or asks about coffee needs for a group/room:
+        - "Look at this room and tell me how many cups of coffee I need" → Use AnalyzeRoomForCoffee tool
+        - "Count the people here" → Use AnalyzeRoomForCoffee tool
+        - "How many cups of coffee do I need to make?" → Use AnalyzeRoomForCoffee tool
+        - "Do I have enough beans for everyone?" → Use AnalyzeRoomForCoffee tool
+        The tool will take a photo and analyze it to count people, then calculate coffee needs (18g per person).
+
         RULES:
         1. Always use available tools to complete actions immediately
         2. NEVER ask follow-up questions - use defaults for missing optional values
@@ -141,10 +149,13 @@ public class VoiceCommandService : IVoiceCommandService
         6. For queries, return the information directly from the tool response
         7. For "show me" requests about a category (profiles, beans, etc.), NAVIGATE to that page
         8. For "what/how many" questions, provide a TEXT response
+        9. For vision/camera requests (look at, count people, coffee for group), use AnalyzeRoomForCoffee
         """;
 
     private readonly INavigationRegistry _navigationRegistry;
     private readonly IOverlayService? _overlayService;
+    private readonly IVisionService? _visionService;
+    private readonly Microsoft.Maui.Media.IMediaPicker? _mediaPicker;
 
     public VoiceCommandService(
         IShotService shotService,
@@ -157,7 +168,9 @@ public class VoiceCommandService : IVoiceCommandService
         IConfiguration configuration,
         ILogger<VoiceCommandService> logger,
         IChatClient? chatClient = null,
-        IOverlayService? overlayService = null)
+        IOverlayService? overlayService = null,
+        IVisionService? visionService = null,
+        Microsoft.Maui.Media.IMediaPicker? mediaPicker = null)
     {
         _shotService = shotService;
         _beanService = beanService;
@@ -170,6 +183,8 @@ public class VoiceCommandService : IVoiceCommandService
         _logger = logger;
         _localClient = chatClient;
         _overlayService = overlayService;
+        _visionService = visionService;
+        _mediaPicker = mediaPicker;
     }
 
     /// <inheritdoc />
@@ -666,6 +681,7 @@ public class VoiceCommandService : IVoiceCommandService
                 AIFunctionFactory.Create(FindEquipmentToolAsync),
                 AIFunctionFactory.Create(GetProfileCountToolAsync),
                 AIFunctionFactory.Create(FindProfilesToolAsync),
+                AIFunctionFactory.Create(AnalyzeRoomForCoffeeToolAsync),
             ]
         };
     }
@@ -1964,6 +1980,75 @@ public class VoiceCommandService : IVoiceCommandService
         if (!string.IsNullOrEmpty(type)) parts.Add($"type '{type}'");
         if (!string.IsNullOrEmpty(name)) parts.Add($"named '{name}'");
         return parts.Count > 0 ? string.Join(", ", parts) : "";
+    }
+
+    [Description("Takes a photo and analyzes it to count people and determine how many cups of coffee are needed. Use this when the user wants to 'look at' a room, 'count people', or asks about coffee needs for a group.")]
+    private async Task<string> AnalyzeRoomForCoffeeToolAsync(
+        [Description("The user's question about the image, e.g., 'how many cups of coffee do I need?'")] string userQuestion)
+    {
+        _logger.LogInformation("AnalyzeRoomForCoffee tool called with question: {Question}", userQuestion);
+
+        try
+        {
+            // Check if vision service is available
+            if (_visionService == null || !await _visionService.IsAvailableAsync())
+            {
+                return "Vision service is not available. Please check your configuration.";
+            }
+
+            // Check if media picker is available
+            if (_mediaPicker == null)
+            {
+                return "Camera is not available on this device.";
+            }
+
+            // Capture photo
+            _logger.LogDebug("Requesting camera capture");
+            var photo = await _mediaPicker.CapturePhotoAsync(new Microsoft.Maui.Media.MediaPickerOptions
+            {
+                Title = "Take a photo of the room"
+            });
+
+            if (photo == null)
+            {
+                return "Photo capture was cancelled.";
+            }
+
+            // Analyze the photo
+            _logger.LogDebug("Photo captured, analyzing with vision service");
+            using var stream = await photo.OpenReadAsync();
+            var result = await _visionService.AnalyzeImageAsync(stream, userQuestion);
+
+            if (!result.Success)
+            {
+                return result.ErrorMessage ?? "Failed to analyze the image.";
+            }
+
+            // Return a helpful response
+            if (result.PeopleCount == 0)
+            {
+                return result.Message ?? "I don't see any people in the photo.";
+            }
+
+            var response = result.Message ?? 
+                $"I see {result.PeopleCount} {(result.PeopleCount == 1 ? "person" : "people")}. " +
+                $"You'll need {result.CupsNeeded} {(result.CupsNeeded == 1 ? "cup" : "cups")} of coffee, " +
+                $"which requires about {result.BeansNeededGrams}g of beans.";
+
+            _logger.LogInformation("Vision analysis complete: {PeopleCount} people, {Cups} cups needed", 
+                result.PeopleCount, result.CupsNeeded);
+
+            return response;
+        }
+        catch (PermissionException)
+        {
+            return "Camera permission is required to take photos. Please enable camera access in settings.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in AnalyzeRoomForCoffee tool");
+            return "Sorry, I couldn't analyze the room. Please try again.";
+        }
     }
 
     #endregion

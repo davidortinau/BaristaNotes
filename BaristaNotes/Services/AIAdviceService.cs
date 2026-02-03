@@ -1,8 +1,9 @@
 using System.Text;
+using Azure;
+using Azure.AI.OpenAI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using OpenAI;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 
@@ -10,7 +11,7 @@ namespace BaristaNotes.Services;
 
 /// <summary>
 /// Service for generating AI-powered espresso shot advice.
-/// Tries on-device AI first (Apple Intelligence), falls back to OpenAI if available.
+/// Tries on-device AI first (Apple Intelligence), falls back to Azure OpenAI if available.
 /// Once local client fails, it is disabled for the remainder of the app session.
 /// </summary>
 public class AIAdviceService : IAIAdviceService
@@ -23,19 +24,19 @@ public class AIAdviceService : IAIAdviceService
     // Injected on-device client (from AddPlatformChatClient)
     private readonly IChatClient? _localClient;
 
-    // OpenAI client created on demand
-    private IChatClient? _openAIClient;
+    // Azure OpenAI client created on demand
+    private IChatClient? _azureOpenAIClient;
 
     // Session-level flag: once local client fails, don't retry until app restart
     private bool _localClientDisabled = false;
 
-    private const string ModelId = "gpt-4o-mini";
+    private const string ModelId = "gpt-4.1-mini";
     private const int LocalTimeoutSeconds = 10;
     private const int CloudTimeoutSeconds = 20;
 
     // Source strings for transparency
     private const string SourceOnDevice = "via Apple Intelligence";
-    private const string SourceCloud = "via OpenAI";
+    private const string SourceCloud = "via Azure OpenAI";
 
     private const string SystemPrompt = @"You are an expert barista assistant helping improve espresso shots.
 Analyze the shot data and provide 1-3 specific parameter adjustments.
@@ -60,10 +61,11 @@ Provide brief reasoning in one sentence.";
     /// <inheritdoc />
     public Task<bool> IsConfiguredAsync()
     {
-        // Available if local client works (and not disabled) OR OpenAI key exists
+        // Available if local client works (and not disabled) OR Azure OpenAI is configured
         var hasLocalClient = _localClient != null && !_localClientDisabled;
-        var hasOpenAIKey = !string.IsNullOrWhiteSpace(_configuration["OpenAI:ApiKey"]);
-        var isConfigured = hasLocalClient || hasOpenAIKey;
+        var hasAzureOpenAI = !string.IsNullOrWhiteSpace(_configuration["AzureOpenAI:Endpoint"]) &&
+                             !string.IsNullOrWhiteSpace(_configuration["AzureOpenAI:ApiKey"]);
+        var isConfigured = hasLocalClient || hasAzureOpenAI;
         return Task.FromResult(isConfigured);
     }
 
@@ -251,45 +253,45 @@ Provide brief reasoning in one sentence.";
             {
                 // Local client failed - disable for remainder of session
                 _localClientDisabled = true;
-                _logger.LogWarning(ex, "On-device AI failed for type {ResponseType}, disabling for session. Falling back to OpenAI.", typeof(T).Name);
+                _logger.LogWarning(ex, "On-device AI failed for type {ResponseType}, disabling for session. Falling back to Azure OpenAI.", typeof(T).Name);
             }
         }
 
-        // Try OpenAI as fallback
-        var openAIClient = GetOrCreateOpenAIClient();
-        if (openAIClient != null)
+        // Try Azure OpenAI as fallback
+        var azureClient = GetOrCreateAzureOpenAIClient();
+        if (azureClient != null)
         {
             // Check if user explicitly cancelled before attempting fallback
             if (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogDebug("Skipping OpenAI fallback - request was cancelled");
+                _logger.LogDebug("Skipping Azure OpenAI fallback - request was cancelled");
                 return (null, null);
             }
 
             try
             {
-                _logger.LogDebug("Attempting OpenAI request for type {ResponseType}", typeof(T).Name);
+                _logger.LogDebug("Attempting Azure OpenAI request for type {ResponseType}", typeof(T).Name);
 
-                // Create independent timeout for OpenAI - don't link to potentially-cancelled local token
+                // Create independent timeout for Azure OpenAI - don't link to potentially-cancelled local token
                 using var cloudCts = new CancellationTokenSource();
                 cloudCts.CancelAfter(TimeSpan.FromSeconds(cloudTimeoutSeconds));
 
                 // Also cancel if user cancels during the call
                 using var registration = cancellationToken.Register(() => cloudCts.Cancel());
 
-                var cloudResponse = await openAIClient.GetResponseAsync<T>(
+                var cloudResponse = await azureClient.GetResponseAsync<T>(
                     messages,
                     cancellationToken: cloudCts.Token);
 
                 if (cloudResponse?.Result != null)
                 {
-                    _logger.LogDebug("OpenAI request succeeded for type {ResponseType}", typeof(T).Name);
+                    _logger.LogDebug("Azure OpenAI request succeeded for type {ResponseType}", typeof(T).Name);
                     return (cloudResponse.Result, SourceCloud);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "OpenAI request failed for type {ResponseType}", typeof(T).Name);
+                _logger.LogWarning(ex, "Azure OpenAI request failed for type {ResponseType}", typeof(T).Name);
                 throw; // Re-throw to be handled by caller's error handling
             }
         }
@@ -332,45 +334,45 @@ Provide brief reasoning in one sentence.";
             {
                 // Local client failed - disable for remainder of session
                 _localClientDisabled = true;
-                _logger.LogWarning(ex, "On-device AI failed, disabling for session. Falling back to OpenAI.");
+                _logger.LogWarning(ex, "On-device AI failed, disabling for session. Falling back to Azure OpenAI.");
             }
         }
 
-        // Try OpenAI as fallback
-        var openAIClient = GetOrCreateOpenAIClient();
-        if (openAIClient != null)
+        // Try Azure OpenAI as fallback
+        var azureClient = GetOrCreateAzureOpenAIClient();
+        if (azureClient != null)
         {
             // Check if user explicitly cancelled before attempting fallback
             if (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogDebug("Skipping OpenAI fallback - request was cancelled");
+                _logger.LogDebug("Skipping Azure OpenAI fallback - request was cancelled");
                 return (null, null);
             }
 
             try
             {
-                _logger.LogDebug("Attempting OpenAI request");
+                _logger.LogDebug("Attempting Azure OpenAI request");
 
-                // Create independent timeout for OpenAI - don't link to potentially-cancelled local token
+                // Create independent timeout for Azure OpenAI - don't link to potentially-cancelled local token
                 using var cloudCts = new CancellationTokenSource();
                 cloudCts.CancelAfter(TimeSpan.FromSeconds(cloudTimeoutSeconds));
 
                 // Also cancel if user cancels during the call
                 using var registration = cancellationToken.Register(() => cloudCts.Cancel());
 
-                var cloudResponse = await openAIClient.GetResponseAsync(
+                var cloudResponse = await azureClient.GetResponseAsync(
                     messages,
                     cancellationToken: cloudCts.Token);
 
                 if (!string.IsNullOrWhiteSpace(cloudResponse?.Text))
                 {
-                    _logger.LogDebug("OpenAI request succeeded");
+                    _logger.LogDebug("Azure OpenAI request succeeded");
                     return (cloudResponse.Text, SourceCloud);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "OpenAI request failed");
+                _logger.LogWarning(ex, "Azure OpenAI request failed");
                 throw; // Re-throw to be handled by caller's error handling
             }
         }
@@ -379,30 +381,34 @@ Provide brief reasoning in one sentence.";
     }
 
     /// <summary>
-    /// Gets or creates the OpenAI client instance.
+    /// Gets or creates the Azure OpenAI client instance.
     /// </summary>
-    private IChatClient? GetOrCreateOpenAIClient()
+    private IChatClient? GetOrCreateAzureOpenAIClient()
     {
-        if (_openAIClient != null)
+        if (_azureOpenAIClient != null)
         {
-            return _openAIClient;
+            return _azureOpenAIClient;
         }
 
-        var apiKey = _configuration["OpenAI:ApiKey"];
-        if (string.IsNullOrWhiteSpace(apiKey))
+        var endpoint = _configuration["AzureOpenAI:Endpoint"];
+        var apiKey = _configuration["AzureOpenAI:ApiKey"];
+        
+        if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
         {
             return null;
         }
 
         try
         {
-            var openAIClient = new OpenAIClient(apiKey);
-            _openAIClient = openAIClient.GetChatClient(ModelId).AsIChatClient();
-            return _openAIClient;
+            var azureClient = new AzureOpenAIClient(
+                new Uri(endpoint),
+                new AzureKeyCredential(apiKey));
+            _azureOpenAIClient = azureClient.GetChatClient(ModelId).AsIChatClient();
+            return _azureOpenAIClient;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create OpenAI client");
+            _logger.LogError(ex, "Failed to create Azure OpenAI client");
             return null;
         }
     }

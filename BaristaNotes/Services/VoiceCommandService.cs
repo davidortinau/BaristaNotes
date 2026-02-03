@@ -1,11 +1,12 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Azure;
+using Azure.AI.OpenAI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Recognizers.Text;
 using Microsoft.Recognizers.Text.Number;
-using OpenAI;
 using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
@@ -22,7 +23,7 @@ internal static class VoiceCommandCulture
 
 /// <summary>
 /// Service for processing voice commands using AI tool calling.
-/// Supports on-device AI (Apple Intelligence) with OpenAI fallback.
+/// Supports on-device AI (Apple Intelligence) with Azure OpenAI fallback.
 /// </summary>
 public class VoiceCommandService : IVoiceCommandService
 {
@@ -38,8 +39,8 @@ public class VoiceCommandService : IVoiceCommandService
     // Injected on-device client (from AddPlatformChatClient)
     private readonly IChatClient? _localClient;
 
-    // OpenAI client created on demand
-    private IChatClient? _openAIClient;
+    // Azure OpenAI client created on demand
+    private IChatClient? _azureOpenAIClient;
 
     // Session-level flag: once local client fails, don't retry until app restart
     private bool _localClientDisabled = false;
@@ -47,7 +48,7 @@ public class VoiceCommandService : IVoiceCommandService
     // Conversation history for the current voice session
     private readonly List<ChatMessage> _conversationHistory = new();
 
-    private const string ModelId = "gpt-4o-mini";
+    private const string ModelId = "gpt-4.1-mini";
     private const int LocalTimeoutSeconds = 15;
     private const int CloudTimeoutSeconds = 30;
 
@@ -181,17 +182,17 @@ public class VoiceCommandService : IVoiceCommandService
         _logger.LogDebug("Interpreting command: {Transcript} (normalized: {Normalized})",
             request.Transcript, normalizedTranscript);
 
-        return await InterpretCommandInternalAsync(normalizedTranscript, forceOpenAI: false, cancellationToken);
+        return await InterpretCommandInternalAsync(normalizedTranscript, forceAzure: false, cancellationToken);
     }
 
     private async Task<VoiceCommandResponseDto> InterpretCommandInternalAsync(
         string normalizedTranscript,
-        bool forceOpenAI,
+        bool forceAzure,
         CancellationToken cancellationToken)
     {
         try
         {
-            var client = GetChatClientWithTools(forceOpenAI);
+            var client = GetChatClientWithTools(forceAzure);
             if (client == null)
             {
                 return new VoiceCommandResponseDto
@@ -246,14 +247,14 @@ public class VoiceCommandService : IVoiceCommandService
                 ErrorMessage = "Cancelled"
             };
         }
-        catch (Exception ex) when (!forceOpenAI && IsLocalAIToolCallingError(ex))
+        catch (Exception ex) when (!forceAzure && IsLocalAIToolCallingError(ex))
         {
             // Local AI (Apple Intelligence) failed with a tool-calling related error
-            // Disable local client for this session and retry with OpenAI
-            _logger.LogWarning(ex, "Local AI failed with tool calling error, falling back to OpenAI. Error: {Message}", ex.Message);
+            // Disable local client for this session and retry with Azure OpenAI
+            _logger.LogWarning(ex, "Local AI failed with tool calling error, falling back to Azure OpenAI. Error: {Message}", ex.Message);
             _localClientDisabled = true;
 
-            return await InterpretCommandInternalAsync(normalizedTranscript, forceOpenAI: true, cancellationToken);
+            return await InterpretCommandInternalAsync(normalizedTranscript, forceAzure: true, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -265,10 +266,10 @@ public class VoiceCommandService : IVoiceCommandService
                 HttpRequestException => "Network error. Please check your connection and try again.",
                 TaskCanceledException => "Request timed out. Please try again.",
                 _ when ex.Message.Contains("API key", StringComparison.OrdinalIgnoreCase) =>
-                    "Voice commands require an OpenAI API key. Please configure it in settings.",
+                    "Voice commands require Azure OpenAI configuration. Please check settings.",
                 _ when ex.Message.Contains("401", StringComparison.OrdinalIgnoreCase) ||
                        ex.Message.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase) =>
-                    "Invalid API key. Please check your OpenAI configuration.",
+                    "Invalid API key. Please check your Azure OpenAI configuration.",
                 _ when ex.Message.Contains("429", StringComparison.OrdinalIgnoreCase) ||
                        ex.Message.Contains("rate limit", StringComparison.OrdinalIgnoreCase) =>
                     "Too many requests. Please wait a moment and try again.",
@@ -327,66 +328,70 @@ public class VoiceCommandService : IVoiceCommandService
         _logger.LogDebug("Conversation history cleared");
     }
 
-    private IChatClient? GetChatClientWithTools(bool forceOpenAI = false)
+    private IChatClient? GetChatClientWithTools(bool forceAzure = false)
     {
         // Try Apple Intelligence (local client) first if available and not disabled
         // Apple Intelligence now supports function/tool calling as of iOS 18.x
-        if (!forceOpenAI && _localClient != null && !_localClientDisabled)
+        if (!forceAzure && _localClient != null && !_localClientDisabled)
         {
             _logger.LogDebug("Using local AI (Apple Intelligence) for voice commands with tool calling");
             return new ChatClientBuilder(_localClient)
-                .UseFunctionInvocation()
+                // .UseFunctionInvocation()
                 .Build();
         }
 
         if (_localClientDisabled)
         {
-            _logger.LogDebug("Local AI disabled for this session, using OpenAI fallback");
+            _logger.LogDebug("Local AI disabled for this session, using Azure OpenAI fallback");
         }
 
-        // Fall back to OpenAI which supports function calling
-        var openAIClient = GetOrCreateOpenAIClient();
-        if (openAIClient != null)
+        // Fall back to Azure OpenAI which supports function calling
+        var azureClient = GetOrCreateAzureOpenAIClient();
+        if (azureClient != null)
         {
-            _logger.LogDebug("Using OpenAI for voice commands");
-            return new ChatClientBuilder(openAIClient)
+            _logger.LogDebug("Using Azure OpenAI for voice commands");
+            return new ChatClientBuilder(azureClient)
                 .UseFunctionInvocation()
                 .Build();
         }
 
-        _logger.LogWarning("No AI client available for voice commands. Configure OpenAI:ApiKey in settings.");
+        _logger.LogWarning("No AI client available for voice commands. Configure AzureOpenAI:Endpoint and AzureOpenAI:ApiKey in settings.");
         return null;
     }
 
-    private IChatClient? GetOrCreateOpenAIClient()
+    private IChatClient? GetOrCreateAzureOpenAIClient()
     {
-        if (_openAIClient != null)
+        if (_azureOpenAIClient != null)
         {
-            return _openAIClient;
+            return _azureOpenAIClient;
         }
 
-        var apiKey = _configuration["OpenAI:ApiKey"];
-        if (string.IsNullOrWhiteSpace(apiKey))
+        var endpoint = _configuration["AzureOpenAI:Endpoint"];
+        var apiKey = _configuration["AzureOpenAI:ApiKey"];
+        
+        if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
         {
             return null;
         }
 
         try
         {
-            var openAIClient = new OpenAIClient(apiKey);
-            _openAIClient = openAIClient.GetChatClient(ModelId).AsIChatClient();
-            return _openAIClient;
+            var azureClient = new AzureOpenAIClient(
+                new Uri(endpoint),
+                new AzureKeyCredential(apiKey));
+            _azureOpenAIClient = azureClient.GetChatClient(ModelId).AsIChatClient();
+            return _azureOpenAIClient;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create OpenAI client");
+            _logger.LogError(ex, "Failed to create Azure OpenAI client");
             return null;
         }
     }
 
     /// <summary>
     /// Determines if an exception indicates the local AI (Apple Intelligence) failed
-    /// in a way that warrants falling back to OpenAI.
+    /// in a way that warrants falling back to Azure OpenAI.
     /// </summary>
     private bool IsLocalAIToolCallingError(Exception ex)
     {

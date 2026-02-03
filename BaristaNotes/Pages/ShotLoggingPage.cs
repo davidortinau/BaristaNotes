@@ -160,6 +160,10 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         // Subscribe to overlay events
         _overlayService.CloseRequested += OnOverlayCloseRequested;
         _overlayService.ExpandRequested += OnOverlayExpandRequested;
+
+        // Subscribe to voice command speech control events
+        _voiceCommandService.PauseSpeechRequested += OnPauseSpeechRequested;
+        _voiceCommandService.ResumeSpeechRequested += OnResumeSpeechRequested;
     }
 
     protected override void OnWillUnmount()
@@ -172,6 +176,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         _dataChangeNotifier.DataChanged -= OnDataChanged;
         _overlayService.CloseRequested -= OnOverlayCloseRequested;
         _overlayService.ExpandRequested -= OnOverlayExpandRequested;
+        _voiceCommandService.PauseSpeechRequested -= OnPauseSpeechRequested;
+        _voiceCommandService.ResumeSpeechRequested -= OnResumeSpeechRequested;
         base.OnWillUnmount();
     }
 
@@ -194,6 +200,45 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         if (State.IsVoiceSheetOpen && _overlayService.IsCollapsed)
         {
             _overlayService.Expand();
+        }
+    }
+
+    /// <summary>
+    /// Handle request to pause speech recognition (e.g., when camera opens).
+    /// </summary>
+    private async void OnPauseSpeechRequested(object? sender, EventArgs e)
+    {
+        _logger.LogDebug("Pause speech requested - stopping listening for camera");
+        if (State.IsRecording)
+        {
+            await _speechRecognitionService.StopListeningAsync();
+            _overlayService.UpdateContent(new OverlayContent(
+                StateText: "Taking photo...",
+                Transcript: State.VoiceTranscript,
+                IsListening: false,
+                IsProcessing: true,
+                AIResponse: State.LastAIResponse
+            ));
+        }
+    }
+
+    /// <summary>
+    /// Handle request to resume speech recognition (e.g., after camera closes).
+    /// </summary>
+    private void OnResumeSpeechRequested(object? sender, EventArgs e)
+    {
+        _logger.LogDebug("Resume speech requested - will restart listening loop");
+        // The listening will resume automatically via the existing recording loop
+        // Just update the overlay state
+        if (State.IsRecording)
+        {
+            _overlayService.UpdateContent(new OverlayContent(
+                StateText: "Analyzing...",
+                Transcript: State.VoiceTranscript,
+                IsListening: false,
+                IsProcessing: true,
+                AIResponse: State.LastAIResponse
+            ));
         }
     }
 

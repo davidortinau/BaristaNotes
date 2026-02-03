@@ -8,6 +8,17 @@ namespace BaristaNotes.Core.Services;
 public interface IVoiceCommandService
 {
     /// <summary>
+    /// Event raised when the service needs to pause speech recognition
+    /// (e.g., when opening camera for vision analysis).
+    /// </summary>
+    event EventHandler? PauseSpeechRequested;
+
+    /// <summary>
+    /// Event raised when the service is done and speech can resume.
+    /// </summary>
+    event EventHandler? ResumeSpeechRequested;
+
+    /// <summary>
     /// Interprets a voice command transcript and returns the parsed intent and parameters.
     /// </summary>
     /// <param name="request">The voice command request with transcript.</param>

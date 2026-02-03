@@ -48,6 +48,10 @@ public class VoiceCommandService : IVoiceCommandService
     // Conversation history for the current voice session
     private readonly List<ChatMessage> _conversationHistory = new();
 
+    // Events for speech coordination
+    public event EventHandler? PauseSpeechRequested;
+    public event EventHandler? ResumeSpeechRequested;
+
     private const string ModelId = "gpt-4.1-mini";
     private const int LocalTimeoutSeconds = 15;
     private const int CloudTimeoutSeconds = 30;
@@ -2002,43 +2006,61 @@ public class VoiceCommandService : IVoiceCommandService
                 return "Camera is not available on this device.";
             }
 
-            // Capture photo
-            _logger.LogDebug("Requesting camera capture");
-            var photo = await _mediaPicker.CapturePhotoAsync(new Microsoft.Maui.Media.MediaPickerOptions
-            {
-                Title = "Take a photo of the room"
-            });
+            // Signal to pause speech recognition before opening camera
+            _logger.LogDebug("Requesting speech pause for camera capture");
+            PauseSpeechRequested?.Invoke(this, EventArgs.Empty);
 
-            if (photo == null)
+            try
             {
-                return "Photo capture was cancelled.";
+                // Capture photo - must run on main thread
+                _logger.LogDebug("Requesting camera capture on main thread");
+                FileResult? photo = null;
+                
+                await MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    photo = await _mediaPicker.CapturePhotoAsync(new Microsoft.Maui.Media.MediaPickerOptions
+                    {
+                        Title = "Take a photo of the room"
+                    });
+                });
+
+                if (photo == null)
+                {
+                    return "Photo capture was cancelled.";
+                }
+
+                // Analyze the photo
+                _logger.LogDebug("Photo captured, analyzing with vision service");
+                using var stream = await photo.OpenReadAsync();
+                var result = await _visionService.AnalyzeImageAsync(stream, userQuestion);
+
+                if (!result.Success)
+                {
+                    return result.ErrorMessage ?? "Failed to analyze the image.";
+                }
+
+                // Return a helpful response
+                if (result.PeopleCount == 0)
+                {
+                    return result.Message ?? "I don't see any people in the photo.";
+                }
+
+                var response = result.Message ?? 
+                    $"I see {result.PeopleCount} {(result.PeopleCount == 1 ? "person" : "people")}. " +
+                    $"You'll need {result.CupsNeeded} {(result.CupsNeeded == 1 ? "cup" : "cups")} of coffee, " +
+                    $"which requires about {result.BeansNeededGrams}g of beans.";
+
+                _logger.LogInformation("Vision analysis complete: {PeopleCount} people, {Cups} cups needed", 
+                    result.PeopleCount, result.CupsNeeded);
+
+                return response;
             }
-
-            // Analyze the photo
-            _logger.LogDebug("Photo captured, analyzing with vision service");
-            using var stream = await photo.OpenReadAsync();
-            var result = await _visionService.AnalyzeImageAsync(stream, userQuestion);
-
-            if (!result.Success)
+            finally
             {
-                return result.ErrorMessage ?? "Failed to analyze the image.";
+                // Always signal to resume speech recognition
+                _logger.LogDebug("Requesting speech resume after camera capture");
+                ResumeSpeechRequested?.Invoke(this, EventArgs.Empty);
             }
-
-            // Return a helpful response
-            if (result.PeopleCount == 0)
-            {
-                return result.Message ?? "I don't see any people in the photo.";
-            }
-
-            var response = result.Message ?? 
-                $"I see {result.PeopleCount} {(result.PeopleCount == 1 ? "person" : "people")}. " +
-                $"You'll need {result.CupsNeeded} {(result.CupsNeeded == 1 ? "cup" : "cups")} of coffee, " +
-                $"which requires about {result.BeansNeededGrams}g of beans.";
-
-            _logger.LogInformation("Vision analysis complete: {PeopleCount} people, {Cups} cups needed", 
-                result.PeopleCount, result.CupsNeeded);
-
-            return response;
         }
         catch (PermissionException)
         {

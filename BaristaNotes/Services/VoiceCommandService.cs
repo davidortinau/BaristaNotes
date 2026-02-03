@@ -330,9 +330,10 @@ public class VoiceCommandService : IVoiceCommandService
 
     private IChatClient? GetChatClientWithTools(bool forceAzure = false)
     {
-        // Try Apple Intelligence (local client) first if available and not disabled
-        // Apple Intelligence now supports function/tool calling as of iOS 18.x
-        if (!forceAzure && _localClient != null && !_localClientDisabled)
+        // TEMPORARY: Skip Apple Intelligence until assets are available
+        // The Model Catalog errors indicate on-device AI isn't ready
+        // TODO: Re-enable once Apple Intelligence is properly set up
+        if (!forceAzure && _localClient != null && !_localClientDisabled && false) // Disabled for now
         {
             _logger.LogDebug("Using local AI (Apple Intelligence) for voice commands with tool calling");
             return new ChatClientBuilder(_localClient)
@@ -345,7 +346,7 @@ public class VoiceCommandService : IVoiceCommandService
             _logger.LogDebug("Local AI disabled for this session, using Azure OpenAI fallback");
         }
 
-        // Fall back to Azure OpenAI which supports function calling
+        // Use Azure OpenAI which supports function calling
         var azureClient = GetOrCreateAzureOpenAIClient();
         if (azureClient != null)
         {
@@ -402,7 +403,13 @@ public class VoiceCommandService : IVoiceCommandService
         if (fullText.Contains("Model assets are unavailable", StringComparison.OrdinalIgnoreCase) ||
             fullText.Contains("ChatClientNative", StringComparison.OrdinalIgnoreCase) ||
             fullText.Contains("NSLocalizedDescription", StringComparison.OrdinalIgnoreCase) ||
-            fullText.Contains("assets have finished downloading", StringComparison.OrdinalIgnoreCase))
+            fullText.Contains("assets have finished downloading", StringComparison.OrdinalIgnoreCase) ||
+            fullText.Contains("com.apple.modelcatalog", StringComparison.OrdinalIgnoreCase) ||
+            fullText.Contains("UnifiedAssetFramework", StringComparison.OrdinalIgnoreCase) ||
+            fullText.Contains("no underlying assets", StringComparison.OrdinalIgnoreCase) ||
+            fullText.Contains("Model Catalog error", StringComparison.OrdinalIgnoreCase) ||
+            fullText.Contains("TokenGenerator", StringComparison.OrdinalIgnoreCase) ||
+            fullText.Contains("ModelManagerError", StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }

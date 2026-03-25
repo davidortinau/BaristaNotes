@@ -1,18 +1,24 @@
 using BaristaNotes.Core.Services;
 using Microsoft.Maui.Handlers;
+#if IOS
+using UIKit;
+using Foundation;
+#endif
 
 namespace BaristaNotes.Services;
 
 /// <summary>
 /// Voice command overlay that displays above all app content.
 /// Uses WindowOverlay + IWindowOverlayElement pattern for cross-platform support.
-/// Based on Plugin.Maui.DebugOverlay approach.
+/// Supports push-to-talk: user holds the mic button to record, releases to process.
 /// </summary>
 public class VoiceOverlay : WindowOverlay, IOverlayService
 {
     private readonly VoiceOverlayPanel _panel;
     private bool _isOverlayVisible;
     private bool _isCollapsed;
+    private bool _isMicActive;
+    private bool _isProcessing;
 
     public new bool IsVisible => _isOverlayVisible;
     public bool IsCollapsed => _isCollapsed;
@@ -20,6 +26,8 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
     public event EventHandler<bool>? VisibilityChanged;
     public event EventHandler? CloseRequested;
     public event EventHandler? ExpandRequested;
+    public event EventHandler? MicPressStarted;
+    public event EventHandler? MicPressEnded;
 
     public VoiceOverlay(Microsoft.Maui.IWindow window) : base(window)
     {
@@ -27,6 +35,62 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
         this.AddWindowElement(_panel);
         this.Tapped += VoiceOverlay_Tapped;
     }
+
+    /// <summary>
+    /// Sets up platform-specific touch handling for push-to-talk.
+    /// On iOS, uses UILongPressGestureRecognizer to detect press/release on the mic button.
+    /// Must be called after the overlay is added to the window.
+    /// </summary>
+    public void SetupPlatformTouchHandling()
+    {
+#if IOS
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (Window?.Handler?.PlatformView is UIWindow uiWindow)
+            {
+                var gesture = new UILongPressGestureRecognizer(HandleiOSTouchGesture);
+                gesture.MinimumPressDuration = 0;
+                gesture.CancelsTouchesInView = false;
+                gesture.ShouldReceiveTouch = (recognizer, touch) =>
+                {
+                    if (!_isOverlayVisible || _isCollapsed || _isProcessing) return false;
+                    var point = touch.LocationInView(uiWindow);
+                    return _panel.IsMicButtonArea(new Point(point.X, point.Y));
+                };
+                uiWindow.AddGestureRecognizer(gesture);
+            }
+        });
+#endif
+    }
+
+#if IOS
+    private void HandleiOSTouchGesture(UILongPressGestureRecognizer gesture)
+    {
+        if (!_isOverlayVisible || _isCollapsed) return;
+
+        switch (gesture.State)
+        {
+            case UIGestureRecognizerState.Began:
+                _isMicActive = true;
+                _panel.SetMicPressed(true);
+                this.Invalidate();
+                MicPressStarted?.Invoke(this, EventArgs.Empty);
+                break;
+
+            case UIGestureRecognizerState.Ended:
+            case UIGestureRecognizerState.Cancelled:
+            case UIGestureRecognizerState.Failed:
+                if (_isMicActive)
+                {
+                    _isMicActive = false;
+                    _panel.SetMicPressed(false);
+                    this.Invalidate();
+                    MicPressEnded?.Invoke(this, EventArgs.Empty);
+                }
+                break;
+        }
+    }
+#endif
 
     private void VoiceOverlay_Tapped(object? sender, WindowOverlayTappedEventArgs e)
     {
@@ -39,7 +103,29 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
             {
                 ExpandRequested?.Invoke(this, EventArgs.Empty);
             }
-            // When collapsed, taps outside FAB pass through (DisableUITouchEventPassthrough = false)
+            return;
+        }
+
+        // Mic button area: on iOS handled by push-to-talk gesture, on other platforms use tap-toggle
+        if (_panel.IsMicButtonArea(e.Point))
+        {
+#if !IOS
+            if (_isProcessing) return;
+            if (!_isMicActive)
+            {
+                _isMicActive = true;
+                _panel.SetMicPressed(true);
+                this.Invalidate();
+                MicPressStarted?.Invoke(this, EventArgs.Empty);
+            }
+            else
+            {
+                _isMicActive = false;
+                _panel.SetMicPressed(false);
+                this.Invalidate();
+                MicPressEnded?.Invoke(this, EventArgs.Empty);
+            }
+#endif
             return;
         }
 
@@ -53,7 +139,6 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
         // Check if user tapped the cancel button - end session
         if (_panel.IsCancelButtonTapped(e.Point))
         {
-            // Delay the close to prevent tap from passing through to underlying UI
             MainThread.BeginInvokeOnMainThread(async () =>
             {
                 await Task.Delay(100);
@@ -73,6 +158,9 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
     {
         _isOverlayVisible = true;
         _isCollapsed = false;
+        _isMicActive = false;
+        _isProcessing = false;
+        _panel.SetMicPressed(false);
         _panel.Show(collapsed: false);
         this.DisableUITouchEventPassthrough = true;
         this.Invalidate();
@@ -85,6 +173,9 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
 
         _isOverlayVisible = false;
         _isCollapsed = false;
+        _isMicActive = false;
+        _isProcessing = false;
+        _panel.SetMicPressed(false);
         _panel.Hide();
         this.DisableUITouchEventPassthrough = false;
         this.Invalidate();
@@ -96,6 +187,8 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
         if (!_isOverlayVisible || _isCollapsed) return;
 
         _isCollapsed = true;
+        _isMicActive = false;
+        _panel.SetMicPressed(false);
         _panel.Show(collapsed: true);
         this.DisableUITouchEventPassthrough = false;
         this.Invalidate();
@@ -113,6 +206,7 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
 
     public void UpdateContent(OverlayContent content)
     {
+        _isProcessing = content.IsProcessing;
         _panel.UpdateContent(content);
         this.Invalidate();
     }
@@ -121,17 +215,20 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
 /// <summary>
 /// The visual panel element for the voice overlay.
 /// Draws using ICanvas for cross-platform rendering.
+/// Includes a push-to-talk mic button that the user holds to record.
 /// </summary>
 public class VoiceOverlayPanel : IWindowOverlayElement
 {
     private readonly VoiceOverlay _overlay;
     private bool _isVisible;
     private bool _isCollapsed;
-    private string _stateText = "Listening...";
+    private string _stateText = "Ready";
     private string _transcript = "";
     private string _aiResponse = "";
     private bool _isListening;
     private bool _isProcessing;
+    private bool _isReady;
+    private bool _isMicPressed;
 
     // Layout rectangles for hit testing
     private RectF _panelRect;
@@ -139,22 +236,26 @@ public class VoiceOverlayPanel : IWindowOverlayElement
     private RectF _cancelButtonRect;
     private RectF _contentAreaRect;
     private RectF _fabRect;
+    private RectF _micButtonRect;
 
     // Colors
-    private readonly Color _backgroundColor = Colors.Transparent; // Transparent - only panel is opaque
+    private readonly Color _backgroundColor = Colors.Transparent;
     private readonly Color _panelColor = Color.FromArgb("#FF1E1E1E"); // Dark gray
     private readonly Color _accentColor = Color.FromArgb("#FFFF9500"); // Orange
     private readonly Color _textColor = Colors.White;
     private readonly Color _secondaryTextColor = Color.FromArgb("#FFCCCCCC");
-    private readonly Color _aiResponseColor = Color.FromArgb("#FF90EE90"); // Light green for AI response
+    private readonly Color _aiResponseColor = Color.FromArgb("#FF90EE90"); // Light green
+    private readonly Color _micIdleColor = Color.FromArgb("#FF333333"); // Dark gray fill for idle mic
+    private readonly Color _micIdleStrokeColor = Color.FromArgb("#FF888888"); // Gray outline for idle mic
 
     // Dimensions
-    private const float PanelHeight = 380f; // Increased to fit longer AI responses
+    private const float PanelHeight = 420f;
     private const float CornerRadius = 20f;
     private const float Padding = 20f;
     private const float CloseButtonSize = 40f;
     private const float FabSize = 56f;
     private const float FabMargin = 16f;
+    private const float MicButtonSize = 80f; // Push-to-talk button diameter
 
     public VoiceOverlayPanel(VoiceOverlay overlay)
     {
@@ -173,6 +274,11 @@ public class VoiceOverlayPanel : IWindowOverlayElement
         _isCollapsed = false;
     }
 
+    public void SetMicPressed(bool pressed)
+    {
+        _isMicPressed = pressed;
+    }
+
     public void UpdateContent(OverlayContent content)
     {
         _stateText = content.StateText;
@@ -180,6 +286,7 @@ public class VoiceOverlayPanel : IWindowOverlayElement
         _aiResponse = content.AIResponse ?? "";
         _isListening = content.IsListening;
         _isProcessing = content.IsProcessing;
+        _isReady = content.IsReady;
     }
 
     public bool Contains(Point point)
@@ -187,34 +294,37 @@ public class VoiceOverlayPanel : IWindowOverlayElement
         if (!_isVisible)
             return false;
 
-        // When collapsed, only consume taps on FAB
         if (_isCollapsed)
-        {
             return _fabRect.Contains(point);
-        }
 
-        // When expanded, consume taps on the panel area
         return _panelRect.Contains(point);
     }
 
-    public bool IsCloseButtonTapped(Point point)
-    {
-        return _isVisible && !_isCollapsed && _closeButtonRect.Contains(point);
-    }
+    public bool IsCloseButtonTapped(Point point) =>
+        _isVisible && !_isCollapsed && _closeButtonRect.Contains(point);
 
-    public bool IsCancelButtonTapped(Point point)
-    {
-        return _isVisible && !_isCollapsed && _cancelButtonRect.Contains(point);
-    }
+    public bool IsCancelButtonTapped(Point point) =>
+        _isVisible && !_isCollapsed && _cancelButtonRect.Contains(point);
 
-    public bool IsContentAreaTapped(Point point)
-    {
-        return _isVisible && !_isCollapsed && _contentAreaRect.Contains(point);
-    }
+    public bool IsContentAreaTapped(Point point) =>
+        _isVisible && !_isCollapsed && _contentAreaRect.Contains(point);
 
-    public bool IsFabTapped(Point point)
+    public bool IsFabTapped(Point point) =>
+        _isVisible && _isCollapsed && _fabRect.Contains(point);
+
+    /// <summary>
+    /// Checks if a point is within the push-to-talk mic button area.
+    /// Uses an expanded hit area for easier pressing.
+    /// </summary>
+    public bool IsMicButtonArea(Point point)
     {
-        return _isVisible && _isCollapsed && _fabRect.Contains(point);
+        if (!_isVisible || _isCollapsed) return false;
+        var expandedRect = new RectF(
+            _micButtonRect.X - 15,
+            _micButtonRect.Y - 15,
+            _micButtonRect.Width + 30,
+            _micButtonRect.Height + 30);
+        return expandedRect.Contains(point);
     }
 
     public void Draw(ICanvas canvas, RectF dirtyRect)
@@ -290,17 +400,15 @@ public class VoiceOverlayPanel : IWindowOverlayElement
             canvas.FontSize = 24;
             canvas.DrawString("✕", _closeButtonRect, HorizontalAlignment.Center, VerticalAlignment.Center);
 
-            // Draw state text with activity indicator simulation
+            // Draw state text with activity indicator
             float stateY = panelY + Padding;
-            canvas.FontColor = _textColor;
             canvas.FontSize = 20;
             canvas.Font = new Microsoft.Maui.Graphics.Font("Arial", 700, FontStyleType.Normal); // Bold
 
-            var indicatorText = (_isListening || _isProcessing) ? "● " : "";
             if (_isListening || _isProcessing)
             {
                 canvas.FontColor = _accentColor;
-                canvas.DrawString(indicatorText, new RectF(Padding, stateY, 24, 30), HorizontalAlignment.Left, VerticalAlignment.Center);
+                canvas.DrawString("● ", new RectF(Padding, stateY, 24, 30), HorizontalAlignment.Left, VerticalAlignment.Center);
             }
 
             canvas.FontColor = _textColor;
@@ -311,41 +419,66 @@ public class VoiceOverlayPanel : IWindowOverlayElement
             float contentY = stateY + 50;
             float contentWidth = dirtyRect.Width - Padding * 2;
 
-            // Calculate available height for content (above cancel button)
-            float cancelButtonHeight = 40f;
-            float availableContentHeight = PanelHeight - 50 - Padding - cancelButtonHeight - Padding - 20;
+            // Calculate mic button position (centered, above cancel button)
+            float cancelButtonHeight = 30f;
+            float micButtonCenterX = dirtyRect.Width / 2;
+            float micButtonCenterY = panelY + PanelHeight - cancelButtonHeight - Padding - MicButtonSize / 2 - 30;
+            _micButtonRect = new RectF(
+                micButtonCenterX - MicButtonSize / 2,
+                micButtonCenterY - MicButtonSize / 2,
+                MicButtonSize,
+                MicButtonSize);
+
+            // Content area ends above mic button
+            float contentMaxY = micButtonCenterY - MicButtonSize / 2 - 15;
 
             canvas.FontSize = 16;
-            canvas.Font = new Microsoft.Maui.Graphics.Font("Arial", 400, FontStyleType.Normal); // Regular
+            canvas.Font = new Microsoft.Maui.Graphics.Font("Arial", 400, FontStyleType.Normal);
 
             // Draw transcript (user's speech) if available
             if (!string.IsNullOrEmpty(_transcript))
             {
                 canvas.FontColor = _secondaryTextColor;
-                var transcriptRect = new RectF(Padding, contentY, contentWidth, 60f);
+                float transcriptHeight = Math.Min(60f, (contentMaxY - contentY) / 2);
+                var transcriptRect = new RectF(Padding, contentY, contentWidth, transcriptHeight);
                 canvas.DrawString(_transcript, transcriptRect, HorizontalAlignment.Left, VerticalAlignment.Top);
-                contentY += 70f; // Move down for AI response
+                contentY += transcriptHeight + 10f;
             }
 
-            // Draw AI response if available (positioned right after transcript, or at content start if no transcript)
+            // Draw AI response if available
             if (!string.IsNullOrEmpty(_aiResponse))
             {
                 canvas.FontColor = _aiResponseColor;
                 canvas.FontSize = 15;
                 canvas.Font = new Microsoft.Maui.Graphics.Font("Arial", 400, FontStyleType.Italic);
 
-                // Use remaining space for response
-                float responseHeight = availableContentHeight - (contentY - (stateY + 50));
+                float responseHeight = Math.Max(40f, contentMaxY - contentY);
                 var responseRect = new RectF(Padding, contentY, contentWidth, responseHeight);
                 canvas.DrawString(_aiResponse, responseRect, HorizontalAlignment.Left, VerticalAlignment.Top);
             }
-            else if (string.IsNullOrEmpty(_transcript))
+            else if (string.IsNullOrEmpty(_transcript) && _isReady)
             {
-                // Show hint text when no transcript and no AI response
+                // Show hint text when ready and nothing to display
                 canvas.FontColor = Color.FromArgb("#FF888888");
-                var hintRect = new RectF(Padding, contentY, contentWidth, 60f);
+                canvas.FontSize = 14;
+                canvas.Font = new Microsoft.Maui.Graphics.Font("Arial", 400, FontStyleType.Normal);
+                var hintRect = new RectF(Padding, contentY, contentWidth, 40f);
                 canvas.DrawString("Say something like \"Log shot 18 in, 36 out, 28 seconds\"",
-                    hintRect, HorizontalAlignment.Left, VerticalAlignment.Top);
+                    hintRect, HorizontalAlignment.Center, VerticalAlignment.Top);
+            }
+
+            // Draw push-to-talk mic button
+            DrawMicButton(canvas, micButtonCenterX, micButtonCenterY);
+
+            // Draw "Hold to speak" hint below mic button when ready
+            if (_isReady && !_isListening && !_isProcessing)
+            {
+                canvas.FontColor = Color.FromArgb("#FF888888");
+                canvas.FontSize = 13;
+                canvas.Font = new Microsoft.Maui.Graphics.Font("Arial", 400, FontStyleType.Normal);
+                float hintY = micButtonCenterY + MicButtonSize / 2 + 6;
+                canvas.DrawString("Hold to speak", new RectF(0, hintY, dirtyRect.Width, 20),
+                    HorizontalAlignment.Center, VerticalAlignment.Center);
             }
 
             // Draw cancel button at bottom
@@ -356,6 +489,7 @@ public class VoiceOverlayPanel : IWindowOverlayElement
 
             canvas.FontColor = _accentColor;
             canvas.FontSize = 16;
+            canvas.Font = new Microsoft.Maui.Graphics.Font("Arial", 400, FontStyleType.Normal);
             canvas.DrawString("Cancel", _cancelButtonRect,
                 HorizontalAlignment.Center, VerticalAlignment.Center);
         }
@@ -363,6 +497,80 @@ public class VoiceOverlayPanel : IWindowOverlayElement
         {
             // Silently ignore drawing errors
         }
+    }
+
+    /// <summary>
+    /// Draws the push-to-talk mic button with visual state feedback.
+    /// </summary>
+    private void DrawMicButton(ICanvas canvas, float centerX, float centerY)
+    {
+        float radius = MicButtonSize / 2;
+
+        if (_isMicPressed || _isListening)
+        {
+            // Active/pressed: filled orange circle with pulse ring
+            canvas.FillColor = _accentColor;
+            canvas.FillCircle(centerX, centerY, radius);
+
+            canvas.StrokeColor = _accentColor;
+            canvas.StrokeSize = 2f;
+            canvas.DrawCircle(centerX, centerY, radius + 6);
+        }
+        else if (_isProcessing)
+        {
+            // Processing: filled orange, no pulse
+            canvas.FillColor = _accentColor;
+            canvas.FillCircle(centerX, centerY, radius);
+        }
+        else
+        {
+            // Idle/Ready: dark filled circle with gray outline
+            canvas.FillColor = _micIdleColor;
+            canvas.FillCircle(centerX, centerY, radius);
+            canvas.StrokeColor = _micIdleStrokeColor;
+            canvas.StrokeSize = 2.5f;
+            canvas.DrawCircle(centerX, centerY, radius);
+        }
+
+        // Draw mic icon inside button
+        canvas.FillColor = _textColor;
+        float micWidth = 16f;
+        float micHeight = 24f;
+        float micTop = centerY - micHeight / 2 - 3;
+        float micLeft = centerX - micWidth / 2;
+        float micRadius = micWidth / 2;
+
+        // Mic body (rounded rect)
+        var micPath = new PathF();
+        micPath.MoveTo(micLeft, micTop + micRadius);
+        micPath.LineTo(micLeft, micTop + micHeight - micRadius);
+        micPath.QuadTo(micLeft, micTop + micHeight, micLeft + micRadius, micTop + micHeight);
+        micPath.LineTo(micLeft + micWidth - micRadius, micTop + micHeight);
+        micPath.QuadTo(micLeft + micWidth, micTop + micHeight, micLeft + micWidth, micTop + micHeight - micRadius);
+        micPath.LineTo(micLeft + micWidth, micTop + micRadius);
+        micPath.QuadTo(micLeft + micWidth, micTop, micLeft + micRadius, micTop);
+        micPath.LineTo(micLeft + micRadius, micTop);
+        micPath.QuadTo(micLeft, micTop, micLeft, micTop + micRadius);
+        micPath.Close();
+        canvas.FillPath(micPath);
+
+        // Mic stand (U shape)
+        canvas.StrokeColor = _textColor;
+        canvas.StrokeSize = 2.5f;
+        float standTop = micTop + micHeight + 3;
+        float standWidth = micWidth + 8;
+        float standLeft = centerX - standWidth / 2;
+
+        var standPath = new PathF();
+        standPath.MoveTo(standLeft, micTop + micHeight / 2);
+        standPath.LineTo(standLeft, standTop);
+        standPath.QuadTo(standLeft, standTop + 8, centerX, standTop + 8);
+        standPath.QuadTo(standLeft + standWidth, standTop + 8, standLeft + standWidth, standTop);
+        standPath.LineTo(standLeft + standWidth, micTop + micHeight / 2);
+        canvas.DrawPath(standPath);
+
+        // Stem
+        canvas.DrawLine(centerX, standTop + 8, centerX, standTop + 14);
     }
 
     private void DrawCollapsedFab(ICanvas canvas, RectF dirtyRect, float safeBottom)
@@ -450,6 +658,7 @@ public static class VoiceOverlayExtensions
             {
                 _overlay = new VoiceOverlay(handler.VirtualView);
                 handler.VirtualView.AddOverlay(_overlay);
+                _overlay.SetupPlatformTouchHandling();
             });
         });
 

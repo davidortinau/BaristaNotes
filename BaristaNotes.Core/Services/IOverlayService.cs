@@ -55,6 +55,16 @@ public interface IOverlayService
     /// Event raised when user taps the collapsed FAB to expand.
     /// </summary>
     event EventHandler? ExpandRequested;
+
+    /// <summary>
+    /// Event raised when user presses down on the mic button (push-to-talk start).
+    /// </summary>
+    event EventHandler? MicPressStarted;
+
+    /// <summary>
+    /// Event raised when user lifts off the mic button (push-to-talk end).
+    /// </summary>
+    event EventHandler? MicPressEnded;
 }
 
 /// <summary>
@@ -65,6 +75,7 @@ public record OverlayContent(
     string Transcript,
     bool IsListening,
     bool IsProcessing,
+    bool IsReady = false,
     string? ErrorMessage = null,
     string? AIResponse = null
 );

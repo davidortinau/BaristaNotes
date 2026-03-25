@@ -166,6 +166,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         // Subscribe to overlay events
         _overlayService.CloseRequested += OnOverlayCloseRequested;
         _overlayService.ExpandRequested += OnOverlayExpandRequested;
+        _overlayService.MicPressStarted += OnMicPressStarted;
+        _overlayService.MicPressEnded += OnMicPressEnded;
 
         // Subscribe to voice command speech control events
         _voiceCommandService.PauseSpeechRequested += OnPauseSpeechRequested;
@@ -182,6 +184,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         _dataChangeNotifier.DataChanged -= OnDataChanged;
         _overlayService.CloseRequested -= OnOverlayCloseRequested;
         _overlayService.ExpandRequested -= OnOverlayExpandRequested;
+        _overlayService.MicPressStarted -= OnMicPressStarted;
+        _overlayService.MicPressEnded -= OnMicPressEnded;
         _voiceCommandService.PauseSpeechRequested -= OnPauseSpeechRequested;
         _voiceCommandService.ResumeSpeechRequested -= OnResumeSpeechRequested;
         base.OnWillUnmount();
@@ -207,6 +211,28 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         {
             _overlayService.Expand();
         }
+    }
+
+    /// <summary>
+    /// Handle push-to-talk: user pressed down on the mic button.
+    /// Starts recording immediately.
+    /// </summary>
+    private async void OnMicPressStarted(object? sender, EventArgs e)
+    {
+        _logger.LogInformation("Push-to-talk: mic button pressed");
+        if (!State.IsVoiceSheetOpen || State.IsRecording) return;
+        await StartRecordingAsync();
+    }
+
+    /// <summary>
+    /// Handle push-to-talk: user released the mic button.
+    /// Stops recording and processes the transcript.
+    /// </summary>
+    private async void OnMicPressEnded(object? sender, EventArgs e)
+    {
+        _logger.LogInformation("Push-to-talk: mic button released");
+        if (!State.IsRecording) return;
+        await StopRecordingAsync();
     }
 
     /// <summary>
@@ -300,18 +326,18 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             // Clear chat history UI as well
             SetState(s => s.VoiceChatHistory = new List<VoiceChatMessage>());
 
-            // Show the window overlay
+            // Show the window overlay in Ready state (mic NOT listening)
             _overlayService.Show();
             _overlayService.UpdateContent(new OverlayContent(
-                StateText: "Listening...",
+                StateText: "Ready",
                 Transcript: "",
-                IsListening: true,
-                IsProcessing: false
+                IsListening: false,
+                IsProcessing: false,
+                IsReady: true
             ));
 
-            // Update state and start recording
+            // Update state - overlay is open but NOT recording yet
             SetState(s => s.IsVoiceSheetOpen = true);
-            await StartRecordingAsync();
         }
     }
 
@@ -350,13 +376,14 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     }
 
     /// <summary>
-    /// Starts voice recording.
+    /// Starts voice recording for a single push-to-talk session.
+    /// Recording will stop when the user releases the mic button.
     /// </summary>
     private async Task StartRecordingAsync()
     {
         try
         {
-            _logger.LogInformation("Starting voice recording");
+            _logger.LogInformation("Starting voice recording (push-to-talk)");
 
             // Check permissions
             var permissionStatus = await _speechRecognitionService.RequestPermissionsAsync();
@@ -388,7 +415,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             // Subscribe to partial results
             _speechRecognitionService.PartialResultReceived += OnPartialResultReceived;
 
-            // Start listening in background - don't await completion
+            // Start a single listening session (not a continuous loop)
             _ = ListenForSpeechAsync();
         }
         catch (Exception ex)
@@ -399,85 +426,72 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     }
 
     /// <summary>
-    /// Background task that listens for speech in continuous mode.
-    /// Processes utterances as they complete and restarts listening automatically.
+    /// Background task that performs a single speech recognition session.
+    /// The user holds the mic button to record; releasing triggers StopRecordingAsync
+    /// which cancels this task and processes the result.
     /// </summary>
     private async Task ListenForSpeechAsync()
     {
-        _logger.LogInformation("ListenForSpeechAsync started");
+        _logger.LogInformation("ListenForSpeechAsync started (single-shot push-to-talk)");
         try
         {
-            while (State.IsRecording && !(_voiceCts?.Token.IsCancellationRequested ?? true))
+            if (_voiceCts?.Token.IsCancellationRequested ?? true)
             {
-                // Check if speech is paused (e.g., during camera capture)
-                if (_speechPaused)
-                {
-                    _logger.LogDebug("Speech is paused, waiting...");
-                    await Task.Delay(200, _voiceCts?.Token ?? CancellationToken.None);
-                    continue;
-                }
-
-                _logger.LogDebug("Starting speech recognition cycle, IsRecording={IsRecording}, IsCancelled={IsCancelled}",
-                    State.IsRecording, _voiceCts?.Token.IsCancellationRequested ?? true);
-
-                var result = await _speechRecognitionService.StartListeningAsync(_voiceCts?.Token ?? CancellationToken.None);
-
-                _logger.LogInformation("Speech recognition returned: Success={Success}, Transcript='{Transcript}', Error={Error}",
-                    result.Success, result.Transcript ?? "(null)", result.ErrorMessage ?? "(none)");
-
-                // Check if cancelled or paused
-                if (_voiceCts?.Token.IsCancellationRequested ?? true)
-                {
-                    _logger.LogInformation("Voice recording cancelled during listening, breaking loop");
-                    break;
-                }
-
-                // If paused during listening, skip processing
-                if (_speechPaused)
-                {
-                    _logger.LogDebug("Speech paused during recognition, skipping result");
-                    continue;
-                }
-
-                // If we got a result with text, process it
-                if (result.Success && !string.IsNullOrWhiteSpace(result.Transcript))
-                {
-                    _logger.LogInformation("Got successful utterance, will process: '{Text}'", result.Transcript);
-
-                    // Use the final transcript from recognition, not the partial
-                    var transcript = result.Transcript;
-
-                    // Clear the live transcript and process
-                    SetState(s => s.VoiceTranscript = "");
-
-                    // Process in background so we can restart listening quickly
-                    _ = ProcessTranscriptAsync(transcript);
-                }
-                else if (!string.IsNullOrWhiteSpace(State.VoiceTranscript))
-                {
-                    // Recognition ended but we have partial text - process it
-                    _logger.LogInformation("Recognition ended with partial text, will process: '{Text}'", State.VoiceTranscript);
-                    var transcript = State.VoiceTranscript;
-                    SetState(s => s.VoiceTranscript = "");
-                    _ = ProcessTranscriptAsync(transcript);
-                }
-                else
-                {
-                    _logger.LogDebug("Recognition ended with no usable text, restarting cycle");
-                }
-
-                // Small delay before restarting to avoid tight loop
-                if (State.IsRecording && !(_voiceCts?.Token.IsCancellationRequested ?? true))
-                {
-                    _logger.LogDebug("Delaying 100ms before next cycle");
-                    await Task.Delay(100, _voiceCts?.Token ?? CancellationToken.None);
-                }
+                _logger.LogInformation("Already cancelled before starting");
+                return;
             }
-            _logger.LogInformation("ListenForSpeechAsync loop ended, IsRecording={IsRecording}", State.IsRecording);
+
+            _logger.LogDebug("Starting speech recognition, IsRecording={IsRecording}", State.IsRecording);
+
+            var result = await _speechRecognitionService.StartListeningAsync(_voiceCts?.Token ?? CancellationToken.None);
+
+            _logger.LogInformation("Speech recognition returned: Success={Success}, Transcript='{Transcript}', Error={Error}",
+                result.Success, result.Transcript ?? "(null)", result.ErrorMessage ?? "(none)");
+
+            // If cancelled (user released button), StopRecordingAsync handles processing
+            if (_voiceCts?.Token.IsCancellationRequested ?? true)
+            {
+                _logger.LogInformation("Recognition ended via cancellation (button release)");
+                return;
+            }
+
+            // If recognition completed naturally (e.g., timeout), process result
+            if (result.Success && !string.IsNullOrWhiteSpace(result.Transcript))
+            {
+                _logger.LogInformation("Got natural completion with transcript: '{Text}'", result.Transcript);
+                var transcript = result.Transcript;
+                SetState(s => s.VoiceTranscript = "");
+                await ProcessTranscriptAsync(transcript);
+            }
+            else if (!string.IsNullOrWhiteSpace(State.VoiceTranscript))
+            {
+                _logger.LogInformation("Recognition ended with accumulated partial text: '{Text}'", State.VoiceTranscript);
+                var transcript = State.VoiceTranscript;
+                SetState(s => s.VoiceTranscript = "");
+                await ProcessTranscriptAsync(transcript);
+            }
+            else
+            {
+                _logger.LogDebug("Recognition ended with no usable text");
+                // Return to ready state
+                SetState(s =>
+                {
+                    s.IsRecording = false;
+                    s.VoiceState = SpeechRecognitionState.Idle;
+                });
+                _overlayService.UpdateContent(new OverlayContent(
+                    StateText: "Ready",
+                    Transcript: "",
+                    IsListening: false,
+                    IsProcessing: false,
+                    IsReady: true,
+                    AIResponse: State.LastAIResponse
+                ));
+            }
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation("ListenForSpeechAsync cancelled via OperationCanceledException");
+            _logger.LogInformation("ListenForSpeechAsync cancelled (push-to-talk button released)");
         }
         catch (Exception ex)
         {
@@ -485,23 +499,19 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         }
         finally
         {
-            _logger.LogInformation("ListenForSpeechAsync finally block, cleaning up");
+            _logger.LogInformation("ListenForSpeechAsync cleanup");
             StopSilenceTimer();
             _speechRecognitionService.PartialResultReceived -= OnPartialResultReceived;
-            SetState(s =>
-            {
-                s.IsRecording = false;
-                s.VoiceState = SpeechRecognitionState.Idle;
-            });
         }
     }
 
     /// <summary>
     /// Stops recording and processes any pending transcript.
+    /// Returns the overlay to Ready state after processing.
     /// </summary>
     private async Task StopRecordingAsync()
     {
-        _logger.LogInformation("StopRecordingAsync called");
+        _logger.LogInformation("StopRecordingAsync called (push-to-talk release)");
 
         // Stop silence detection
         StopSilenceTimer();
@@ -533,12 +543,21 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         else
         {
             _logger.LogInformation("No pending transcript to process on stop");
+            // Return to ready state with any previous AI response
+            _overlayService.UpdateContent(new OverlayContent(
+                StateText: "Ready",
+                Transcript: "",
+                IsListening: false,
+                IsProcessing: false,
+                IsReady: true,
+                AIResponse: State.LastAIResponse
+            ));
         }
     }
 
     /// <summary>
     /// Processes a transcript and adds messages to chat history.
-    /// Does not stop recording - allows continuous conversation.
+    /// Returns to Ready state after processing (push-to-talk model).
     /// </summary>
     private async Task ProcessTranscriptAsync(string transcript)
     {
@@ -548,7 +567,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         AddChatMessage(transcript, isUser: true);
         _logger.LogDebug("Added user message to chat");
 
-        // Show processing state (but don't stop listening)
+        // Show processing state
         SetState(s => s.VoiceState = SpeechRecognitionState.Processing);
 
         // Update overlay to show processing
@@ -562,7 +581,6 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         try
         {
             _logger.LogInformation("Calling VoiceCommandService.ProcessCommandAsync");
-            // Process the voice command
             var commandResult = await _voiceCommandService.ProcessCommandAsync(
                 new VoiceCommandRequestDto(transcript, 1.0),
                 CancellationToken.None);
@@ -576,20 +594,11 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             // Store the last AI response for display persistence
             SetState(s => s.LastAIResponse = commandResult.Message);
 
-            // Show AI response in overlay - keep visible until user speaks again
-            _overlayService.UpdateContent(new OverlayContent(
-                StateText: commandResult.Success ? "Done" : "Error",
-                Transcript: transcript,
-                IsListening: false,
-                IsProcessing: false,
-                AIResponse: commandResult.Message
-            ));
-
-            // Return to listening state if still recording (keep AI response visible)
+            // Return to Ready state with AI response visible
             SetState(s =>
             {
                 s.VoiceTranscript = "";
-                s.VoiceState = s.IsRecording ? SpeechRecognitionState.Listening : SpeechRecognitionState.Idle;
+                s.VoiceState = SpeechRecognitionState.Idle;
             });
 
             // Resume speech if it was paused (e.g., during camera capture)
@@ -599,18 +608,17 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 _speechPaused = false;
             }
 
-            // Update overlay back to listening but KEEP the AI response visible
-            if (State.IsRecording)
-            {
-                _overlayService.UpdateContent(new OverlayContent(
-                    StateText: "Listening...",
-                    Transcript: "",
-                    IsListening: true,
-                    IsProcessing: false,
-                    AIResponse: commandResult.Message  // Keep last response visible
-                ));
-            }
-            _logger.LogInformation("ProcessTranscriptAsync END: Success");
+            // Show Ready state with AI response — user can press mic again
+            _overlayService.UpdateContent(new OverlayContent(
+                StateText: commandResult.Success ? "Done" : "Error",
+                Transcript: "",
+                IsListening: false,
+                IsProcessing: false,
+                IsReady: true,
+                AIResponse: commandResult.Message
+            ));
+
+            _logger.LogInformation("ProcessTranscriptAsync END: Success, returned to Ready state");
         }
         catch (Exception ex)
         {
@@ -619,37 +627,25 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             
             var errorMessage = "Sorry, something went wrong. Please try again.";
             SetState(s => s.LastAIResponse = errorMessage);
+            SetState(s => s.VoiceState = SpeechRecognitionState.Idle);
             
-            // Show error in overlay
-            _overlayService.UpdateContent(new OverlayContent(
-                StateText: "Error",
-                Transcript: transcript,
-                IsListening: false,
-                IsProcessing: false,
-                ErrorMessage: "Something went wrong",
-                AIResponse: errorMessage
-            ));
-            
-            SetState(s => s.VoiceState = s.IsRecording ? SpeechRecognitionState.Listening : SpeechRecognitionState.Idle);
-            
-            // Resume speech if it was paused (e.g., during camera capture)
+            // Resume speech if it was paused
             if (_speechPaused)
             {
                 _logger.LogDebug("Clearing speech pause flag after error");
                 _speechPaused = false;
             }
 
-            // Return to listening but keep error visible
-            if (State.IsRecording)
-            {
-                _overlayService.UpdateContent(new OverlayContent(
-                    StateText: "Listening...",
-                    Transcript: "",
-                    IsListening: true,
-                    IsProcessing: false,
-                    AIResponse: errorMessage
-                ));
-            }
+            // Return to Ready state with error visible
+            _overlayService.UpdateContent(new OverlayContent(
+                StateText: "Error",
+                Transcript: "",
+                IsListening: false,
+                IsProcessing: false,
+                IsReady: true,
+                ErrorMessage: "Something went wrong",
+                AIResponse: errorMessage
+            ));
         }
     }
 

@@ -129,15 +129,15 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
             return;
         }
 
-        // Check if user tapped the close (X) button - collapse to FAB
-        if (_panel.IsCloseButtonTapped(e.Point))
+        // Check if user tapped the minimize button - collapse to FAB
+        if (_panel.IsMinimizeButtonTapped(e.Point))
         {
             Collapse();
             return;
         }
 
-        // Check if user tapped the cancel button - end session
-        if (_panel.IsCancelButtonTapped(e.Point))
+        // Check if user tapped the close (X) button - end session
+        if (_panel.IsCloseButtonTapped(e.Point))
         {
             MainThread.BeginInvokeOnMainThread(async () =>
             {
@@ -233,7 +233,7 @@ public class VoiceOverlayPanel : IWindowOverlayElement
     // Layout rectangles for hit testing
     private RectF _panelRect;
     private RectF _closeButtonRect;
-    private RectF _cancelButtonRect;
+    private RectF _minimizeButtonRect;
     private RectF _contentAreaRect;
     private RectF _fabRect;
     private RectF _micButtonRect;
@@ -303,8 +303,8 @@ public class VoiceOverlayPanel : IWindowOverlayElement
     public bool IsCloseButtonTapped(Point point) =>
         _isVisible && !_isCollapsed && _closeButtonRect.Contains(point);
 
-    public bool IsCancelButtonTapped(Point point) =>
-        _isVisible && !_isCollapsed && _cancelButtonRect.Contains(point);
+    public bool IsMinimizeButtonTapped(Point point) =>
+        _isVisible && !_isCollapsed && _minimizeButtonRect.Contains(point);
 
     public bool IsContentAreaTapped(Point point) =>
         _isVisible && !_isCollapsed && _contentAreaRect.Contains(point);
@@ -391,7 +391,7 @@ public class VoiceOverlayPanel : IWindowOverlayElement
             panelPath.Close();
             canvas.FillPath(panelPath);
 
-            // Draw close button (X) in top right
+            // Draw close (X) button in top right — ends session
             float closeX = dirtyRect.Width - Padding - CloseButtonSize;
             float closeY = panelY + Padding;
             _closeButtonRect = new RectF(closeX, closeY, CloseButtonSize, CloseButtonSize);
@@ -399,6 +399,14 @@ public class VoiceOverlayPanel : IWindowOverlayElement
             canvas.FontColor = _textColor;
             canvas.FontSize = 24;
             canvas.DrawString("✕", _closeButtonRect, HorizontalAlignment.Center, VerticalAlignment.Center);
+
+            // Draw minimize (−) button to the left of close — collapses to FAB
+            float minimizeX = closeX - CloseButtonSize - 4;
+            _minimizeButtonRect = new RectF(minimizeX, closeY, CloseButtonSize, CloseButtonSize);
+
+            canvas.FontColor = _secondaryTextColor;
+            canvas.FontSize = 22;
+            canvas.DrawString("−", _minimizeButtonRect, HorizontalAlignment.Center, VerticalAlignment.Center);
 
             // Draw state text with activity indicator
             float stateY = panelY + Padding;
@@ -412,17 +420,16 @@ public class VoiceOverlayPanel : IWindowOverlayElement
             }
 
             canvas.FontColor = _textColor;
-            canvas.DrawString(_stateText, new RectF(Padding + 24, stateY, dirtyRect.Width - Padding * 2 - CloseButtonSize - 24, 30),
+            canvas.DrawString(_stateText, new RectF(Padding + 24, stateY, dirtyRect.Width - Padding * 2 - CloseButtonSize * 2 - 28, 30),
                 HorizontalAlignment.Left, VerticalAlignment.Center);
 
             // Content area starts below state text
             float contentY = stateY + 50;
             float contentWidth = dirtyRect.Width - Padding * 2;
 
-            // Calculate mic button position (centered, above cancel button)
-            float cancelButtonHeight = 30f;
+            // Calculate mic button position (centered, near bottom of panel)
             float micButtonCenterX = dirtyRect.Width / 2;
-            float micButtonCenterY = panelY + PanelHeight - cancelButtonHeight - Padding - MicButtonSize / 2 - 30;
+            float micButtonCenterY = panelY + PanelHeight - Padding - MicButtonSize / 2 - 30;
             _micButtonRect = new RectF(
                 micButtonCenterX - MicButtonSize / 2,
                 micButtonCenterY - MicButtonSize / 2,
@@ -481,17 +488,6 @@ public class VoiceOverlayPanel : IWindowOverlayElement
                     HorizontalAlignment.Center, VerticalAlignment.Center);
             }
 
-            // Draw cancel button at bottom
-            float cancelButtonWidth = 100f;
-            float cancelX = (dirtyRect.Width - cancelButtonWidth) / 2;
-            float cancelY = panelY + PanelHeight - cancelButtonHeight - Padding;
-            _cancelButtonRect = new RectF(cancelX, cancelY, cancelButtonWidth, cancelButtonHeight);
-
-            canvas.FontColor = _accentColor;
-            canvas.FontSize = 16;
-            canvas.Font = new Microsoft.Maui.Graphics.Font("Arial", 400, FontStyleType.Normal);
-            canvas.DrawString("Cancel", _cancelButtonRect,
-                HorizontalAlignment.Center, VerticalAlignment.Center);
         }
         catch (Exception)
         {

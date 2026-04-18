@@ -4,6 +4,7 @@ using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls.Shapes;
+using Microsoft.Maui.Media;
 using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups.Services;
 using Controls = Microsoft.Maui.Controls;
@@ -39,6 +40,7 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
     private readonly IBeanService _beanService;
     private readonly IBagService _bagService;
     private readonly IFeedbackService _feedbackService;
+    private readonly IVisionService _visionService;
     private readonly ILogger<AddCoffeePopup> _logger;
 
     private Mode _mode = Mode.Type;
@@ -65,6 +67,8 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
     private DateTime _roastDate = DateTime.Today;
     private BeanDto? _fuzzyMatch;
     private CancellationTokenSource? _fuzzyCts;
+    private BeanLabelExtraction? _pendingExtraction;
+    private bool _isScanning;
 
     /// <summary>
     /// Callback invoked when a bag is successfully created (either via Browse tap
@@ -76,11 +80,13 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
         IBeanService beanService,
         IBagService bagService,
         IFeedbackService feedbackService,
+        IVisionService visionService,
         ILogger<AddCoffeePopup> logger)
     {
         _beanService = beanService;
         _bagService = bagService;
         _feedbackService = feedbackService;
+        _visionService = visionService;
         _logger = logger;
 
         Title = "Add Coffee";
@@ -193,13 +199,31 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
             BorderWidth = 1,
             CornerRadius = 18,
             HeightRequest = 40,
-            HorizontalOptions = LayoutOptions.Center,
             Padding = new Thickness(20, 0)
         };
         newCoffeeButton.Clicked += (_, _) =>
         {
             _mode = Mode.Type;
             RenderCurrentMode();
+        };
+
+        var scanButton = new Controls.Button
+        {
+            Text = "📷  Scan label",
+            BackgroundColor = AppColors.Dark.Primary,
+            TextColor = AppColors.Dark.OnPrimary,
+            BorderWidth = 0,
+            CornerRadius = 18,
+            HeightRequest = 40,
+            Padding = new Thickness(20, 0)
+        };
+        scanButton.Clicked += async (_, _) => await HandleScanAsync();
+
+        var buttonRow = new Controls.HorizontalStackLayout
+        {
+            Spacing = 10,
+            HorizontalOptions = LayoutOptions.Center,
+            Children = { scanButton, newCoffeeButton }
         };
 
         return new Controls.VerticalStackLayout
@@ -217,7 +241,7 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
                     Margin = new Thickness(HorizontalPadding, 0)
                 },
                 carousel,
-                newCoffeeButton
+                buttonRow
             }
         };
     }
@@ -305,8 +329,19 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
 
     private Controls.View BuildTypeContent()
     {
+        // Consume any pending photo-extracted values so they pre-fill the fields
+        // below. Applied once — cleared on the way out so a second render doesn't
+        // overwrite user edits.
+        var prefill = _pendingExtraction;
+        _pendingExtraction = null;
+        if (prefill?.RoastDate is DateTime rd && rd <= DateTime.Today)
+        {
+            _roastDate = rd.Date;
+        }
+
         _nameEntry = new Controls.Entry
         {
+            Text = prefill?.Name ?? string.Empty,
             Placeholder = "Ethiopian Yirgacheffe",
             BackgroundColor = Colors.Transparent,
             TextColor = AppColors.Dark.TextPrimary,
@@ -314,6 +349,7 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
         };
         _roasterEntry = new Controls.Entry
         {
+            Text = prefill?.Roaster ?? string.Empty,
             Placeholder = "Blue Bottle",
             BackgroundColor = Colors.Transparent,
             TextColor = AppColors.Dark.TextPrimary,
@@ -321,6 +357,7 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
         };
         _originEntry = new Controls.Entry
         {
+            Text = prefill?.Origin ?? string.Empty,
             Placeholder = "Ethiopia",
             BackgroundColor = Colors.Transparent,
             TextColor = AppColors.Dark.TextPrimary,
@@ -397,8 +434,16 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
         UpdateChipSuggestions(_roasterChipsHost, _knownRoasters, null);
         UpdateChipSuggestions(_originChipsHost, _knownOrigins, null);
 
-        // Back-to-Browse link (only if we have recents)
-        Controls.View? backLink = null;
+        // Back-to-Browse link (only if we have recents) + Scan label button
+        var topRow = new Controls.Grid
+        {
+            ColumnDefinitions =
+            {
+                new ColumnDefinition { Width = GridLength.Star },
+                new ColumnDefinition { Width = GridLength.Auto }
+            },
+            ColumnSpacing = 8
+        };
         if (_recentBeans.Count > 0)
         {
             var back = new Controls.Button
@@ -416,8 +461,21 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
                 _mode = Mode.Browse;
                 RenderCurrentMode();
             };
-            backLink = back;
+            topRow.Add(back, 0, 0);
         }
+
+        var scanLink = new Controls.Button
+        {
+            Text = "📷  Scan label",
+            BackgroundColor = Colors.Transparent,
+            TextColor = AppColors.Dark.Primary,
+            BorderWidth = 0,
+            Padding = new Thickness(0),
+            HeightRequest = 28,
+            HorizontalOptions = LayoutOptions.End
+        };
+        scanLink.Clicked += async (_, _) => await HandleScanAsync();
+        topRow.Add(scanLink, 1, 0);
 
         var content = new Controls.VerticalStackLayout
         {
@@ -426,10 +484,7 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
             HorizontalOptions = LayoutOptions.Fill
         };
 
-        if (backLink != null)
-        {
-            content.Children.Add(backLink);
-        }
+        content.Children.Add(topRow);
 
         content.Children.Add(new Controls.Label
         {
@@ -821,6 +876,131 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
             ShowError(ex.Message);
             SetSaving(false);
         }
+    }
+
+    // ---------- Scan mode ----------
+
+    private async Task HandleScanAsync()
+    {
+        if (_isScanning)
+        {
+            return;
+        }
+
+        if (!MediaPicker.Default.IsCaptureSupported)
+        {
+            _logger.LogWarning("Camera capture not supported on this device");
+            await _feedbackService.ShowErrorAsync("Camera isn't available. Type it instead.");
+            _mode = Mode.Type;
+            RenderCurrentMode();
+            return;
+        }
+
+        FileResult? photo;
+        try
+        {
+            photo = await MediaPicker.Default.CapturePhotoAsync(new MediaPickerOptions
+            {
+                Title = "Photograph bag label"
+            });
+        }
+        catch (PermissionException pex)
+        {
+            _logger.LogWarning(pex, "Camera permission denied");
+            await _feedbackService.ShowErrorAsync("Camera permission denied. Type it instead.");
+            _mode = Mode.Type;
+            RenderCurrentMode();
+            return;
+        }
+        catch (FeatureNotSupportedException)
+        {
+            _logger.LogWarning("Camera feature not supported");
+            await _feedbackService.ShowErrorAsync("Camera isn't available on this device.");
+            _mode = Mode.Type;
+            RenderCurrentMode();
+            return;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error opening camera");
+            await _feedbackService.ShowErrorAsync("Couldn't open camera. Type it instead.");
+            _mode = Mode.Type;
+            RenderCurrentMode();
+            return;
+        }
+
+        if (photo is null)
+        {
+            return;
+        }
+
+        _isScanning = true;
+        ShowActionButton = false;
+        PopupContent = BuildScanningContent();
+
+        try
+        {
+            using var stream = await photo.OpenReadAsync();
+            var extraction = await _visionService.ExtractBeanLabelAsync(stream, CancellationToken.None);
+
+            if (!extraction.Success)
+            {
+                _logger.LogWarning("Bean label extraction failed: {Error}", extraction.ErrorMessage);
+                await _feedbackService.ShowErrorAsync(
+                    "Couldn't read the label — type it in",
+                    recoveryAction: null);
+                _pendingExtraction = null;
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Bean label extracted: Name={HasName} Roaster={HasRoaster} Origin={HasOrigin} RoastDate={HasRoastDate}",
+                    !string.IsNullOrWhiteSpace(extraction.Name),
+                    !string.IsNullOrWhiteSpace(extraction.Roaster),
+                    !string.IsNullOrWhiteSpace(extraction.Origin),
+                    extraction.RoastDate.HasValue);
+                _pendingExtraction = extraction;
+                _feedbackService.TriggerSuccessHaptic();
+                await _feedbackService.ShowInfoAsync("Filled in — review and save");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Vision extraction threw exception");
+            await _feedbackService.ShowErrorAsync("Couldn't read the label — type it in");
+            _pendingExtraction = null;
+        }
+        finally
+        {
+            _isScanning = false;
+            _mode = Mode.Type;
+            RenderCurrentMode();
+        }
+    }
+
+    private Controls.View BuildScanningContent()
+    {
+        return new Controls.VerticalStackLayout
+        {
+            Spacing = 12,
+            Padding = new Thickness(HorizontalPadding, 24),
+            HorizontalOptions = LayoutOptions.Center,
+            Children =
+            {
+                new Controls.ActivityIndicator
+                {
+                    IsRunning = true,
+                    HorizontalOptions = LayoutOptions.Center
+                },
+                new Controls.Label
+                {
+                    Text = "Reading label…",
+                    FontSize = 14,
+                    TextColor = AppColors.Dark.TextSecondary,
+                    HorizontalOptions = LayoutOptions.Center
+                }
+            }
+        };
     }
 
     public void Dispose()

@@ -37,7 +37,7 @@ class ShotLoggingState
     public int SelectedBagIndex { get; set; } = -1;
     public int SelectedDrinkIndex { get; set; } = 0;
     public List<BagSummaryDto> AvailableBags { get; set; } = new();
-    public List<string> DrinkTypes { get; set; } = new() { "Espresso", "Americano", "Latte", "Cappuccino", "Flat White", "Cortado" };
+    public List<string> DrinkTypes { get; set; } = new() { "Espresso", "Americano", "Latte", "Cappuccino", "Flat White", "Cortado", "Pour Over" };
     public bool IsLoading { get; set; }
     public string? ErrorMessage { get; set; }
 

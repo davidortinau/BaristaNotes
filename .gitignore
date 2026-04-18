@@ -133,3 +133,4 @@ _ReSharper*/
 *.vspscc
 *.vssscc
 BaristaNotes/SyncfusionLicense.txt
+*.lscache

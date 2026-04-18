@@ -17,6 +17,7 @@ using Microsoft.Maui.Controls.PlatformConfiguration;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using Application = Microsoft.Maui.Controls.Application;
 using System.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 
@@ -138,6 +139,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
     [Inject]
     IVisionService _visionService;
+
+    [Inject]
+    IServiceProvider _services;
 
     // Cancellation token for AI recommendation requests
     private CancellationTokenSource? _recommendationCts;
@@ -1178,11 +1182,10 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     /// </summary>
     async Task ShowBeanAndBagCreationPopup()
     {
-        var popup = new BeanAndBagCreationPopup(_beanService, _bagService)
-        {
-            OnCreated = HandleBagCreated  // Reuse existing handler
-        };
+        var popup = _services.GetRequiredService<AddCoffeePopup>();
+        popup.OnCreated = HandleBagCreated;
 
+        await popup.InitializeAsync();
         await IPopupService.Current.PushAsync(popup);
     }
 

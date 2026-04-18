@@ -170,6 +170,9 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IThemeService, ThemeService>();
 		builder.Services.AddSingleton<IAIAdviceService, AIAdviceService>();
 
+		// Popups
+		builder.Services.AddTransient<Integrations.Popups.AddCoffeePopup>();
+
 		// Image services
 		builder.Services.AddSingleton<Microsoft.Maui.Media.IMediaPicker>(Microsoft.Maui.Media.MediaPicker.Default);
 		builder.Services.AddSingleton<IImagePickerService, ImagePickerService>();

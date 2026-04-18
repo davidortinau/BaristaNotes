@@ -31,6 +31,10 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
     private const int MultilineCornerRadius = 16;
     private const int ChipCornerRadius = 14;
     private const int FuzzyDebounceMs = 300;
+    // Negative margin used to bleed scroll views past the popup frame's built-in
+    // horizontal padding so carousels/chip rows sit truly edge-to-edge. Tuned
+    // empirically for UXDivers ActionModalPopup chrome.
+    private const int EdgeToEdgeBleed = 20;
 
     private readonly IBeanService _beanService;
     private readonly IBagService _bagService;
@@ -172,6 +176,11 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
         {
             Orientation = ScrollOrientation.Horizontal,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Never,
+            // Pull the scroll wrapper edge-to-edge past the popup's internal chrome padding.
+            // The inner carouselStack keeps a matching HorizontalPadding so the first/last
+            // cards still inset nicely from the screen edges while the scroll area itself
+            // spans full width.
+            Margin = new Thickness(-EdgeToEdgeBleed, 0),
             Content = carouselStack
         };
 
@@ -396,7 +405,7 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
             {
                 Text = "← Browse recent",
                 BackgroundColor = Colors.Transparent,
-                TextColor = AppColors.Dark.Primary,
+                TextColor = AppColors.Dark.TextPrimary,
                 BorderWidth = 0,
                 Padding = new Thickness(0),
                 HeightRequest = 28,
@@ -436,15 +445,26 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
         content.Children.Add(_fuzzyUseButton);
 
         content.Children.Add(CreateFormField("Roaster", _roasterEntry, false));
-        content.Children.Add(_roasterChipsHost);
+        content.Children.Add(WrapChipsScroll(_roasterChipsHost));
 
         content.Children.Add(CreateFormField("Origin", _originEntry, false));
-        content.Children.Add(_originChipsHost);
+        content.Children.Add(WrapChipsScroll(_originChipsHost));
 
         content.Children.Add(BuildRoastDateField());
         content.Children.Add(CreateFormField("Notes", _notesEditor, true));
 
         return new Controls.ScrollView { Content = content };
+    }
+
+    private static Controls.View WrapChipsScroll(Controls.HorizontalStackLayout host)
+    {
+        return new Controls.ScrollView
+        {
+            Orientation = ScrollOrientation.Horizontal,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Never,
+            Margin = new Thickness(-EdgeToEdgeBleed, 0),
+            Content = host
+        };
     }
 
     private Controls.View BuildRoastDateField()
@@ -475,17 +495,23 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
             Date = _roastDate,
             MaximumDate = DateTime.Today,
             BackgroundColor = Colors.Transparent,
-            Opacity = 0.01,
-            HorizontalOptions = LayoutOptions.Start,
-            WidthRequest = 140,
-            HeightRequest = 32
+            Opacity = 0,
+            InputTransparent = false,
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill
         };
+        SemanticProperties.SetDescription(_hiddenDatePicker, "Roast date");
+        SemanticProperties.SetDescription(_dateChipBorder, "Roast date");
+        SemanticProperties.SetHint(_dateChipBorder, "Opens a date picker to choose the roast date");
         _hiddenDatePicker.DateSelected += (_, e) =>
         {
             _roastDate = e.NewDate ?? _roastDate;
             UpdateDateChip();
         };
 
+        // Grid overlays the invisible native DatePicker on top of the chip so the
+        // native picker UI opens on tap (iOS wheel / Android dialog) while the chip
+        // supplies our styling.
         var grid = new Controls.Grid
         {
             RowDefinitions = { new RowDefinition { Height = GridLength.Auto } },
@@ -494,6 +520,11 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
         };
         grid.Children.Add(_dateChipBorder);
         grid.Children.Add(_hiddenDatePicker);
+
+        // Tap the chip as a fallback to programmatically focus the DatePicker.
+        var tap = new Controls.TapGestureRecognizer();
+        tap.Tapped += (_, _) => _hiddenDatePicker?.Focus();
+        _dateChipBorder.GestureRecognizers.Add(tap);
 
         return new Controls.VerticalStackLayout
         {

@@ -1,4 +1,6 @@
 using MauiReactor;
+using MauiReactor.Shapes;
+using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Styles;
 using Fonts;
@@ -25,7 +27,8 @@ partial class ShotRecordCard : Component
                             .FontSize(18),
                         Label(_shot.DrinkType)
                             .FontSize(18)
-                            .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
+                            .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold),
+                        RenderBrewMethodBadge()
                     ),
 
                     RenderRating()
@@ -61,6 +64,30 @@ partial class ShotRecordCard : Component
             .FontSize(24)
             .TextColor(AppColors.Light.Primary)
             .HEnd();
+    }
+
+    /// <summary>
+    /// Shows the brew-method pill when it's not the default Espresso,
+    /// so at-a-glance the user can tell a pour-over/moka/etc. record
+    /// apart from espresso shots in the feed.
+    /// </summary>
+    VisualNode RenderBrewMethodBadge()
+    {
+        if (_shot == null || _shot.BrewMethod == BrewMethod.Espresso)
+            return new MauiReactor.ContentView();
+
+        return Border(
+            Label(_shot.BrewMethod.DisplayName())
+                .FontSize(10)
+                .TextColor(AppColors.Light.Primary)
+                .Padding(6, 2)
+        )
+        .StrokeThickness(1)
+        .Stroke(AppColors.Light.Primary)
+        .BackgroundColor(Colors.Transparent)
+        .StrokeShape(RoundRectangle().CornerRadius(8))
+        .VerticalOptions(LayoutOptions.Center)
+        .Margin(6, 0, 0, 0);
     }
 
     MauiReactor.Label RenderUserProfilesAndTimestamp()

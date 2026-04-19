@@ -359,6 +359,7 @@ public class ShotService : IShotService
             Rating = shot.Rating,
             TastingNotes = shot.TastingNotes,
             DrinkType = shot.DrinkType,
+            BrewMethod = shot.BrewMethod,
             Timestamp = shot.Timestamp
         };
 
@@ -402,6 +403,7 @@ public class ShotService : IShotService
                 Rating = s.Rating,
                 TastingNotes = s.TastingNotes,
                 DrinkType = s.DrinkType,
+                BrewMethod = s.BrewMethod,
                 Timestamp = s.Timestamp
             })
             .ToList();

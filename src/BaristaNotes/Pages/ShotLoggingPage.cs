@@ -30,6 +30,12 @@ class ShotLoggingState
     public decimal ExpectedTime { get; set; } = 28;
     public decimal ExpectedOutput { get; set; } = 36.0m;
     public string DrinkType { get; set; } = "Espresso";
+    /// <summary>
+    /// Brew method for this drink. Drives form defaults and equipment
+    /// filtering. Defaults to Espresso for back-compat.
+    /// </summary>
+    public BrewMethod BrewMethod { get; set; } = BrewMethod.Espresso;
+    public int SelectedBrewMethodIndex { get; set; } = 0;
     public decimal? ActualTime { get; set; }
     public decimal? ActualOutput { get; set; }
     public int Rating { get; set; } = 2;
@@ -855,6 +861,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     // Convert from 1-5 service scale to 0-4 UI index (Rating 1 -> Index 0, Rating 5 -> Index 4)
                     s.Rating = shot.Rating.HasValue ? Math.Max(0, shot.Rating.Value - 1) : 2;
                     s.DrinkType = shot.DrinkType;
+                    s.BrewMethod = shot.BrewMethod;
+                    s.SelectedBrewMethodIndex = BrewMethodExtensions.All.ToList().IndexOf(shot.BrewMethod);
+                    if (s.SelectedBrewMethodIndex < 0) s.SelectedBrewMethodIndex = 0;
                     s.SelectedBagId = shot.Bag?.Id;
                     s.SelectedBagIndex = shot.Bag != null ? s.AvailableBags.FindIndex(b => b.Id == shot.Bag.Id) : -1;
                     s.SelectedDrinkIndex = s.DrinkTypes.IndexOf(shot.DrinkType);
@@ -893,6 +902,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         s.ActualOutput = lastShot.ActualOutput;
                         s.Rating = lastShot.Rating ?? 2;
                         s.DrinkType = lastShot.DrinkType;
+                        s.BrewMethod = lastShot.BrewMethod;
+                        s.SelectedBrewMethodIndex = BrewMethodExtensions.All.ToList().IndexOf(lastShot.BrewMethod);
+                        if (s.SelectedBrewMethodIndex < 0) s.SelectedBrewMethodIndex = 0;
                         s.SelectedBagId = lastShot.Bag?.Id;
                         s.SelectedBagIndex = lastShot.Bag != null ? s.AvailableBags.FindIndex(b => b.Id == lastShot.Bag.Id) : -1;
                         s.SelectedDrinkIndex = s.DrinkTypes.IndexOf(lastShot.DrinkType);
@@ -1076,6 +1088,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     // Convert from 0-4 UI index to 1-5 service scale
                     Rating = State.Rating + 1,
                     DrinkType = State.DrinkType,
+                    BrewMethod = State.BrewMethod,
                     TastingNotes = State.TastingNotes
                 };
 
@@ -1116,6 +1129,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     ActualTime = State.ActualTime,
                     ActualOutput = State.ActualOutput,
                     DrinkType = State.DrinkType,
+                    BrewMethod = State.BrewMethod,
                     // Convert from 0-4 UI index to 1-5 service scale
                     Rating = State.Rating + 1,
                     TastingNotes = State.TastingNotes
@@ -1495,6 +1509,29 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         {
                             if (decimal.TryParse(text, out var val))
                                 SetState(s => s.ExpectedOutput = val);
+                        }),
+
+                    // Brew Method (Phase D2): top-level selector. Defaults to
+                    // Espresso so existing espresso flow is unchanged. Users can
+                    // pick Pour Over / Moka / Drip / Aeropress / French Press for
+                    // non-espresso drinks; this is stored on the record and lets
+                    // activity feed, AI advice, and future adaptive forms respond.
+                    new FormPickerField()
+                        .Label("Brew Method")
+                        .Title("Select brew method")
+                        .ItemsSource(BrewMethodExtensions.All.Select(m => m.DisplayName()).ToList())
+                        .SelectedIndex(State.SelectedBrewMethodIndex)
+                        .OnSelectedIndexChanged(idx =>
+                        {
+                            var all = BrewMethodExtensions.All.ToList();
+                            if (idx >= 0 && idx < all.Count)
+                            {
+                                SetState(s =>
+                                {
+                                    s.SelectedBrewMethodIndex = idx;
+                                    s.BrewMethod = all[idx];
+                                });
+                            }
                         }),
 
                     // Drink Type

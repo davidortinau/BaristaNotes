@@ -163,6 +163,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     // Cancellation token for AI recommendation requests
     private CancellationTokenSource? _recommendationCts;
 
+    // Cancellation token for recipe lookups (superseded when bag/method changes rapidly)
+    private CancellationTokenSource? _recipeLookupCts;
+
     // Cancellation token for voice commands
     private CancellationTokenSource? _voiceCts;
 
@@ -199,6 +202,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     {
         _recommendationCts?.Cancel();
         _recommendationCts?.Dispose();
+        _recipeLookupCts?.Cancel();
+        _recipeLookupCts?.Dispose();
         _voiceCts?.Cancel();
         _voiceCts?.Dispose();
         DeviceDisplay.Current.MainDisplayInfoChanged -= OnMainDisplayInfoChanged;
@@ -2300,10 +2305,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 s.DoseIn = newProfile.ClampDose(s.DoseIn);
                 s.ExpectedOutput = newProfile.ClampOutput(s.ExpectedOutput);
                 s.ExpectedTime = newProfile.ClampTime(s.ExpectedTime);
-                if (s.ActualOutput.HasValue)
-                    s.ActualOutput = newProfile.ClampOutput(s.ActualOutput.Value);
-                if (s.ActualTime.HasValue)
-                    s.ActualTime = newProfile.ClampTime(s.ActualTime.Value);
+                // Do NOT clamp ActualOutput / ActualTime: these are measured values
+                // that can legitimately fall outside a method's expected range
+                // (e.g. a 5s ristretto, or variance on a pour over yield).
             }
         });
 
@@ -2331,20 +2335,41 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         if (State.LastRecipeLookup == key && !State.IsLoadingRecipe)
             return;
 
+        // Cancel any in-flight lookup so a stale result can't clobber a newer one.
+        _recipeLookupCts?.Cancel();
+        _recipeLookupCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        _recipeLookupCts = cts;
+        var token = cts.Token;
+
         SetState(s => { s.IsLoadingRecipe = true; s.LastRecipeLookup = key; });
         try
         {
             var recipe = await _recipeService.GetRecipeForBeanAndMethodAsync(bag.BeanId, State.BrewMethod);
+            if (token.IsCancellationRequested) return;
             SetState(s =>
             {
+                // Guard against stale completions: only accept this result if the
+                // user's current selection still matches the key we queried for.
+                if (s.LastRecipeLookup != key) return;
                 s.CurrentRecipe = recipe;
                 s.IsLoadingRecipe = false;
             });
         }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer lookup — leave state to the newer call.
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to load recipe for BeanId={BeanId}, Method={Method}", bag.BeanId, State.BrewMethod);
-            SetState(s => { s.CurrentRecipe = null; s.IsLoadingRecipe = false; });
+            if (token.IsCancellationRequested) return;
+            SetState(s =>
+            {
+                if (s.LastRecipeLookup != key) return;
+                s.CurrentRecipe = null;
+                s.IsLoadingRecipe = false;
+            });
         }
     }
 

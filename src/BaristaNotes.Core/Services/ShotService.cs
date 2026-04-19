@@ -1,5 +1,6 @@
 using BaristaNotes.Core.Data.Repositories;
 using BaristaNotes.Core.Models;
+using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Core.Services.Exceptions;
 
@@ -641,11 +642,19 @@ public class ShotService : IShotService
     {
         var errors = new Dictionary<string, List<string>>();
 
-        if (dto.ActualTime.HasValue && (dto.ActualTime <= 0 || dto.ActualTime > 999))
-            errors.Add(nameof(dto.ActualTime), new List<string> { "Shot time must be between 0 and 999 seconds" });
+        // When BrewMethod is supplied on the update, use its profile as the upper bound;
+        // otherwise fall back to the most permissive profile (Drip: 1500g / 1200s) so we
+        // don't reject large-batch brews (pour over, drip, french press) whose actuals
+        // legitimately exceed the old espresso-centric 200g / 999s ceilings.
+        var profile = dto.BrewMethod.HasValue
+            ? dto.BrewMethod.Value.Profile()
+            : BrewMethod.Drip.Profile();
 
-        if (dto.ActualOutput.HasValue && (dto.ActualOutput <= 0 || dto.ActualOutput > 200))
-            errors.Add(nameof(dto.ActualOutput), new List<string> { "Output weight must be between 0 and 200 grams" });
+        if (dto.ActualTime.HasValue && (dto.ActualTime <= 0 || (decimal)dto.ActualTime.Value > (decimal)profile.TimeMax))
+            errors.Add(nameof(dto.ActualTime), new List<string> { $"Shot time must be between 0 and {profile.TimeMax} seconds" });
+
+        if (dto.ActualOutput.HasValue && (dto.ActualOutput <= 0 || (decimal)dto.ActualOutput.Value > (decimal)profile.OutputMax))
+            errors.Add(nameof(dto.ActualOutput), new List<string> { $"Output weight must be between 0 and {profile.OutputMax} grams" });
 
         if (dto.Rating.HasValue && (dto.Rating < 1 || dto.Rating > 5))
             errors.Add(nameof(dto.Rating), new List<string> { "Rating must be between 1 and 5 stars" });

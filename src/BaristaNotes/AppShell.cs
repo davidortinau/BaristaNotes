@@ -10,8 +10,8 @@ public class AppShell : Component
     {
         return Shell(
             TabBar(
-                // Shot Log remains as the second tab
-                ShellContent("New Shot")
+                // Drink log remains as the second tab
+                ShellContent("New Drink")
                     .Icon(AppIcons.CoffeeCup)
                     .Route("shots")
                     .RenderContent(() => new ShotLoggingPage()),

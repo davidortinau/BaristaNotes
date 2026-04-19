@@ -10,6 +10,7 @@ using UXDivers.Popups.Maui;
 using BaristaNotes.Core.Data;
 using BaristaNotes.Core.Data.Repositories;
 using BaristaNotes.Core.Services;
+using BaristaNotes.Core.Services.Recipes;
 using BaristaNotes.Infrastructure;
 using BaristaNotes.Services;
 using Fonts;
@@ -167,6 +168,28 @@ public static class MauiProgram
 		builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 		builder.Services.AddScoped<IRatingService, RatingService>();
 		builder.Services.AddScoped<IRecipeService, RecipeService>();
+
+		// Recipe sourcing (Phase B)
+		builder.Services.AddHttpClient(); // provides IHttpClientFactory + default HttpClient
+		builder.Services.AddSingleton<IRoasterRecipeAdapter>(sp =>
+			new OnyxCoffeeLabAdapter(
+				sp.GetRequiredService<IHttpClientFactory>().CreateClient("recipes"),
+				sp.GetRequiredService<ILogger<OnyxCoffeeLabAdapter>>()));
+		builder.Services.AddSingleton<IRoasterRecipeAdapter>(sp =>
+			new CounterCultureAdapter(
+				sp.GetRequiredService<IHttpClientFactory>().CreateClient("recipes"),
+				sp.GetRequiredService<ILogger<CounterCultureAdapter>>()));
+		builder.Services.AddSingleton<IRoasterRecipeAdapter>(sp =>
+			new BlueBottleAdapter(
+				sp.GetRequiredService<IHttpClientFactory>().CreateClient("recipes"),
+				sp.GetRequiredService<ILogger<BlueBottleAdapter>>()));
+		builder.Services.AddSingleton<IRoasterRecipeAdapter>(sp =>
+			new IntelligentsiaAdapter(
+				sp.GetRequiredService<IHttpClientFactory>().CreateClient("recipes"),
+				sp.GetRequiredService<ILogger<IntelligentsiaAdapter>>()));
+		builder.Services.AddSingleton<IRoasterRecipeAdapterRegistry, RoasterRecipeAdapterRegistry>();
+		builder.Services.AddSingleton<IAIRecipeGenerator, NullAIRecipeGenerator>();
+		builder.Services.AddScoped<IRecipeSourcingService, RecipeSourcingService>();
 		builder.Services.AddSingleton<IPreferencesService, PreferencesService>();
 		builder.Services.AddSingleton<IFeedbackService, FeedbackService>();
 		builder.Services.AddSingleton<IThemeService, ThemeService>();

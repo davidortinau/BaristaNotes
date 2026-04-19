@@ -2,6 +2,7 @@ using BaristaNotes.Core.Data.Repositories;
 using BaristaNotes.Core.Models;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Core.Services.Exceptions;
+using BaristaNotes.Core.Services.Recipes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -12,17 +13,28 @@ public class BeanService : IBeanService
 {
     private readonly IBeanRepository _beanRepository;
     private readonly IRatingService _ratingService;
+    private readonly IRecipeSourcingService? _recipeSourcing;
     private readonly ILogger<BeanService> _logger;
 
     public BeanService(IBeanRepository beanRepository, IRatingService ratingService)
-        : this(beanRepository, ratingService, NullLogger<BeanService>.Instance)
+        : this(beanRepository, ratingService, null, NullLogger<BeanService>.Instance)
     {
     }
 
     public BeanService(IBeanRepository beanRepository, IRatingService ratingService, ILogger<BeanService> logger)
+        : this(beanRepository, ratingService, null, logger)
+    {
+    }
+
+    public BeanService(
+        IBeanRepository beanRepository,
+        IRatingService ratingService,
+        IRecipeSourcingService? recipeSourcing,
+        ILogger<BeanService> logger)
     {
         _beanRepository = beanRepository;
         _ratingService = ratingService;
+        _recipeSourcing = recipeSourcing;
         _logger = logger;
     }
 
@@ -79,6 +91,7 @@ public class BeanService : IBeanService
             };
 
             var created = await _beanRepository.AddAsync(bean);
+            TriggerRecipeSourcing(created.Id);
             return OperationResult<BeanDto>.Ok(MapToDto(created), $"{dto.Name} saved successfully");
         }
         catch (DbUpdateException ex)
@@ -279,6 +292,37 @@ public class BeanService : IBeanService
             .OrderBy(o => o, StringComparer.OrdinalIgnoreCase)
             .ToList();
         return result;
+    }
+
+    public async Task<IReadOnlyList<DTOs.RecipeDto>> RefreshRecipesAsync(int beanId, CancellationToken ct = default)
+    {
+        if (_recipeSourcing == null)
+        {
+            _logger.LogDebug("RefreshRecipes: recipe sourcing not configured BeanId={BeanId}", beanId);
+            return Array.Empty<DTOs.RecipeDto>();
+        }
+        return await _recipeSourcing.SourceRecipesAsync(beanId, ct);
+    }
+
+    private void TriggerRecipeSourcing(int beanId)
+    {
+        if (_recipeSourcing == null) return;
+
+        // Fire-and-forget: recipe sourcing is a best-effort background task.
+        // Failures inside the service are already logged; any escape is caught
+        // here to prevent unobserved task exceptions.
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _recipeSourcing.SourceRecipesAsync(beanId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Background recipe sourcing escaped for BeanId={BeanId}", beanId);
+            }
+        });
     }
 
     private BeanDto MapToDto(Bean bean) => new()

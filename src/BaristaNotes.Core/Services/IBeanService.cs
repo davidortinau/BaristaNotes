@@ -40,4 +40,10 @@ public interface IBeanService
     /// ordered alphabetically (case-insensitive).
     /// </summary>
     Task<IReadOnlyList<string>> GetDistinctOriginsAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Manually re-runs recipe sourcing for a bean. Returns the updated set of
+    /// recipes. No-op if recipe sourcing is not configured (returns empty).
+    /// </summary>
+    Task<IReadOnlyList<DTOs.RecipeDto>> RefreshRecipesAsync(int beanId, CancellationToken ct = default);
 }

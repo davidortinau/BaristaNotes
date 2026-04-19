@@ -4,6 +4,7 @@ using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Core.Services.Exceptions;
 using BaristaNotes.Core.Services.Recipes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -13,7 +14,11 @@ public class BeanService : IBeanService
 {
     private readonly IBeanRepository _beanRepository;
     private readonly IRatingService _ratingService;
-    private readonly IRecipeSourcingService? _recipeSourcing;
+    // Scoped services (repos, DbContext) must be resolved inside a fresh scope
+    // for the fire-and-forget recipe sourcing path — capturing the caller's
+    // scope would risk ObjectDisposedException / cross-thread DbContext access
+    // once the original request scope ends.
+    private readonly IServiceScopeFactory? _scopeFactory;
     private readonly ILogger<BeanService> _logger;
 
     public BeanService(IBeanRepository beanRepository, IRatingService ratingService)
@@ -29,12 +34,12 @@ public class BeanService : IBeanService
     public BeanService(
         IBeanRepository beanRepository,
         IRatingService ratingService,
-        IRecipeSourcingService? recipeSourcing,
+        IServiceScopeFactory? scopeFactory,
         ILogger<BeanService> logger)
     {
         _beanRepository = beanRepository;
         _ratingService = ratingService;
-        _recipeSourcing = recipeSourcing;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -296,30 +301,48 @@ public class BeanService : IBeanService
 
     public async Task<IReadOnlyList<DTOs.RecipeDto>> RefreshRecipesAsync(int beanId, CancellationToken ct = default)
     {
-        if (_recipeSourcing == null)
+        if (_scopeFactory == null)
         {
-            _logger.LogDebug("RefreshRecipes: recipe sourcing not configured BeanId={BeanId}", beanId);
+            _logger.LogDebug("RefreshRecipes: scope factory not configured BeanId={BeanId}", beanId);
             return Array.Empty<DTOs.RecipeDto>();
         }
-        return await _recipeSourcing.SourceRecipesAsync(beanId, ct);
+
+        // Resolve the scoped sourcing service inside a fresh scope so we don't
+        // tangle with whatever scope the caller is on (which may own its own
+        // DbContext).
+        using var scope = _scopeFactory.CreateScope();
+        var sourcing = scope.ServiceProvider.GetService<IRecipeSourcingService>();
+        if (sourcing == null)
+        {
+            _logger.LogDebug("RefreshRecipes: recipe sourcing not registered BeanId={BeanId}", beanId);
+            return Array.Empty<DTOs.RecipeDto>();
+        }
+        return await sourcing.SourceRecipesAsync(beanId, ct);
     }
 
     private void TriggerRecipeSourcing(int beanId)
     {
-        if (_recipeSourcing == null) return;
+        if (_scopeFactory == null) return;
+
+        var scopeFactory = _scopeFactory;
+        var logger = _logger;
 
         // Fire-and-forget: recipe sourcing is a best-effort background task.
-        // Failures inside the service are already logged; any escape is caught
-        // here to prevent unobserved task exceptions.
+        // We MUST create a fresh DI scope inside the Task so the scoped
+        // IRecipeSourcingService / repositories / DbContext have a lifetime
+        // tied to this Task — not the (likely disposed) caller scope.
         _ = Task.Run(async () =>
         {
             try
             {
-                await _recipeSourcing.SourceRecipesAsync(beanId);
+                using var scope = scopeFactory.CreateScope();
+                var sourcing = scope.ServiceProvider.GetService<IRecipeSourcingService>();
+                if (sourcing == null) return;
+                await sourcing.SourceRecipesAsync(beanId);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex,
+                logger.LogWarning(ex,
                     "Background recipe sourcing escaped for BeanId={BeanId}", beanId);
             }
         });

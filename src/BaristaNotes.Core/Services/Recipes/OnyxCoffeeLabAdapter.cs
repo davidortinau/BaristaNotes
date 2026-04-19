@@ -114,29 +114,40 @@ public sealed class OnyxCoffeeLabAdapter : HttpRoasterRecipeAdapterBase
         (BrewMethod.Moka,        @"moka"),
     };
 
+    // All scraping regexes get a safety timeout + bounded quantifiers to
+    // avoid catastrophic backtracking on hostile/malformed HTML from a
+    // compromised or unexpectedly laid out roaster site.
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
+
     private static readonly Regex DoseYieldTime = new(
-        @"(?<dose>\d{1,3}(?:\.\d+)?)\s*(?:g|grams?)\s*[:\-→to/]+\s*(?<yield>\d{1,4}(?:\.\d+)?)\s*(?:g|grams?|ml)\s*(?:[^0-9]*?(?<time>\d{1,3}(?:\.\d+)?)\s*(?:s|sec|seconds?))?",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        @"(?<dose>\d{1,3}(?:\.\d+)?)\s*(?:g|grams?)\s*[:\-→to/]+\s*(?<yield>\d{1,4}(?:\.\d+)?)\s*(?:g|grams?|ml)\s*(?:[^0-9]{0,40}(?<time>\d{1,3}(?:\.\d+)?)\s*(?:s|sec|seconds?))?",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        RegexTimeout);
 
     private static readonly Regex DoseWaterNoYield = new(
         @"(?<dose>\d{1,3}(?:\.\d+)?)\s*(?:g|grams?)\s*[^0-9]{1,10}(?<water>\d{2,4})\s*(?:g|grams?|ml)",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        RegexTimeout);
 
     private static readonly Regex TempC = new(
         @"(?<temp>\d{2,3}(?:\.\d+)?)\s*°?\s*C\b",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        RegexTimeout);
 
     private static readonly Regex TempF = new(
         @"(?<temp>\d{2,3}(?:\.\d+)?)\s*°?\s*F\b",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        RegexTimeout);
 
     private static readonly Regex TimeSeconds = new(
         @"(?<mm>\d{1,2})\s*[:]\s*(?<ss>\d{2})|(?<sec>\d{1,3})\s*(?:s|sec|seconds?)\b",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        RegexTimeout);
 
     private static readonly Regex GrindHint = new(
         @"grind[^<:]{0,20}[:\-]\s*(?<hint>[^<\r\n.]{3,40})",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        RegexTimeout);
 
     private static ScrapedRecipe? ParseSection(string block, BrewMethod method, string sourceUrl)
     {
@@ -148,7 +159,11 @@ public sealed class OnyxCoffeeLabAdapter : HttpRoasterRecipeAdapterBase
         decimal? tempC = null;
         string? grind = null;
 
-        var dyt = DoseYieldTime.Match(text);
+        // Regex timeouts throw RegexMatchTimeoutException; treat those as
+        // "couldn't parse" and return no recipe rather than letting a
+        // pathological roaster-site HTML payload take down the sourcing task.
+        try
+        {        var dyt = DoseYieldTime.Match(text);
         if (dyt.Success)
         {
             dose = ParseDecimal(dyt.Groups["dose"].Value);
@@ -204,6 +219,14 @@ public sealed class OnyxCoffeeLabAdapter : HttpRoasterRecipeAdapterBase
         if (grindMatch.Success)
             grind = grindMatch.Groups["hint"].Value.Trim();
 
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            // Hostile/pathological HTML — bail out and let the sourcing
+            // pipeline fall through to the AI fallback or empty result.
+            return null;
+        }
+
         // If we couldn't find any useful data, skip this section.
         if (!dose.HasValue && !yield.HasValue && !time.HasValue && grind == null)
             return null;
@@ -231,13 +254,14 @@ public sealed class OnyxCoffeeLabAdapter : HttpRoasterRecipeAdapterBase
     {
         var headingRegex = new Regex(
             $@"<h([1-4])[^>]*>\s*(?:<[^>]+>\s*)*([^<]*?(?:{headingPattern})[^<]*?)(?:\s*<[^>]+>)*\s*</h\1\s*>",
-            RegexOptions.IgnoreCase);
+            RegexOptions.IgnoreCase,
+            RegexTimeout);
         var match = headingRegex.Match(html);
         if (!match.Success) return null;
 
         var startIdx = match.Index + match.Length;
         var level = match.Groups[1].Value;
-        var endRegex = new Regex($@"<h[1-{level}][^>]*>", RegexOptions.IgnoreCase);
+        var endRegex = new Regex($@"<h[1-{level}][^>]*>", RegexOptions.IgnoreCase, RegexTimeout);
         var endMatch = endRegex.Match(html, startIdx);
         var endIdx = endMatch.Success ? endMatch.Index : html.Length;
 

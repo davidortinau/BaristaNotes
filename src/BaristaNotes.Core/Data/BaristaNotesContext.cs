@@ -111,6 +111,11 @@ public class BaristaNotesContext : DbContext
             entity.Property(e => e.ExpectedTime).IsRequired().HasPrecision(5, 2);
             entity.Property(e => e.ExpectedOutput).IsRequired().HasPrecision(5, 2);
             entity.Property(e => e.DrinkType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.BrewMethod)
+                .IsRequired()
+                .HasConversion<int>()
+                .HasDefaultValue(BaristaNotes.Core.Models.Enums.BrewMethod.Espresso);
+            entity.Property(e => e.ParametersJson);
             entity.Property(e => e.ActualTime).HasPrecision(5, 2);
             entity.Property(e => e.ActualOutput).HasPrecision(5, 2);
             entity.Property(e => e.PreinfusionTime).HasPrecision(5, 2);

@@ -13,6 +13,9 @@ public record ShotRecordDto
     public UserProfileDto? MadeBy { get; init; }
     public UserProfileDto? MadeFor { get; init; }
 
+    public Models.Enums.BrewMethod BrewMethod { get; init; } = Models.Enums.BrewMethod.Espresso;
+    public string? ParametersJson { get; init; }
+
     public decimal DoseIn { get; init; }
     public string GrindSetting { get; init; } = string.Empty;
     public decimal ExpectedTime { get; init; }
@@ -37,6 +40,9 @@ public record CreateShotDto
     public List<int> AccessoryIds { get; init; } = new();
     public int? MadeById { get; init; }
     public int? MadeForId { get; init; }
+
+    public Models.Enums.BrewMethod BrewMethod { get; init; } = Models.Enums.BrewMethod.Espresso;
+    public string? ParametersJson { get; init; }
 
     public decimal DoseIn { get; init; }
     public string GrindSetting { get; init; } = string.Empty;
@@ -157,6 +163,18 @@ public record UpdateShotDto
     /// Optional tasting notes (free text description of flavor, aroma, etc.)
     /// </summary>
     public string? TastingNotes { get; init; }
+
+    /// <summary>
+    /// Brew method (Espresso, Pour Over, Moka, Drip, Aeropress, French Press).
+    /// Null means no change to existing value.
+    /// </summary>
+    public Models.Enums.BrewMethod? BrewMethod { get; init; }
+
+    /// <summary>
+    /// Brew-method-specific parameters as JSON. Null means no change.
+    /// Pass empty string to clear.
+    /// </summary>
+    public string? ParametersJson { get; init; }
 }
 
 public record EquipmentDto

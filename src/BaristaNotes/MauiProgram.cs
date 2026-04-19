@@ -154,6 +154,7 @@ public static class MauiProgram
 		builder.Services.AddScoped<IBagRepository, BagRepository>();  // T040: Phase 4
 		builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 		builder.Services.AddScoped<IShotRecordRepository, ShotRecordRepository>();
+		builder.Services.AddScoped<IRecipeRepository, RecipeRepository>();
 
 		// Register MAUI preferences store
 		builder.Services.AddSingleton<IPreferencesStore, MauiPreferencesStore>();
@@ -165,6 +166,7 @@ public static class MauiProgram
 		builder.Services.AddScoped<IBagService, BagService>();  // T040: Phase 4
 		builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 		builder.Services.AddScoped<IRatingService, RatingService>();
+		builder.Services.AddScoped<IRecipeService, RecipeService>();
 		builder.Services.AddSingleton<IPreferencesService, PreferencesService>();
 		builder.Services.AddSingleton<IFeedbackService, FeedbackService>();
 		builder.Services.AddSingleton<IThemeService, ThemeService>();

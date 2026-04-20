@@ -120,6 +120,11 @@
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.1" />
 	</ItemGroup>
 
+	<!-- MAUI DevFlow (DEBUG only): in-process agent for UI inspection, logs, network, preferences. -->
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<PackageReference Include="Microsoft.Maui.DevFlow.Agent" Version="0.24.0-dev" />
+	</ItemGroup>
+
 	<ItemGroup>
 	  <ProjectReference Include="..\BaristaNotes.Core\BaristaNotes.Core.csproj" />
 	</ItemGroup>

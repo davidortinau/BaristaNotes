@@ -10,6 +10,7 @@ using UXDivers.Popups.Maui;
 using BaristaNotes.Core.Data;
 using BaristaNotes.Core.Data.Repositories;
 using BaristaNotes.Core.Services;
+using BaristaNotes.Core.Services.Recipes;
 using BaristaNotes.Infrastructure;
 using BaristaNotes.Services;
 using Fonts;
@@ -154,6 +155,7 @@ public static class MauiProgram
 		builder.Services.AddScoped<IBagRepository, BagRepository>();  // T040: Phase 4
 		builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 		builder.Services.AddScoped<IShotRecordRepository, ShotRecordRepository>();
+		builder.Services.AddScoped<IRecipeRepository, RecipeRepository>();
 
 		// Register MAUI preferences store
 		builder.Services.AddSingleton<IPreferencesStore, MauiPreferencesStore>();
@@ -165,10 +167,36 @@ public static class MauiProgram
 		builder.Services.AddScoped<IBagService, BagService>();  // T040: Phase 4
 		builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 		builder.Services.AddScoped<IRatingService, RatingService>();
+		builder.Services.AddScoped<IRecipeService, RecipeService>();
+
+		// Recipe sourcing (Phase B)
+		builder.Services.AddHttpClient(); // provides IHttpClientFactory + default HttpClient
+		builder.Services.AddSingleton<IRoasterRecipeAdapter>(sp =>
+			new OnyxCoffeeLabAdapter(
+				sp.GetRequiredService<IHttpClientFactory>().CreateClient("recipes"),
+				sp.GetRequiredService<ILogger<OnyxCoffeeLabAdapter>>()));
+		builder.Services.AddSingleton<IRoasterRecipeAdapter>(sp =>
+			new CounterCultureAdapter(
+				sp.GetRequiredService<IHttpClientFactory>().CreateClient("recipes"),
+				sp.GetRequiredService<ILogger<CounterCultureAdapter>>()));
+		builder.Services.AddSingleton<IRoasterRecipeAdapter>(sp =>
+			new BlueBottleAdapter(
+				sp.GetRequiredService<IHttpClientFactory>().CreateClient("recipes"),
+				sp.GetRequiredService<ILogger<BlueBottleAdapter>>()));
+		builder.Services.AddSingleton<IRoasterRecipeAdapter>(sp =>
+			new IntelligentsiaAdapter(
+				sp.GetRequiredService<IHttpClientFactory>().CreateClient("recipes"),
+				sp.GetRequiredService<ILogger<IntelligentsiaAdapter>>()));
+		builder.Services.AddSingleton<IRoasterRecipeAdapterRegistry, RoasterRecipeAdapterRegistry>();
+		builder.Services.AddSingleton<IAIRecipeGenerator, NullAIRecipeGenerator>();
+		builder.Services.AddScoped<IRecipeSourcingService, RecipeSourcingService>();
 		builder.Services.AddSingleton<IPreferencesService, PreferencesService>();
 		builder.Services.AddSingleton<IFeedbackService, FeedbackService>();
 		builder.Services.AddSingleton<IThemeService, ThemeService>();
 		builder.Services.AddSingleton<IAIAdviceService, AIAdviceService>();
+
+		// Popups
+		builder.Services.AddTransient<Integrations.Popups.AddCoffeePopup>();
 
 		// Image services
 		builder.Services.AddSingleton<Microsoft.Maui.Media.IMediaPicker>(Microsoft.Maui.Media.MediaPicker.Default);
@@ -191,6 +219,7 @@ public static class MauiProgram
 
 #if DEBUG
 		builder.Logging.AddDebug();
+		Microsoft.Maui.DevFlow.Agent.AgentServiceExtensions.AddMauiDevFlowAgent(builder);
 #endif
 
 		LogTiming("Services registered, calling Build()");

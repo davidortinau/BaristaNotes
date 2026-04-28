@@ -1,3 +1,4 @@
+using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
@@ -44,6 +45,12 @@ class BeanDetailPageState
     public bool HasMoreShots { get; set; }
     public int ShotPageIndex { get; set; }
     public string? ShotLoadError { get; set; }
+
+    // Recipes
+    public List<RecipeDto> Recipes { get; set; } = new();
+    public bool IsLoadingRecipes { get; set; }
+    public bool IsRefreshingRecipes { get; set; }
+    public string? RecipesLoadError { get; set; }
 }
 
 partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProps>
@@ -51,6 +58,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
     [Inject] IBeanService _beanService;
     [Inject] IBagService _bagService;
     [Inject] IShotService _shotService;
+    [Inject] IRecipeService _recipeService;
     [Inject] IFeedbackService _feedbackService;
 
     const int PageSize = 20;
@@ -98,9 +106,10 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 s.IsLoading = false;
             });
 
-            // Load bags and shot history after bean loads
+            // Load bags, shot history, and recipes after bean loads
             _ = LoadBagsAsync();
             _ = LoadShotsAsync();
+            _ = LoadRecipesAsync();
         }
         catch (Exception ex)
         {
@@ -201,6 +210,75 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 s.IsLoadingShots = false;
                 s.ShotLoadError = $"Failed to load more shots: {ex.Message}";
             });
+        }
+    }
+
+    async Task LoadRecipesAsync()
+    {
+        if (!State.BeanId.HasValue || State.IsLoadingRecipes) return;
+
+        SetState(s =>
+        {
+            s.IsLoadingRecipes = true;
+            s.RecipesLoadError = null;
+        });
+
+        try
+        {
+            var recipes = await _recipeService.GetRecipesForBeanAsync(State.BeanId.Value);
+
+            SetState(s =>
+            {
+                s.Recipes = recipes.ToList();
+                s.IsLoadingRecipes = false;
+            });
+        }
+        catch (Exception ex)
+        {
+            SetState(s =>
+            {
+                s.IsLoadingRecipes = false;
+                s.RecipesLoadError = $"Failed to load recipes: {ex.Message}";
+            });
+        }
+    }
+
+    async Task RefreshRecipesAsync()
+    {
+        if (!State.BeanId.HasValue || State.IsRefreshingRecipes) return;
+
+        SetState(s =>
+        {
+            s.IsRefreshingRecipes = true;
+            s.RecipesLoadError = null;
+        });
+
+        try
+        {
+            var recipes = await _beanService.RefreshRecipesAsync(State.BeanId.Value);
+            SetState(s =>
+            {
+                s.Recipes = recipes.ToList();
+                s.IsRefreshingRecipes = false;
+            });
+
+            if (recipes.Count == 0)
+            {
+                await _feedbackService.ShowInfoAsync("No recipes found for this bean yet.");
+            }
+            else
+            {
+                await _feedbackService.ShowSuccessAsync($"Refreshed {recipes.Count} recipe(s).");
+            }
+        }
+        catch (Exception ex)
+        {
+            SetState(s =>
+            {
+                s.IsRefreshingRecipes = false;
+                s.RecipesLoadError = $"Failed to refresh recipes: {ex.Message}";
+            });
+            await _feedbackService.ShowErrorAsync("Recipe refresh failed.");
         }
     }
 
@@ -363,6 +441,9 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                     // Rating section (edit mode only)
                     isEditMode ? RenderRatings() : null,
 
+                    // Recipes section (edit mode only)
+                    isEditMode ? RenderRecipes() : null,
+
                     // Bags section (edit mode only)
                     isEditMode ? RenderBags() : null,
 
@@ -380,10 +461,11 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
 
     void OnPageAppearing()
     {
-        // Refresh bags when returning from BagFormPage
+        // Refresh bags and recipes when returning from child pages
         if (State.BeanId.HasValue && State.BeanId.Value > 0)
         {
             _ = LoadBagsAsync();
+            _ = LoadRecipesAsync();
         }
     }
 
@@ -608,5 +690,162 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
         .StrokeThickness(0)
         .OnTapped(() => NavigateToShot(shot.Id))
         .Margin(0, 4);
+    }
+
+    VisualNode RenderRecipes()
+    {
+        return VStack(spacing: 12,
+            BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
+
+            HStack(spacing: 8,
+                Label("Recipes")
+                    .ThemeKey(ThemeKeys.SubHeadline)
+                    .HStart()
+                    .VCenter(),
+
+                State.IsRefreshingRecipes
+                    ? (VisualNode)ActivityIndicator().IsRunning(true).HeightRequest(20).WidthRequest(20).VCenter()
+                    : Button()
+                        .Text(State.Recipes.Count == 0 ? "Find Recipes" : "Refresh")
+                        .OnClicked(async () => await RefreshRecipesAsync())
+                        .IsEnabled(!State.IsRefreshingRecipes)
+                        .HEnd()
+            ),
+
+            // Error state
+            State.RecipesLoadError != null
+                ? (VisualNode)Label(State.RecipesLoadError).TextColor(Colors.Red)
+                : null,
+
+            // Loading state
+            State.IsLoadingRecipes && State.Recipes.Count == 0
+                ? (VisualNode)ActivityIndicator().IsRunning(true).HCenter()
+                : null,
+
+            // Empty state
+            !State.IsLoadingRecipes && !State.IsRefreshingRecipes && State.Recipes.Count == 0 && State.RecipesLoadError == null
+                ? (VisualNode)VStack(spacing: 8,
+                    Label("No recipes yet for this bean.")
+                        .ThemeKey(ThemeKeys.SecondaryText)
+                        .HCenter(),
+                    Label("Tap \"Find Recipes\" to look up official brew guides.")
+                        .ThemeKey(ThemeKeys.SecondaryText)
+                        .FontSize(12)
+                        .HCenter()
+                )
+                .Padding(0, 12)
+                : null,
+
+            // Recipe list
+            State.Recipes.Count > 0
+                ? (VisualNode)VStack(spacing: 8,
+                    [.. State.Recipes.Select(RenderRecipeItem)]
+                )
+                : null
+        );
+    }
+
+    VisualNode RenderRecipeItem(RecipeDto recipe)
+    {
+        string sourceLabel = recipe.Source switch
+        {
+            RecipeSource.RoasterSite => "Roaster",
+            RecipeSource.AIGenerated => "AI suggested",
+            RecipeSource.Manual => "Custom",
+            _ => recipe.Source.ToString()
+        };
+
+        var paramsRow = BuildParamsRow(recipe);
+
+        return Border(
+            VStack(spacing: 6,
+                HStack(spacing: 8,
+                    Label(recipe.BrewMethod.DisplayName())
+                        .ThemeKey(ThemeKeys.CardTitle)
+                        .HStart()
+                        .VCenter(),
+
+                    Label(sourceLabel)
+                        .ThemeKey(ThemeKeys.SecondaryText)
+                        .FontSize(11)
+                        .Padding(6, 2),
+
+                    recipe.IsEditedByUser
+                        ? (VisualNode)Label("edited")
+                            .ThemeKey(ThemeKeys.SecondaryText)
+                            .FontSize(11)
+                            .Padding(6, 2)
+                        : null
+                ),
+
+                !string.IsNullOrWhiteSpace(recipe.Title)
+                    ? (VisualNode)Label(recipe.Title!)
+                        .ThemeKey(ThemeKeys.SecondaryText)
+                        .FontSize(12)
+                    : null,
+
+                paramsRow,
+
+                !string.IsNullOrWhiteSpace(recipe.GrindHint)
+                    ? (VisualNode)Label($"Grind: {recipe.GrindHint}")
+                        .ThemeKey(ThemeKeys.SecondaryText)
+                        .FontSize(12)
+                    : null,
+
+                !string.IsNullOrWhiteSpace(recipe.Notes)
+                    ? (VisualNode)Label(recipe.Notes!)
+                        .ThemeKey(ThemeKeys.SecondaryText)
+                        .FontSize(12)
+                        .LineBreakMode(Microsoft.Maui.LineBreakMode.WordWrap)
+                    : null,
+
+                !string.IsNullOrWhiteSpace(recipe.SourceUrl)
+                    ? (VisualNode)Label("View source")
+                        .TextColor(Colors.Blue)
+                        .FontSize(12)
+                        .OnTapped(async () =>
+                        {
+                            try
+                            {
+                                await Microsoft.Maui.ApplicationModel.Browser.OpenAsync(
+                                    recipe.SourceUrl!,
+                                    Microsoft.Maui.ApplicationModel.BrowserLaunchMode.SystemPreferred);
+                            }
+                            catch { /* best effort */ }
+                        })
+                    : null
+            )
+            .Padding(12)
+        )
+        .ThemeKey(ThemeKeys.CardBorder);
+    }
+
+    static VisualNode BuildParamsRow(RecipeDto recipe)
+    {
+        var parts = new List<string>();
+        if (recipe.DoseIn.HasValue) parts.Add($"{recipe.DoseIn:0.#}g in");
+        if (recipe.OutputAmount.HasValue) parts.Add($"{recipe.OutputAmount:0.#}g out");
+        if (recipe.TotalTimeSeconds.HasValue)
+        {
+            var t = recipe.TotalTimeSeconds.Value;
+            if (t >= 60)
+            {
+                var mm = (int)(t / 60);
+                var ss = (int)(t % 60);
+                parts.Add($"{mm}:{ss:D2}");
+            }
+            else
+            {
+                parts.Add($"{t:0}s");
+            }
+        }
+        if (recipe.BrewTempC.HasValue) parts.Add($"{recipe.BrewTempC:0.#}°C");
+
+        if (parts.Count == 0)
+            return Label("No parameters captured.").ThemeKey(ThemeKeys.SecondaryText).FontSize(12);
+
+        return Label(string.Join(" · ", parts))
+            .ThemeKey(ThemeKeys.PrimaryText)
+            .FontSize(13);
     }
 }

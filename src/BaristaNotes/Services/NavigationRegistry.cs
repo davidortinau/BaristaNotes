@@ -20,10 +20,10 @@ public class NavigationRegistry : INavigationRegistry
     {
         // === Shell Tab Bar Routes (visual hierarchy) ===
         ["shots"] = new PageDescription(
-            "New Shot",
-            "Log a new espresso shot. Use this page to record shot parameters like dose, yield, time, grind setting, and rating. This is where users create new shot records.",
-            ["new shot", "log shot", "shot logging", "new", "log", "record shot", "pull shot", "make coffee", "espresso"],
-            ["log", "new", "record", "create", "pull", "make", "dose", "yield", "grind", "espresso"],
+            "New Drink",
+            "Log a new drink — espresso, pour over, moka, drip, aeropress, or french press. Start by choosing the brew method, then pick the bean/bag, review the recipe preview, and record dose, yield, time, grind setting, and rating.",
+            ["new shot", "new drink", "log shot", "log drink", "shot logging", "drink logging", "new", "log", "record shot", "record drink", "pull shot", "make coffee", "espresso", "pour over", "moka", "drip", "aeropress", "french press"],
+            ["log", "new", "record", "create", "pull", "make", "dose", "yield", "grind", "espresso", "pour", "over", "drip", "moka", "aeropress", "french"],
             IsShellRoute: true
         ),
         ["history"] = new PageDescription(

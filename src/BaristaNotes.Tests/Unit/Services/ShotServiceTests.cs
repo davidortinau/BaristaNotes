@@ -323,15 +323,16 @@ public class ShotServiceTests
     }
     
     [Theory]
-    [InlineData(0, "Shot time must be between 0 and 999 seconds")]
-    [InlineData(1000, "Shot time must be between 0 and 999 seconds")]
+    [InlineData(0, "Shot time must be between 0 and 60 seconds")]
+    [InlineData(1000, "Shot time must be between 0 and 60 seconds")]
     public async Task UpdateShotAsync_InvalidActualTime_ThrowsValidationException(decimal actualTime, string expectedError)
     {
         // Arrange
         var dto = new UpdateShotDto
         {
             ActualTime = actualTime,
-            DrinkType = "Espresso"
+            DrinkType = "Espresso",
+            BrewMethod = BaristaNotes.Core.Models.Enums.BrewMethod.Espresso
         };
         
         // Act & Assert
@@ -340,15 +341,16 @@ public class ShotServiceTests
     }
     
     [Theory]
-    [InlineData(0, "Output weight must be between 0 and 200 grams")]
-    [InlineData(201, "Output weight must be between 0 and 200 grams")]
+    [InlineData(0, "Output weight must be between 0 and 100 grams")]
+    [InlineData(201, "Output weight must be between 0 and 100 grams")]
     public async Task UpdateShotAsync_InvalidActualOutput_ThrowsValidationException(decimal actualOutput, string expectedError)
     {
         // Arrange
         var dto = new UpdateShotDto
         {
             ActualOutput = actualOutput,
-            DrinkType = "Espresso"
+            DrinkType = "Espresso",
+            BrewMethod = BaristaNotes.Core.Models.Enums.BrewMethod.Espresso
         };
         
         // Act & Assert

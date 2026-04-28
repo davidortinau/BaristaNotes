@@ -15,7 +15,7 @@ namespace BaristaNotes.Core.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.1");
 
             modelBuilder.Entity("BaristaNotes.Core.Models.Bag", b =>
                 {
@@ -176,6 +176,88 @@ namespace BaristaNotes.Core.Migrations
                     b.ToTable("Equipment");
                 });
 
+            modelBuilder.Entity("BaristaNotes.Core.Models.Recipe", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BeanId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BrewMethod")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("BrewTempC")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("DoseIn")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("FetchedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GrindHint")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsEditedByUser")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime>("LastModifiedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("OutputAmount")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ParametersJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("SyncId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("TotalTimeSeconds")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BeanId");
+
+                    b.HasIndex("SyncId")
+                        .IsUnique();
+
+                    b.HasIndex("BeanId", "BrewMethod");
+
+                    b.ToTable("Recipes");
+                });
+
             modelBuilder.Entity("BaristaNotes.Core.Models.ShotEquipment", b =>
                 {
                     b.Property<int>("ShotRecordId")
@@ -207,6 +289,11 @@ namespace BaristaNotes.Core.Migrations
 
                     b.Property<int>("BagId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<int>("BrewMethod")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(1);
 
                     b.Property<decimal>("DoseIn")
                         .HasPrecision(5, 2)
@@ -249,6 +336,9 @@ namespace BaristaNotes.Core.Migrations
 
                     b.Property<int?>("MadeForId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("ParametersJson")
+                        .HasColumnType("TEXT");
 
                     b.Property<decimal?>("PreinfusionTime")
                         .HasPrecision(5, 2)
@@ -339,6 +429,17 @@ namespace BaristaNotes.Core.Migrations
                     b.Navigation("Bean");
                 });
 
+            modelBuilder.Entity("BaristaNotes.Core.Models.Recipe", b =>
+                {
+                    b.HasOne("BaristaNotes.Core.Models.Bean", "Bean")
+                        .WithMany("Recipes")
+                        .HasForeignKey("BeanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Bean");
+                });
+
             modelBuilder.Entity("BaristaNotes.Core.Models.ShotEquipment", b =>
                 {
                     b.HasOne("BaristaNotes.Core.Models.Equipment", "Equipment")
@@ -405,6 +506,8 @@ namespace BaristaNotes.Core.Migrations
             modelBuilder.Entity("BaristaNotes.Core.Models.Bean", b =>
                 {
                     b.Navigation("Bags");
+
+                    b.Navigation("Recipes");
                 });
 
             modelBuilder.Entity("BaristaNotes.Core.Models.Equipment", b =>

@@ -41,6 +41,13 @@ public record ShotContextDto
     public string? DrinkType { get; init; }
 
     /// <summary>
+    /// Brew method (Espresso, PourOver, Moka, Drip, Aeropress, FrenchPress).
+    /// AI uses this to ground advice: e.g. don't suggest finer grind on a
+    /// french press, or shorter time on a pour over.
+    /// </summary>
+    public BaristaNotes.Core.Models.Enums.BrewMethod BrewMethod { get; init; } = BaristaNotes.Core.Models.Enums.BrewMethod.Espresso;
+
+    /// <summary>
     /// When shot was logged.
     /// </summary>
     public DateTime Timestamp { get; init; }

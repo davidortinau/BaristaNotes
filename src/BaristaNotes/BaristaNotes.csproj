@@ -71,11 +71,11 @@
 		<!-- Platform-specific configuration files for Shiny -->
 		<!-- Android: Assets folder -->
 		<AndroidAsset Include="Platforms\Android\Assets\appsettings.json" />
-		<AndroidAsset Include="Platforms\Android\Assets\appsettings.Development.json" Condition="Exists('Platforms\Android\Assets\appsettings.Development.json')" />
+		<AndroidAsset Include="Platforms\Android\Assets\appsettings.Development.json" Condition="Exists('Platforms\Android\Assets\appsettings.Development.json') and '$(Configuration)' == 'Debug'" />
 		
 		<!-- iOS: PROJECT ROOT with BundleResource (per Shiny docs) -->
 		<BundleResource Include="appsettings.json" Condition="$(TargetFramework.Contains('ios')) or $(TargetFramework.Contains('maccatalyst'))" />
-		<BundleResource Include="appsettings.Development.json" Condition="($(TargetFramework.Contains('ios')) or $(TargetFramework.Contains('maccatalyst'))) and Exists('appsettings.Development.json')" />
+		<BundleResource Include="appsettings.Development.json" Condition="($(TargetFramework.Contains('ios')) or $(TargetFramework.Contains('maccatalyst'))) and Exists('appsettings.Development.json') and '$(Configuration)' == 'Debug'" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -118,6 +118,11 @@
 		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.1.1-preview.1.25612.2" />
 		<PackageReference Include="Azure.AI.OpenAI" Version="2.1.0" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.1" />
+	</ItemGroup>
+
+	<!-- MAUI DevFlow (DEBUG only): in-process agent for UI inspection, logs, network, preferences. -->
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<PackageReference Include="Microsoft.Maui.DevFlow.Agent" Version="0.24.0-dev" />
 	</ItemGroup>
 
 	<ItemGroup>

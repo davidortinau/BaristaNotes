@@ -1,5 +1,6 @@
 using BaristaNotes.Core.Data.Repositories;
 using BaristaNotes.Core.Models;
+using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Core.Services.Exceptions;
 
@@ -71,6 +72,8 @@ public class ShotService : IShotService
             GrinderId = dto.GrinderId,
             MadeById = dto.MadeById,
             MadeForId = dto.MadeForId,
+            BrewMethod = dto.BrewMethod,
+            ParametersJson = dto.ParametersJson,
             DoseIn = dto.DoseIn,
             GrindSetting = dto.GrindSetting,
             ExpectedTime = dto.ExpectedTime,
@@ -182,6 +185,10 @@ public class ShotService : IShotService
         shot.Rating = dto.Rating; // Can be null
         shot.DrinkType = dto.DrinkType;
         shot.TastingNotes = dto.TastingNotes; // Can be null
+        if (dto.BrewMethod.HasValue)
+            shot.BrewMethod = dto.BrewMethod.Value;
+        if (dto.ParametersJson != null)
+            shot.ParametersJson = string.IsNullOrEmpty(dto.ParametersJson) ? null : dto.ParametersJson;
         shot.LastModifiedAt = DateTime.Now;
 
         var updated = await _shotRepository.UpdateAsync(shot);
@@ -353,6 +360,7 @@ public class ShotService : IShotService
             Rating = shot.Rating,
             TastingNotes = shot.TastingNotes,
             DrinkType = shot.DrinkType,
+            BrewMethod = shot.BrewMethod,
             Timestamp = shot.Timestamp
         };
 
@@ -396,6 +404,7 @@ public class ShotService : IShotService
                 Rating = s.Rating,
                 TastingNotes = s.TastingNotes,
                 DrinkType = s.DrinkType,
+                BrewMethod = s.BrewMethod,
                 Timestamp = s.Timestamp
             })
             .ToList();
@@ -580,6 +589,8 @@ public class ShotService : IShotService
         ExpectedTime = shot.ExpectedTime,
         ExpectedOutput = shot.ExpectedOutput,
         DrinkType = shot.DrinkType,
+        BrewMethod = shot.BrewMethod,
+        ParametersJson = shot.ParametersJson,
         ActualTime = shot.ActualTime,
         ActualOutput = shot.ActualOutput,
         Rating = shot.Rating,
@@ -590,14 +601,29 @@ public class ShotService : IShotService
     {
         var errors = new Dictionary<string, List<string>>();
 
-        if (dto.DoseIn < 5 || dto.DoseIn > 30)
-            errors.Add(nameof(dto.DoseIn), new List<string> { "Dose must be between 5 and 30 grams" });
+        // Ranges are brew-method-aware so non-espresso drinks (pour over, moka,
+        // french press, etc.) can log larger doses, longer times, and larger
+        // output volumes without tripping espresso-tuned validation.
+        var (doseMin, doseMax, timeMin, timeMax, outputMin, outputMax) =
+            dto.BrewMethod switch
+            {
+                Models.Enums.BrewMethod.Espresso   => (5m, 30m,  10m,  60m,  10m, 100m),
+                Models.Enums.BrewMethod.Moka       => (5m, 50m,  30m, 600m,  20m, 400m),
+                Models.Enums.BrewMethod.Aeropress  => (5m, 40m,  30m, 600m,  50m, 400m),
+                Models.Enums.BrewMethod.PourOver   => (10m, 60m, 60m, 900m, 100m, 800m),
+                Models.Enums.BrewMethod.Drip       => (10m, 120m, 60m, 1200m, 100m, 1500m),
+                Models.Enums.BrewMethod.FrenchPress=> (10m, 100m, 60m, 900m,  100m, 1200m),
+                _                                  => (5m, 30m,  10m,  60m,  10m, 100m),
+            };
 
-        if (dto.ExpectedTime < 10 || dto.ExpectedTime > 60)
-            errors.Add(nameof(dto.ExpectedTime), new List<string> { "Expected time must be between 10 and 60 seconds" });
+        if (dto.DoseIn < doseMin || dto.DoseIn > doseMax)
+            errors.Add(nameof(dto.DoseIn), new List<string> { $"Dose must be between {doseMin} and {doseMax} grams for {dto.BrewMethod}" });
 
-        if (dto.ExpectedOutput < 10 || dto.ExpectedOutput > 100)
-            errors.Add(nameof(dto.ExpectedOutput), new List<string> { "Expected output must be between 10 and 100 grams" });
+        if (dto.ExpectedTime < timeMin || dto.ExpectedTime > timeMax)
+            errors.Add(nameof(dto.ExpectedTime), new List<string> { $"Expected time must be between {timeMin} and {timeMax} seconds for {dto.BrewMethod}" });
+
+        if (dto.ExpectedOutput < outputMin || dto.ExpectedOutput > outputMax)
+            errors.Add(nameof(dto.ExpectedOutput), new List<string> { $"Expected output must be between {outputMin} and {outputMax} grams for {dto.BrewMethod}" });
 
         if (string.IsNullOrWhiteSpace(dto.GrindSetting))
             errors.Add(nameof(dto.GrindSetting), new List<string> { "Grind setting is required" });
@@ -616,11 +642,19 @@ public class ShotService : IShotService
     {
         var errors = new Dictionary<string, List<string>>();
 
-        if (dto.ActualTime.HasValue && (dto.ActualTime <= 0 || dto.ActualTime > 999))
-            errors.Add(nameof(dto.ActualTime), new List<string> { "Shot time must be between 0 and 999 seconds" });
+        // When BrewMethod is supplied on the update, use its profile as the upper bound;
+        // otherwise fall back to the most permissive profile (Drip: 1500g / 1200s) so we
+        // don't reject large-batch brews (pour over, drip, french press) whose actuals
+        // legitimately exceed the old espresso-centric 200g / 999s ceilings.
+        var profile = dto.BrewMethod.HasValue
+            ? dto.BrewMethod.Value.Profile()
+            : BrewMethod.Drip.Profile();
 
-        if (dto.ActualOutput.HasValue && (dto.ActualOutput <= 0 || dto.ActualOutput > 200))
-            errors.Add(nameof(dto.ActualOutput), new List<string> { "Output weight must be between 0 and 200 grams" });
+        if (dto.ActualTime.HasValue && (dto.ActualTime <= 0 || (decimal)dto.ActualTime.Value > (decimal)profile.TimeMax))
+            errors.Add(nameof(dto.ActualTime), new List<string> { $"Shot time must be between 0 and {profile.TimeMax} seconds" });
+
+        if (dto.ActualOutput.HasValue && (dto.ActualOutput <= 0 || (decimal)dto.ActualOutput.Value > (decimal)profile.OutputMax))
+            errors.Add(nameof(dto.ActualOutput), new List<string> { $"Output weight must be between 0 and {profile.OutputMax} grams" });
 
         if (dto.Rating.HasValue && (dto.Rating < 1 || dto.Rating > 5))
             errors.Add(nameof(dto.Rating), new List<string> { "Rating must be between 1 and 5 stars" });

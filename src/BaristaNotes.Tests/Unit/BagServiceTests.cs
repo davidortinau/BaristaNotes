@@ -257,4 +257,109 @@ public class BagServiceTests
     }
 
     #endregion
+
+    #region CreateNewBagForBeanAsync Tests
+
+    [Fact]
+    public async Task CreateNewBagForBeanAsync_returns_bag_summary_for_valid_input()
+    {
+        // Arrange
+        var bean = new Bean { Id = 1, Name = "Ethiopian Yirgacheffe", IsActive = true, IsDeleted = false };
+        var roastDate = DateTime.Today.AddDays(-2);
+
+        _mockBeanRepo.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(bean);
+        _mockBagRepo
+            .Setup(x => x.CreateAsync(It.IsAny<Bag>()))
+            .ReturnsAsync((Bag b) => { b.Id = 42; return b; });
+
+        // Act
+        var result = await _service.CreateNewBagForBeanAsync(1, roastDate, "  From Trader Joe's  ");
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.NotNull(result.Data);
+        Assert.Equal(42, result.Data!.Id);
+        Assert.Equal(1, result.Data.BeanId);
+        Assert.Equal("Ethiopian Yirgacheffe", result.Data.BeanName);
+        Assert.Equal(roastDate, result.Data.RoastDate);
+        Assert.Equal("  From Trader Joe's  ", result.Data.Notes);
+        Assert.False(result.Data.IsComplete);
+        Assert.Equal(0, result.Data.ShotCount);
+        Assert.Null(result.Data.AverageRating);
+        _mockBagRepo.Verify(x => x.CreateAsync(It.IsAny<Bag>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateNewBagForBeanAsync_fails_when_bean_not_found()
+    {
+        // Arrange
+        _mockBeanRepo.Setup(x => x.GetByIdAsync(999)).ReturnsAsync((Bean?)null);
+
+        // Act
+        var result = await _service.CreateNewBagForBeanAsync(999, DateTime.Today);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("Bean not found", result.ErrorMessage);
+        _mockBagRepo.Verify(x => x.CreateAsync(It.IsAny<Bag>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateNewBagForBeanAsync_fails_when_bean_is_deleted()
+    {
+        // Arrange
+        var bean = new Bean { Id = 1, Name = "Deleted Bean", IsActive = true, IsDeleted = true };
+        _mockBeanRepo.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(bean);
+
+        // Act
+        var result = await _service.CreateNewBagForBeanAsync(1, DateTime.Today);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("Bean not found", result.ErrorMessage);
+        _mockBagRepo.Verify(x => x.CreateAsync(It.IsAny<Bag>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateNewBagForBeanAsync_fails_when_roastDate_in_future()
+    {
+        // Arrange
+        var bean = new Bean { Id = 1, Name = "Test Bean", IsActive = true, IsDeleted = false };
+        _mockBeanRepo.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(bean);
+
+        // Act
+        var result = await _service.CreateNewBagForBeanAsync(1, DateTime.Today.AddDays(1));
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("future", result.ErrorMessage.ToLower());
+        _mockBagRepo.Verify(x => x.CreateAsync(It.IsAny<Bag>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateNewBagForBeanAsync_defaults_isComplete_false_isActive_true()
+    {
+        // Arrange
+        var bean = new Bean { Id = 1, Name = "Test Bean", IsActive = true, IsDeleted = false };
+        Bag? captured = null;
+
+        _mockBeanRepo.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(bean);
+        _mockBagRepo
+            .Setup(x => x.CreateAsync(It.IsAny<Bag>()))
+            .Callback<Bag>(b => captured = b)
+            .ReturnsAsync((Bag b) => { b.Id = 7; return b; });
+
+        // Act
+        var result = await _service.CreateNewBagForBeanAsync(1, DateTime.Today.AddDays(-1));
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.NotNull(captured);
+        Assert.False(captured!.IsComplete);
+        Assert.True(captured.IsActive);
+        Assert.False(captured.IsDeleted);
+        Assert.False(result.Data!.IsComplete);
+    }
+
+    #endregion
 }

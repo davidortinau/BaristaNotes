@@ -1,10 +1,13 @@
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
+using BaristaNotes.Integrations.Popups;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using Fonts;
 using MauiReactor;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
+using UXDivers.Popups.Services;
 
 namespace BaristaNotes.Pages;
 
@@ -22,6 +25,9 @@ partial class BeanManagementPage : Component<BeanManagementState>
 
     [Inject]
     IFeedbackService _feedbackService;
+
+    [Inject]
+    IServiceProvider _services;
 
     protected override void OnMounted()
     {
@@ -53,7 +59,11 @@ partial class BeanManagementPage : Component<BeanManagementState>
 
     async Task NavigateToAddBean()
     {
-        await Microsoft.Maui.Controls.Shell.Current.GoToAsync("bean-detail");
+        var popup = _services.GetRequiredService<AddCoffeePopup>();
+        popup.OnCreated = summary => { _ = LoadDataAsync(); };
+
+        await popup.InitializeAsync();
+        await IPopupService.Current.PushAsync(popup);
     }
 
     async void NavigateToEditBean(BeanDto bean)

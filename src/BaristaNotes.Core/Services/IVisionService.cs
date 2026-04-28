@@ -1,3 +1,5 @@
+using BaristaNotes.Core.Services.DTOs;
+
 namespace BaristaNotes.Core.Services;
 
 /// <summary>
@@ -9,7 +11,7 @@ public interface IVisionService
     /// <summary>
     /// Analyzes an image to count people and calculate coffee needs.
     /// </summary>
-    /// <param name="imageStream">The image stream to analyze.</param>
+    /// <param name="imageStream">The image stream to analyze. Caller retains ownership and is responsible for disposal.</param>
     /// <param name="userQuestion">The user's question about the image.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Analysis result with people count and coffee recommendations.</returns>
@@ -17,6 +19,15 @@ public interface IVisionService
         Stream imageStream, 
         string userQuestion, 
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Extracts coffee-bag-label fields (name, roaster, origin, roast date) from a photo.
+    /// Uses a lighter vision model (gpt-4o-mini) optimized for OCR-style extraction.
+    /// </summary>
+    /// <param name="imageStream">The image stream of the coffee bag label. Caller retains ownership and is responsible for disposal.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Structured extraction result; <see cref="BeanLabelExtraction.Success"/> is false on any failure.</returns>
+    Task<BeanLabelExtraction> ExtractBeanLabelAsync(Stream imageStream, CancellationToken ct = default);
 
     /// <summary>
     /// Checks if the vision service is configured and available.

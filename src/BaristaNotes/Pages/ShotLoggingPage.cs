@@ -17,6 +17,7 @@ using Microsoft.Maui.Controls.PlatformConfiguration;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using Application = Microsoft.Maui.Controls.Application;
 using System.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 
@@ -29,6 +30,12 @@ class ShotLoggingState
     public decimal ExpectedTime { get; set; } = 28;
     public decimal ExpectedOutput { get; set; } = 36.0m;
     public string DrinkType { get; set; } = "Espresso";
+    /// <summary>
+    /// Brew method for this drink. Drives form defaults and equipment
+    /// filtering. Defaults to Espresso for back-compat.
+    /// </summary>
+    public BrewMethod BrewMethod { get; set; } = BrewMethod.Espresso;
+    public int SelectedBrewMethodIndex { get; set; } = 0;
     public decimal? ActualTime { get; set; }
     public decimal? ActualOutput { get; set; }
     public int Rating { get; set; } = 2;
@@ -77,6 +84,14 @@ class ShotLoggingState
     public double VoicePulseScale { get; set; } = 1.0; // Animation scale for pulsing mic icon
     public List<VoiceChatMessage> VoiceChatHistory { get; set; } = new(); // Conversation history
     public string LastAIResponse { get; set; } = ""; // Last AI response to keep visible until user speaks
+
+    // Recipe lookup for the currently selected bean + brew method. Used by
+    // the recipe preview card on the drink-logging page (shows the official
+    // roaster recipe if available + a one-tap "Apply" button).
+    public RecipeDto? CurrentRecipe { get; set; }
+    public bool IsLoadingRecipe { get; set; }
+    // (beanId, method) tuple we last looked up, to avoid redundant fetches.
+    public (int beanId, BrewMethod method)? LastRecipeLookup { get; set; }
 }
 
 /// <summary>
@@ -139,8 +154,17 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     [Inject]
     IVisionService _visionService;
 
+    [Inject]
+    IRecipeService _recipeService;
+
+    [Inject]
+    IServiceProvider _services;
+
     // Cancellation token for AI recommendation requests
     private CancellationTokenSource? _recommendationCts;
+
+    // Cancellation token for recipe lookups (superseded when bag/method changes rapidly)
+    private CancellationTokenSource? _recipeLookupCts;
 
     // Cancellation token for voice commands
     private CancellationTokenSource? _voiceCts;
@@ -178,6 +202,8 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     {
         _recommendationCts?.Cancel();
         _recommendationCts?.Dispose();
+        _recipeLookupCts?.Cancel();
+        _recipeLookupCts?.Dispose();
         _voiceCts?.Cancel();
         _voiceCts?.Dispose();
         DeviceDisplay.Current.MainDisplayInfoChanged -= OnMainDisplayInfoChanged;
@@ -512,46 +538,60 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     private async Task StopRecordingAsync()
     {
         _logger.LogInformation("StopRecordingAsync called (push-to-talk release)");
-
-        // Stop silence detection
-        StopSilenceTimer();
-
-        // Capture any pending transcript before stopping
-        var pendingTranscript = State.VoiceTranscript;
-        _logger.LogInformation("Pending transcript captured: '{Transcript}'", pendingTranscript ?? "(null)");
-
-        _voiceCts?.Cancel();
-        _logger.LogDebug("CancellationToken cancelled");
-
-        await _speechRecognitionService.StopListeningAsync();
-        _logger.LogDebug("StopListeningAsync completed");
-
-        _speechRecognitionService.PartialResultReceived -= OnPartialResultReceived;
-        SetState(s =>
+        try
         {
-            s.IsRecording = false;
-            s.VoiceTranscript = "";
-            s.VoiceState = SpeechRecognitionState.Idle;
-        });
+            // Stop silence detection
+            StopSilenceTimer();
 
-        // Process pending transcript if we have one
-        if (!string.IsNullOrWhiteSpace(pendingTranscript))
-        {
-            _logger.LogInformation("Processing pending transcript on stop: '{Text}'", pendingTranscript);
-            await ProcessTranscriptAsync(pendingTranscript);
+            // Capture any pending transcript before stopping
+            var pendingTranscript = State.VoiceTranscript;
+            _logger.LogInformation("Pending transcript captured: '{Transcript}'", pendingTranscript ?? "(null)");
+
+            _voiceCts?.Cancel();
+            _logger.LogDebug("CancellationToken cancelled");
+
+            await _speechRecognitionService.StopListeningAsync();
+            _logger.LogDebug("StopListeningAsync completed");
+
+            _speechRecognitionService.PartialResultReceived -= OnPartialResultReceived;
+            SetState(s =>
+            {
+                s.IsRecording = false;
+                s.VoiceTranscript = "";
+                s.VoiceState = SpeechRecognitionState.Idle;
+            });
+
+            // Process pending transcript if we have one
+            if (!string.IsNullOrWhiteSpace(pendingTranscript))
+            {
+                _logger.LogInformation("Processing pending transcript on stop: '{Text}'", pendingTranscript);
+                await ProcessTranscriptAsync(pendingTranscript);
+            }
+            else
+            {
+                _logger.LogInformation("No pending transcript to process on stop");
+                // Return to ready state with any previous AI response
+                _overlayService.UpdateContent(new OverlayContent(
+                    StateText: "Ready",
+                    Transcript: "",
+                    IsListening: false,
+                    IsProcessing: false,
+                    IsReady: true,
+                    AIResponse: State.LastAIResponse
+                ));
+            }
         }
-        else
+        catch (Exception ex)
         {
-            _logger.LogInformation("No pending transcript to process on stop");
-            // Return to ready state with any previous AI response
-            _overlayService.UpdateContent(new OverlayContent(
-                StateText: "Ready",
-                Transcript: "",
-                IsListening: false,
-                IsProcessing: false,
-                IsReady: true,
-                AIResponse: State.LastAIResponse
-            ));
+            _logger.LogError(ex, "Error stopping voice recording");
+            _speechRecognitionService.PartialResultReceived -= OnPartialResultReceived;
+            SetState(s =>
+            {
+                s.IsRecording = false;
+                s.VoiceTranscript = "";
+                s.VoiceState = SpeechRecognitionState.Idle;
+            });
+            AddChatMessage("Failed to stop recording. Please try again.", isUser: false, isError: true);
         }
     }
 
@@ -624,11 +664,11 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         {
             _logger.LogError(ex, "Error processing voice command");
             AddChatMessage("Sorry, something went wrong. Please try again.", isUser: false, isError: true);
-            
+
             var errorMessage = "Sorry, something went wrong. Please try again.";
             SetState(s => s.LastAIResponse = errorMessage);
             SetState(s => s.VoiceState = SpeechRecognitionState.Idle);
-            
+
             // Resume speech if it was paused
             if (_speechPaused)
             {
@@ -703,7 +743,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             {
                 // Clear last AI response when user starts speaking again
                 s.LastAIResponse = "";
-                
+
                 // iOS sends individual words, so append with space
                 if (!string.IsNullOrEmpty(s.VoiceTranscript) && !string.IsNullOrEmpty(partialText))
                 {
@@ -851,6 +891,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     // Convert from 1-5 service scale to 0-4 UI index (Rating 1 -> Index 0, Rating 5 -> Index 4)
                     s.Rating = shot.Rating.HasValue ? Math.Max(0, shot.Rating.Value - 1) : 2;
                     s.DrinkType = shot.DrinkType;
+                    s.BrewMethod = shot.BrewMethod;
+                    s.SelectedBrewMethodIndex = BrewMethodExtensions.All.ToList().IndexOf(shot.BrewMethod);
+                    if (s.SelectedBrewMethodIndex < 0) s.SelectedBrewMethodIndex = 0;
                     s.SelectedBagId = shot.Bag?.Id;
                     s.SelectedBagIndex = shot.Bag != null ? s.AvailableBags.FindIndex(b => b.Id == shot.Bag.Id) : -1;
                     s.SelectedDrinkIndex = s.DrinkTypes.IndexOf(shot.DrinkType);
@@ -889,6 +932,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         s.ActualOutput = lastShot.ActualOutput;
                         s.Rating = lastShot.Rating ?? 2;
                         s.DrinkType = lastShot.DrinkType;
+                        s.BrewMethod = lastShot.BrewMethod;
+                        s.SelectedBrewMethodIndex = BrewMethodExtensions.All.ToList().IndexOf(lastShot.BrewMethod);
+                        if (s.SelectedBrewMethodIndex < 0) s.SelectedBrewMethodIndex = 0;
                         s.SelectedBagId = lastShot.Bag?.Id;
                         s.SelectedBagIndex = lastShot.Bag != null ? s.AvailableBags.FindIndex(b => b.Id == lastShot.Bag.Id) : -1;
                         s.SelectedDrinkIndex = s.DrinkTypes.IndexOf(lastShot.DrinkType);
@@ -911,6 +957,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
 
                     s.IsLoading = false;
                 });
+
+                // Kick off recipe lookup for the initial bag + brew method.
+                _ = LoadRecipeForSelectionAsync();
             }
         }
         catch (Exception ex)
@@ -1072,6 +1121,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     // Convert from 0-4 UI index to 1-5 service scale
                     Rating = State.Rating + 1,
                     DrinkType = State.DrinkType,
+                    BrewMethod = State.BrewMethod,
                     TastingNotes = State.TastingNotes
                 };
 
@@ -1112,6 +1162,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     ActualTime = State.ActualTime,
                     ActualOutput = State.ActualOutput,
                     DrinkType = State.DrinkType,
+                    BrewMethod = State.BrewMethod,
                     // Convert from 0-4 UI index to 1-5 service scale
                     Rating = State.Rating + 1,
                     TastingNotes = State.TastingNotes
@@ -1178,11 +1229,10 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     /// </summary>
     async Task ShowBeanAndBagCreationPopup()
     {
-        var popup = new BeanAndBagCreationPopup(_beanService, _bagService)
-        {
-            OnCreated = HandleBagCreated  // Reuse existing handler
-        };
+        var popup = _services.GetRequiredService<AddCoffeePopup>();
+        popup.OnCreated = HandleBagCreated;
 
+        await popup.InitializeAsync();
         await IPopupService.Current.PushAsync(popup);
     }
 
@@ -1283,7 +1333,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
     {
         if (State.IsLoading && !State.AvailableBags.Any())
         {
-            return ContentPage(Props.ShotId.HasValue ? "Edit Shot" : "New Shot",
+            return ContentPage(Props.ShotId.HasValue ? "Edit Drink" : "New Drink",
                 VStack(
                     ActivityIndicator()
                         .IsRunning(true),
@@ -1301,7 +1351,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         // Only for add mode - edit mode should still show the form
         if (!Props.ShotId.HasValue && !State.IsLoading && State.AvailableBeans.Count == 0)
         {
-            return ContentPage("New Shot",
+            return ContentPage("New Drink",
                 RenderNoBeanEmptyState()
             )
             .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
@@ -1320,7 +1370,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         // MauiControls.Shell.Current.BackgroundColor = Colors.Transparent;
         // MauiControls.Shell.Current.Background = Colors.Transparent;
 
-        return ContentPage(Props.ShotId.HasValue ? "Edit Shot" : "New Shot",
+        return ContentPage(Props.ShotId.HasValue ? "Edit Drink" : "New Drink",
             // Voice command toolbar item (available for new shots)
             !Props.ShotId.HasValue ?
                 ToolbarItem("Voice")
@@ -1384,15 +1434,22 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                                 .Margin(0, 8) :
                             null,
 
-                        // In/Out Gauges in 2-column grid
+                        // [Zoe UX, 2026-04-19] The drink-logging page now leads
+                        // with the brew method as the primary choice — dose,
+                        // yield, and time all re-scale based on it. Bean/bag +
+                        // recipe preview follow, then the adaptive gauges.
+
+                        // 1. Brew method chip row (primary selection)
+                        RenderBrewMethodChips(),
+
+                        // 2. Bag picker + recipe preview card
+                        RenderBagAndRecipeSection(),
+
+                        // 3. In/Out Gauges — adaptive to selected brew method
                         RenderDoseGauges(),
 
-                        new FormSliderField()
-                            .Label($"Time: {State.ActualTime?.ToString("F0") ?? "0"}s")
-                            .Minimum(0)
-                            .Maximum(60)
-                            .Value((double)(State.ActualTime ?? 0))
-                            .OnValueChanged(val => SetState(s => s.ActualTime = (decimal)val)),
+                        // 4. Time slider — adaptive max per brew method
+                        RenderTimeSlider(),
 
                         // User Selection Row (Made By -> Made For)
                         RenderUserSelectionRow(),
@@ -1413,7 +1470,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         ),
 
                     // Save Button
-                    Button(Props.ShotId.HasValue ? "Update Shot" : "Add Shot")
+                    Button(Props.ShotId.HasValue ? "Update Drink" : "Log Drink")
                         .IsEnabled(!State.IsLoading)
                         .OnClicked(async () => await SaveShotAsync())
                         .HeightRequest(50),
@@ -1426,45 +1483,6 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     Label()
                         .Text("Additional Details")
                         .ThemeKey(ThemeKeys.MutedText),
-
-                    // Bag Picker with empty state handling
-                    State.AvailableBags.Count > 0 ?
-                        new FormPickerField()
-                            .Label("Bag")
-                            .Title("Select Bag")
-                            .ItemsSource(State.AvailableBags.Select(b => b.DisplayLabel).ToList())
-                            .SelectedIndex(State.SelectedBagIndex)
-                            .OnSelectedIndexChanged(idx =>
-                            {
-                                if (idx >= 0 && idx < State.AvailableBags.Count)
-                                {
-                                    var bag = State.AvailableBags[idx];
-                                    var bagId = bag.Id;
-                                    var beanId = bag.BeanId;
-                                    SetState(s =>
-                                    {
-                                        s.SelectedBagIndex = idx;
-                                        s.SelectedBagId = bagId;
-                                    });
-                                    // Check if we need AI recommendations
-                                    _ = HandleBagSelectionAsync(beanId, bagId);
-                                }
-                            }) :
-                        // T018: Enhanced "no active bags" empty state with inline bag creation
-                        VStack(spacing: 12,
-                            Label("No active bags available")
-                                .ThemeKey(ThemeKeys.SecondaryText)
-                                .FontSize(16)
-                                .HCenter(),
-                            Label("Create a bag to start logging shots")
-                                .ThemeKey(ThemeKeys.MutedText)
-                                .FontSize(14)
-                                .HCenter(),
-                            // T019: Use inline bag creation popup with bean picker
-                            Button("Add New Bag")
-                                .OnClicked(async () => await ShowBagCreationPopupWithPicker())
-                                .HCenter()
-                        ).Padding(16),
 
                     // Grind Setting
                     new FormEntryField()
@@ -1494,7 +1512,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                                 SetState(s => s.ExpectedOutput = val);
                         }),
 
-                    // Drink Type
+                    // Drink Type (Espresso → Americano → Latte etc.) kept
+                    // under Additional Details since it's largely a
+                    // milk/dilution label that's independent of brew method.
                     new FormPickerField()
                         .Label("Drink Type")
                         .Title("Select Drink")
@@ -1518,7 +1538,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .Padding(16, 0, 16, 32)
                 ).GridRow(1)
 
-                // Voice overlay is now rendered via WindowOverlay (IOverlayService)
+            // Voice overlay is now rendered via WindowOverlay (IOverlayService)
             ).SafeAreaEdges(safeEdges)
         )
         .SafeAreaEdges(safeEdges)
@@ -1559,7 +1579,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             // Check if capture is supported
             if (!MediaPicker.Default.IsCaptureSupported)
             {
-                await ContainerPage!.DisplayAlert("Camera Unavailable", 
+                await ContainerPage!.DisplayAlert("Camera Unavailable",
                     "Camera is not available on this device.", "OK");
                 return;
             }
@@ -1567,7 +1587,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             // Check if vision service is available
             if (!await _visionService.IsAvailableAsync())
             {
-                await ContainerPage!.DisplayAlert("Vision Unavailable", 
+                await ContainerPage!.DisplayAlert("Vision Unavailable",
                     "Vision service is not configured.", "OK");
                 return;
             }
@@ -1588,34 +1608,34 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             }
 
             // Show analyzing state
-            await ContainerPage!.DisplayAlert("Analyzing", 
+            await ContainerPage!.DisplayAlert("Analyzing",
                 "Analyzing photo for people count...", "OK");
 
             // Analyze the photo
             using var stream = await photo.OpenReadAsync();
             var result = await _visionService.AnalyzeImageAsync(
-                stream, 
+                stream,
                 "Count the people in this image and tell me how many cups of coffee I need to make.");
 
             if (result.Success)
             {
-                var message = result.Message ?? 
+                var message = result.Message ??
                     $"I see {result.PeopleCount} {(result.PeopleCount == 1 ? "person" : "people")}. " +
                     $"You'll need {result.CupsNeeded} {(result.CupsNeeded == 1 ? "cup" : "cups")} of coffee, " +
                     $"which requires about {result.BeansNeededGrams}g of beans.";
-                
+
                 await ContainerPage!.DisplayAlert("Analysis Complete", message, "OK");
             }
             else
             {
-                await ContainerPage!.DisplayAlert("Analysis Failed", 
+                await ContainerPage!.DisplayAlert("Analysis Failed",
                     result.ErrorMessage ?? "Could not analyze the photo.", "OK");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error capturing and analyzing photo");
-            await ContainerPage!.DisplayAlert("Error", 
+            await ContainerPage!.DisplayAlert("Error",
                 $"Failed to capture or analyze photo: {ex.Message}", "OK");
         }
     }
@@ -1890,14 +1910,20 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                            (State.SelectedGrinderId.HasValue ? 1 : 0) +
                            State.SelectedAccessoryIds.Count;
 
+        // Brew-method-adaptive ranges: espresso 15–20g in / 25–50g out,
+        // pour over 10–60g in / 100–800g out, etc. Profile is the single
+        // source of truth (also drives ShotService validation).
+        var profile = State.BrewMethod.Profile();
+
         return Grid("Auto, Auto", "*, Auto, *",
             // In Gauge (left column)
             Grid(
                 RenderSingleGauge(
                     value: (double)State.DoseIn,
                     getValueText: () => State.DoseIn.ToString("F1"),
-                    min: 15,
-                    max: 20,
+                    min: (double)profile.DoseMin,
+                    max: (double)profile.DoseMax,
+                    step: (double)profile.DoseStep,
                     primaryColor: primaryColor,
                     textColor: textColor,
                     secondaryTextColor: secondaryTextColor,
@@ -1955,8 +1981,9 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                 RenderSingleGauge(
                     value: (double)(State.ActualOutput ?? 0),
                     getValueText: () => (State.ActualOutput ?? 0).ToString("F1"),
-                    min: 25,
-                    max: 50,
+                    min: (double)profile.OutputMin,
+                    max: (double)profile.OutputMax,
+                    step: (double)profile.OutputStep,
                     primaryColor: primaryColor,
                     textColor: textColor,
                     secondaryTextColor: secondaryTextColor,
@@ -1985,17 +2012,431 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         );
     }
 
+    /// <summary>
+    /// Horizontal scrolling row of brew-method chips (Espresso / Pour Over /
+    /// Moka / Drip / Aeropress / French Press). Primary user choice on the
+    /// drink-logging page — changing the method re-scales the gauges, time
+    /// slider, and validation ranges and refreshes the recipe preview.
+    /// </summary>
+    VisualNode RenderBrewMethodChips()
+    {
+        var isLightTheme = Application.Current?.RequestedTheme == AppTheme.Light;
+        var primaryColor = AppColors.Light.Primary;
+        var surfaceColor = isLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
+        var textColor = isLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+        var secondaryTextColor = isLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+
+        var methods = BrewMethodExtensions.All;
+
+        return VStack(spacing: 8,
+            Label("Brew method")
+                .ThemeKey(ThemeKeys.FormLabel),
+            ScrollView(
+                HStack(spacing: 8,
+                    methods.Select(m =>
+                    {
+                        var isSelected = State.BrewMethod == m;
+                        return (VisualNode)Border(
+                            Label(m.DisplayName())
+                                .FontSize(14)
+                                .FontAttributes(isSelected
+                                    ? Microsoft.Maui.Controls.FontAttributes.Bold
+                                    : Microsoft.Maui.Controls.FontAttributes.None)
+                                .TextColor(isSelected ? Colors.White : textColor)
+                                .VCenter()
+                                .HCenter()
+                                .Margin(14, 0)
+                        )
+                        .StrokeShape(new RoundRectangle().CornerRadius(18))
+                        .StrokeThickness(isSelected ? 0 : 1)
+                        .Stroke(new SolidColorBrush(isSelected ? primaryColor : surfaceColor))
+                        .BackgroundColor(isSelected ? primaryColor : Colors.Transparent)
+                        .HeightRequest(36)
+                        .OnTapped(() => OnBrewMethodSelected(m));
+                    }).ToArray()
+                )
+            )
+            .Orientation(ScrollOrientation.Horizontal)
+            .HorizontalScrollBarVisibility(ScrollBarVisibility.Never)
+        );
+    }
+
+    /// <summary>
+    /// Bag picker plus an adaptive recipe preview card for the selected
+    /// bean × brew method. Shows the roaster's official recipe (Onyx scraper
+    /// + future roasters) with a one-tap Apply button, or a friendly empty
+    /// state + "View all recipes" affordance that jumps to the bean detail.
+    /// </summary>
+    VisualNode RenderBagAndRecipeSection()
+    {
+        // Empty-bag state reuses the existing inline-creation CTA.
+        if (State.AvailableBags.Count == 0)
+        {
+            return VStack(spacing: 12,
+                Label("No active bags available")
+                    .ThemeKey(ThemeKeys.SecondaryText)
+                    .FontSize(16)
+                    .HCenter(),
+                Label("Create a bag to start logging drinks")
+                    .ThemeKey(ThemeKeys.MutedText)
+                    .FontSize(14)
+                    .HCenter(),
+                Button("Add New Bag")
+                    .OnClicked(async () => await ShowBagCreationPopupWithPicker())
+                    .HCenter()
+            ).Padding(16);
+        }
+
+        return VStack(spacing: 8,
+            new FormPickerField()
+                .Label("Bag")
+                .Title("Select Bag")
+                .ItemsSource(State.AvailableBags.Select(b => b.DisplayLabel).ToList())
+                .SelectedIndex(State.SelectedBagIndex)
+                .OnSelectedIndexChanged(idx =>
+                {
+                    if (idx >= 0 && idx < State.AvailableBags.Count)
+                    {
+                        var bag = State.AvailableBags[idx];
+                        var bagId = bag.Id;
+                        var beanId = bag.BeanId;
+                        SetState(s =>
+                        {
+                            s.SelectedBagIndex = idx;
+                            s.SelectedBagId = bagId;
+                        });
+                        _ = HandleBagSelectionAsync(beanId, bagId);
+                        _ = LoadRecipeForSelectionAsync();
+                    }
+                }),
+            RenderRecipePreviewCard()
+        );
+    }
+
+    /// <summary>
+    /// Small card beneath the bag picker that surfaces the roaster-recommended
+    /// recipe for the currently selected bean + brew method. Non-blocking —
+    /// absence of a recipe is a normal state, not an error.
+    /// </summary>
+    VisualNode RenderRecipePreviewCard()
+    {
+        var isLightTheme = Application.Current?.RequestedTheme == AppTheme.Light;
+        var primaryColor = AppColors.Light.Primary;
+        var surfaceColor = isLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
+        var textColor = isLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+        var secondaryTextColor = isLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+
+        var selectedBag = (State.SelectedBagIndex >= 0 && State.SelectedBagIndex < State.AvailableBags.Count)
+            ? State.AvailableBags[State.SelectedBagIndex]
+            : null;
+
+        if (selectedBag == null)
+        {
+            return VStack();
+        }
+
+        if (State.IsLoadingRecipe)
+        {
+            return Border(
+                HStack(spacing: 8,
+                    ActivityIndicator().IsRunning(true).HeightRequest(16).WidthRequest(16),
+                    Label("Looking up recipe…")
+                        .FontSize(13)
+                        .TextColor(secondaryTextColor)
+                        .VCenter()
+                ).Padding(12, 10)
+            )
+            .StrokeShape(new RoundRectangle().CornerRadius(12))
+            .StrokeThickness(0)
+            .BackgroundColor(surfaceColor);
+        }
+
+        var recipe = State.CurrentRecipe;
+        if (recipe != null)
+        {
+            // Build a compact summary (dose → yield, time, grind, temp)
+            var parts = new List<string>();
+            if (recipe.DoseIn.HasValue && recipe.OutputAmount.HasValue)
+                parts.Add($"{recipe.DoseIn.Value:F1}g → {recipe.OutputAmount.Value:F0}g");
+            else if (recipe.DoseIn.HasValue)
+                parts.Add($"{recipe.DoseIn.Value:F1}g in");
+            else if (recipe.OutputAmount.HasValue)
+                parts.Add($"{recipe.OutputAmount.Value:F0}g out");
+            if (recipe.TotalTimeSeconds.HasValue)
+                parts.Add(FormatTime((int)recipe.TotalTimeSeconds.Value));
+            if (recipe.BrewTempC.HasValue)
+                parts.Add($"{recipe.BrewTempC.Value:F0}°C");
+            var summary = parts.Count > 0 ? string.Join(" · ", parts) : "Recipe available";
+            var grindLine = string.IsNullOrWhiteSpace(recipe.GrindHint) ? null : $"Grind: {recipe.GrindHint}";
+            var sourceLabel = recipe.Source switch
+            {
+                RecipeSource.RoasterSite => "Roaster",
+                RecipeSource.AIGenerated => "AI suggestion",
+                RecipeSource.Manual => "You",
+                _ => "Recipe"
+            };
+
+            return Border(
+                VStack(spacing: 6,
+                    HStack(spacing: 6,
+                        Label(MaterialSymbolsFont.Coffee)
+                            .FontFamily(MaterialSymbolsFont.FontFamily)
+                            .FontSize(16)
+                            .TextColor(primaryColor)
+                            .VCenter(),
+                        Label($"{sourceLabel} · {State.BrewMethod.DisplayName()}")
+                            .FontSize(12)
+                            .TextColor(secondaryTextColor)
+                            .VCenter()
+                    ),
+                    Label(summary)
+                        .FontSize(14)
+                        .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
+                        .TextColor(textColor),
+                    grindLine != null ?
+                        Label(grindLine)
+                            .FontSize(12)
+                            .TextColor(secondaryTextColor)
+                        : null,
+                    HStack(spacing: 12,
+                        Button("Apply recipe")
+                            .FontSize(13)
+                            .HeightRequest(32)
+                            .Padding(12, 0)
+                            .OnClicked(() => ApplyCurrentRecipe()),
+                        Button("View all")
+                            .FontSize(13)
+                            .HeightRequest(32)
+                            .Padding(12, 0)
+                            .BackgroundColor(Colors.Transparent)
+                            .TextColor(primaryColor)
+                            .OnClicked(async () => await NavigateToBeanRecipesAsync(selectedBag.BeanId))
+                    ).Margin(0, 4, 0, 0)
+                ).Padding(12, 10)
+            )
+            .StrokeShape(new RoundRectangle().CornerRadius(12))
+            .StrokeThickness(0)
+            .BackgroundColor(surfaceColor);
+        }
+
+        // No recipe for this bean + method combination.
+        return Border(
+            HStack(spacing: 8,
+                Label(MaterialSymbolsFont.Info)
+                    .FontFamily(MaterialSymbolsFont.FontFamily)
+                    .FontSize(16)
+                    .TextColor(secondaryTextColor)
+                    .VCenter(),
+                Label($"No {State.BrewMethod.DisplayName()} recipe yet for this bean")
+                    .FontSize(13)
+                    .TextColor(secondaryTextColor)
+                    .VCenter()
+                    .HorizontalOptions(LayoutOptions.StartAndExpand),
+                Button("Browse")
+                    .FontSize(13)
+                    .HeightRequest(30)
+                    .Padding(10, 0)
+                    .BackgroundColor(Colors.Transparent)
+                    .TextColor(primaryColor)
+                    .OnClicked(async () => await NavigateToBeanRecipesAsync(selectedBag.BeanId))
+            ).Padding(12, 10)
+        )
+        .StrokeShape(new RoundRectangle().CornerRadius(12))
+        .StrokeThickness(0)
+        .BackgroundColor(surfaceColor);
+    }
+
+    /// <summary>
+    /// Adaptive time slider — minimum/maximum/step track the selected brew
+    /// method's profile so a pour-over can run 15 minutes and an espresso
+    /// stays pinned to ~60s.
+    /// </summary>
+    VisualNode RenderTimeSlider()
+    {
+        var profile = State.BrewMethod.Profile();
+        var currentSeconds = (double)(State.ActualTime ?? 0);
+        // Clamp to profile range for display so switching methods doesn't
+        // leave the slider pegged past the max.
+        var clamped = Math.Max(profile.TimeMin, Math.Min(profile.TimeMax, currentSeconds));
+        var label = State.ActualTime.HasValue
+            ? $"Time: {FormatTime((int)State.ActualTime.Value)}"
+            : $"Time: {FormatTime(0)}";
+
+        return new FormSliderField()
+            .Label(label)
+            .Minimum(0)
+            .Maximum(profile.TimeMax)
+            .Value(clamped)
+            .OnValueChanged(val => SetState(s => s.ActualTime = (decimal)Math.Round(val)));
+    }
+
+    /// <summary>
+    /// Format a time in seconds as either "SSs" (< 60s) or "M:SS" (≥ 60s).
+    /// </summary>
+    static string FormatTime(int totalSeconds)
+    {
+        if (totalSeconds < 60)
+            return $"{totalSeconds}s";
+        var minutes = totalSeconds / 60;
+        var seconds = totalSeconds % 60;
+        return $"{minutes}:{seconds:D2}";
+    }
+
+    /// <summary>
+    /// Handle brew-method chip tap: update state, re-default gauges if this
+    /// is a new (add-mode) drink and the user hasn't meaningfully customized
+    /// them yet, and re-query the recipe preview for the new method.
+    /// </summary>
+    void OnBrewMethodSelected(BrewMethod method)
+    {
+        if (State.BrewMethod == method) return;
+
+        var oldProfile = State.BrewMethod.Profile();
+        var newProfile = method.Profile();
+        var isAddMode = !Props.ShotId.HasValue;
+
+        SetState(s =>
+        {
+            s.BrewMethod = method;
+            s.SelectedBrewMethodIndex = BrewMethodExtensions.All.ToList().IndexOf(method);
+            if (s.SelectedBrewMethodIndex < 0) s.SelectedBrewMethodIndex = 0;
+
+            // Add mode: snap gauges/time to the new method's defaults so a
+            // user switching Espresso → Pour Over sees a sensible 20g / 320g /
+            // 3:30 starting point rather than the espresso-scaled values.
+            // Edit mode: clamp existing values to the new range without
+            // resetting the user's input.
+            if (isAddMode)
+            {
+                s.DoseIn = newProfile.DoseDefault;
+                s.ExpectedOutput = newProfile.OutputDefault;
+                s.ExpectedTime = newProfile.TimeDefault;
+                s.ActualOutput = null;
+                s.ActualTime = null;
+            }
+            else
+            {
+                s.DoseIn = newProfile.ClampDose(s.DoseIn);
+                s.ExpectedOutput = newProfile.ClampOutput(s.ExpectedOutput);
+                s.ExpectedTime = newProfile.ClampTime(s.ExpectedTime);
+                // Do NOT clamp ActualOutput / ActualTime: these are measured values
+                // that can legitimately fall outside a method's expected range
+                // (e.g. a 5s ristretto, or variance on a pour over yield).
+            }
+        });
+
+        _ = LoadRecipeForSelectionAsync();
+    }
+
+    /// <summary>
+    /// Refresh <see cref="ShotLoggingState.CurrentRecipe"/> for the currently
+    /// selected bag's bean × the currently selected brew method. No-op if no
+    /// bag is selected; caches the last lookup so switching state unrelated
+    /// to the recipe doesn't re-hit the DB.
+    /// </summary>
+    async Task LoadRecipeForSelectionAsync()
+    {
+        var bag = (State.SelectedBagIndex >= 0 && State.SelectedBagIndex < State.AvailableBags.Count)
+            ? State.AvailableBags[State.SelectedBagIndex]
+            : null;
+        if (bag == null)
+        {
+            SetState(s => { s.CurrentRecipe = null; s.LastRecipeLookup = null; });
+            return;
+        }
+
+        var key = (bag.BeanId, State.BrewMethod);
+        if (State.LastRecipeLookup == key && !State.IsLoadingRecipe)
+            return;
+
+        // Cancel any in-flight lookup so a stale result can't clobber a newer one.
+        _recipeLookupCts?.Cancel();
+        _recipeLookupCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        _recipeLookupCts = cts;
+        var token = cts.Token;
+
+        SetState(s => { s.IsLoadingRecipe = true; s.LastRecipeLookup = key; });
+        try
+        {
+            var recipe = await _recipeService.GetRecipeForBeanAndMethodAsync(bag.BeanId, State.BrewMethod);
+            if (token.IsCancellationRequested) return;
+            SetState(s =>
+            {
+                // Guard against stale completions: only accept this result if the
+                // user's current selection still matches the key we queried for.
+                if (s.LastRecipeLookup != key) return;
+                s.CurrentRecipe = recipe;
+                s.IsLoadingRecipe = false;
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer lookup — leave state to the newer call.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load recipe for BeanId={BeanId}, Method={Method}", bag.BeanId, State.BrewMethod);
+            if (token.IsCancellationRequested) return;
+            SetState(s =>
+            {
+                if (s.LastRecipeLookup != key) return;
+                s.CurrentRecipe = null;
+                s.IsLoadingRecipe = false;
+            });
+        }
+    }
+
+    /// <summary>
+    /// Pre-fill the drink form from the current recipe preview. Non-destructive
+    /// — only fields the recipe actually specifies are overwritten.
+    /// </summary>
+    void ApplyCurrentRecipe()
+    {
+        var recipe = State.CurrentRecipe;
+        if (recipe == null) return;
+        var profile = State.BrewMethod.Profile();
+
+        SetState(s =>
+        {
+            if (recipe.DoseIn.HasValue)
+                s.DoseIn = profile.ClampDose(recipe.DoseIn.Value);
+            if (recipe.OutputAmount.HasValue)
+                s.ExpectedOutput = profile.ClampOutput(recipe.OutputAmount.Value);
+            if (recipe.TotalTimeSeconds.HasValue)
+                s.ExpectedTime = profile.ClampTime(recipe.TotalTimeSeconds.Value);
+            if (!string.IsNullOrWhiteSpace(recipe.GrindHint))
+                s.GrindSetting = recipe.GrindHint!;
+        });
+    }
+
+    async Task NavigateToBeanRecipesAsync(int beanId)
+    {
+        await MauiControls.Shell.Current.GoToAsync<BeanDetailPageProps>(
+            "bean-detail",
+            props => props.BeanId = beanId);
+    }
+
     VisualNode RenderSingleGauge(
         double value,
         Func<string> getValueText,
         double min,
         double max,
+        double step,
         Color primaryColor,
         Color textColor,
         Color secondaryTextColor,
         Color surfaceColor,
         Action<double> onValueChanged)
     {
+        // Clamp display value so the gauge doesn't throw / render off-range
+        // when switching brew methods (e.g. espresso 36g → pour over still
+        // shows 36g but the new axis goes 100–800; clamp to min until user
+        // drags).
+        var displayValue = Math.Max(min, Math.Min(max, value));
+        // Decimal places in the add/subtract buttons: finer for small ranges,
+        // integer for coarse ranges (pour-over 100–800g).
+        var decimals = step >= 1 ? 0 : 1;
         return Grid(
             new SfRadialGauge()
                 .HeightRequest(160)
@@ -2025,15 +2466,15 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                         })
                         .WithPointers(
                             new RangePointer()
-                                .Value(value)
+                                .Value(displayValue)
                                 .CornerStyle(Syncfusion.Maui.Gauges.CornerStyle.BothCurve)
                                 .PointerWidth(20)
                                 .Fill(new SolidColorBrush(primaryColor)),
 
                             new ShapePointer()
-                                .Value(value)
+                                .Value(displayValue)
                                 .IsInteractive(true)
-                                .StepFrequency(0.1)
+                                .StepFrequency(step)
                                 .ShapeType(Syncfusion.Maui.Gauges.ShapeType.Circle)
                                 .ShapeHeight(28)
                                 .ShapeWidth(28)
@@ -2044,7 +2485,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                                 {
                                     if (e is Syncfusion.Maui.Gauges.ValueChangedEventArgs syncArgs)
                                     {
-                                        var roundedValue = Math.Round(syncArgs.Value, 1);
+                                        var roundedValue = Math.Round(syncArgs.Value, decimals);
                                         onValueChanged(roundedValue);
                                     }
                                 })
@@ -2064,11 +2505,13 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .HCenter()
             ).VCenter().HCenter().TranslationY(10),
 
-            // Add/subtract buttons
+            // Add/subtract buttons — step size adapts to the method's scale
+            // so pour-over (100–800g) nudges by 5g per tap, espresso (25–50g)
+            // stays at 0.1g precision.
             ImageButton().Source(AppIcons.Decrement).HStart().VEnd().TranslationY(10).Aspect(Aspect.Center)
-                .OnClicked(() => onValueChanged(Math.Round(value - 0.1, 1))),
+                .OnClicked(() => onValueChanged(Math.Round(Math.Max(min, value - step), decimals))),
             ImageButton().Source(AppIcons.Increment).HEnd().VEnd().TranslationY(10).Aspect(Aspect.Center)
-                .OnClicked(() => onValueChanged(Math.Round(value + 0.1, 1)))
+                .OnClicked(() => onValueChanged(Math.Round(Math.Min(max, value + step), decimals)))
 
         ).HeightRequest(160).WidthRequest(160).HCenter();
     }

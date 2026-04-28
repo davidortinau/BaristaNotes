@@ -12,6 +12,7 @@ public class BaristaNotesContext : DbContext
     public DbSet<UserProfile> UserProfiles { get; set; } = null!;
     public DbSet<ShotRecord> ShotRecords { get; set; } = null!;
     public DbSet<ShotEquipment> ShotEquipments { get; set; } = null!;
+    public DbSet<Recipe> Recipes { get; set; } = null!;
     
     public BaristaNotesContext(DbContextOptions<BaristaNotesContext> options) 
         : base(options) { }
@@ -110,6 +111,11 @@ public class BaristaNotesContext : DbContext
             entity.Property(e => e.ExpectedTime).IsRequired().HasPrecision(5, 2);
             entity.Property(e => e.ExpectedOutput).IsRequired().HasPrecision(5, 2);
             entity.Property(e => e.DrinkType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.BrewMethod)
+                .IsRequired()
+                .HasConversion<int>()
+                .HasDefaultValue(BaristaNotes.Core.Models.Enums.BrewMethod.Espresso);
+            entity.Property(e => e.ParametersJson);
             entity.Property(e => e.ActualTime).HasPrecision(5, 2);
             entity.Property(e => e.ActualOutput).HasPrecision(5, 2);
             entity.Property(e => e.PreinfusionTime).HasPrecision(5, 2);
@@ -151,6 +157,38 @@ public class BaristaNotesContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull);
         });
         
+        // Recipe configuration
+        modelBuilder.Entity<Recipe>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BeanId).IsRequired();
+            entity.Property(e => e.BrewMethod).IsRequired();
+            entity.Property(e => e.Source).IsRequired();
+            entity.Property(e => e.SourceUrl).HasMaxLength(500);
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.DoseIn).HasPrecision(5, 2);
+            entity.Property(e => e.OutputAmount).HasPrecision(6, 2);
+            entity.Property(e => e.GrindHint).HasMaxLength(100);
+            entity.Property(e => e.BrewTempC).HasPrecision(5, 2);
+            entity.Property(e => e.TotalTimeSeconds).HasPrecision(6, 2);
+            entity.Property(e => e.ParametersJson).HasMaxLength(4000);
+            entity.Property(e => e.Notes).HasMaxLength(2000);
+            entity.Property(e => e.FetchedAt).IsRequired();
+            entity.Property(e => e.IsEditedByUser).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.SyncId).IsRequired();
+            entity.Property(e => e.LastModifiedAt).IsRequired();
+            entity.Property(e => e.IsDeleted).IsRequired().HasDefaultValue(false);
+
+            entity.HasIndex(e => e.BeanId);
+            entity.HasIndex(e => new { e.BeanId, e.BrewMethod });
+            entity.HasIndex(e => e.SyncId).IsUnique();
+
+            entity.HasOne(e => e.Bean)
+                .WithMany(b => b.Recipes)
+                .HasForeignKey(e => e.BeanId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         // ShotEquipment (junction) configuration
         modelBuilder.Entity<ShotEquipment>(entity =>
         {

@@ -1,4 +1,5 @@
 using System.Text;
+using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services.DTOs;
 
 namespace BaristaNotes.Core.Services;
@@ -18,6 +19,7 @@ public static class AIPromptBuilder
 
         // Current shot info
         sb.AppendLine("## Current Shot");
+        sb.AppendLine($"- Brew method: {context.CurrentShot.BrewMethod.DisplayName()}");
         if (!string.IsNullOrWhiteSpace(context.CurrentShot.DrinkType))
             sb.AppendLine($"- Drink type: {context.CurrentShot.DrinkType}");
         sb.AppendLine($"- Dose: {context.CurrentShot.DoseIn}g in");

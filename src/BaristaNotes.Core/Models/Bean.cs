@@ -17,4 +17,5 @@ public class Bean
     
     // Navigation properties
     public virtual ICollection<Bag> Bags { get; set; } = new List<Bag>();
+    public virtual ICollection<Recipe> Recipes { get; set; } = new List<Recipe>();
 }

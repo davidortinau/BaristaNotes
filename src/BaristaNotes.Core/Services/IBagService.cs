@@ -21,6 +21,21 @@ public interface IBagService
     /// - If Notes exceed 500 characters
     /// </exception>
     Task<OperationResult<Bag>> CreateBagAsync(Bag bag);
+
+    /// <summary>
+    /// Creates a new bag for an existing bean, specified by bean ID.
+    /// Validates that the bean exists (not deleted, active) and roast date is not in the future.
+    /// Returns a lightweight <see cref="BagSummaryDto"/> populated with the bean name and zeroed stats.
+    /// </summary>
+    /// <param name="beanId">Parent bean identifier (must be &gt; 0)</param>
+    /// <param name="roastDate">Date the coffee was roasted (must be today or earlier)</param>
+    /// <param name="notes">Optional user notes (≤500 characters); whitespace is treated as null</param>
+    /// <returns>
+    /// <see cref="OperationResult{T}"/> with a populated <see cref="BagSummaryDto"/> on success,
+    /// or a failure result with an appropriate error message.
+    /// </returns>
+    Task<OperationResult<BagSummaryDto>> CreateNewBagForBeanAsync(int beanId, DateTime roastDate, string? notes = null);
+
     
     /// <summary>
     /// Gets a bag by its unique identifier.

@@ -1,3 +1,5 @@
+using BaristaNotes.Core.Models.Enums;
+
 namespace BaristaNotes.Core.Models;
 
 public class ShotRecord
@@ -11,7 +13,22 @@ public class ShotRecord
     public int? GrinderId { get; set; }
     public int? MadeById { get; set; }
     public int? MadeForId { get; set; }
-    
+
+    /// <summary>
+    /// Brew method for this record. Defaults to Espresso for backwards
+    /// compatibility with pre-v2 rows. Combined with <see cref="ParametersJson"/>,
+    /// this lets a single record represent any drink (espresso, pour over, moka, etc.)
+    /// while keeping the shared columns (Dose, Time, Output) as first-class.
+    /// </summary>
+    public BrewMethod BrewMethod { get; set; } = BrewMethod.Espresso;
+
+    /// <summary>
+    /// Optional JSON blob of brew-method-specific parameters that don't
+    /// warrant their own column (e.g. pour-over pour schedule, moka burner
+    /// level, aeropress plunge style). Null when not used.
+    /// </summary>
+    public string? ParametersJson { get; set; }
+
     // Recipe parameters
     public decimal DoseIn { get; set; }
     public string GrindSetting { get; set; } = string.Empty;

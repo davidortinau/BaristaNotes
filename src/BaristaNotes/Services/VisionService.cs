@@ -4,6 +4,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using BaristaNotes.Core.Services;
+using BaristaNotes.Core.Services.DTOs;
 
 namespace BaristaNotes.Services;
 
@@ -16,9 +17,22 @@ public class VisionService : IVisionService
     private readonly IConfiguration _configuration;
     private readonly ILogger<VisionService> _logger;
     private IChatClient? _visionClient;
+    private IChatClient? _extractionClient;
 
     private const string VisionModelId = "gpt-4o";
+    private const string ExtractionModelId = "gpt-4o-mini";
     private const int TimeoutSeconds = 30;
+
+    private const string BeanLabelExtractionSystemPrompt = """
+        You are a specialist at reading coffee bag labels. Extract these fields from the image and return ONLY JSON, no prose:
+        {
+          "name": string or null,       // The specific bean/blend name (e.g. "Yirgacheffe", "Monarch", "Black Cat Espresso")
+          "roaster": string or null,    // The roastery/brand (e.g. "Blue Bottle", "Onyx", "Counter Culture")
+          "origin": string or null,     // Country, region, or farm (e.g. "Ethiopia", "Colombia Huila")
+          "roastDate": "YYYY-MM-DD" or null  // Only if a roast date is explicitly printed
+        }
+        If a field is unclear or missing from the label, use null. Never guess a date.
+        """;
 
     private const string SystemPrompt = """
         You are a helpful barista assistant with vision capabilities.
@@ -107,6 +121,86 @@ public class VisionService : IVisionService
         }
     }
 
+    /// <inheritdoc />
+    public async Task<BeanLabelExtraction> ExtractBeanLabelAsync(
+        Stream imageStream,
+        CancellationToken ct = default)
+    {
+        string? rawResponse = null;
+        try
+        {
+            var client = GetOrCreateExtractionClient();
+            if (client == null)
+            {
+                return new BeanLabelExtraction
+                {
+                    Success = false,
+                    ErrorMessage = "Vision service is not configured."
+                };
+            }
+
+            using var memoryStream = new MemoryStream();
+            await imageStream.CopyToAsync(memoryStream, ct);
+            var imageBytes = memoryStream.ToArray();
+
+            _logger.LogDebug("Extracting bean label fields from image ({Size} bytes)", imageBytes.Length);
+
+            var messages = new List<ChatMessage>
+            {
+                new(ChatRole.System, BeanLabelExtractionSystemPrompt),
+                new(ChatRole.User, new AIContent[]
+                {
+                    new TextContent("Extract the fields."),
+                    new DataContent(imageBytes, "image/jpeg")
+                })
+            };
+
+            var options = new ChatOptions
+            {
+                ResponseFormat = ChatResponseFormat.Json
+            };
+
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(TimeoutSeconds));
+
+            var response = await client.GetResponseAsync(messages, options, cts.Token);
+            rawResponse = response.Text;
+
+            var result = BeanLabelParser.ParseResponse(rawResponse);
+            if (result.Success)
+            {
+                _logger.LogInformation(
+                    "Bean label extracted: name={Name} roaster={Roaster} origin={Origin} roastDate={RoastDate}",
+                    result.Name, result.Roaster, result.Origin, result.RoastDate);
+            }
+            else
+            {
+                _logger.LogWarning("Bean label extraction failed to parse: {Error}", result.ErrorMessage);
+            }
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Bean label extraction timed out");
+            return new BeanLabelExtraction
+            {
+                Success = false,
+                ErrorMessage = "Extraction timed out. Please try again.",
+                RawResponse = rawResponse
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error extracting bean label");
+            return new BeanLabelExtraction
+            {
+                Success = false,
+                ErrorMessage = $"Failed to extract bean label: {ex.Message}",
+                RawResponse = rawResponse
+            };
+        }
+    }
+
     /// <summary>
     /// Gets or creates the Azure OpenAI vision client (gpt-4o).
     /// </summary>
@@ -136,6 +230,39 @@ public class VisionService : IVisionService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create Azure OpenAI vision client");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Gets or creates the Azure OpenAI extraction client (gpt-4o-mini) for OCR-style field extraction.
+    /// </summary>
+    private IChatClient? GetOrCreateExtractionClient()
+    {
+        if (_extractionClient != null)
+        {
+            return _extractionClient;
+        }
+
+        var endpoint = _configuration["AzureOpenAI:Endpoint"];
+        var apiKey = _configuration["AzureOpenAI:ApiKey"];
+
+        if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
+        {
+            return null;
+        }
+
+        try
+        {
+            var azureClient = new AzureOpenAIClient(
+                new Uri(endpoint),
+                new ApiKeyCredential(apiKey));
+            _extractionClient = azureClient.GetChatClient(ExtractionModelId).AsIChatClient();
+            return _extractionClient;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create Azure OpenAI extraction client");
             return null;
         }
     }

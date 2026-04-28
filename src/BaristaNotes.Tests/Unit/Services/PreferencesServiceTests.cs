@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Tests.Mocks;
 
@@ -222,6 +222,7 @@ public class PreferencesServiceTests
         // Arrange
         _service.SetLastDrinkType("Espresso");
         _service.SetLastBeanId(1);
+        _service.SetLastBagId(42);
         _service.SetLastMachineId(2);
         _service.SetLastGrinderId(3);
         _service.SetLastAccessoryIds(new List<int> { 4, 5 });
@@ -234,10 +235,24 @@ public class PreferencesServiceTests
         // Assert
         Assert.Null(_service.GetLastDrinkType());
         Assert.Null(_service.GetLastBeanId());
+        Assert.Null(_service.GetLastBagId());
         Assert.Null(_service.GetLastMachineId());
         Assert.Null(_service.GetLastGrinderId());
         Assert.Empty(_service.GetLastAccessoryIds());
         Assert.Null(_service.GetLastMadeById());
         Assert.Null(_service.GetLastMadeForId());
+    }
+
+    [Fact]
+    public void ClearAll_ClearsLastBagId()
+    {
+        // Arrange
+        _service.SetLastBagId(42);
+        
+        // Act
+        _service.ClearAll();
+        
+        // Assert
+        Assert.Null(_service.GetLastBagId());
     }
 }

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace BaristaNotes.Core.Services;
 
@@ -148,6 +148,7 @@ public class PreferencesService : IPreferencesService
     {
         _store.Remove(KeyLastDrinkType);
         _store.Remove(KeyLastBeanId);
+        _store.Remove(KeyLastBagId);
         _store.Remove(KeyLastMachineId);
         _store.Remove(KeyLastGrinderId);
         _store.Remove(KeyLastAccessoryIds);

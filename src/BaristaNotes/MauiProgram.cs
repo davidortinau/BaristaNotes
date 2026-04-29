@@ -28,10 +28,14 @@ public static class MauiProgram
 {
 	public static MauiApp CreateMauiApp()
 	{
+#if DEBUG
 		var startupTimer = System.Diagnostics.Stopwatch.StartNew();
 		void LogTiming(string phase) => Console.WriteLine($"[STARTUP] {phase}: {startupTimer.ElapsedMilliseconds}ms");
-		
+#endif
+
+#if DEBUG
 		LogTiming("CreateMauiApp entered");
+#endif
 		
 		var builder = MauiApp.CreateBuilder();
 		builder
@@ -91,7 +95,9 @@ public static class MauiProgram
 				fonts.AddFont("coffee-icons.ttf", "coffee-icons");
 			});
 
+#if DEBUG
 		LogTiming("Builder configured");
+#endif
 
 		// Register MauiReactor routes
 		RegisterRoutes();
@@ -120,12 +126,14 @@ public static class MauiProgram
 		builder.Services.AddDbContext<BaristaNotesContext>(options =>
 			options.UseSqlite($"Data Source={dbPath}"));
 
+#if DEBUG
 		LogTiming("DbContext registered");
+#endif
 
-		// Bootstrap logging: Console.WriteLine used here because ILogger<T> is not available
-		// during DI container build phase (circular dependency). This is the only acceptable
-		// use of Console.WriteLine in the application.
+		// Database path logging gated to DEBUG builds only to avoid leaking file paths in production.
+#if DEBUG
 		Console.WriteLine($"Database path: {dbPath}");
+#endif
 
 		// Register Apple Intelligence chat client (iOS only)
 		// Note: AppleIntelligenceChatClient requires iOS 26.0+, but VoiceCommandService
@@ -138,12 +146,16 @@ public static class MauiProgram
 			// This will fail on iOS < 26.0 or if Apple Intelligence is not available
 			var appleIntelligenceClient = new AppleIntelligenceChatClient();
 			builder.Services.AddSingleton<Microsoft.Extensions.AI.IChatClient>(appleIntelligenceClient);
+#if DEBUG
 			Console.WriteLine("Apple Intelligence chat client registered successfully");
+#endif
 		}
 		catch (Exception ex)
 		{
 			// Apple Intelligence not available - VoiceCommandService will use OpenAI fallback
+#if DEBUG
 			Console.WriteLine($"Apple Intelligence not available, will use OpenAI: {ex.Message}");
+#endif
 		}
 #pragma warning restore CA1416
 #endif
@@ -193,14 +205,20 @@ public static class MauiProgram
 		builder.Logging.AddDebug();
 #endif
 
+#if DEBUG
 		LogTiming("Services registered, calling Build()");
+#endif
 		var app = builder.Build();
+#if DEBUG
 		LogTiming("Build() completed");
+#endif
 
 		// Theme initialization moved to BaristaApp.OnMounted() to avoid blocking main thread
 		// Database migration moved to async startup to avoid iOS watchdog timeout
 		
+#if DEBUG
 		LogTiming("CreateMauiApp returning (deferred: theme init, db migration)");
+#endif
 		return app;
 	}
 

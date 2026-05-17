@@ -1,4 +1,4 @@
-using BaristaNotes.Core.Services;
+﻿using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Components;
 using BaristaNotes.Styles;
@@ -127,7 +127,14 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
 
     async void NavigateToDetail(int shotId)
     {
-        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingPageProps>("shot-logging", props => props.ShotId = shotId);
+        if (AppShell.UseGridLoggingLayout)
+        {
+            await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingGridPageProps>("shot-logging-grid", props => props.ShotId = shotId);
+        }
+        else
+        {
+            await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingPageProps>("shot-logging", props => props.ShotId = shotId);
+        }
     }
 
     async Task OpenFilterPopup()

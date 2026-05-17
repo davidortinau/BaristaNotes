@@ -156,6 +156,8 @@ public static class MauiProgram
 		builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 		builder.Services.AddScoped<IShotRecordRepository, ShotRecordRepository>();
 		builder.Services.AddScoped<IRecipeRepository, RecipeRepository>();
+		builder.Services.AddScoped<IGrinderProfileRepository, GrinderProfileRepository>();
+		builder.Services.AddScoped<IGrindTranslationCacheRepository, GrindTranslationCacheRepository>();
 
 		// Register MAUI preferences store
 		builder.Services.AddSingleton<IPreferencesStore, MauiPreferencesStore>();
@@ -194,6 +196,8 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IFeedbackService, FeedbackService>();
 		builder.Services.AddSingleton<IThemeService, ThemeService>();
 		builder.Services.AddSingleton<IAIAdviceService, AIAdviceService>();
+		builder.Services.AddSingleton<BaristaNotes.Core.Services.Grind.IGrindTranslationAI, GrindTranslationAI>();
+		builder.Services.AddScoped<BaristaNotes.Core.Services.Grind.IGrindTranslationService, BaristaNotes.Core.Services.Grind.GrindTranslationService>();
 
 		// Popups
 		builder.Services.AddTransient<Integrations.Popups.AddCoffeePopup>();
@@ -220,6 +224,8 @@ public static class MauiProgram
 #if DEBUG
 		builder.Logging.AddDebug();
 		Microsoft.Maui.DevFlow.Agent.AgentServiceExtensions.AddMauiDevFlowAgent(builder);
+		HotReloadSentinel.Diagnostics.HotReloadDiagnosticsExtensions.UseHotReloadDiagnostics(builder);
+		// HotReloadSentinel.Diagnostics.Maui.MauiAppBuilderExtensions.UseHotReloadOverlay(builder);
 #endif
 
 		LogTiming("Services registered, calling Build()");
@@ -301,5 +307,6 @@ public static class MauiProgram
 		MauiReactor.Routing.RegisterRoute<Pages.UserProfileManagementPage>("profiles");
 		MauiReactor.Routing.RegisterRoute<Pages.ProfileFormPage>("profile-form");
 		MauiReactor.Routing.RegisterRoute<Pages.ShotLoggingPage>("shot-logging");
+		MauiReactor.Routing.RegisterRoute<Pages.ShotLoggingGridPage>("shot-logging-grid");
 	}
 }

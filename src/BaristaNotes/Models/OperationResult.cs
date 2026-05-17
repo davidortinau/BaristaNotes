@@ -1,4 +1,4 @@
-namespace BaristaNotes.Models;
+﻿namespace BaristaNotes.Models;
 
 public class OperationResult<T>
 {

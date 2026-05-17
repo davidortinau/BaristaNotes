@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Services.Exceptions;
+﻿namespace BaristaNotes.Core.Services.Exceptions;
 
 public class EntityNotFoundException : Exception
 {

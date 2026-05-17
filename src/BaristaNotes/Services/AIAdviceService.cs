@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.ClientModel;
 using Azure.AI.OpenAI;
 using Microsoft.Extensions.AI;

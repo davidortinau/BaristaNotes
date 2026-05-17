@@ -1,4 +1,4 @@
-using BaristaNotes.Core.Models;
+﻿using BaristaNotes.Core.Models;
 using BaristaNotes.Core.Services.DTOs;
 
 namespace BaristaNotes.Core.Services;

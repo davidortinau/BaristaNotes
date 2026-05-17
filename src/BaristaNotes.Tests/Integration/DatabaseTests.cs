@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using Microsoft.EntityFrameworkCore;
 using BaristaNotes.Core.Data;
 using BaristaNotes.Core.Models;

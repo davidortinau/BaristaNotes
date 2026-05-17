@@ -1,4 +1,4 @@
-using Fonts;
+﻿using Fonts;
 
 namespace BaristaNotes.Styles;
 

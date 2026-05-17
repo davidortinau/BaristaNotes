@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Models.Enums;
+﻿namespace BaristaNotes.Core.Models.Enums;
 
 /// <summary>
 /// A brewing method for preparing coffee. Each <see cref="Recipe"/> and

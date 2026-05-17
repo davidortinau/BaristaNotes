@@ -1,4 +1,4 @@
-using MauiReactor;
+﻿using MauiReactor;
 using BaristaNotes.Styles;
 using MauiReactor.Shapes;
 

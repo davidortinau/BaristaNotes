@@ -1,4 +1,4 @@
-using Syncfusion.Maui.Gauges;
+﻿using Syncfusion.Maui.Gauges;
 
 namespace BaristaNotes.Components;
 

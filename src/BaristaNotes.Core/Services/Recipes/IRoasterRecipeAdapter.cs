@@ -1,4 +1,4 @@
-using BaristaNotes.Core.Models;
+﻿using BaristaNotes.Core.Models;
 
 namespace BaristaNotes.Core.Services.Recipes;
 

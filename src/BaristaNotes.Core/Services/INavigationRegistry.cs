@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Services;
+﻿namespace BaristaNotes.Core.Services;
 
 /// <summary>
 /// Registry for app navigation routes with descriptions for AI reasoning.

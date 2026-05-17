@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using BaristaNotes.Core.Services;
 
 namespace BaristaNotes.Tests.Unit.Services;

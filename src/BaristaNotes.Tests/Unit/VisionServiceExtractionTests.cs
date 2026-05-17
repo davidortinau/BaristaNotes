@@ -1,4 +1,4 @@
-using BaristaNotes.Core.Services;
+﻿using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 
 namespace BaristaNotes.Tests.Unit;

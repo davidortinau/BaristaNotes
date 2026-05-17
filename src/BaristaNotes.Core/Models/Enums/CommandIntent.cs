@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Models.Enums;
+﻿namespace BaristaNotes.Core.Models.Enums;
 
 /// <summary>
 /// Identifies the action type from a voice command.

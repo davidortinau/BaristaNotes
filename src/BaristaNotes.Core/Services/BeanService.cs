@@ -1,4 +1,4 @@
-using BaristaNotes.Core.Data.Repositories;
+﻿using BaristaNotes.Core.Data.Repositories;
 using BaristaNotes.Core.Models;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Core.Services.Exceptions;

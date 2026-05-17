@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Data.Repositories;
+﻿namespace BaristaNotes.Core.Data.Repositories;
 
 public interface IRepository<T> where T : class
 {

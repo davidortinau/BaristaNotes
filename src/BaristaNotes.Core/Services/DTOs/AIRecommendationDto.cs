@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Services.DTOs;
+﻿namespace BaristaNotes.Core.Services.DTOs;
 
 /// <summary>
 /// Response from AI service for bean extraction recommendations.

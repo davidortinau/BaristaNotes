@@ -1,4 +1,4 @@
-using BaristaNotes.Core.Data.Repositories;
+﻿using BaristaNotes.Core.Data.Repositories;
 using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services.DTOs;
 using Microsoft.Extensions.Logging;

@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Services.DTOs;
+﻿namespace BaristaNotes.Core.Services.DTOs;
 
 /// <summary>
 /// Result of extracting coffee-bag-label fields from a photo via the vision model.

@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Services.DTOs;
+﻿namespace BaristaNotes.Core.Services.DTOs;
 
 /// <summary>
 /// Used to gather context for AI advice request.

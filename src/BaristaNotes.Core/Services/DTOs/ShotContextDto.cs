@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Services.DTOs;
+﻿namespace BaristaNotes.Core.Services.DTOs;
 
 /// <summary>
 /// Simplified shot data for AI context.

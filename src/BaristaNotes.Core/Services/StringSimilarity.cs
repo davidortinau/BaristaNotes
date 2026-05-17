@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Services;
+﻿namespace BaristaNotes.Core.Services;
 
 /// <summary>
 /// Small string similarity helpers used by fuzzy matching.

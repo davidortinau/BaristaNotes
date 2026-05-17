@@ -1,4 +1,4 @@
-using MauiReactor;
+﻿using MauiReactor;
 using MauiReactor.Internals;
 using UXDivers.Popups.Maui;
 

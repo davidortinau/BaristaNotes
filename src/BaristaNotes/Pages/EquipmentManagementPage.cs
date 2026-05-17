@@ -1,4 +1,4 @@
-using BaristaNotes.Core.Models.Enums;
+﻿using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;

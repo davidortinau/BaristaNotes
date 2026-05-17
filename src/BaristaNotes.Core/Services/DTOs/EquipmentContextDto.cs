@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Services.DTOs;
+﻿namespace BaristaNotes.Core.Services.DTOs;
 
 /// <summary>
 /// Equipment information for AI context.

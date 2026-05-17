@@ -1,4 +1,4 @@
-namespace BaristaNotes.Styles;
+﻿namespace BaristaNotes.Styles;
 
 /// <summary>
 /// Coffee-themed color palette with light and dark mode variants.

@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Services;
+﻿namespace BaristaNotes.Core.Services;
 
 /// <summary>
 /// Service for managing a persistent overlay that appears above all app content,

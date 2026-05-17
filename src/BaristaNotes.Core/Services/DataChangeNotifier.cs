@@ -1,4 +1,4 @@
-using BaristaNotes.Core.Models.Enums;
+﻿using BaristaNotes.Core.Models.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace BaristaNotes.Core.Services;

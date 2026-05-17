@@ -1,4 +1,4 @@
-using Moq;
+﻿using Moq;
 using Xunit;
 using BaristaNotes.Core.Services;
 using Microsoft.Maui.Media;

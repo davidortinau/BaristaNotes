@@ -1,4 +1,4 @@
-namespace BaristaNotes.Styles;
+﻿namespace BaristaNotes.Styles;
 
 /// <summary>
 /// Centralized theme key constants for MauiReactor theme system.

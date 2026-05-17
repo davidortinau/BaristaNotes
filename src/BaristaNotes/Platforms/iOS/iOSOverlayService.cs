@@ -1,4 +1,4 @@
-// DEPRECATED: Using WindowOverlay approach instead (cross-platform)
+﻿// DEPRECATED: Using WindowOverlay approach instead (cross-platform)
 // See BaristaNotes/Services/VoiceOverlay.cs
 
 /*

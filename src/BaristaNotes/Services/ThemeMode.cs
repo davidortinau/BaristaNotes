@@ -1,4 +1,4 @@
-namespace BaristaNotes.Services;
+﻿namespace BaristaNotes.Services;
 
 /// <summary>
 /// Represents the user's theme mode preference.

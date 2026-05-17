@@ -1,4 +1,4 @@
-using BaristaNotes.Core.Data;
+﻿using BaristaNotes.Core.Data;
 using BaristaNotes.Core.Models;
 using BaristaNotes.Core.Services;
 using Microsoft.EntityFrameworkCore;

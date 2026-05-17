@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Models.Enums;
+﻿namespace BaristaNotes.Core.Models.Enums;
 
 /// <summary>
 /// Processing status for a voice command.

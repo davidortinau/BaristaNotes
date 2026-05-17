@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using BaristaNotes.Core.Services;
 using Microsoft.Extensions.Logging;
 

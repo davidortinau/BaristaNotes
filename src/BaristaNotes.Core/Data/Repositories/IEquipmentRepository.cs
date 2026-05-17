@@ -1,4 +1,4 @@
-using BaristaNotes.Core.Models;
+﻿using BaristaNotes.Core.Models;
 using BaristaNotes.Core.Models.Enums;
 
 namespace BaristaNotes.Core.Data.Repositories;

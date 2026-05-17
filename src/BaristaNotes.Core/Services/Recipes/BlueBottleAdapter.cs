@@ -1,4 +1,4 @@
-using BaristaNotes.Core.Models;
+﻿using BaristaNotes.Core.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 

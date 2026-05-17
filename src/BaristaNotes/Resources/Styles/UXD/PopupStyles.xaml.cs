@@ -1,4 +1,4 @@
-namespace UXDivers.Popups.Maui.Controls
+﻿namespace UXDivers.Popups.Maui.Controls
 {
     public partial class PopupStyles : ResourceDictionary
     {

@@ -1,4 +1,4 @@
-using Microsoft.Maui.Graphics;
+﻿using Microsoft.Maui.Graphics;
 using Xunit;
 
 namespace BaristaNotes.Tests.Unit.Utilities;

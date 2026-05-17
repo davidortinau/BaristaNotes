@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Models.Enums;
+﻿namespace BaristaNotes.Core.Models.Enums;
 
 /// <summary>
 /// Type of data change for cross-page notifications.

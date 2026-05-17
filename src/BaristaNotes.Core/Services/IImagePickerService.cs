@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Services;
+﻿namespace BaristaNotes.Core.Services;
 
 public interface IImagePickerService
 {

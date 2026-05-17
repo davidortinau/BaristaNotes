@@ -1,4 +1,4 @@
-using Microsoft.Maui.Media;
+﻿using Microsoft.Maui.Media;
 using BaristaNotes.Core.Services;
 using Microsoft.Extensions.Logging;
 

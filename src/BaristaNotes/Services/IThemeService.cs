@@ -1,4 +1,4 @@
-namespace BaristaNotes.Services;
+﻿namespace BaristaNotes.Services;
 
 /// <summary>
 /// Encapsulates theme mode management, preference persistence, and theme application logic.

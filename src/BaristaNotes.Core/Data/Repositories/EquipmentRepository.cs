@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using BaristaNotes.Core.Models;
 using BaristaNotes.Core.Models.Enums;
 

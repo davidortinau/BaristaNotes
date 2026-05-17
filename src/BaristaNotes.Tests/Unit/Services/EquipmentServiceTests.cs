@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using Moq;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Data.Repositories;

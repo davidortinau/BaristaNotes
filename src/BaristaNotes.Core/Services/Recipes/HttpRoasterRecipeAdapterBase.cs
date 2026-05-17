@@ -1,4 +1,4 @@
-using System.Net.Http;
+﻿using System.Net.Http;
 using BaristaNotes.Core.Models;
 using Microsoft.Extensions.Logging;
 

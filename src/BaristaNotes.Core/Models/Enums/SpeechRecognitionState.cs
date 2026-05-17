@@ -1,4 +1,4 @@
-namespace BaristaNotes.Core.Models.Enums;
+﻿namespace BaristaNotes.Core.Models.Enums;
 
 /// <summary>
 /// State of the speech recognition service.

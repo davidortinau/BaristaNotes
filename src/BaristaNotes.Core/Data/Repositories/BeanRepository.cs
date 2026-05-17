@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using BaristaNotes.Core.Models;
 
 namespace BaristaNotes.Core.Data.Repositories;

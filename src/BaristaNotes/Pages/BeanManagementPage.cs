@@ -1,4 +1,4 @@
-using BaristaNotes.Core.Services;
+﻿using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Integrations.Popups;
 using BaristaNotes.Services;
@@ -109,6 +109,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
                         })
                         .Margin(0, 16, 0, 0)
                 )
+                .Padding(10)
                 .VCenter()
                 .HCenter()
                 .Spacing(16)
@@ -136,6 +137,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
                     .Margin(16, 0)
 
         ).Title("Beans")
+        .Padding(10)
         .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always))
         .OnAppearing(() => OnPageAppearing());
     }

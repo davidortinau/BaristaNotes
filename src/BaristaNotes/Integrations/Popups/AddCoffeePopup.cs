@@ -1,4 +1,4 @@
-using BaristaNotes.Core.Services;
+﻿using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
@@ -209,7 +209,7 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
 
         var scanButton = new Controls.Button
         {
-            Text = "📷  Scan label",
+            Text = "< Scan a label >",
             BackgroundColor = AppColors.Dark.Primary,
             TextColor = AppColors.Dark.OnPrimary,
             BorderWidth = 0,
@@ -466,9 +466,9 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
 
         var scanLink = new Controls.Button
         {
-            Text = "📷  Scan label",
+            Text = "Scan a label",
             BackgroundColor = Colors.Transparent,
-            TextColor = AppColors.Dark.Primary,
+            TextColor = AppColors.Dark.TextPrimary,
             BorderWidth = 0,
             Padding = new Thickness(0),
             HeightRequest = 28,
@@ -480,7 +480,7 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
         var content = new Controls.VerticalStackLayout
         {
             Spacing = 10,
-            Padding = new Thickness(HorizontalPadding, 0),
+            Padding = new Thickness(0, 0),
             HorizontalOptions = LayoutOptions.Fill
         };
 

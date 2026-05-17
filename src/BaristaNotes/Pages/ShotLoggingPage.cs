@@ -1,4 +1,4 @@
-using MauiReactor;
+﻿using MauiReactor;
 using MauiReactor.Animations;
 using MauiReactor.Shapes;
 using BaristaNotes.Core.Services;
@@ -650,11 +650,11 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
         {
             _logger.LogError(ex, "Error processing voice command");
             AddChatMessage("Sorry, something went wrong. Please try again.", isUser: false, isError: true);
-            
+
             var errorMessage = "Sorry, something went wrong. Please try again.";
             SetState(s => s.LastAIResponse = errorMessage);
             SetState(s => s.VoiceState = SpeechRecognitionState.Idle);
-            
+
             // Resume speech if it was paused
             if (_speechPaused)
             {
@@ -729,7 +729,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             {
                 // Clear last AI response when user starts speaking again
                 s.LastAIResponse = "";
-                
+
                 // iOS sends individual words, so append with space
                 if (!string.IsNullOrEmpty(s.VoiceTranscript) && !string.IsNullOrEmpty(partialText))
                 {
@@ -1284,17 +1284,17 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             // Coffee bean icon - MUST use MaterialSymbolsFont per Constitution Principle III
             Label(MaterialSymbolsFont.Coffee)
                 .FontFamily(MaterialSymbolsFont.FontFamily)
-                .FontSize(48)
+                .FontSize(86)
                 .TextColor(textColor)
                 .HCenter(),
 
-            Label("No beans configured")
+            Label("No beans")
                 .FontSize(20)
                 .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold)
                 .TextColor(textColor)
                 .HCenter(),
 
-            Label("Create your first bean to start logging shots")
+            Label("Create a bean to start logging drinks")
                 .FontSize(14)
                 .TextColor(secondaryTextColor)
                 .HCenter()
@@ -1524,7 +1524,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
                     .Padding(16, 0, 16, 32)
                 ).GridRow(1)
 
-                // Voice overlay is now rendered via WindowOverlay (IOverlayService)
+            // Voice overlay is now rendered via WindowOverlay (IOverlayService)
             ).SafeAreaEdges(safeEdges)
         )
         .SafeAreaEdges(safeEdges)
@@ -1565,7 +1565,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             // Check if capture is supported
             if (!MediaPicker.Default.IsCaptureSupported)
             {
-                await ContainerPage!.DisplayAlert("Camera Unavailable", 
+                await ContainerPage!.DisplayAlert("Camera Unavailable",
                     "Camera is not available on this device.", "OK");
                 return;
             }
@@ -1573,7 +1573,7 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             // Check if vision service is available
             if (!await _visionService.IsAvailableAsync())
             {
-                await ContainerPage!.DisplayAlert("Vision Unavailable", 
+                await ContainerPage!.DisplayAlert("Vision Unavailable",
                     "Vision service is not configured.", "OK");
                 return;
             }
@@ -1594,34 +1594,34 @@ partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps
             }
 
             // Show analyzing state
-            await ContainerPage!.DisplayAlert("Analyzing", 
+            await ContainerPage!.DisplayAlert("Analyzing",
                 "Analyzing photo for people count...", "OK");
 
             // Analyze the photo
             using var stream = await photo.OpenReadAsync();
             var result = await _visionService.AnalyzeImageAsync(
-                stream, 
+                stream,
                 "Count the people in this image and tell me how many cups of coffee I need to make.");
 
             if (result.Success)
             {
-                var message = result.Message ?? 
+                var message = result.Message ??
                     $"I see {result.PeopleCount} {(result.PeopleCount == 1 ? "person" : "people")}. " +
                     $"You'll need {result.CupsNeeded} {(result.CupsNeeded == 1 ? "cup" : "cups")} of coffee, " +
                     $"which requires about {result.BeansNeededGrams}g of beans.";
-                
+
                 await ContainerPage!.DisplayAlert("Analysis Complete", message, "OK");
             }
             else
             {
-                await ContainerPage!.DisplayAlert("Analysis Failed", 
+                await ContainerPage!.DisplayAlert("Analysis Failed",
                     result.ErrorMessage ?? "Could not analyze the photo.", "OK");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error capturing and analyzing photo");
-            await ContainerPage!.DisplayAlert("Error", 
+            await ContainerPage!.DisplayAlert("Error",
                 $"Failed to capture or analyze photo: {ex.Message}", "OK");
         }
     }

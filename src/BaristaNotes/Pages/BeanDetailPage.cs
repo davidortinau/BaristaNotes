@@ -1,4 +1,4 @@
-using BaristaNotes.Core.Models.Enums;
+﻿using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
@@ -51,6 +51,13 @@ class BeanDetailPageState
     public bool IsLoadingRecipes { get; set; }
     public bool IsRefreshingRecipes { get; set; }
     public string? RecipesLoadError { get; set; }
+
+    // Grind translations (keyed by recipe.Id). Populated after recipes load
+    // and the user has an active grinder.
+    public Dictionary<int, BaristaNotes.Core.Services.Grind.GrindTranslationResult> GrindTranslations { get; set; } = new();
+    public bool IsTranslatingGrinds { get; set; }
+    public int? ActiveGrinderId { get; set; }
+    public string? ActiveGrinderName { get; set; }
 }
 
 partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProps>
@@ -60,8 +67,13 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
     [Inject] IShotService _shotService;
     [Inject] IRecipeService _recipeService;
     [Inject] IFeedbackService _feedbackService;
+    [Inject] BaristaNotes.Core.Data.Repositories.IEquipmentRepository _equipmentRepository;
+    [Inject] BaristaNotes.Core.Data.Repositories.IGrinderProfileRepository _grinderProfileRepository;
+    [Inject] BaristaNotes.Core.Services.Grind.IGrindTranslationService _grindTranslationService;
 
     const int PageSize = 20;
+
+    CancellationTokenSource? _grindTranslationCts;
 
     protected override void OnMounted()
     {
@@ -76,6 +88,14 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
             });
             _ = LoadBeanAsync();
         }
+    }
+
+    protected override void OnWillUnmount()
+    {
+        try { _grindTranslationCts?.Cancel(); } catch { }
+        _grindTranslationCts?.Dispose();
+        _grindTranslationCts = null;
+        base.OnWillUnmount();
     }
 
     async Task LoadBeanAsync()
@@ -232,6 +252,8 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 s.Recipes = recipes.ToList();
                 s.IsLoadingRecipes = false;
             });
+
+            _ = TranslateRecipeGrindsAsync();
         }
         catch (Exception ex)
         {
@@ -240,6 +262,86 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 s.IsLoadingRecipes = false;
                 s.RecipesLoadError = $"Failed to load recipes: {ex.Message}";
             });
+        }
+    }
+
+    async Task TranslateRecipeGrindsAsync()
+    {
+        _grindTranslationCts?.Cancel();
+        _grindTranslationCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        _grindTranslationCts = cts;
+        var ct = cts.Token;
+
+        try
+        {
+            SetState(s => s.IsTranslatingGrinds = true);
+
+            // Pick the user's first active grinder (scope keeps this simple — a
+            // proper "active equipment" picker is a separate feature).
+            var grinders = await _equipmentRepository.GetByTypeAsync(
+                BaristaNotes.Core.Models.Enums.EquipmentType.Grinder);
+            if (ct.IsCancellationRequested) return;
+            var grinder = grinders.FirstOrDefault(g => g.IsActive && !g.IsDeleted);
+            if (grinder == null)
+            {
+                if (ct.IsCancellationRequested) return;
+                SetState(s =>
+                {
+                    s.IsTranslatingGrinds = false;
+                    s.ActiveGrinderId = null;
+                    s.ActiveGrinderName = null;
+                    s.GrindTranslations = new();
+                });
+                return;
+            }
+
+            // Ensure a profile exists so the deterministic path has anchors
+            // for known grinders (e.g. DF64 seed data).
+            await _grinderProfileRepository.GetOrCreateForEquipmentAsync(grinder);
+            if (ct.IsCancellationRequested) return;
+
+            var translations = new Dictionary<int, BaristaNotes.Core.Services.Grind.GrindTranslationResult>();
+            foreach (var recipe in State.Recipes)
+            {
+                if (ct.IsCancellationRequested) return;
+                if (string.IsNullOrWhiteSpace(recipe.GrindHint)) continue;
+                try
+                {
+                    var result = await _grindTranslationService.TranslateAsync(
+                        new BaristaNotes.Core.Services.Grind.GrindTranslationRequest(
+                            EquipmentId: grinder.Id,
+                            GrinderModel: grinder.Name,
+                            GrindHint: recipe.GrindHint!,
+                            Method: recipe.BrewMethod,
+                            BeanId: State.BeanId));
+                    translations[recipe.Id] = result;
+                }
+                catch
+                {
+                    // Per-recipe failure is non-fatal — just skip.
+                }
+            }
+
+            if (ct.IsCancellationRequested) return;
+            SetState(s =>
+            {
+                s.IsTranslatingGrinds = false;
+                s.ActiveGrinderId = grinder.Id;
+                s.ActiveGrinderName = grinder.Name;
+                s.GrindTranslations = translations;
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            // Page unmounted or new translation kicked off - nothing to do.
+        }
+        catch
+        {
+            if (!ct.IsCancellationRequested)
+            {
+                SetState(s => s.IsTranslatingGrinds = false);
+            }
         }
     }
 
@@ -261,6 +363,8 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 s.Recipes = recipes.ToList();
                 s.IsRefreshingRecipes = false;
             });
+
+            _ = TranslateRecipeGrindsAsync();
 
             if (recipes.Count == 0)
             {
@@ -790,6 +894,15 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                     ? (VisualNode)Label($"Grind: {recipe.GrindHint}")
                         .ThemeKey(ThemeKeys.SecondaryText)
                         .FontSize(12)
+                    : null,
+
+                // Grinder-specific translation chip, shown only when we have
+                // an active grinder and either a result or a loading state.
+                !string.IsNullOrWhiteSpace(recipe.GrindHint) && State.ActiveGrinderId.HasValue
+                    ? GrindTranslationChip.Render(
+                        State.GrindTranslations.TryGetValue(recipe.Id, out var t) ? t : null,
+                        loading: State.IsTranslatingGrinds
+                                 && !State.GrindTranslations.ContainsKey(recipe.Id))
                     : null,
 
                 !string.IsNullOrWhiteSpace(recipe.Notes)

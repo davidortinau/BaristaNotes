@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using BaristaNotes.Core.Models;
 using BaristaNotes.Core.Models.Enums;
 
@@ -13,6 +13,8 @@ public class BaristaNotesContext : DbContext
     public DbSet<ShotRecord> ShotRecords { get; set; } = null!;
     public DbSet<ShotEquipment> ShotEquipments { get; set; } = null!;
     public DbSet<Recipe> Recipes { get; set; } = null!;
+    public DbSet<GrinderProfile> GrinderProfiles { get; set; } = null!;
+    public DbSet<GrindTranslationCache> GrindTranslationCache { get; set; } = null!;
     
     public BaristaNotesContext(DbContextOptions<BaristaNotesContext> options) 
         : base(options) { }
@@ -203,6 +205,51 @@ public class BaristaNotesContext : DbContext
                 .WithMany(eq => eq.ShotEquipments)
                 .HasForeignKey(e => e.EquipmentId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // GrinderProfile configuration
+        modelBuilder.Entity<GrinderProfile>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EquipmentId).IsRequired();
+            entity.Property(e => e.MinSetting).HasPrecision(6, 2);
+            entity.Property(e => e.MaxSetting).HasPrecision(6, 2);
+            entity.Property(e => e.StepSize).HasPrecision(6, 3);
+            entity.Property(e => e.AnchorsJson).HasMaxLength(4000);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.LastModifiedAt).IsRequired();
+            entity.Property(e => e.SyncId).IsRequired();
+            entity.Property(e => e.IsDeleted).IsRequired().HasDefaultValue(false);
+
+            entity.HasIndex(e => e.EquipmentId).IsUnique();
+            entity.HasIndex(e => e.SyncId).IsUnique();
+
+            entity.HasOne(e => e.Equipment)
+                .WithMany()
+                .HasForeignKey(e => e.EquipmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // GrindTranslationCache configuration
+        modelBuilder.Entity<GrindTranslationCache>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.GrinderModelNormalized).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.GrindHintNormalized).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.BrewMethod).IsRequired().HasConversion<int>();
+            entity.Property(e => e.MinSetting).HasPrecision(6, 2);
+            entity.Property(e => e.MaxSetting).HasPrecision(6, 2);
+            entity.Property(e => e.SuggestedSetting).HasPrecision(6, 2);
+            entity.Property(e => e.Confidence).IsRequired().HasMaxLength(10);
+            entity.Property(e => e.Source).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Explanation).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.ExpiresAt).IsRequired();
+
+            entity.HasIndex(e => new { e.GrinderModelNormalized, e.GrindHintNormalized, e.BrewMethod })
+                .IsUnique()
+                .HasDatabaseName("IX_GrindTranslationCache_Key");
+            entity.HasIndex(e => e.ExpiresAt);
         });
     }
 }

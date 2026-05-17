@@ -1,5 +1,6 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using BaristaNotes.Core.Models;
+using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services.DTOs;
 
 namespace BaristaNotes.Core.Data.Repositories;
@@ -229,5 +230,26 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
             .Select(s => s.MadeForId!.Value)
             .Distinct()
             .ToList();
+    }
+
+    public async Task<ShotRecord?> GetMostRecentWithGrindAsync(int grinderId, int? beanId = null, BrewMethod? method = null)
+    {
+        var query = _dbSet
+            .AsNoTracking()
+            .Include(s => s.Bag)
+            .Where(s => !s.IsDeleted
+                && s.GrinderId == grinderId
+                && s.GrindSetting != null
+                && s.GrindSetting != string.Empty);
+
+        if (method.HasValue)
+            query = query.Where(s => s.BrewMethod == method.Value);
+
+        if (beanId.HasValue)
+            query = query.Where(s => s.Bag != null && s.Bag.BeanId == beanId.Value);
+
+        return await query
+            .OrderByDescending(s => s.Timestamp)
+            .FirstOrDefaultAsync();
     }
 }

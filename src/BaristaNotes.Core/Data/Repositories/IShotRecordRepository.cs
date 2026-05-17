@@ -1,5 +1,6 @@
-using BaristaNotes.Core.Models;
+﻿using BaristaNotes.Core.Models;
 using BaristaNotes.Core.Services.DTOs;
+using BaristaNotes.Core.Models.Enums;
 
 namespace BaristaNotes.Core.Data.Repositories;
 
@@ -32,4 +33,12 @@ public interface IShotRecordRepository : IRepository<ShotRecord>
     /// Gets distinct MadeFor user profile IDs from shot records.
     /// </summary>
     Task<List<int>> GetMadeForIdsWithShotsAsync();
+
+    /// <summary>
+    /// Returns the most recent (non-deleted) shot record for a given grinder
+    /// that has a non-empty <c>GrindSetting</c>. Optionally filter by bean and
+    /// brew method for higher-relevance history lookups. Used by the grind
+    /// translator to seed a suggested default setting.
+    /// </summary>
+    Task<ShotRecord?> GetMostRecentWithGrindAsync(int grinderId, int? beanId = null, BrewMethod? method = null);
 }

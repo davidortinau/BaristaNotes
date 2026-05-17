@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using BaristaNotes.Core.Models;
 using BaristaNotes.Core.Models.Enums;
@@ -85,13 +85,26 @@ public sealed class OnyxCoffeeLabAdapter : HttpRoasterRecipeAdapterBase
 
     /// <summary>
     /// Exposed internal for testing. Parses the HTML for recipe blocks.
-    /// Strategy: find sections whose heading or class matches "espresso" /
-    /// "pour over" / "drip" etc, then pull dose/yield/time/grind.
+    ///
+    /// Strategy (in order):
+    /// 1. <b>Onyx brew-guide blocks</b> (primary): each Onyx product page
+    ///    embeds espresso + filter brew guides keyed by Wistia video ids of
+    ///    the form <c>wistia_id_brew_guide_{filter|espresso}_en</c>, wrapped
+    ///    in a <c>&lt;div class="guide-body" data-guide="..."&gt;</c>
+    ///    element. Inside we parse <c>Coffee: Ng</c>, <c>Water/Yield: Mg</c>,
+    ///    <c>@ NNN°F</c>, a micron grind hint, and the nearest
+    ///    <c>data-duration="..."</c> seconds.
+    /// 2. <b>Heading fallback</b>: if no brew-guide blocks are present, fall
+    ///    back to the older heading-based scraper. This keeps the adapter
+    ///    useful on unusual pages, e.g. blog posts, and keeps existing tests
+    ///    with simple <c>&lt;h2&gt;Espresso&lt;/h2&gt;</c> markup working.
     /// </summary>
     internal static IReadOnlyList<ScrapedRecipe> ParseRecipes(string html, string sourceUrl)
     {
-        var result = new List<ScrapedRecipe>();
+        var onyxRecipes = ParseOnyxBrewGuides(html, sourceUrl);
+        if (onyxRecipes.Count > 0) return onyxRecipes;
 
+        var result = new List<ScrapedRecipe>();
         foreach (var (method, headingPattern) in MethodHeadingPatterns)
         {
             var block = ExtractSectionBody(html, headingPattern);
@@ -102,6 +115,183 @@ public sealed class OnyxCoffeeLabAdapter : HttpRoasterRecipeAdapterBase
         }
 
         return result;
+    }
+
+    // --- Onyx brew-guide block parser --------------------------------------
+    // NOTE: RegexTimeout is the source-of-truth match timeout; it is declared
+    // below in the heading-parser section but must be referenced by the
+    // regexes in this block. Because static field initializers run top-to-
+    // bottom, we inline the timeout literal here to avoid reading a zero
+    // value from an uninitialized field (which would throw
+    // ArgumentOutOfRangeException at type load).
+
+    private static readonly TimeSpan OnyxRegexTimeout = TimeSpan.FromSeconds(1);
+
+    private static readonly Regex WistiaGuideMarker = new(
+        @"wistia_id_brew_guide_(?<method>filter|espresso)_en",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        OnyxRegexTimeout);
+
+    private static readonly Regex CoffeeLine = new(
+        @"Coffee\s*:\s*(?<dose>\d{1,3}(?:\.\d+)?)\s*g",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        OnyxRegexTimeout);
+
+    private static readonly Regex WaterOrYieldLine = new(
+        @"(?:Water|Yield)\s*:\s*(?<amt>\d{1,4}(?:\.\d+)?)\s*g(?:[^<\r\n]{0,40}@\s*(?<temp>\d{2,3}(?:\.\d+)?)\s*°?\s*(?<unit>[CF]))?",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        OnyxRegexTimeout);
+
+    private static readonly Regex MicronGrind = new(
+        @"(?<um>\d{2,4})\s*(?:µm|um|microns?)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        OnyxRegexTimeout);
+
+    private static readonly Regex StrongGrindBlock = new(
+        @"<strong>\s*Grind\s*</strong>\s*(?:<br[^>]*>|\s|:)*\s*(?<hint>[^<\r\n]{1,60})",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        OnyxRegexTimeout);
+
+    private static readonly Regex DataDuration = new(
+        @"data-duration\s*=\s*""(?<secs>\d{1,4})""",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        OnyxRegexTimeout);
+
+    internal static IReadOnlyList<ScrapedRecipe> ParseOnyxBrewGuides(string html, string sourceUrl)
+    {
+        var recipes = new List<ScrapedRecipe>();
+        try
+        {
+            foreach (Match marker in WistiaGuideMarker.Matches(html))
+            {
+                var methodToken = marker.Groups["method"].Value.ToLowerInvariant();
+                var method = methodToken == "espresso" ? BrewMethod.Espresso : BrewMethod.PourOver;
+
+                var block = ExtractGuideBody(html, marker.Index) ?? SurroundingWindow(html, marker.Index, 4000);
+                if (block == null) continue;
+
+                var recipe = ParseOnyxBlock(block, method, sourceUrl);
+                if (recipe != null && !recipes.Any(r => r.BrewMethod == recipe.BrewMethod))
+                    recipes.Add(recipe);
+            }
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            return Array.Empty<ScrapedRecipe>();
+        }
+        return recipes;
+    }
+
+    /// <summary>
+    /// Finds the enclosing <c>&lt;div class="guide-body" ...&gt;...&lt;/div&gt;</c>
+    /// that contains the Wistia marker at <paramref name="markerIndex"/>. Uses a
+    /// simple bracket-counting scan rather than regex because HTML nesting is
+    /// not regex-friendly.
+    /// </summary>
+    internal static string? ExtractGuideBody(string html, int markerIndex)
+    {
+        const string openTagToken = "<div class=\"guide-body";
+        var start = html.LastIndexOf(openTagToken, markerIndex, StringComparison.OrdinalIgnoreCase);
+        if (start < 0) return null;
+
+        // Walk forward counting <div>/</div> to find the matching closer.
+        var depth = 0;
+        var i = start;
+        while (i < html.Length)
+        {
+            var nextOpen = html.IndexOf("<div", i, StringComparison.OrdinalIgnoreCase);
+            var nextClose = html.IndexOf("</div>", i, StringComparison.OrdinalIgnoreCase);
+            if (nextClose < 0) return null;
+
+            if (nextOpen >= 0 && nextOpen < nextClose)
+            {
+                depth++;
+                i = nextOpen + 4;
+            }
+            else
+            {
+                depth--;
+                i = nextClose + 6;
+                if (depth <= 0) return html.Substring(start, i - start);
+            }
+        }
+        return null;
+    }
+
+    private static string SurroundingWindow(string html, int index, int radius)
+    {
+        var start = Math.Max(0, index - radius);
+        var end = Math.Min(html.Length, index + radius);
+        return html.Substring(start, end - start);
+    }
+
+    private static ScrapedRecipe? ParseOnyxBlock(string block, BrewMethod method, string sourceUrl)
+    {
+        decimal? dose = null;
+        decimal? yield = null;
+        decimal? tempC = null;
+        decimal? totalTime = null;
+        string? grindHint = null;
+
+        var coffee = CoffeeLine.Match(block);
+        if (coffee.Success)
+            dose = ParseDecimal(coffee.Groups["dose"].Value);
+
+        // Prefer Yield for espresso; otherwise Water.
+        Match? chosen = null;
+        foreach (Match m in WaterOrYieldLine.Matches(block))
+        {
+            // First match is usually authoritative; for espresso the HTML has
+            // only "Yield: Ng", for filter "Water: Ng @ NNN°F".
+            chosen = m;
+            break;
+        }
+        if (chosen != null)
+        {
+            yield = ParseDecimal(chosen.Groups["amt"].Value);
+            if (chosen.Groups["temp"].Success)
+            {
+                var t = ParseDecimal(chosen.Groups["temp"].Value);
+                if (t.HasValue)
+                {
+                    tempC = string.Equals(chosen.Groups["unit"].Value, "F", StringComparison.OrdinalIgnoreCase)
+                        ? Math.Round((t.Value - 32m) * 5m / 9m, 1)
+                        : t.Value;
+                }
+            }
+        }
+
+        var grindStrong = StrongGrindBlock.Match(block);
+        if (grindStrong.Success)
+        {
+            var hint = grindStrong.Groups["hint"].Value.Trim();
+            if (hint.Length > 0) grindHint = hint;
+        }
+        if (grindHint == null)
+        {
+            var um = MicronGrind.Match(block);
+            if (um.Success) grindHint = um.Groups["um"].Value + "µm";
+        }
+
+        var dur = DataDuration.Match(block);
+        if (dur.Success)
+            totalTime = ParseDecimal(dur.Groups["secs"].Value);
+
+        if (!dose.HasValue && !yield.HasValue && !totalTime.HasValue && grindHint == null)
+            return null;
+
+        return new ScrapedRecipe
+        {
+            BrewMethod = method,
+            Title = $"{method.DisplayName()} recipe (Onyx)",
+            SourceUrl = sourceUrl,
+            DoseIn = dose,
+            OutputAmount = yield,
+            GrindHint = grindHint,
+            BrewTempC = tempC,
+            TotalTimeSeconds = totalTime,
+            Notes = null
+        };
     }
 
     private static readonly (BrewMethod Method, string HeadingPattern)[] MethodHeadingPatterns =

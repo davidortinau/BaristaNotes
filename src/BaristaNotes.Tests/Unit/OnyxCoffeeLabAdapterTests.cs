@@ -1,4 +1,4 @@
-using BaristaNotes.Core.Models;
+﻿using BaristaNotes.Core.Models;
 using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services.Recipes;
 using Xunit;
@@ -121,6 +121,51 @@ public class OnyxCoffeeLabAdapterTests
         Assert.NotNull(body);
         Assert.Contains("body1", body);
         Assert.DoesNotContain("body2", body);
+    }
+
+    [Fact]
+    public void ParseRecipes_ParsesOnyxBrewGuideBlocks()
+    {
+        // Mirrors the real DOM on onyxcoffeelab.com/products/{slug} circa 2026:
+        // a <div class="guide-body ..."> wraps a Wistia-id marker that
+        // identifies the brew method, and a <div class="guide-text"> contains
+        // the Coffee / Water-or-Yield / Grind lines.
+        var html = """
+            <div class="guide-body" data-guide="blk1">
+              <div class="guide-video" data-video-id="abc">
+                <div id="wistia_id_brew_guide_filter_en"></div>
+              </div>
+              <div class="guide-text">
+                <p>Coffee: 25g</p>
+                <p>Water: 400g @ 205°F</p>
+                <p><strong>Grind</strong><br>725µm</p>
+              </div>
+            </div>
+            <div class="guide-body" data-guide="blk2">
+              <div class="guide-video" data-video-id="xyz">
+                <div id="wistia_id_brew_guide_espresso_en"></div>
+              </div>
+              <div class="guide-text">
+                <p>Coffee: 20g</p>
+                <p>Yield: 47g</p>
+              </div>
+            </div>
+            """;
+
+        var recipes = OnyxCoffeeLabAdapter.ParseRecipes(html, "https://onyxcoffeelab.com/products/x");
+
+        Assert.Equal(2, recipes.Count);
+
+        var filter = Assert.Single(recipes, r => r.BrewMethod == BrewMethod.PourOver);
+        Assert.Equal(25m, filter.DoseIn);
+        Assert.Equal(400m, filter.OutputAmount);
+        Assert.NotNull(filter.BrewTempC);
+        Assert.InRange(filter.BrewTempC!.Value, 95m, 97m);
+        Assert.Equal("725µm", filter.GrindHint);
+
+        var espresso = Assert.Single(recipes, r => r.BrewMethod == BrewMethod.Espresso);
+        Assert.Equal(20m, espresso.DoseIn);
+        Assert.Equal(47m, espresso.OutputAmount);
     }
 
     [Fact]

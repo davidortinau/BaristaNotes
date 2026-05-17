@@ -32,14 +32,22 @@
 		<WindowsPackageType>None</WindowsPackageType>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">17.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.EntityFrameworkCore.GeneratedInterceptors</InterceptorsNamespaces>
+		<!--
+			NOTE: EF Core 10 precompiled queries (InterceptorsNamespaces +
+			Microsoft.EntityFrameworkCore.Tasks) were previously enabled here.
+			They are experimental / NativeAOT-focused and cause spurious
+			"LINQ expression could not be translated" errors on trivial queries
+			when the model or queries change during development. Re-enable only
+			when the model is stable and NativeAOT publishing is required.
+			See: https://learn.microsoft.com/ef/core/performance/nativeaot-and-precompiled-queries
+		-->
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net11.0-ios|AnyCPU'">
@@ -79,13 +87,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.40-ci" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Maui.Essentials.AI" Version="10.0.40-ci" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.1" />
 		<PackageReference Include="Microsoft.Recognizers.Text.Number" Version="1.8.9" />
 		
 		<!-- Maui Reactor (latest preview) -->
-		<PackageReference Include="Reactor.Maui" Version="4.0.12-beta" />
+		<PackageReference Include="Reactor.Maui" Version="4.0.17" />
 		
 		<!-- Community Toolkit -->
 		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
@@ -96,10 +104,17 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<!--
+			Microsoft.EntityFrameworkCore.Tasks auto-runs precompiled query
+			generation at build. Disabled for the same reason as the
+			InterceptorsNamespaces block above: unstable with an in-flux model.
+		-->
+		<!--
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tasks" Version="10.0.1">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		-->
 		
 		<!-- CoreSync (for future sync capability - using latest available version) -->
 		<PackageReference Include="CoreSync.Sqlite" Version="0.1.122" />
@@ -123,6 +138,20 @@
 	<!-- MAUI DevFlow (DEBUG only): in-process agent for UI inspection, logs, network, preferences. -->
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
 		<PackageReference Include="Microsoft.Maui.DevFlow.Agent" Version="0.24.0-dev" />
+	</ItemGroup>
+
+	<!-- HotReload Sentinel (DEBUG only): in-app overlay + diagnostics endpoint. -->
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<ProjectReference Include="..\..\..\hotreload-sentinel\src\HotReloadSentinel.Diagnostics\HotReloadSentinel.Diagnostics.csproj" />
+		<ProjectReference Include="..\..\..\hotreload-sentinel\src\HotReloadSentinel.Diagnostics.Maui\HotReloadSentinel.Diagnostics.Maui.csproj" />
+	</ItemGroup>
+
+	<!-- MauiReactor hot reload: v3+ uses a feature switch (no code call needed). -->
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<RuntimeHostConfigurationOption Include="MauiReactor.HotReload" Value="true" Trim="false" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(Configuration)' == 'Release'">
+		<RuntimeHostConfigurationOption Include="MauiReactor.HotReload" Value="false" Trim="true" />
 	</ItemGroup>
 
 	<ItemGroup>

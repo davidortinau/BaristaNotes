@@ -1,12 +1,15 @@
-﻿using BaristaNotes.Core.Models.Enums;
+using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using Fonts;
+using MauiReactor;
+using MauiReactor.Shapes;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups.Services;
+using Application = Microsoft.Maui.Controls.Application;
 
 namespace BaristaNotes.Pages;
 
@@ -40,7 +43,6 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
 
     void OnPageAppearing()
     {
-        // Reload data when returning from detail page
         _ = LoadDataAsync();
     }
 
@@ -78,133 +80,237 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
         });
     }
 
-    async Task ShowArchiveConfirmation(EquipmentDto equipment)
+    async Task NavigateBack()
     {
-        var popup = new SimpleActionPopup
-        {
-            Title = $"Archive \"{equipment.Name}\"?",
-            Text = "It will no longer appear in your equipment list.",
-            ActionButtonText = "Archive",
-            SecondaryActionButtonText = "Cancel",
-            ActionButtonCommand = new Command(async () =>
-            {
-                await ArchiveEquipment(equipment);
-                await IPopupService.Current.PopAsync();
-            })
-        };
-
-        await IPopupService.Current.PushAsync(popup);
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
     }
 
-    async Task ArchiveEquipment(EquipmentDto equipment)
-    {
-        try
-        {
-            await _equipmentService.ArchiveEquipmentAsync(equipment.Id);
-            await _feedbackService.ShowSuccessAsync($"{equipment.Name} archived");
-            await LoadDataAsync();
-        }
-        catch (Exception ex)
-        {
-            await _feedbackService.ShowErrorAsync("Failed to archive equipment", "Please try again");
-            SetState(s => s.ErrorMessage = ex.Message);
-        }
-    }
+    // ============================================================
+    // Rendering
+    // ============================================================
 
     public override VisualNode Render()
     {
+        return ContentPage("Equipment",
+            Grid(rows: "Auto,*,Auto", columns: "*",
+                HeaderTile().GridRow(0),
+                RenderBody().GridRow(1),
+                BottomNavRow().GridRow(2)
+            )
+            .RowSpacing(1)
+            .BackgroundColor(DividerColor())
+            .Padding(1)
+            .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
+        )
+        .Set(MauiControls.Shell.NavBarIsVisibleProperty, false)
+        .Set(MauiControls.Shell.TabBarIsVisibleProperty, false)
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
+        .OnAppearing(() => OnPageAppearing());
+    }
+
+    // ------------------------------------------------------------
+    // Theme helpers
+    // ------------------------------------------------------------
+
+    static bool IsLight() => Application.Current?.RequestedTheme != AppTheme.Dark;
+    static Color SurfaceColor() => IsLight() ? AppColors.Light.Surface : AppColors.Dark.Surface;
+    static Color TextPrimary() => IsLight() ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+    static Color TextSecondary() => IsLight() ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+    static Color AccentColor() => IsLight() ? AppColors.Light.Primary : AppColors.Dark.Primary;
+    static Color DividerColor() => IsLight() ? AppColors.Light.Outline : AppColors.Dark.Outline;
+
+    // ------------------------------------------------------------
+    // Header tile
+    // ------------------------------------------------------------
+
+    VisualNode HeaderTile()
+    {
+        var count = State.Equipment.Count;
+        var countText = count == 1 ? "1 item" : $"{count} items";
+
+        return Border(
+            Grid(rows: "Auto,*", columns: "*",
+                Label("EQUIPMENT")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .GridRow(0),
+                Label(countText)
+                    .FontSize(28)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .VEnd()
+                    .GridRow(1)
+            )
+            .Padding(16, 56, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(120);
+    }
+
+    // ------------------------------------------------------------
+    // Body
+    // ------------------------------------------------------------
+
+    VisualNode RenderBody()
+    {
         if (State.IsLoading)
         {
-            return ContentPage("Equipment",
-                VStack(
-                    ActivityIndicator()
-                        .IsRunning(true)
-                        .VCenter()
-                        .HCenter()
-                )
-                .VCenter()
-                .HCenter()
+            return Border(
+                VStack(spacing: 8,
+                    ActivityIndicator().IsRunning(true),
+                    Label("Loading…").FontSize(14).TextColor(TextSecondary()).HCenter()
+                ).VCenter().HCenter()
             )
-            .OnAppearing(() => OnPageAppearing());
+            .BackgroundColor(SurfaceColor())
+            .StrokeThickness(0)
+            .StrokeShape(new Rectangle());
         }
 
         if (!string.IsNullOrEmpty(State.ErrorMessage))
         {
-            return ContentPage("Equipment",
-                VStack(
-                    Label("⚠️")
-                        .FontSize(48)
+            return Border(
+                VStack(spacing: 12,
+                    Label("ERROR")
+                        .FontSize(10).CharacterSpacing(2)
+                        .FontAttributes(MauiControls.FontAttributes.Bold)
+                        .TextColor(TextSecondary())
                         .HCenter(),
-                    Label(State.ErrorMessage)
+                    Label(State.ErrorMessage ?? "Unknown error")
+                        .FontSize(16)
+                        .TextColor(TextPrimary())
                         .HCenter(),
                     Button("Retry")
                         .OnClicked(async () =>
                         {
-                            SetState(s => s.ErrorMessage = null);
+                            SetState(s => { s.ErrorMessage = null; s.IsLoading = true; });
                             await LoadDataAsync();
                         })
-                        .Margin(0, 16, 0, 0)
-                )
-                .VCenter()
-                .HCenter()
-                .Spacing(16)
+                        .BackgroundColor(AccentColor())
+                        .TextColor(SurfaceColor())
+                ).VCenter().HCenter().Padding(24)
             )
-            .OnAppearing(() => OnPageAppearing());
+            .BackgroundColor(SurfaceColor())
+            .StrokeThickness(0)
+            .StrokeShape(new Rectangle());
         }
 
-        return ContentPage("Equipment",
-            ToolbarItem("+ Add")
-                .Order(MauiControls.ToolbarItemOrder.Primary)
-                .Priority(0)
-                .OnClicked(async () => await NavigateToAddEquipment()),
-            State.Equipment.Count == 0
-                ? RenderEmptyState()
-                : CollectionView()
-                    .ItemsSource(State.Equipment, RenderEquipmentItem)
-                    .Header(
-                        ContentView().HeightRequest(DeviceInfo.Platform == DevicePlatform.iOS ? 180 : 16)
-                    )
-                    .Footer(
-                        ContentView().HeightRequest(80)
-                    )
-                    .Margin(16, 0)
-        )
-        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always))
-        .OnAppearing(() => OnPageAppearing());
-    }
-
-    VisualNode RenderEmptyState()
-    {
-        return VStack(spacing: 12,
-            Image()
-                .Source(AppIcons.EspressoMachine)
-                .HCenter(),
-            Label("No Equipment Yet")
-                .ThemeKey(ThemeKeys.CardTitle)
-                .HCenter(),
-            Label("Add your coffee machines, grinders, and accessories")
-                .ThemeKey(ThemeKeys.CardSubtitle)
-                .HCenter()
-        )
-        .VCenter()
-        .HCenter()
-        .Padding(24);
-    }
-
-    VisualNode RenderEquipmentItem(EquipmentDto equipment)
-    {
-        return
-            Border(
-                VStack(spacing: 4,
-                    Label(equipment.Name)
-                        .ThemeKey(ThemeKeys.CardTitle),
-                    Label(equipment.Type.ToString())
-                        .ThemeKey(ThemeKeys.CardSubtitle)
-                )
-                .Padding(12)
+        if (State.Equipment.Count == 0)
+        {
+            return Border(
+                VStack(spacing: 12,
+                    Label("NO EQUIPMENT")
+                        .FontSize(10).CharacterSpacing(2)
+                        .FontAttributes(MauiControls.FontAttributes.Bold)
+                        .TextColor(TextSecondary())
+                        .HCenter(),
+                    Label("Add machines, grinders, and accessories")
+                        .FontSize(16)
+                        .TextColor(TextPrimary())
+                        .HCenter()
+                        .HorizontalTextAlignment(TextAlignment.Center)
+                ).VCenter().HCenter().Padding(32)
             )
-            .ThemeKey(ThemeKeys.CardBorder)
-            .OnTapped(() => NavigateToEditEquipment(equipment))
-            .Margin(0, 4);
+            .BackgroundColor(SurfaceColor())
+            .StrokeThickness(0)
+            .StrokeShape(new Rectangle());
+        }
+
+        return CollectionView()
+            .ItemsSource(State.Equipment, RenderEquipmentRow)
+            .BackgroundColor(DividerColor());
+    }
+
+    VisualNode RenderEquipmentRow(EquipmentDto equipment)
+    {
+        return Border(
+            Grid(rows: "Auto,Auto", columns: "*,Auto",
+                Label(equipment.Type.ToString().ToUpperInvariant())
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .GridRow(0).GridColumn(0),
+                Label(equipment.Name)
+                    .FontSize(20)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .LineBreakMode(LineBreakMode.TailTruncation)
+                    .GridRow(1).GridColumn(0),
+                Label("→")
+                    .FontSize(22)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .VCenter()
+                    .GridRow(0).GridRowSpan(2).GridColumn(1)
+            )
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(80)
+        .Margin(0, 0, 0, 1)
+        .OnTapped(() => NavigateToEditEquipment(equipment));
+    }
+
+    // ------------------------------------------------------------
+    // Bottom nav row
+    // ------------------------------------------------------------
+
+    VisualNode BottomNavRow()
+    {
+        return Grid(rows: "Auto", columns: "*,*,*,*",
+            NavTile(AppIcons.CoffeeCup,
+                async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("//shots"))
+                .GridColumn(0),
+            NavTile(AppIcons.Feed,
+                async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("//history"))
+                .GridColumn(1),
+            NavTile(AppIcons.Settings,
+                async () => await NavigateBack())
+                .GridColumn(2),
+            NavTile(AppIcons.Add,
+                async () => await NavigateToAddEquipment(), inverted: true)
+                .GridColumn(3)
+        )
+        .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
+        .ColumnSpacing(1)
+        .BackgroundColor(DividerColor());
+    }
+
+    VisualNode NavTile(FontImageSource imageSource, Action onTap, bool inverted = false)
+    {
+        // For inverted, build a tinted FontImageSource so the icon glyph is
+        // visible against the dark background.
+        FontImageSource source = imageSource;
+        if (inverted)
+        {
+            source = new FontImageSource
+            {
+                FontFamily = imageSource.FontFamily,
+                Glyph = imageSource.Glyph,
+                Size = imageSource.Size,
+                Color = SurfaceColor()
+            };
+        }
+
+        var bg = inverted ? TextPrimary() : SurfaceColor();
+
+        return Border(
+            Image()
+                .Source(source)
+                .HCenter()
+                .VCenter()
+        )
+        .BackgroundColor(bg)
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(72)
+        .Padding(16, 18, 16, 30)
+        .OnTapped(onTap);
     }
 }

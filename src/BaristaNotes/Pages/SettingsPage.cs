@@ -1,9 +1,10 @@
-﻿using MauiReactor;
+using MauiReactor;
 using MauiReactor.Shapes;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using Fonts;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
+using Application = Microsoft.Maui.Controls.Application;
 
 namespace BaristaNotes.Pages;
 
@@ -30,131 +31,275 @@ partial class SettingsPage : Component<SettingsPageState>
         SetState(s => s.CurrentThemeMode = mode);
     }
 
-    public override VisualNode Render()
-    {
-        return ContentPage("Settings",
-            ToolbarItem("Done")
-                .Order(MauiControls.ToolbarItemOrder.Primary)
-                .OnClicked(async () => await MauiControls.Shell.Current.GoToAsync("//shots")),
-            ScrollView(
-                VStack(spacing: 16,
-                    // Appearance section
-                    Label("Appearance")
-                        .ThemeKey(ThemeKeys.SecondaryText)
-                        .Padding(16, 16, 16, 8),
-
-                    // Theme selection - horizontal compact
-                    HStack(spacing: 8,
-                        RenderThemeOption(ThemeMode.Light, MaterialSymbolsFont.Light_mode, "Light"),
-                        RenderThemeOption(ThemeMode.Dark, MaterialSymbolsFont.Dark_mode, "Dark"),
-                        RenderThemeOption(ThemeMode.System, MaterialSymbolsFont.Brightness_auto, "Auto")
-                    )
-                    .Padding(16, 0),
-
-                    // Manage section header
-                    Label("Manage")
-                        .ThemeKey(ThemeKeys.SecondaryText)
-                        .Padding(16, 24, 16, 8),
-
-                    // Equipment management option
-                    RenderSettingsItem(
-                        "Equipment",
-                        "Manage machines, grinders, and accessories",
-                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("equipment")),
-
-                    // Bean management option
-                    RenderSettingsItem(
-                        "Beans",
-                        "Manage coffee beans and roasters",
-                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("beans")),
-
-                    // User Profile management option
-                    RenderSettingsItem(
-                        "User Profiles",
-                        "Manage household members",
-                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("profiles")),
-
-                    // About section
-                    Label("About")
-                        .ThemeKey(ThemeKeys.SecondaryText)
-                        .Padding(16, 24, 16, 8),
-
-                    Border(
-                        VStack(spacing: 8,
-                            Label("BaristaNotes")
-                                .FontSize(16)
-                                .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold),
-                            Label("Version 1.0")
-                                .ThemeKey(ThemeKeys.SecondaryText),
-                            Label("Track your espresso journey")
-                                .ThemeKey(ThemeKeys.SecondaryText)
-                        )
-                        .Padding(16)
-                    )
-                    .ThemeKey(ThemeKeys.CardBorder)
-                    .Margin(16, 0, 16, 16)
-                )
-            )
-        ).OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always));
-    }
-
-    VisualNode RenderThemeOption(ThemeMode mode, string icon, string title)
-    {
-        var isSelected = State.CurrentThemeMode == mode;
-        var isLightTheme = ApplicationTheme.IsLightTheme;
-        var primaryColor = isLightTheme ? AppColors.Light.Primary : AppColors.Dark.Primary;
-        var surfaceColor = isLightTheme ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
-        var textColor = isLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
-
-        return Border(
-            VStack(spacing: 4,
-                Label(icon)
-                    .FontFamily(MaterialSymbolsFont.FontFamily)
-                    .FontSize(24)
-                    .TextColor(isSelected ? primaryColor : textColor)
-                    .HCenter(),
-                Label(title)
-                    .FontSize(12)
-                    .TextColor(isSelected ? primaryColor : textColor)
-                    .HCenter()
-            )
-            .Padding(16, 8)
-        )
-        .StrokeShape(new RoundRectangle().CornerRadius(8))
-        .BackgroundColor(isSelected ? primaryColor.WithAlpha(0.15f) : surfaceColor)
-        .Stroke(isSelected ? primaryColor : Colors.Transparent)
-        .StrokeThickness(isSelected ? 2 : 0)
-        .OnTapped(async () => await OnThemeSelected(mode));
-    }
-
     async Task OnThemeSelected(ThemeMode mode)
     {
         await _themeService.SetThemeModeAsync(mode);
         SetState(s => s.CurrentThemeMode = mode);
     }
 
-    VisualNode RenderSettingsItem(string title, string description, Action onTapped)
+    async Task OpenVoiceFromSettingsAsync()
+    {
+        ShotLoggingGridPage.OpenVoiceOnNextMount = true;
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync("//shots");
+    }
+
+    // ============================================================
+    // Rendering
+    // ============================================================
+
+    public override VisualNode Render()
+    {
+        return ContentPage("Settings",
+            Grid(rows: "Auto,*,Auto", columns: "*",
+                HeaderTile().GridRow(0),
+                RenderBody().GridRow(1),
+                BottomNavRow().GridRow(2)
+            )
+            .RowSpacing(1)
+            .BackgroundColor(DividerColor())
+            .Padding(1)
+            .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
+        )
+        .Set(MauiControls.Shell.NavBarIsVisibleProperty, false)
+        .Set(MauiControls.Shell.TabBarIsVisibleProperty, false)
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
+        .OnAppearing(() => _ = LoadCurrentTheme());
+    }
+
+    // ------------------------------------------------------------
+    // Theme helpers (mirror ShotLoggingGridPage / ActivityFeedPage)
+    // ------------------------------------------------------------
+
+    static bool IsLight() => Application.Current?.RequestedTheme != AppTheme.Dark;
+    static Color SurfaceColor() => IsLight() ? AppColors.Light.Surface : AppColors.Dark.Surface;
+    static Color SurfaceVariantColor() => IsLight() ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
+    static Color TextPrimary() => IsLight() ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+    static Color TextSecondary() => IsLight() ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+    static Color AccentColor() => IsLight() ? AppColors.Light.Primary : AppColors.Dark.Primary;
+    static Color DividerColor() => IsLight() ? AppColors.Light.Outline : AppColors.Dark.Outline;
+
+    // ------------------------------------------------------------
+    // Header tile
+    // ------------------------------------------------------------
+
+    VisualNode HeaderTile()
+    {
+        var modeLabel = State.CurrentThemeMode switch
+        {
+            ThemeMode.Light => "Light theme",
+            ThemeMode.Dark => "Dark theme",
+            _ => "System theme"
+        };
+
+        return Border(
+            Grid(rows: "Auto,*", columns: "*",
+                Label("SETTINGS")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .GridRow(0),
+                Label(modeLabel)
+                    .FontSize(28)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .VEnd()
+                    .GridRow(1)
+            )
+            .Padding(16, 56, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(120);
+    }
+
+    // ------------------------------------------------------------
+    // Body — scrolling stack of section tiles
+    // ------------------------------------------------------------
+
+    VisualNode RenderBody()
+    {
+        return ScrollView(
+            Grid(
+                rows: "Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto",
+                columns: "*",
+                SectionLabel("APPEARANCE").GridRow(0),
+                ThemePickerRow().GridRow(1),
+                SectionLabel("MANAGE").GridRow(2),
+                ManageTile("EQUIPMENT", "Machines, grinders, accessories",
+                    async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("equipment")).GridRow(3),
+                ManageTile("BEANS", "Coffee beans and roasters",
+                    async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("beans")).GridRow(4),
+                ManageTile("PROFILES", "Household members",
+                    async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("profiles")).GridRow(5),
+                SectionLabel("ABOUT").GridRow(6),
+                AboutTile().GridRow(7),
+                // Spacer so list doesn't crowd the bottom nav under the divider
+                Border()
+                    .BackgroundColor(SurfaceColor())
+                    .StrokeThickness(0)
+                    .StrokeShape(new Rectangle())
+                    .MinimumHeightRequest(16)
+                    .GridRow(8)
+            )
+            .RowSpacing(1)
+            .BackgroundColor(DividerColor())
+        );
+    }
+
+    VisualNode SectionLabel(string text)
     {
         return Border(
-            Grid("*", "*,Auto",
-                VStack(spacing: 4,
-                    Label(title)
-                        .FontSize(16)
-                        .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold),
-                    Label(description)
-                        .ThemeKey(ThemeKeys.SecondaryText)
-                )
-                .VCenter(),
-                Label("›")
-                    .FontSize(20)
-                    .ThemeKey(ThemeKeys.SecondaryText)
-                    .GridColumn(1)
-                    .VCenter()
-            )
-            .Padding(16)
+            Label(text)
+                .FontSize(10)
+                .CharacterSpacing(2)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextSecondary())
+                .VEnd()
         )
-        .ThemeKey(ThemeKeys.CardBorder)
-        .Margin(16, 0)
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .Padding(16, 24, 16, 10);
+    }
+
+    VisualNode ThemePickerRow()
+    {
+        return Grid(rows: "Auto", columns: "*,*,*",
+            ThemeOptionTile(ThemeMode.Light, "LIGHT").GridColumn(0),
+            ThemeOptionTile(ThemeMode.Dark, "DARK").GridColumn(1),
+            ThemeOptionTile(ThemeMode.System, "AUTO").GridColumn(2)
+        )
+        .ColumnSpacing(1)
+        .BackgroundColor(DividerColor());
+    }
+
+    VisualNode ThemeOptionTile(ThemeMode mode, string label)
+    {
+        var isSelected = State.CurrentThemeMode == mode;
+        var bg = isSelected ? TextPrimary() : SurfaceColor();
+        var fg = isSelected ? SurfaceColor() : TextPrimary();
+
+        return Border(
+            Grid(rows: "Auto,*", columns: "*",
+                Label(label)
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(fg.WithAlpha(0.7f))
+                    .GridRow(0),
+                Label(isSelected ? "●" : "○")
+                    .FontSize(28)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(fg)
+                    .VEnd()
+                    .GridRow(1)
+            )
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(bg)
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(96)
+        .OnTapped(async () => await OnThemeSelected(mode));
+    }
+
+    VisualNode ManageTile(string label, string subtitle, Action onTapped)
+    {
+        return Border(
+            Grid(rows: "Auto,Auto", columns: "*,Auto",
+                Label(label)
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .GridRow(0).GridColumn(0),
+                Label(subtitle)
+                    .FontSize(20)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .LineBreakMode(LineBreakMode.TailTruncation)
+                    .GridRow(1).GridColumn(0),
+                Label("→")
+                    .FontSize(24)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .VCenter()
+                    .GridRow(0).GridRowSpan(2).GridColumn(1)
+            )
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(80)
         .OnTapped(onTapped);
+    }
+
+    VisualNode AboutTile()
+    {
+        return Border(
+            Grid(rows: "Auto,Auto,Auto", columns: "*",
+                Label("BARISTANOTES")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .GridRow(0),
+                Label("Version 1.0")
+                    .FontSize(18)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .GridRow(1),
+                Label("Track your espresso journey")
+                    .FontSize(13)
+                    .TextColor(TextSecondary())
+                    .GridRow(2)
+            )
+            .Padding(16, 14, 16, 18)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(96);
+    }
+
+    // ------------------------------------------------------------
+    // Bottom nav row
+    // ------------------------------------------------------------
+
+    VisualNode BottomNavRow()
+    {
+        return Grid(rows: "Auto", columns: "*,*,*",
+            NavTile(AppIcons.CoffeeCup,
+                async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("//shots"))
+                .GridColumn(0),
+            NavTile(AppIcons.Feed,
+                async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("//history"))
+                .GridColumn(1),
+            NavTile(AppIcons.Voice,
+                async () => await OpenVoiceFromSettingsAsync())
+                .GridColumn(2)
+        )
+        .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
+        .ColumnSpacing(1)
+        .BackgroundColor(DividerColor());
+    }
+
+    VisualNode NavTile(FontImageSource imageSource, Action onTap)
+    {
+        return Border(
+            Image()
+                .Source(imageSource)
+                .HCenter()
+                .VCenter()
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(72)
+        .Padding(16, 18, 16, 30)
+        .OnTapped(onTap);
     }
 }

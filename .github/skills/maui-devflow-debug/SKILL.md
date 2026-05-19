@@ -74,6 +74,8 @@ packages and `builder.AddMauiDevFlowAgent()` registered.
 - Do not kill an async `dotnet build -t:Run` or `dotnet run` shell while you still need the app; that often kills the app.
 - Do not reuse a busy simulator/emulator when multiple MAUI apps or agents may be running.
 - Do not debug Blazor WebView DOM issues through the native visual tree alone; use the WebView/CDP commands.
+- Do not treat `ui status` / `ui tree` / `screenshot` failures as connectivity issues without first running `curl http://localhost:<port>/api/status`. The CLI's "Cannot connect" error masks JSON serialization errors and CLI↔agent route-version skew. See `references/connectivity.md` for the 8-rung troubleshooting ladder.
+- Do not declare a DevFlow CLI or agent bug "blocked." The source lives at `~/work/maui-labs` (origin `dotnet/maui-labs`). Reproduce against source, fix locally (`dotnet pack` into `~/work/LocalNuGets/`), and open a draft PR upstream before falling back to manual smoke tests.
 
 ## Stop Signals
 

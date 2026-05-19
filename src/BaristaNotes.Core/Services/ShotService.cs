@@ -75,7 +75,7 @@ public class ShotService : IShotService
             BrewMethod = dto.BrewMethod,
             ParametersJson = dto.ParametersJson,
             DoseIn = dto.DoseIn,
-            GrindSetting = dto.GrindSetting,
+            GrindMicrons = dto.GrindMicrons,
             ExpectedTime = dto.ExpectedTime,
             ExpectedOutput = dto.ExpectedOutput,
             DrinkType = dto.DrinkType,
@@ -166,8 +166,8 @@ public class ShotService : IShotService
         if (dto.DoseIn.HasValue)
             shot.DoseIn = dto.DoseIn.Value;
 
-        if (dto.GrindSetting != null)
-            shot.GrindSetting = dto.GrindSetting;
+        if (dto.GrindMicrons.HasValue)
+            shot.GrindMicrons = dto.GrindMicrons.Value;
 
         if (dto.ExpectedTime.HasValue)
             shot.ExpectedTime = dto.ExpectedTime.Value;
@@ -356,7 +356,7 @@ public class ShotService : IShotService
             DoseIn = shot.DoseIn,
             ActualOutput = shot.ActualOutput,
             ActualTime = shot.ActualTime,
-            GrindSetting = shot.GrindSetting,
+            GrindMicrons = shot.GrindMicrons,
             Rating = shot.Rating,
             TastingNotes = shot.TastingNotes,
             DrinkType = shot.DrinkType,
@@ -400,7 +400,7 @@ public class ShotService : IShotService
                 DoseIn = s.DoseIn,
                 ActualOutput = s.ActualOutput,
                 ActualTime = s.ActualTime,
-                GrindSetting = s.GrindSetting,
+                GrindMicrons = s.GrindMicrons,
                 Rating = s.Rating,
                 TastingNotes = s.TastingNotes,
                 DrinkType = s.DrinkType,
@@ -468,7 +468,7 @@ public class ShotService : IShotService
                     DoseIn = s.DoseIn,
                     ActualOutput = s.ActualOutput,
                     ActualTime = s.ActualTime,
-                    GrindSetting = s.GrindSetting,
+                    GrindMicrons = s.GrindMicrons,
                     Rating = s.Rating,
                     TastingNotes = null,
                     Timestamp = s.Timestamp
@@ -585,7 +585,7 @@ public class ShotService : IShotService
             CreatedAt = shot.MadeFor.CreatedAt
         },
         DoseIn = shot.DoseIn,
-        GrindSetting = shot.GrindSetting,
+        GrindMicrons = shot.GrindMicrons,
         ExpectedTime = shot.ExpectedTime,
         ExpectedOutput = shot.ExpectedOutput,
         DrinkType = shot.DrinkType,
@@ -607,13 +607,21 @@ public class ShotService : IShotService
         var (doseMin, doseMax, timeMin, timeMax, outputMin, outputMax) =
             dto.BrewMethod switch
             {
-                Models.Enums.BrewMethod.Espresso   => (5m, 30m,  10m,  60m,  10m, 100m),
-                Models.Enums.BrewMethod.Moka       => (5m, 50m,  30m, 600m,  20m, 400m),
-                Models.Enums.BrewMethod.Aeropress  => (5m, 40m,  30m, 600m,  50m, 400m),
-                Models.Enums.BrewMethod.PourOver   => (10m, 60m, 60m, 900m, 100m, 800m),
-                Models.Enums.BrewMethod.Drip       => (10m, 120m, 60m, 1200m, 100m, 1500m),
-                Models.Enums.BrewMethod.FrenchPress=> (10m, 100m, 60m, 900m,  100m, 1200m),
-                _                                  => (5m, 30m,  10m,  60m,  10m, 100m),
+                Models.Enums.BrewMethod.Espresso       => (5m, 30m,  10m,  60m,  10m, 100m),
+                Models.Enums.BrewMethod.Turkish        => (3m, 20m,  60m, 300m,  25m, 200m),
+                Models.Enums.BrewMethod.Moka           => (5m, 50m,  30m, 600m,  20m, 400m),
+                Models.Enums.BrewMethod.Aeropress      => (5m, 40m,  30m, 600m,  50m, 400m),
+                Models.Enums.BrewMethod.Siphon         => (10m, 60m, 60m, 600m, 150m, 1000m),
+                Models.Enums.BrewMethod.V60            => (10m, 40m, 60m, 600m, 100m, 600m),
+                Models.Enums.BrewMethod.PourOver       => (10m, 60m, 60m, 900m, 100m, 800m),
+                Models.Enums.BrewMethod.Drip           => (10m, 120m, 60m, 1200m, 100m, 1500m),
+                Models.Enums.BrewMethod.Cupping        => (5m, 20m, 120m, 600m, 100m, 400m),
+                Models.Enums.BrewMethod.SteepAndRelease=> (10m, 60m, 60m, 900m, 100m, 1000m),
+                Models.Enums.BrewMethod.FrenchPress    => (10m, 100m, 60m, 900m,  100m, 1200m),
+                // Cold methods measured in seconds; ranges allow 1h to 24h.
+                Models.Enums.BrewMethod.ColdBrew       => (30m, 500m, 3600m, 86400m, 250m, 4000m),
+                Models.Enums.BrewMethod.ColdDrip       => (20m, 200m, 1800m, 43200m, 150m, 2000m),
+                _                                      => (5m, 30m,  10m,  60m,  10m, 100m),
             };
 
         if (dto.DoseIn < doseMin || dto.DoseIn > doseMax)
@@ -625,8 +633,11 @@ public class ShotService : IShotService
         if (dto.ExpectedOutput < outputMin || dto.ExpectedOutput > outputMax)
             errors.Add(nameof(dto.ExpectedOutput), new List<string> { $"Expected output must be between {outputMin} and {outputMax} grams for {dto.BrewMethod}" });
 
-        if (string.IsNullOrWhiteSpace(dto.GrindSetting))
-            errors.Add(nameof(dto.GrindSetting), new List<string> { "Grind setting is required" });
+        // GrindMicrons is optional. Null means "not recorded" — that's a
+        // valid state (e.g. quick logging without setting grind). Allowed
+        // range 40–1500 µm. Out-of-range values are rejected.
+        if (dto.GrindMicrons.HasValue && (dto.GrindMicrons.Value < 40 || dto.GrindMicrons.Value > 1500))
+            errors.Add(nameof(dto.GrindMicrons), new List<string> { "Grind microns must be between 40 and 1500" });
 
         if (string.IsNullOrWhiteSpace(dto.DrinkType))
             errors.Add(nameof(dto.DrinkType), new List<string> { "Drink type is required" });

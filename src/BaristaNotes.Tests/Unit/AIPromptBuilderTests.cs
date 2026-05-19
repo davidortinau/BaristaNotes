@@ -54,16 +54,16 @@ public class AIPromptBuilderTests
     }
 
     [Fact]
-    public void BuildPrompt_IncludesGrindSetting()
+    public void BuildPrompt_IncludesGrindMicrons()
     {
         // Arrange
-        var context = CreateBasicContext(grindSetting: "15.5");
+        var context = CreateBasicContext(grindMicrons: 270);
 
         // Act
         var prompt = AIPromptBuilder.BuildPrompt(context);
 
         // Assert
-        Assert.Contains("Grind: 15.5", prompt);
+        Assert.Contains("270µm", prompt);
     }
 
     [Fact]
@@ -333,7 +333,7 @@ public class AIPromptBuilderTests
         decimal doseIn = 18m,
         decimal? actualOutput = null,
         decimal? actualTime = null,
-        string grindSetting = "",
+        int? grindMicrons = null,
         int? rating = null,
         string? tastingNotes = null)
     {
@@ -345,7 +345,7 @@ public class AIPromptBuilderTests
                 DoseIn = doseIn,
                 ActualOutput = actualOutput,
                 ActualTime = actualTime,
-                GrindSetting = grindSetting,
+                GrindMicrons = grindMicrons,
                 Rating = rating,
                 TastingNotes = tastingNotes,
                 Timestamp = DateTime.UtcNow
@@ -369,7 +369,7 @@ public class AIPromptBuilderTests
                 DoseIn = 18.5m,
                 ActualOutput = 38m,
                 ActualTime = 28m,
-                GrindSetting = "15",
+                GrindMicrons = 270,
                 Rating = 2,
                 TastingNotes = "sour, thin",
                 Timestamp = DateTime.UtcNow

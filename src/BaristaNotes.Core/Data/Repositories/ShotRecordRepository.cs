@@ -239,8 +239,7 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
             .Include(s => s.Bag)
             .Where(s => !s.IsDeleted
                 && s.GrinderId == grinderId
-                && s.GrindSetting != null
-                && s.GrindSetting != string.Empty);
+                && s.GrindMicrons != null);
 
         if (method.HasValue)
             query = query.Where(s => s.BrewMethod == method.Value);
@@ -250,6 +249,21 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
 
         return await query
             .OrderByDescending(s => s.Timestamp)
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<int?> GetMostRecentMicronsByBeanAsync(int beanId, BrewMethod method)
+    {
+        return await _dbSet
+            .AsNoTracking()
+            .Include(s => s.Bag)
+            .Where(s => !s.IsDeleted
+                && s.GrindMicrons != null
+                && s.BrewMethod == method
+                && s.Bag != null
+                && s.Bag.BeanId == beanId)
+            .OrderByDescending(s => s.Timestamp)
+            .Select(s => s.GrindMicrons)
             .FirstOrDefaultAsync();
     }
 }

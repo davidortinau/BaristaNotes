@@ -29,8 +29,8 @@ public interface IPreferencesService
     decimal? GetLastDoseIn();
     void SetLastDoseIn(decimal? doseIn);
     
-    string? GetLastGrindSetting();
-    void SetLastGrindSetting(string? grindSetting);
+    int? GetLastGrindMicrons();
+    void SetLastGrindMicrons(int? grindMicrons);
     
     decimal? GetLastExpectedTime();
     void SetLastExpectedTime(decimal? expectedTime);

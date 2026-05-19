@@ -55,7 +55,7 @@ public class BeanServiceRecentBeansTests
         Id = Random.Shared.Next(1, int.MaxValue),
         Timestamp = timestamp,
         DrinkType = "Espresso",
-        GrindSetting = "3",
+        GrindMicrons = 270,
         SyncId = Guid.NewGuid(),
         LastModifiedAt = timestamp,
         IsDeleted = isDeleted

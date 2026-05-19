@@ -15,7 +15,7 @@ public class PreferencesService : IPreferencesService
     private const string KeyLastMadeById = "last_made_by_id";
     private const string KeyLastMadeForId = "last_made_for_id";
     private const string KeyLastDoseIn = "last_dose_in";
-    private const string KeyLastGrindSetting = "last_grind_setting";
+    private const string KeyLastGrindMicrons = "last_grind_microns";
     private const string KeyLastExpectedTime = "last_expected_time";
     private const string KeyLastExpectedOutput = "last_expected_output";
     private const string KeyLastPreinfusionTime = "last_preinfusion_time";
@@ -106,15 +106,18 @@ public class PreferencesService : IPreferencesService
     public void SetLastDoseIn(decimal? doseIn)
         => _store.Set(KeyLastDoseIn, doseIn.HasValue ? (double)doseIn.Value : -1.0);
     
-    public string? GetLastGrindSetting()
-        => _store.Get(KeyLastGrindSetting, null);
-    
-    public void SetLastGrindSetting(string? grindSetting)
+    public int? GetLastGrindMicrons()
     {
-        if (grindSetting != null)
-            _store.Set(KeyLastGrindSetting, grindSetting);
+        var value = _store.Get(KeyLastGrindMicrons, -1);
+        return value == -1 ? null : value;
+    }
+
+    public void SetLastGrindMicrons(int? grindMicrons)
+    {
+        if (grindMicrons.HasValue)
+            _store.Set(KeyLastGrindMicrons, grindMicrons.Value);
         else
-            _store.Remove(KeyLastGrindSetting);
+            _store.Remove(KeyLastGrindMicrons);
     }
     
     public decimal? GetLastExpectedTime()
@@ -155,7 +158,7 @@ public class PreferencesService : IPreferencesService
         _store.Remove(KeyLastMadeById);
         _store.Remove(KeyLastMadeForId);
         _store.Remove(KeyLastDoseIn);
-        _store.Remove(KeyLastGrindSetting);
+        _store.Remove(KeyLastGrindMicrons);
         _store.Remove(KeyLastExpectedTime);
         _store.Remove(KeyLastExpectedOutput);
         _store.Remove(KeyLastPreinfusionTime);

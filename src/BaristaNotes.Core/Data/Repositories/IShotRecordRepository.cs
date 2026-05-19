@@ -36,9 +36,18 @@ public interface IShotRecordRepository : IRepository<ShotRecord>
 
     /// <summary>
     /// Returns the most recent (non-deleted) shot record for a given grinder
-    /// that has a non-empty <c>GrindSetting</c>. Optionally filter by bean and
+    /// that has a non-null <c>GrindMicrons</c>. Optionally filter by bean and
     /// brew method for higher-relevance history lookups. Used by the grind
-    /// translator to seed a suggested default setting.
+    /// translator to seed a suggested default setting from past micron values.
     /// </summary>
     Task<ShotRecord?> GetMostRecentWithGrindAsync(int grinderId, int? beanId = null, BrewMethod? method = null);
+
+    /// <summary>
+    /// Returns the most recent (non-deleted) shot record for a given bean and
+    /// brew method that has a non-null <c>GrindMicrons</c>. Grinder-agnostic —
+    /// microns transfer across grinders, so this is the canonical lookup
+    /// when defaulting the grind picker for a freshly opened brew of a
+    /// bean+method combination.
+    /// </summary>
+    Task<int?> GetMostRecentMicronsByBeanAsync(int beanId, BrewMethod method);
 }

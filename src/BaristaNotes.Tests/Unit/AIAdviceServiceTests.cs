@@ -196,7 +196,7 @@ public class AIAdviceServiceTests
                 DoseIn = 18m,
                 ActualOutput = 36m,
                 ActualTime = 28m,
-                GrindSetting = "15",
+                GrindMicrons = 270,
                 Rating = 2,
                 Timestamp = DateTime.UtcNow
             },
@@ -299,8 +299,8 @@ public class AIAdviceServiceTests
             HasHistory = true,
             HistoricalShots = new List<ShotContextDto>
             {
-                new ShotContextDto { DoseIn = 18m, ActualOutput = 36m, ActualTime = 28m, GrindSetting = "15", Rating = 4, Timestamp = DateTime.UtcNow.AddDays(-1) },
-                new ShotContextDto { DoseIn = 18m, ActualOutput = 38m, ActualTime = 30m, GrindSetting = "14", Rating = 3, Timestamp = DateTime.UtcNow.AddDays(-2) }
+                new ShotContextDto { DoseIn = 18m, ActualOutput = 36m, ActualTime = 28m, GrindMicrons = 270, Rating = 4, Timestamp = DateTime.UtcNow.AddDays(-1) },
+                new ShotContextDto { DoseIn = 18m, ActualOutput = 38m, ActualTime = 30m, GrindMicrons = 270, Rating = 3, Timestamp = DateTime.UtcNow.AddDays(-2) }
             }
         };
 
@@ -355,7 +355,7 @@ public class AIAdviceServiceTests
         {
             Success = true,
             Dose = 18m,
-            GrindSetting = "15",
+            GrindSetting = "medium-fine",
             Output = 36m,
             Duration = 28m,
             RecommendationType = RecommendationType.NewBean,
@@ -365,7 +365,7 @@ public class AIAdviceServiceTests
         // Assert
         Assert.True(dto.Success);
         Assert.Equal(18m, dto.Dose);
-        Assert.Equal("15", dto.GrindSetting);
+        Assert.Equal("medium-fine", dto.GrindSetting);
         Assert.Equal(36m, dto.Output);
         Assert.Equal(28m, dto.Duration);
         Assert.Equal(RecommendationType.NewBean, dto.RecommendationType);
@@ -379,7 +379,7 @@ public class AIAdviceServiceTests
         {
             Success = true,
             Dose = 19m,
-            GrindSetting = "14",
+            GrindSetting = "medium-fine",
             Output = 38m,
             Duration = 30m,
             RecommendationType = RecommendationType.ReturningBean,
@@ -389,7 +389,7 @@ public class AIAdviceServiceTests
         // Assert
         Assert.True(dto.Success);
         Assert.Equal(19m, dto.Dose);
-        Assert.Equal("14", dto.GrindSetting);
+        Assert.Equal("medium-fine", dto.GrindSetting);
         Assert.Equal(38m, dto.Output);
         Assert.Equal(30m, dto.Duration);
         Assert.Equal(RecommendationType.ReturningBean, dto.RecommendationType);
@@ -419,7 +419,7 @@ public class AIAdviceServiceTests
         {
             Success = true,
             Dose = 18m,
-            GrindSetting = "medium",
+            GrindSetting = "medium-fine",
             Output = 36m,
             Duration = 30m,
             RecommendationType = RecommendationType.ReturningBean,

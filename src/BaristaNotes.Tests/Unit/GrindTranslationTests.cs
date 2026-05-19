@@ -77,15 +77,15 @@ public class GrindHintParserTests
 public class DeterministicGrindInterpolatorTests
 {
     [Fact]
-    public void Interpolate_Df64Seed_725Micron_MapsNear55()
+    public void Interpolate_Df64Seed_700Micron_MapsNearPourOver()
     {
-        // Onyx spec: 725µm → user expects DF64 around 5.5.
+        // 700µm is anchored at dial 60 on the DF64V chart curve (V60/pour-over upper).
         var result = DeterministicGrindInterpolator.Interpolate(
             DeterministicGrindInterpolator.DF64SeedAnchors,
-            targetMicron: 725m);
+            targetMicron: 700m);
         Assert.NotNull(result);
-        Assert.InRange(result!.Suggested, 5.0m, 6.0m);
-        Assert.True(result.Min < result.Suggested && result.Suggested < result.Max);
+        Assert.InRange(result!.Suggested, 55m, 65m);
+        Assert.True(result.Min <= result.Suggested && result.Suggested <= result.Max);
     }
 
     [Fact]
@@ -93,9 +93,10 @@ public class DeterministicGrindInterpolatorTests
     {
         var result = DeterministicGrindInterpolator.Interpolate(
             DeterministicGrindInterpolator.DF64SeedAnchors,
-            targetMicron: 50m);
+            targetMicron: 30m);
         Assert.NotNull(result);
-        Assert.Equal(1.2m, result!.Suggested);
+        // Smallest seed anchor on the 0–90 dial is 0 (Turkish floor, 50µm).
+        Assert.Equal(0m, result!.Suggested);
     }
 
     [Fact]
@@ -105,7 +106,8 @@ public class DeterministicGrindInterpolatorTests
             DeterministicGrindInterpolator.DF64SeedAnchors,
             targetMicron: 5000m);
         Assert.NotNull(result);
-        Assert.Equal(8.0m, result!.Suggested);
+        // Largest seed anchor on the 0–90 dial is 90 (cold drip/brew ceiling, 1300µm).
+        Assert.Equal(90m, result!.Suggested);
     }
 
     [Fact]

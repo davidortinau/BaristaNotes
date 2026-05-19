@@ -658,13 +658,11 @@ public static class VoiceOverlayExtensions
             });
         });
 
-        // Register as singleton
+        // Register as singleton. App.cs always renders AppShell directly so
+        // exactly one Window/handler/overlay is created; no proxy needed.
         builder.Services.AddSingleton<IOverlayService>(sp =>
-        {
-            // Return the overlay instance once it's created
-            // This is a workaround since the overlay is created during Window initialization
-            return _overlay ?? throw new InvalidOperationException("VoiceOverlay not yet initialized. Ensure UseVoiceOverlay is called before services are resolved.");
-        });
+            _overlay ?? throw new InvalidOperationException(
+                "VoiceOverlay not yet initialized. Ensure UseVoiceOverlay is called before services are resolved."));
 
         return builder;
     }

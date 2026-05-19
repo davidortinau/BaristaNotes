@@ -1,39 +1,30 @@
 ﻿using MauiReactor;
 using BaristaNotes.Pages;
 using BaristaNotes.Styles;
-using Microsoft.Maui.Storage;
 
 namespace BaristaNotes;
 
 public class AppShell : Component
 {
-    /// <summary>
-    /// Preferences key for opting into the experimental grid-style logging layout.
-    /// Default false → existing ShotLoggingPage. True → ShotLoggingGridPage.
-    /// </summary>
-    public const string GridLayoutPreferenceKey = "Pref:UseGridLoggingLayout";
-
-    public static bool UseGridLoggingLayout
-        => Preferences.Default.Get(GridLayoutPreferenceKey, false);
-
     public override VisualNode Render()
     {
+        // TabBar wrapper is REQUIRED on iOS — without it, Shell with multiple
+        // bare ShellContents doesn't pick a default route on iOS published
+        // builds (blank black screen on device). The tab bar itself is hidden
+        // by each page setting Shell.TabBarIsVisibleProperty=false; this
+        // wrapper exists purely to give Shell the structure it needs to
+        // resolve "//shots", "//history", and "//settings".
         return Shell(
             TabBar(
-                // Drink log remains as the second tab
                 ShellContent("New Drink")
                     .Icon(AppIcons.CoffeeCup)
                     .Route("shots")
-                    .RenderContent(() => UseGridLoggingLayout
-                        ? (Component)new ShotLoggingGridPage()
-                        : new ShotLoggingPage()),
+                    .RenderContent(() => new ShotLoggingGridPage()),
 
-                // Activity Feed is now the primary tab
                 ShellContent("Activity")
                     .Icon(AppIcons.Feed)
                     .Route("history")
                     .RenderContent(() => new ActivityFeedPage()),
-
 
                 ShellContent("Settings")
                     .Icon(AppIcons.Settings)

@@ -16,7 +16,11 @@ public record AIRecommendationDto
     public decimal Dose { get; init; }
 
     /// <summary>
-    /// Recommended grinder setting.
+    /// Recommended grind, as an advisory descriptor (e.g. "medium-fine" or
+    /// "around 270µm"). This is intentionally a free-form string: it's the
+    /// AI's suggestion to the user, not a value we auto-apply to the shot.
+    /// The actual <see cref="ShotRecord.GrindMicrons"/> is captured by the
+    /// user via the picker, optionally informed by this advice.
     /// </summary>
     public string GrindSetting { get; init; } = string.Empty;
 

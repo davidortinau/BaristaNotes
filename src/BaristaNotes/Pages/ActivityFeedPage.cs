@@ -1,5 +1,8 @@
-﻿using BaristaNotes.Core.Services;
+using MauiReactor;
+using MauiReactor.Shapes;
+using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
+using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Components;
 using BaristaNotes.Styles;
 using BaristaNotes.Models;
@@ -7,6 +10,7 @@ using BaristaNotes.Integrations.Popups;
 using Fonts;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using UXDivers.Popups.Services;
+using Application = Microsoft.Maui.Controls.Application;
 
 namespace BaristaNotes.Pages;
 
@@ -19,7 +23,6 @@ class ActivityFeedState
     public int PageIndex { get; set; } = 0;
     public int PageSize { get; set; } = 50;
     public bool HasMore { get; set; } = true;
-    public int? ShotToDelete { get; set; }
 
     // Filter state
     public ShotFilterCriteria ActiveFilters { get; set; } = new();
@@ -27,15 +30,11 @@ class ActivityFeedState
     public int FilteredShotCount { get; set; }
 
     public bool HasActiveFilters => ActiveFilters.HasFilters;
-    public string ResultCountText => HasActiveFilters
-        ? $"Showing {FilteredShotCount} of {TotalShotCount} shots"
-        : $"{TotalShotCount} shots";
 }
 
 partial class ActivityFeedPage : Component<ActivityFeedState>
 {
-    [Inject]
-    IShotService _shotService;
+    [Inject] IShotService _shotService;
 
     protected override void OnMounted()
     {
@@ -61,22 +60,19 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                 SetState(s => s.IsLoading = true);
             }
 
-            // Use filtered query when filters are active
             PagedResult<ShotRecordDto> pagedResult;
             if (State.HasActiveFilters)
             {
                 pagedResult = await _shotService.GetFilteredShotHistoryAsync(
                     State.ActiveFilters.ToDto(),
                     pageIndex: isRefresh ? 0 : State.PageIndex,
-                    pageSize: State.PageSize
-                );
+                    pageSize: State.PageSize);
             }
             else
             {
                 pagedResult = await _shotService.GetShotHistoryAsync(
                     pageIndex: isRefresh ? 0 : State.PageIndex,
-                    pageSize: State.PageSize
-                );
+                    pageSize: State.PageSize);
             }
 
             var shots = pagedResult.Items.ToList();
@@ -107,7 +103,6 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
                 });
             }
 
-            // Get total count for display
             if (isRefresh || State.TotalShotCount == 0)
             {
                 var totalResult = await _shotService.GetShotHistoryAsync(0, 1);
@@ -127,19 +122,11 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
 
     async void NavigateToDetail(int shotId)
     {
-        if (AppShell.UseGridLoggingLayout)
-        {
-            await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingGridPageProps>("shot-logging-grid", props => props.ShotId = shotId);
-        }
-        else
-        {
-            await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingPageProps>("shot-logging", props => props.ShotId = shotId);
-        }
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingGridPageProps>("shot-logging", props => props.ShotId = shotId);
     }
 
     async Task OpenFilterPopup()
     {
-        // Load filter options
         var beans = await _shotService.GetBeansWithShotsAsync();
         var people = await _shotService.GetPeopleWithShotsAsync();
 
@@ -178,137 +165,265 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         _ = LoadShotsAsync(isRefresh: true);
     }
 
+    async Task OpenVoiceFromActivityAsync()
+    {
+        // Voice flow lives on the Drink page (recording, command dispatch).
+        // From Activity we signal the grid page to auto-open the overlay on
+        // its next mount, then navigate to it.
+        ShotLoggingGridPage.OpenVoiceOnNextMount = true;
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync("//shots");
+    }
+
+    // ============================================================
+    // Rendering
+    // ============================================================
+
     public override VisualNode Render()
     {
-        return ContentPage("Shot History",
-            // Filter toolbar item
-            ToolbarItem()
-                .IconImageSource(AppIcons.GetFilterIcon(State.HasActiveFilters))
-                .Order(MauiControls.ToolbarItemOrder.Primary)
-                .OnClicked(async () => await OpenFilterPopup()),
-
-            RenderContent()
+        return ContentPage("Activity",
+            Grid(rows: "Auto,*,Auto", columns: "*",
+                HeaderTile().GridRow(0),
+                RenderBody().GridRow(1),
+                BottomNavRow().GridRow(2)
+            )
+            .RowSpacing(1)
+            .BackgroundColor(DividerColor())
+            .Padding(1)
+            .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
         )
-        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always))
-        .OnAppearing(() => OnPageAppearing());
+        .Set(MauiControls.Shell.NavBarIsVisibleProperty, false)
+        .Set(MauiControls.Shell.TabBarIsVisibleProperty, false)
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
+        .OnAppearing(() => _ = LoadShotsAsync(isRefresh: true));
     }
 
-    void OnPageAppearing()
+    // ------------------------------------------------------------
+    // Theme helpers (mirror ShotLoggingGridPage)
+    // ------------------------------------------------------------
+
+    static bool IsLight() => Application.Current?.RequestedTheme != AppTheme.Dark;
+    static Color SurfaceColor() => IsLight() ? AppColors.Light.Surface : AppColors.Dark.Surface;
+    static Color TextPrimary() => IsLight() ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+    static Color TextSecondary() => IsLight() ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+    static Color AccentColor() => IsLight() ? AppColors.Light.Primary : AppColors.Dark.Primary;
+    static Color DividerColor() => IsLight() ? AppColors.Light.Outline : AppColors.Dark.Outline;
+
+    // ------------------------------------------------------------
+    // Header — single tile spanning full width, sits in safe area
+    // ------------------------------------------------------------
+
+    VisualNode HeaderTile()
     {
-        // Refresh data when returning from edit/delete
-        _ = LoadShotsAsync(isRefresh: true);
+        var count = State.HasActiveFilters ? State.FilteredShotCount : State.TotalShotCount;
+        var countText = State.HasActiveFilters
+            ? $"{State.FilteredShotCount} of {State.TotalShotCount} shots"
+            : (count == 1 ? "1 shot" : $"{count} shots");
+
+        return Border(
+            Grid(rows: "Auto,*", columns: "*",
+                Label("ACTIVITY")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .GridRow(0),
+                Label(countText)
+                    .FontSize(28)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .VEnd()
+                    .GridRow(1)
+            )
+            .Padding(16, 56, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(120);
     }
 
-    VisualNode RenderContent()
+    // ------------------------------------------------------------
+    // Body — list / empty / loading / error
+    // ------------------------------------------------------------
+
+    VisualNode RenderBody()
     {
         if (State.IsLoading && !State.ShotRecords.Any())
         {
-            return VStack(
-                ActivityIndicator()
-                    .IsRunning(true),
-
-                Label("Loading shot history...")
-                    .FontSize(16)
-                    .Margin(0, 8, 0, 0)
+            return Border(
+                VStack(spacing: 8,
+                    ActivityIndicator().IsRunning(true),
+                    Label("Loading…").FontSize(14).TextColor(TextSecondary()).HCenter()
+                ).VCenter().HCenter()
             )
-            .VCenter()
-            .HCenter();
+            .BackgroundColor(SurfaceColor())
+            .StrokeThickness(0)
+            .StrokeShape(new Rectangle());
         }
 
         if (State.ErrorMessage != null)
         {
-            return VStack(spacing: 12,
-                Label("Error Loading History")
-                    .FontSize(18)
-                    .HCenter(),
-
-                Label(State.ErrorMessage)
-                    .FontSize(14)
-                    .TextColor(Colors.Red)
-                    .HCenter(),
-
-                Button("Retry")
-                    .OnClicked(async () => await LoadShotsAsync(isRefresh: true))
-                    .HeightRequest(48)
+            return Border(
+                VStack(spacing: 12,
+                    Label("ERROR")
+                        .FontSize(10).CharacterSpacing(2)
+                        .FontAttributes(MauiControls.FontAttributes.Bold)
+                        .TextColor(TextSecondary())
+                        .HCenter(),
+                    Label(State.ErrorMessage ?? "Unknown error")
+                        .FontSize(18)
+                        .TextColor(TextPrimary())
+                        .HCenter(),
+                    Button("Retry")
+                        .OnClicked(async () => await LoadShotsAsync(isRefresh: true))
+                        .BackgroundColor(AccentColor())
+                        .TextColor(SurfaceColor())
+                ).VCenter().HCenter().Padding(24)
             )
-            .VCenter()
-            .HCenter()
-            .Padding(16);
+            .BackgroundColor(SurfaceColor())
+            .StrokeThickness(0)
+            .StrokeShape(new Rectangle());
         }
 
         if (!State.ShotRecords.Any())
         {
-            // Different empty state for filtered vs unfiltered
-            if (State.HasActiveFilters)
-            {
-                return VStack(spacing: 12,
-                    Label(MaterialSymbolsFont.Filter_list_off)
-                        .FontFamily(MaterialSymbolsFont.FontFamily)
-                        .FontSize(64)
-                        .HCenter()
-                        .TextColor(AppColors.Dark.TextSecondary),
-
-                    Label("No Matching Shots")
-                        .ThemeKey(ThemeKeys.CardTitle)
+            var emptyTitle = State.HasActiveFilters ? "NO MATCHES" : "NO SHOTS YET";
+            var emptyBody = State.HasActiveFilters
+                ? "Adjust or clear filters to see results."
+                : "Log a drink to see it here.";
+            return Border(
+                VStack(spacing: 12,
+                    Label(emptyTitle)
+                        .FontSize(12).CharacterSpacing(3)
+                        .FontAttributes(MauiControls.FontAttributes.Bold)
+                        .TextColor(TextSecondary())
                         .HCenter(),
-
-                    Label("Try adjusting or clearing your filters")
-                        .ThemeKey(ThemeKeys.CardSubtitle)
+                    Label(emptyBody)
+                        .FontSize(18)
+                        .TextColor(TextPrimary())
                         .HCenter(),
-
-                    Button("Clear Filters")
-                        .OnClicked(() => OnFiltersCleared())
-                        .HeightRequest(48)
-                        .Margin(0, 16, 0, 0)
-                )
-                .VCenter()
-                .HCenter()
-                .Padding(24);
-            }
-
-            return VStack(spacing: 12,
-                Label(MaterialSymbolsFont.Coffee)
-                    .FontFamily(MaterialSymbolsFont.FontFamily)
-                    .FontSize(64)
-                    .HCenter(),
-
-                Label("No Shots Yet")
-                    .ThemeKey(ThemeKeys.CardTitle)
-                    .HCenter(),
-
-                Label("Start logging your espresso shots to see them here")
-                    .ThemeKey(ThemeKeys.CardSubtitle)
-                    .HCenter()
+                    State.HasActiveFilters
+                        ? Button("Clear Filters")
+                            .OnClicked(() => OnFiltersCleared())
+                            .BackgroundColor(AccentColor())
+                            .TextColor(SurfaceColor())
+                            .Margin(0, 8, 0, 0)
+                        : null
+                ).VCenter().HCenter().Padding(24)
             )
-            .VCenter()
-            .HCenter()
-            .Padding(24);
+            .BackgroundColor(SurfaceColor())
+            .StrokeThickness(0)
+            .StrokeShape(new Rectangle());
         }
 
-        return CollectionView()
-            .ItemsSource(State.ShotRecords, shot =>
-                Border(
-                    new ShotRecordCard()
-                        .Shot(shot)
-                )
-                .StrokeThickness(0)
-                .OnTapped(() => NavigateToDetail(shot.Id))
-                .Margin(16, 4)
+        return
+            CollectionView()
+                .ItemsSource(State.ShotRecords, ShotRow)
+                .BackgroundColor(SurfaceColor());
+    }
+
+    // ------------------------------------------------------------
+    // Shot row — flat, no card, 1px hairline divider via container padding
+    // ------------------------------------------------------------
+
+    VisualNode ShotRow(ShotRecordDto shot)
+    {
+        var primary = shot.BrewMethod.DisplayName();
+        var ratio = $"{shot.DoseIn:0.#}g → {shot.ActualOutput ?? shot.ExpectedOutput:0.#}g";
+        var timeSec = shot.ActualTime ?? shot.ExpectedTime;
+        var timeText = $"{timeSec:0}s";
+        var ratingText = shot.Rating.HasValue
+            ? new string('★', shot.Rating.Value + 1) + new string('☆', 4 - shot.Rating.Value)
+            : "";
+        var bean = shot.Bean?.Name ?? shot.Bag?.BeanName ?? "—";
+        var when = FormatTimestamp(shot.Timestamp);
+
+        return Border(
+            Grid(rows: "Auto,Auto", columns: "*,Auto",
+                Label(primary)
+                    .FontSize(22)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .LineBreakMode(LineBreakMode.TailTruncation)
+                    .MaxLines(1)
+                    .GridRow(0).GridColumn(0),
+                Label(ratio)
+                    .FontSize(18)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .HEnd()
+                    .GridRow(0).GridColumn(1),
+                Label($"{bean}  ·  {when}")
+                    .FontSize(13)
+                    .TextColor(TextSecondary())
+                    .LineBreakMode(LineBreakMode.TailTruncation)
+                    .MaxLines(1)
+                    .GridRow(1).GridColumn(0)
+                    .Margin(0, 4, 0, 0),
+                Label($"{timeText}   {ratingText}".Trim())
+                    .FontSize(13)
+                    .TextColor(TextSecondary())
+                    .HEnd()
+                    .GridRow(1).GridColumn(1)
+                    .Margin(0, 4, 0, 0)
             )
-            .Header(
-                VStack(
-                    ContentView().HeightRequest(DeviceInfo.Platform == DevicePlatform.iOS ? 160 : 0),
-                    State.HasActiveFilters
-                        ? Label(State.ResultCountText)
-                            .FontSize(14)
-                            .TextColor(AppColors.Dark.TextSecondary)
-                            .HCenter()
-                            .Margin(0, 8, 0, 8)
-                        : null
-                )
-            )
-            .Footer(
-                ContentView().HeightRequest(80)
-            );
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .Margin(0, 0, 0, 1) // 1px gap reveals DividerColor underneath
+        .OnTapped(() => NavigateToDetail(shot.Id));
+    }
+
+    static string FormatTimestamp(DateTime ts)
+    {
+        var local = ts.ToLocalTime();
+        var today = DateTime.Today;
+        if (local.Date == today) return $"Today {local:h:mm tt}";
+        if (local.Date == today.AddDays(-1)) return $"Yesterday {local:h:mm tt}";
+        if (local.Date > today.AddDays(-7)) return local.ToString("ddd h:mm tt");
+        return local.ToString("MMM d, yyyy");
+    }
+
+    // ------------------------------------------------------------
+    // Bottom nav row — mirrors ShotLoggingGridPage
+    // ------------------------------------------------------------
+
+    VisualNode BottomNavRow()
+    {
+        return Grid(rows: "Auto", columns: "*,*,*,*",
+            NavTile(AppIcons.CoffeeCup,
+                async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("//shots"))
+                .GridColumn(0),
+            NavTile(AppIcons.Settings,
+                async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("//settings"))
+                .GridColumn(1),
+            NavTile(AppIcons.GetFilterIcon(State.HasActiveFilters),
+                async () => await OpenFilterPopup())
+                .GridColumn(2),
+            NavTile(AppIcons.Voice,
+                async () => await OpenVoiceFromActivityAsync())
+                .GridColumn(3)
+        )
+        .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
+        .ColumnSpacing(1)
+        .BackgroundColor(DividerColor());
+    }
+
+    VisualNode NavTile(FontImageSource imageSource, Action onTap)
+    {
+        return Border(
+            Image()
+                .Source(imageSource)
+                .HCenter()
+                .VCenter()
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(72)
+        .Padding(16, 18, 16, 30)
+        .OnTapped(onTap);
     }
 }

@@ -63,7 +63,7 @@ public class ShotRecordRepositoryTests : IDisposable
             BagId = _defaultBagId,
             Timestamp = DateTime.Now,
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso",
@@ -77,7 +77,7 @@ public class ShotRecordRepositoryTests : IDisposable
         // Assert
         Assert.NotEqual(0, result.Id);
         Assert.Equal(18, result.DoseIn);
-        Assert.Equal("5", result.GrindSetting);
+        Assert.Equal(270, result.GrindMicrons);
     }
     
     [Fact]
@@ -99,7 +99,7 @@ public class ShotRecordRepositoryTests : IDisposable
             BagId = _defaultBagId,
             Timestamp = DateTime.Now.AddDays(-2),
             DoseIn = 17,
-            GrindSetting = "4",
+            GrindMicrons = 270,
             ExpectedTime = 28,
             ExpectedOutput = 38,
             DrinkType = "Espresso",
@@ -112,7 +112,7 @@ public class ShotRecordRepositoryTests : IDisposable
             BagId = _defaultBagId,
             Timestamp = DateTime.Now.AddMinutes(-5),
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Latte",
@@ -141,7 +141,7 @@ public class ShotRecordRepositoryTests : IDisposable
             BagId = _defaultBagId,
             Timestamp = DateTime.Now.AddDays(-1),
             DoseIn = 17,
-            GrindSetting = "4",
+            GrindMicrons = 270,
             ExpectedTime = 28,
             ExpectedOutput = 38,
             DrinkType = "Espresso",
@@ -155,7 +155,7 @@ public class ShotRecordRepositoryTests : IDisposable
             BagId = _defaultBagId,
             Timestamp = DateTime.Now,
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Latte",
@@ -187,7 +187,7 @@ public class ShotRecordRepositoryTests : IDisposable
                 BagId = _defaultBagId,
                 Timestamp = DateTime.Now.AddMinutes(-i),
                 DoseIn = 18 + i,
-                GrindSetting = i.ToString(),
+                GrindMicrons = 270 + i,
                 ExpectedTime = 30,
                 ExpectedOutput = 40,
                 DrinkType = "Espresso",
@@ -221,7 +221,7 @@ public class ShotRecordRepositoryTests : IDisposable
             BagId = _defaultBagId,
             Timestamp = DateTime.Now,
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso",
@@ -258,7 +258,7 @@ public class ShotRecordRepositoryTests : IDisposable
                 BagId = _defaultBagId,
                 Timestamp = DateTime.Now.AddMinutes(-i),
                 DoseIn = 18,
-                GrindSetting = "5",
+                GrindMicrons = 270,
                 ExpectedTime = 30,
                 ExpectedOutput = 40,
                 DrinkType = "Espresso",
@@ -285,7 +285,7 @@ public class ShotRecordRepositoryTests : IDisposable
             BagId = _defaultBagId,
             Timestamp = DateTime.Now,
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso",
@@ -319,7 +319,7 @@ public class ShotRecordRepositoryTests : IDisposable
             BagId = _defaultBagId,
             Timestamp = DateTime.Now,
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso",
@@ -333,7 +333,7 @@ public class ShotRecordRepositoryTests : IDisposable
             BagId = _defaultBagId,
             Timestamp = DateTime.Now.AddMinutes(-5),
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Latte",
@@ -362,7 +362,7 @@ public class ShotRecordRepositoryTests : IDisposable
             BagId = _defaultBagId,
             Timestamp = DateTime.Now,
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso",
@@ -406,7 +406,7 @@ public class ShotRecordRepositoryTests : IDisposable
             BagId = _defaultBagId,
             Timestamp = originalTimestamp,
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso",
@@ -431,7 +431,7 @@ public class ShotRecordRepositoryTests : IDisposable
         Assert.NotNull(retrieved);
         Assert.Equal(originalTimestamp, retrieved.Timestamp);
         Assert.Equal(18, retrieved.DoseIn);
-        Assert.Equal("5", retrieved.GrindSetting);
+        Assert.Equal(270, retrieved.GrindMicrons);
         Assert.Equal(30, retrieved.ExpectedTime);
         Assert.Equal(40, retrieved.ExpectedOutput);
     }

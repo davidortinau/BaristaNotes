@@ -4,7 +4,6 @@ using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using Fonts;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
-using Microsoft.Maui.Storage;
 
 namespace BaristaNotes.Pages;
 
@@ -12,7 +11,6 @@ class SettingsPageState
 {
     public bool IsLoading { get; set; }
     public ThemeMode CurrentThemeMode { get; set; } = ThemeMode.System;
-    public bool UseGridLoggingLayout { get; set; }
 }
 
 partial class SettingsPage : Component<SettingsPageState>
@@ -23,7 +21,6 @@ partial class SettingsPage : Component<SettingsPageState>
     protected override void OnMounted()
     {
         base.OnMounted();
-        SetState(s => s.UseGridLoggingLayout = AppShell.UseGridLoggingLayout);
         _ = LoadCurrentTheme();
     }
 
@@ -36,6 +33,9 @@ partial class SettingsPage : Component<SettingsPageState>
     public override VisualNode Render()
     {
         return ContentPage("Settings",
+            ToolbarItem("Done")
+                .Order(MauiControls.ToolbarItemOrder.Primary)
+                .OnClicked(async () => await MauiControls.Shell.Current.GoToAsync("//shots")),
             ScrollView(
                 VStack(spacing: 16,
                     // Appearance section
@@ -50,9 +50,6 @@ partial class SettingsPage : Component<SettingsPageState>
                         RenderThemeOption(ThemeMode.System, MaterialSymbolsFont.Brightness_auto, "Auto")
                     )
                     .Padding(16, 0),
-
-                    // Experimental: grid drink-logging layout toggle
-                    RenderGridLayoutToggle(),
 
                     // Manage section header
                     Label("Manage")
@@ -134,34 +131,6 @@ partial class SettingsPage : Component<SettingsPageState>
     {
         await _themeService.SetThemeModeAsync(mode);
         SetState(s => s.CurrentThemeMode = mode);
-    }
-
-    VisualNode RenderGridLayoutToggle()
-    {
-        return Border(
-            Grid("*", "*,Auto",
-                VStack(spacing: 4,
-                    Label("Grid drink-logging layout")
-                        .FontSize(16)
-                        .FontAttributes(Microsoft.Maui.Controls.FontAttributes.Bold),
-                    Label("Experimental Braun/Bauhaus tile grid for New Drink. Restart the tab to take effect.")
-                        .ThemeKey(ThemeKeys.SecondaryText)
-                )
-                .VCenter(),
-                Switch()
-                    .IsToggled(State.UseGridLoggingLayout)
-                    .OnToggled((s, e) =>
-                    {
-                        Preferences.Default.Set(AppShell.GridLayoutPreferenceKey, e.Value);
-                        SetState(st => st.UseGridLoggingLayout = e.Value);
-                    })
-                    .GridColumn(1)
-                    .VCenter()
-            )
-            .Padding(16)
-        )
-        .ThemeKey(ThemeKeys.CardBorder)
-        .Margin(16, 0);
     }
 
     VisualNode RenderSettingsItem(string title, string description, Action onTapped)

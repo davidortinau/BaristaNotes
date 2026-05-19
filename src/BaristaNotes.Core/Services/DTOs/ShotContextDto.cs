@@ -21,9 +21,9 @@ public record ShotContextDto
     public decimal? ActualTime { get; init; }
 
     /// <summary>
-    /// Grinder setting.
+    /// Grind size in microns (canonical). Null when not recorded.
     /// </summary>
-    public string GrindSetting { get; init; } = string.Empty;
+    public int? GrindMicrons { get; init; }
 
     /// <summary>
     /// 0-4 rating scale.

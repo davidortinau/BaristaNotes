@@ -27,8 +27,8 @@ public static class AIPromptBuilder
             sb.AppendLine($"- Yield: {context.CurrentShot.ActualOutput}g out");
         if (context.CurrentShot.ActualTime.HasValue)
             sb.AppendLine($"- Time: {context.CurrentShot.ActualTime}s");
-        if (!string.IsNullOrWhiteSpace(context.CurrentShot.GrindSetting))
-            sb.AppendLine($"- Grind: {context.CurrentShot.GrindSetting}");
+        if (context.CurrentShot.GrindMicrons.HasValue)
+            sb.AppendLine($"- Grind: {context.CurrentShot.GrindMicrons}µm");
         if (context.CurrentShot.Rating.HasValue)
             sb.AppendLine($"- Rating: {context.CurrentShot.Rating}/4");
         if (!string.IsNullOrWhiteSpace(context.CurrentShot.TastingNotes))
@@ -77,7 +77,7 @@ public static class AIPromptBuilder
                     details.Add($"{shot.DoseIn}g in");
                     if (shot.ActualOutput.HasValue) details.Add($"{shot.ActualOutput}g out");
                     if (shot.ActualTime.HasValue) details.Add($"{shot.ActualTime}s");
-                    if (!string.IsNullOrWhiteSpace(shot.GrindSetting)) details.Add($"grind {shot.GrindSetting}");
+                    if (shot.GrindMicrons.HasValue) details.Add($"grind {shot.GrindMicrons}µm");
                     details.Add($"rated {shot.Rating}/4");
                     sb.AppendLine($"- {string.Join(", ", details)}");
                 }
@@ -120,8 +120,8 @@ public static class AIPromptBuilder
             sb.Append($", {context.CurrentShot.ActualOutput}g out");
         if (context.CurrentShot.ActualTime.HasValue)
             sb.Append($", {context.CurrentShot.ActualTime}s");
-        if (!string.IsNullOrWhiteSpace(context.CurrentShot.GrindSetting))
-            sb.Append($", grind {context.CurrentShot.GrindSetting}");
+        if (context.CurrentShot.GrindMicrons.HasValue)
+            sb.Append($", grind {context.CurrentShot.GrindMicrons}µm");
 
         if (context.HistoricalShots.Any(s => s.Rating >= 3))
         {
@@ -220,7 +220,7 @@ public static class AIPromptBuilder
                 details.Add($"{shot.DoseIn}g in");
                 if (shot.ActualOutput.HasValue) details.Add($"{shot.ActualOutput}g out");
                 if (shot.ActualTime.HasValue) details.Add($"{shot.ActualTime}s");
-                if (!string.IsNullOrWhiteSpace(shot.GrindSetting)) details.Add($"grind {shot.GrindSetting}");
+                if (shot.GrindMicrons.HasValue) details.Add($"grind {shot.GrindMicrons}µm");
                 if (shot.Rating.HasValue) details.Add($"rated {shot.Rating}/4");
                 sb.AppendLine($"- {string.Join(", ", details)}");
             }

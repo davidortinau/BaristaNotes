@@ -436,7 +436,7 @@ public class RatingServiceTests : IDisposable
             BagId = bagId,
             Timestamp = DateTime.Now,
             DoseIn = 18.0m,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 28.0m,
             ExpectedOutput = 36.0m,
             DrinkType = "Espresso",

@@ -109,7 +109,10 @@ public class BaristaNotesContext : DbContext
             entity.Property(e => e.Timestamp).IsRequired();
             entity.Property(e => e.BagId).IsRequired();
             entity.Property(e => e.DoseIn).IsRequired().HasPrecision(5, 2);
-            entity.Property(e => e.GrindSetting).IsRequired().HasMaxLength(50);
+            // Grind size in microns (canonical, grinder-agnostic). Nullable —
+            // older rows pre-migration and "didn't record" cases legitimately
+            // have no value.
+            entity.Property(e => e.GrindMicrons);
             entity.Property(e => e.ExpectedTime).IsRequired().HasPrecision(5, 2);
             entity.Property(e => e.ExpectedOutput).IsRequired().HasPrecision(5, 2);
             entity.Property(e => e.DrinkType).IsRequired().HasMaxLength(50);

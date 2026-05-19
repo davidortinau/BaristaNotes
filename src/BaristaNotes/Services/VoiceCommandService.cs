@@ -741,7 +741,7 @@ public class VoiceCommandService : IVoiceCommandService
                 Rating = serviceRating,
                 TastingNotes = tastingNotes,
                 // Inherit from last shot or use sensible defaults
-                GrindSetting = lastShot?.GrindSetting ?? "5.5",
+                GrindMicrons = lastShot?.GrindMicrons,
                 DrinkType = lastShot?.DrinkType ?? "Espresso",
                 MadeById = lastShot?.MadeBy?.Id,
                 MadeForId = lastShot?.MadeFor?.Id,
@@ -1267,7 +1267,7 @@ public class VoiceCommandService : IVoiceCommandService
             {
                 try
                 {
-                    await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingPageProps>(
+                    await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingGridPageProps>(
                         "shot-logging",
                         props => props.ShotId = shotId);
                 }
@@ -1410,7 +1410,7 @@ public class VoiceCommandService : IVoiceCommandService
                 $"Last shot (ID: {lastShot.Id}, {lastShot.Timestamp:MMM d} at {lastShot.Timestamp:h:mm tt}):",
                 $"• Dose: {lastShot.DoseIn:F1}g in → {lastShot.ActualOutput ?? lastShot.ExpectedOutput:F1}g out",
                 $"• Time: {lastShot.ActualTime ?? lastShot.ExpectedTime:F0} seconds",
-                $"• Grind: {lastShot.GrindSetting}",
+                $"• Grind: {(lastShot.GrindMicrons.HasValue ? $"{lastShot.GrindMicrons}µm" : "—")}",
                 $"• Drink: {lastShot.DrinkType}"
             };
 

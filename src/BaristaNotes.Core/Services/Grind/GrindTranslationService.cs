@@ -53,23 +53,24 @@ public class GrindTranslationService : IGrindTranslationService
             profile = await _profiles.GetByEquipmentIdAsync(request.EquipmentId.Value);
         }
 
-        // 1) User history lookup
+        // 1) User history lookup. We use the prior shot's GrindMicrons
+        // (canonical) and interpolate against this grinder's anchors to
+        // give a grinder-native suggestion.
         if (request.EquipmentId.HasValue)
         {
             var recent = await _shots.GetMostRecentWithGrindAsync(
                 request.EquipmentId.Value, request.BeanId, request.Method);
-            if (recent != null &&
-                decimal.TryParse(recent.GrindSetting, System.Globalization.NumberStyles.Number,
-                    System.Globalization.CultureInfo.InvariantCulture, out var userSetting))
+            if (recent != null && recent.GrindMicrons.HasValue)
             {
-                var deterministic = TryDeterministic(parsed, profile);
+                var historyParsed = parsed with { Microns = recent.GrindMicrons.Value };
+                var deterministic = TryDeterministic(historyParsed, profile);
                 return BuildResult(
                     min: deterministic?.Min,
                     max: deterministic?.Max,
-                    suggested: userSetting,
+                    suggested: deterministic?.Suggested,
                     parsed: parsed,
                     source: GrindTranslationSource.UserHistory,
-                    confidence: "high",
+                    confidence: deterministic != null ? "high" : "low",
                     explanation: $"From your last {FormatMethod(request.Method)} on this grinder.",
                     request: request);
             }
@@ -154,11 +155,12 @@ public class GrindTranslationService : IGrindTranslationService
         var anchors = DeterministicGrindInterpolator.ParseAnchors(profile?.AnchorsJson);
         if (anchors.Count < 2)
         {
-            // Fall back to DF64 seed anchors if the profile is empty but the user has a DF64.
-            if (profile?.Equipment != null &&
-                profile.Equipment.Name.Contains("DF64", StringComparison.OrdinalIgnoreCase))
+            // Fall back to seed anchors when the profile is empty but the
+            // grinder model matches a known seeded family.
+            var seeded = KnownGrinderSeeds.TryGet(profile?.Equipment?.Name);
+            if (seeded != null)
             {
-                anchors = DeterministicGrindInterpolator.DF64SeedAnchors;
+                anchors = seeded;
             }
             else
             {
@@ -254,10 +256,17 @@ public class GrindTranslationService : IGrindTranslationService
     {
         BrewMethod.Espresso => "espresso",
         BrewMethod.PourOver => "pour-over",
+        BrewMethod.V60 => "V60",
         BrewMethod.Moka => "moka",
         BrewMethod.Drip => "drip",
         BrewMethod.Aeropress => "Aeropress",
         BrewMethod.FrenchPress => "French press",
+        BrewMethod.Turkish => "Turkish",
+        BrewMethod.Siphon => "siphon",
+        BrewMethod.Cupping => "cupping",
+        BrewMethod.ColdBrew => "cold brew",
+        BrewMethod.ColdDrip => "cold drip",
+        BrewMethod.SteepAndRelease => "steep-and-release",
         _ => "drink",
     };
 }

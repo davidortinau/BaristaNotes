@@ -24,7 +24,7 @@ public static class EquipmentTypeExtensions
     public static IReadOnlyList<BrewMethod> CompatibleMethods(this EquipmentType type) => type switch
     {
         EquipmentType.Machine => new[] { BrewMethod.Espresso },
-        EquipmentType.PourOverDripper => new[] { BrewMethod.PourOver },
+        EquipmentType.PourOverDripper => new[] { BrewMethod.PourOver, BrewMethod.V60 },
         EquipmentType.MokaPot => new[] { BrewMethod.Moka },
         EquipmentType.DripMachine => new[] { BrewMethod.Drip },
         EquipmentType.Aeropress => new[] { BrewMethod.Aeropress },

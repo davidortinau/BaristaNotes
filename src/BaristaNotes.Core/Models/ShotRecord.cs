@@ -31,7 +31,15 @@ public class ShotRecord
 
     // Recipe parameters
     public decimal DoseIn { get; set; }
-    public string GrindSetting { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Grind size in microns. Canonical, grinder-agnostic. Nullable because
+    /// older rows pre-migration and "didn't record" cases legitimately have
+    /// no value. The active grinder's native dial setting is computed at
+    /// display time via <see cref="GrinderProfile.AnchorsJson"/>.
+    /// </summary>
+    public int? GrindMicrons { get; set; }
+
     public decimal ExpectedTime { get; set; }
     public decimal ExpectedOutput { get; set; }
     public string DrinkType { get; set; } = string.Empty;

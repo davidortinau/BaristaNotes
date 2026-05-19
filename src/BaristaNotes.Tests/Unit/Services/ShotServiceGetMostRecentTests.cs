@@ -54,7 +54,7 @@ public class ShotServiceGetMostRecentTests
             Id = 42,
             Timestamp = expectedTimestamp,
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso",
@@ -76,7 +76,7 @@ public class ShotServiceGetMostRecentTests
         Assert.Equal(42, result.Id);
         Assert.Equal(expectedTimestamp, result.Timestamp);
         Assert.Equal(18, result.DoseIn);
-        Assert.Equal("5", result.GrindSetting);
+        Assert.Equal(270, result.GrindMicrons);
         Assert.Equal(30, result.ExpectedTime);
         Assert.Equal(40, result.ExpectedOutput);
         Assert.Equal("Espresso", result.DrinkType);
@@ -163,7 +163,7 @@ public class ShotServiceGetMostRecentTests
             MadeFor = madeFor,
             MadeForId = madeFor.Id,
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso",

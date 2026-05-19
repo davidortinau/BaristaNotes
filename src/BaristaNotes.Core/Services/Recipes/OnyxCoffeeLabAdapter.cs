@@ -296,12 +296,19 @@ public sealed class OnyxCoffeeLabAdapter : HttpRoasterRecipeAdapterBase
 
     private static readonly (BrewMethod Method, string HeadingPattern)[] MethodHeadingPatterns =
     {
-        (BrewMethod.Espresso,    @"espresso"),
-        (BrewMethod.PourOver,    @"pour\s*over|v60|chemex"),
-        (BrewMethod.Drip,        @"\bdrip\b|\bbatch\b"),
-        (BrewMethod.Aeropress,   @"aeropress"),
-        (BrewMethod.FrenchPress, @"french\s*press"),
-        (BrewMethod.Moka,        @"moka"),
+        (BrewMethod.Espresso,        @"espresso"),
+        (BrewMethod.V60,             @"\bv60\b"),
+        (BrewMethod.PourOver,        @"pour\s*over|chemex"),
+        (BrewMethod.Drip,             @"\bdrip\b|\bbatch\b"),
+        (BrewMethod.Aeropress,       @"aeropress"),
+        (BrewMethod.FrenchPress,     @"french\s*press"),
+        (BrewMethod.Moka,            @"moka"),
+        (BrewMethod.Turkish,         @"turkish|ibrik|cezve"),
+        (BrewMethod.Siphon,          @"siphon|syphon"),
+        (BrewMethod.Cupping,         @"cupping"),
+        (BrewMethod.ColdDrip,        @"cold\s*drip"),
+        (BrewMethod.ColdBrew,        @"cold\s*brew"),
+        (BrewMethod.SteepAndRelease, @"steep.*release|clever|hario\s*switch"),
     };
 
     // All scraping regexes get a safety timeout + bounded quantifiers to

@@ -40,7 +40,7 @@ public class ShotServiceTests
         var dto = new CreateShotDto
         {
             DoseIn = doseIn,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso"
@@ -60,7 +60,7 @@ public class ShotServiceTests
         var dto = new CreateShotDto
         {
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = expectedTime,
             ExpectedOutput = 40,
             DrinkType = "Espresso"
@@ -80,7 +80,7 @@ public class ShotServiceTests
         var dto = new CreateShotDto
         {
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = expectedOutput,
             DrinkType = "Espresso"
@@ -92,13 +92,13 @@ public class ShotServiceTests
     }
     
     [Fact]
-    public async Task CreateShotAsync_MissingGrindSetting_ThrowsValidationException()
+    public async Task CreateShotAsync_GrindMicronsOutOfRange_ThrowsValidationException()
     {
         // Arrange
         var dto = new CreateShotDto
         {
             DoseIn = 18,
-            GrindSetting = "",
+            GrindMicrons = 10000, // out of 40..1500 range
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso"
@@ -106,7 +106,7 @@ public class ShotServiceTests
         
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(() => _service.CreateShotAsync(dto));
-        Assert.Contains("Grind setting is required", exception.Errors[nameof(dto.GrindSetting)][0]);
+        Assert.Contains("Grind microns must be between 40 and 1500", exception.Errors[nameof(dto.GrindMicrons)][0]);
     }
     
     [Fact]
@@ -116,7 +116,7 @@ public class ShotServiceTests
         var dto = new CreateShotDto
         {
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = ""
@@ -136,7 +136,7 @@ public class ShotServiceTests
         var dto = new CreateShotDto
         {
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso",
@@ -155,7 +155,7 @@ public class ShotServiceTests
         var dto = new CreateShotDto
         {
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Latte",
@@ -183,7 +183,7 @@ public class ShotServiceTests
         {
             Id = 1,
             DoseIn = dto.DoseIn,
-            GrindSetting = dto.GrindSetting,
+            GrindMicrons = dto.GrindMicrons,
             ExpectedTime = dto.ExpectedTime,
             ExpectedOutput = dto.ExpectedOutput,
             DrinkType = dto.DrinkType,
@@ -235,7 +235,7 @@ public class ShotServiceTests
             Rating = 3,
             Timestamp = DateTime.Now.AddHours(-1),
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             IsDeleted = false,
@@ -281,7 +281,7 @@ public class ShotServiceTests
             Rating = 3,
             Timestamp = DateTime.Now.AddHours(-1),
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             IsDeleted = false,
@@ -428,7 +428,7 @@ public class ShotServiceTests
             Id = 1,
             Timestamp = originalTimestamp,
             BagId = 5,
-            GrindSetting = "10",
+            GrindMicrons = 270,
             DoseIn = 18,
             ExpectedTime = 30,
             ExpectedOutput = 40,
@@ -455,7 +455,7 @@ public class ShotServiceTests
         // Assert - Immutable fields unchanged
         Assert.Equal(originalTimestamp, existingShot.Timestamp);
         Assert.Equal(5, existingShot.BagId);
-        Assert.Equal("10", existingShot.GrindSetting);
+        Assert.Equal(270, existingShot.GrindMicrons);
         Assert.Equal(18, existingShot.DoseIn);
         Assert.Equal(30, existingShot.ExpectedTime);
         Assert.Equal(40, existingShot.ExpectedOutput);
@@ -587,7 +587,7 @@ public class ShotServiceTests
         {
             BagId = 999, // Non-existent bag
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso"
@@ -624,7 +624,7 @@ public class ShotServiceTests
         {
             BagId = 1,
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso"
@@ -661,7 +661,7 @@ public class ShotServiceTests
         {
             BagId = 1,
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso"
@@ -673,7 +673,7 @@ public class ShotServiceTests
             BagId = 1,
             Bag = activeBag,
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             ExpectedTime = 30,
             ExpectedOutput = 40,
             DrinkType = "Espresso",
@@ -722,7 +722,7 @@ public class ShotServiceTests
         var bag = new BaristaNotes.Core.Models.Bag { Id = 1, BeanId = beanId };
         var shots = new List<BaristaNotes.Core.Models.ShotRecord>
         {
-            new() { Id = 1, BagId = 1, Bag = bag, IsDeleted = false, DoseIn = 18, GrindSetting = "5", DrinkType = "Espresso", SyncId = Guid.NewGuid() }
+            new() { Id = 1, BagId = 1, Bag = bag, IsDeleted = false, DoseIn = 18, GrindMicrons = 270, DrinkType = "Espresso", SyncId = Guid.NewGuid() }
         };
         _mockShotRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(shots);
 
@@ -741,7 +741,7 @@ public class ShotServiceTests
         var bag = new BaristaNotes.Core.Models.Bag { Id = 1, BeanId = beanId };
         var shots = new List<BaristaNotes.Core.Models.ShotRecord>
         {
-            new() { Id = 1, BagId = 1, Bag = bag, IsDeleted = true, DoseIn = 18, GrindSetting = "5", DrinkType = "Espresso", SyncId = Guid.NewGuid() }
+            new() { Id = 1, BagId = 1, Bag = bag, IsDeleted = true, DoseIn = 18, GrindMicrons = 270, DrinkType = "Espresso", SyncId = Guid.NewGuid() }
         };
         _mockShotRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(shots);
 
@@ -765,7 +765,7 @@ public class ShotServiceTests
             Bag = bag,
             Timestamp = DateTime.Now,
             DoseIn = 18,
-            GrindSetting = "5",
+            GrindMicrons = 270,
             DrinkType = "Espresso",
             SyncId = Guid.NewGuid()
         };
@@ -845,9 +845,9 @@ public class ShotServiceTests
         
         var shots = new List<BaristaNotes.Core.Models.ShotRecord>
         {
-            new() { Id = 1, BagId = 1, Bag = bag, Rating = 4, DoseIn = 18, GrindSetting = "5", ActualOutput = 36, ActualTime = 28, DrinkType = "Espresso", IsDeleted = false, Timestamp = DateTime.Now.AddDays(-1), SyncId = Guid.NewGuid() },
-            new() { Id = 2, BagId = 1, Bag = bag, Rating = 3, DoseIn = 18, GrindSetting = "6", ActualOutput = 38, ActualTime = 30, DrinkType = "Espresso", IsDeleted = false, Timestamp = DateTime.Now.AddDays(-2), SyncId = Guid.NewGuid() },
-            new() { Id = 3, BagId = 1, Bag = bag, Rating = 2, DoseIn = 18, GrindSetting = "4", ActualOutput = 34, ActualTime = 26, DrinkType = "Espresso", IsDeleted = false, Timestamp = DateTime.Now.AddDays(-3), SyncId = Guid.NewGuid() }
+            new() { Id = 1, BagId = 1, Bag = bag, Rating = 4, DoseIn = 18, GrindMicrons = 270, ActualOutput = 36, ActualTime = 28, DrinkType = "Espresso", IsDeleted = false, Timestamp = DateTime.Now.AddDays(-1), SyncId = Guid.NewGuid() },
+            new() { Id = 2, BagId = 1, Bag = bag, Rating = 3, DoseIn = 18, GrindMicrons = 270, ActualOutput = 38, ActualTime = 30, DrinkType = "Espresso", IsDeleted = false, Timestamp = DateTime.Now.AddDays(-2), SyncId = Guid.NewGuid() },
+            new() { Id = 3, BagId = 1, Bag = bag, Rating = 2, DoseIn = 18, GrindMicrons = 270, ActualOutput = 34, ActualTime = 26, DrinkType = "Espresso", IsDeleted = false, Timestamp = DateTime.Now.AddDays(-3), SyncId = Guid.NewGuid() }
         };
         
         _mockShotRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(shots);
@@ -891,7 +891,7 @@ public class ShotServiceTests
                 Bag = bag,
                 Rating = i % 5,
                 DoseIn = 18,
-                GrindSetting = "5",
+                GrindMicrons = 270,
                 DrinkType = "Espresso",
                 IsDeleted = false,
                 Timestamp = DateTime.Now.AddDays(-i),

@@ -38,6 +38,22 @@ public static class AppIcons
         Color = IconColor
     };
 
+    public static FontImageSource Voice => new()
+    {
+        FontFamily = MaterialSymbolsFont.FontFamily,
+        Glyph = MaterialSymbolsFont.Mic,
+        Color = IconColor,
+        Size = 32
+    };
+
+    public static FontImageSource Camera => new()
+    {
+        FontFamily = MaterialSymbolsFont.FontFamily,
+        Glyph = MaterialSymbolsFont.Photo_camera,
+        Color = IconColor,
+        Size = 32
+    };
+
     public static FontImageSource Edit => new()
     {
         FontFamily = MaterialSymbolsFont.FontFamily,

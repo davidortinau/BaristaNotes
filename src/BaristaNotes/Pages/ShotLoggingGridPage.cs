@@ -15,6 +15,17 @@ using Application = Microsoft.Maui.Controls.Application;
 namespace BaristaNotes.Pages;
 
 /// <summary>
+/// One line of the voice chat transcript shown in the voice overlay.
+/// </summary>
+public class VoiceChatMessage
+{
+    public bool IsUser { get; set; }
+    public string Text { get; set; } = string.Empty;
+    public DateTime Timestamp { get; set; }
+    public bool IsError { get; set; }
+}
+
+/// <summary>
 /// Identifies which full-screen picker is currently open.
 /// </summary>
 enum GridPickerKind
@@ -32,7 +43,7 @@ enum GridPickerKind
     DoseIn,
     YieldOut,
     ActualTime,
-    GrindSetting,
+    GrindMicrons,
 }
 
 class ShotLoggingGridState
@@ -45,7 +56,23 @@ class ShotLoggingGridState
     public decimal ExpectedTime { get; set; } = 28;
     public decimal? ActualOutput { get; set; }
     public decimal? ActualTime { get; set; }
-    public string GrindSetting { get; set; } = "5.5";
+
+    /// <summary>
+    /// Grind size in microns (canonical, grinder-agnostic). Null = not
+    /// yet selected for this session. The picker shows the brew-method's
+    /// default if null when opened.
+    /// </summary>
+    public int? GrindMicrons { get; set; }
+
+    /// <summary>
+    /// Transient grind hint surfaced when a recipe was applied but didn't
+    /// resolve to an explicit micron value (e.g. recipe says "medium-fine"
+    /// without a number). Display-only — not persisted. The user picks an
+    /// explicit µm before save; null GrindMicrons is allowed at save time
+    /// and means "not recorded".
+    /// </summary>
+    public string? PendingGrindHint { get; set; }
+
     public int Rating { get; set; } = 2; // UI 0-4 (1-5 service)
     public string? TastingNotes { get; set; }
 
@@ -70,6 +97,28 @@ class ShotLoggingGridState
 
     // Picker overlay state
     public GridPickerKind ActivePicker { get; set; } = GridPickerKind.None;
+
+    // Grind picker overlay-only state. Populated when the µm picker opens.
+    /// <summary>Currently highlighted (but not yet committed) micron value.</summary>
+    public int? PickerGrindMicrons { get; set; }
+    /// <summary>Anchors for the currently-selected grinder, if any. Used to
+    /// render the live translation badge without re-querying the DB on
+    /// every scroll tick.</summary>
+    public IReadOnlyList<BaristaNotes.Core.Services.Grind.GrindAnchor>? PickerGrindAnchors { get; set; }
+    /// <summary>Cached display name for the picker badge ("DF64", etc.).</summary>
+    public string? PickerGrinderName { get; set; }
+    /// <summary>Indicates the selected grinder has no anchor data (neither
+    /// configured nor seeded). Picker shows the "Set up scale →" CTA.</summary>
+    public bool PickerGrinderUncalibrated { get; set; }
+
+    // Voice command state — drives the window-overlay voice UI.
+    public bool IsVoiceSheetOpen { get; set; }
+    public bool IsRecording { get; set; }
+    public string VoiceTranscript { get; set; } = "";
+    public SpeechRecognitionState VoiceState { get; set; } = SpeechRecognitionState.Idle;
+    public bool VoiceCommandCommitted { get; set; }
+    public List<VoiceChatMessage> VoiceChatHistory { get; set; } = new();
+    public string LastAIResponse { get; set; } = "";
 }
 
 class ShotLoggingGridPageProps
@@ -79,19 +128,83 @@ class ShotLoggingGridPageProps
 
 partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingGridPageProps>
 {
+    /// <summary>
+    /// When true, the next mount of this page will auto-open the voice
+    /// overlay after data load. Used by ActivityFeedPage's Voice NavTile.
+    /// </summary>
+    public static bool OpenVoiceOnNextMount { get; set; }
+
     [Inject] IShotService _shotService;
     [Inject] IBagService _bagService;
     [Inject] IEquipmentService _equipmentService;
     [Inject] IUserProfileService _userProfileService;
     [Inject] IPreferencesService _preferencesService;
     [Inject] IFeedbackService _feedbackService;
+    [Inject] BaristaNotes.Core.Data.Repositories.IGrinderProfileRepository _grinderProfiles;
+    [Inject] BaristaNotes.Core.Data.Repositories.IShotRecordRepository _shotRecords;
+    [Inject] BaristaNotes.Core.Data.Repositories.IBagRepository _bagRepo;
     [Inject] ILogger<ShotLoggingGridPage> _logger;
+    [Inject] ISpeechRecognitionService _speechRecognitionService;
+    [Inject] IVoiceCommandService _voiceCommandService;
+    [Inject] IOverlayService _overlayService;
+    [Inject] IVisionService _visionService;
+    [Inject] IDataChangeNotifier _dataChangeNotifier;
+
+    // Cancellation token for voice commands.
+    private CancellationTokenSource? _voiceCts;
+
+    // Pauses speech recognition when the camera capture flow is active.
+    private bool _speechPaused;
+
+    // Silence detection — 1.5s without partial results stops recognition
+    // to trigger a higher-quality final result.
+    private System.Timers.Timer? _silenceTimer;
+    private const double SilenceTimeoutMs = 1500;
+    private readonly object _silenceLock = new();
 
     protected override void OnMounted()
     {
         base.OnMounted();
         SetState(s => s.IsLoading = true);
-        _ = LoadDataAsync();
+        _ = LoadDataAsync().ContinueWith(_ =>
+        {
+            if (OpenVoiceOnNextMount)
+            {
+                OpenVoiceOnNextMount = false;
+                MainThread.BeginInvokeOnMainThread(async () => await ToggleVoiceSheetAsync());
+            }
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+
+        // Refresh pickers when voice commands create beans/bags/equipment/profiles.
+        _dataChangeNotifier.DataChanged += OnDataChanged;
+
+        // Overlay events drive the voice UI.
+        _overlayService.CloseRequested += OnOverlayCloseRequested;
+        _overlayService.ExpandRequested += OnOverlayExpandRequested;
+        _overlayService.MicPressStarted += OnMicPressStarted;
+        _overlayService.MicPressEnded += OnMicPressEnded;
+
+        // Voice command service can request the recognizer pause/resume
+        // (e.g. while the camera flow is active).
+        _voiceCommandService.PauseSpeechRequested += OnPauseSpeechRequested;
+        _voiceCommandService.ResumeSpeechRequested += OnResumeSpeechRequested;
+    }
+
+    protected override void OnWillUnmount()
+    {
+        _voiceCts?.Cancel();
+        _voiceCts?.Dispose();
+        StopSilenceTimer();
+
+        _dataChangeNotifier.DataChanged -= OnDataChanged;
+        _overlayService.CloseRequested -= OnOverlayCloseRequested;
+        _overlayService.ExpandRequested -= OnOverlayExpandRequested;
+        _overlayService.MicPressStarted -= OnMicPressStarted;
+        _overlayService.MicPressEnded -= OnMicPressEnded;
+        _voiceCommandService.PauseSpeechRequested -= OnPauseSpeechRequested;
+        _voiceCommandService.ResumeSpeechRequested -= OnResumeSpeechRequested;
+
+        base.OnWillUnmount();
     }
 
     async Task LoadDataAsync()
@@ -122,7 +235,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     s.BrewMethod = shot.BrewMethod;
                     s.DrinkType = shot.DrinkType;
                     s.DoseIn = shot.DoseIn;
-                    s.GrindSetting = shot.GrindSetting;
+                    s.GrindMicrons = shot.GrindMicrons;
                     s.ExpectedTime = shot.ExpectedTime;
                     s.ExpectedOutput = shot.ExpectedOutput;
                     s.ActualTime = shot.ActualTime;
@@ -152,7 +265,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                         s.BrewMethod = lastShot.BrewMethod;
                         s.DrinkType = lastShot.DrinkType;
                         s.DoseIn = lastShot.DoseIn;
-                        s.GrindSetting = lastShot.GrindSetting;
+                        s.GrindMicrons = lastShot.GrindMicrons;
                         s.ExpectedTime = lastShot.ExpectedTime;
                         s.ExpectedOutput = lastShot.ExpectedOutput;
                         s.Rating = (lastShot.Rating ?? 3) - 1;
@@ -205,7 +318,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     MadeById = State.SelectedMaker?.Id,
                     MadeForId = State.SelectedRecipient?.Id,
                     DoseIn = State.DoseIn,
-                    GrindSetting = State.GrindSetting,
+                    GrindMicrons = State.GrindMicrons,
                     ExpectedTime = State.ExpectedTime,
                     ExpectedOutput = State.ExpectedOutput,
                     ActualTime = State.ActualTime,
@@ -229,7 +342,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     MadeById = State.SelectedMaker?.Id,
                     MadeForId = State.SelectedRecipient?.Id,
                     DoseIn = State.DoseIn,
-                    GrindSetting = State.GrindSetting,
+                    GrindMicrons = State.GrindMicrons,
                     ExpectedTime = State.ExpectedTime,
                     ExpectedOutput = State.ExpectedOutput,
                     ActualTime = State.ActualTime,
@@ -300,45 +413,50 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 // ScrollView(
                 Grid(
                     rows: "Auto,*,*,*,*,*,*,Auto",
-                    columns: "*,*",
+                    columns: "*,*,*,*",
                     Tile("BREW METHOD", State.BrewMethod.DisplayName(),
-                            () => Open(GridPickerKind.BrewMethod)).GridRow(0).GridColumn(0),
+                            () => Open(GridPickerKind.BrewMethod)).GridRow(0).GridColumn(0).GridColumnSpan(2),
                     Tile("BAG", BagDisplayValue(),
-                            () => Open(GridPickerKind.Bag)).GridRow(0).GridColumn(1),
+                            () => Open(GridPickerKind.Bag)).GridRow(0).GridColumn(2).GridColumnSpan(2),
 
                     Tile("DRINK TYPE", State.DrinkType,
-                            () => Open(GridPickerKind.DrinkType)).GridRow(1).GridColumn(0),
+                            () => Open(GridPickerKind.DrinkType)).GridRow(1).GridColumn(0).GridColumnSpan(2),
                     Tile("RATING", RatingDisplayValue(),
-                            () => Open(GridPickerKind.Rating)).GridRow(1).GridColumn(1),
+                            () => Open(GridPickerKind.Rating)).GridRow(1).GridColumn(2).GridColumnSpan(2),
 
                     Tile("DOSE IN", $"{State.DoseIn:0.#}", () => Open(GridPickerKind.DoseIn), unit: "g")
-                            .GridRow(2).GridColumn(0),
+                            .GridRow(2).GridColumn(0).GridColumnSpan(2),
                     Tile("YIELD", $"{State.ExpectedOutput:0.#}", () => Open(GridPickerKind.YieldOut), unit: "g")
-                            .GridRow(2).GridColumn(1),
+                            .GridRow(2).GridColumn(2).GridColumnSpan(2),
 
                     Tile("TIME", State.ActualTime.HasValue ? $"{State.ActualTime:0}" : $"{State.ExpectedTime:0}", () => Open(GridPickerKind.ActualTime), unit: "s")
-                            .GridRow(3).GridColumn(0),
-                    Tile("GRIND", State.GrindSetting,
-                            () => Open(GridPickerKind.GrindSetting)).GridRow(3).GridColumn(1),
+                            .GridRow(3).GridColumn(0).GridColumnSpan(2),
+                    Tile("GRIND", State.GrindMicrons.HasValue ? $"{State.GrindMicrons}" : "—",
+                            () => Open(GridPickerKind.GrindMicrons), unit: State.GrindMicrons.HasValue ? "µm" : null).GridRow(3).GridColumn(2).GridColumnSpan(2),
 
                     Tile("MADE BY", State.SelectedMaker?.Name ?? "—",
-                            () => Open(GridPickerKind.MadeBy)).GridRow(4).GridColumn(0),
+                            () => Open(GridPickerKind.MadeBy)).GridRow(4).GridColumn(0).GridColumnSpan(2),
                     Tile("MADE FOR", State.SelectedRecipient?.Name ?? "—",
-                            () => Open(GridPickerKind.MadeFor)).GridRow(4).GridColumn(1),
+                            () => Open(GridPickerKind.MadeFor)).GridRow(4).GridColumn(2).GridColumnSpan(2),
 
                     Tile("MACHINE", EquipmentName(State.SelectedMachineId),
-                            () => Open(GridPickerKind.Machine)).GridRow(5).GridColumn(0),
+                            () => Open(GridPickerKind.Machine)).GridRow(5).GridColumn(0).GridColumnSpan(2),
                     Tile("GRINDER", EquipmentName(State.SelectedGrinderId),
-                            () => Open(GridPickerKind.Grinder)).GridRow(5).GridColumn(1),
+                            () => Open(GridPickerKind.Grinder)).GridRow(5).GridColumn(2).GridColumnSpan(2),
 
                     Tile("ACCESSORIES", AccessoriesDisplayValue(),
-                            () => Open(GridPickerKind.Accessories)).GridRow(6).GridColumn(0),
-                    SaveTile().GridRow(6).GridColumn(1),
+                            () => Open(GridPickerKind.Accessories)).GridRow(6).GridColumn(0).GridColumnSpan(2),
+                    SaveTile().GridRow(6).GridColumn(2).GridColumnSpan(2),
 
-                    NavTile("ACTIVITY", async () => await MauiControls.Shell.Current.GoToAsync("//history"))
+                    NavTile(AppIcons.Feed, async () => await MauiControls.Shell.Current.GoToAsync("//history"))
                         .GridRow(7).GridColumn(0),
-                    NavTile("SETTINGS", async () => await MauiControls.Shell.Current.GoToAsync("//settings"))
-                        .GridRow(7).GridColumn(1)
+                    NavTile(AppIcons.Settings, async () => await MauiControls.Shell.Current.GoToAsync("//settings"))
+                        .GridRow(7).GridColumn(1),
+                    NavTile(AppIcons.Voice, async () => await ToggleVoiceSheetAsync())
+                        .GridRow(7).GridColumn(2),
+                    NavTile(AppIcons.Camera, async () => await CaptureAndAnalyzePhotoAsync())
+                        .GridRow(7).GridColumn(3)
+
                 )
                 .ColumnSpacing(1)
                 .RowSpacing(1)
@@ -352,11 +470,105 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         ) // ContentPage
         .Set(MauiControls.Shell.NavBarIsVisibleProperty, false)
         .Set(MauiControls.Shell.TabBarIsVisibleProperty, false)
-        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never));
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
+        .OnAppearing(OnPageAppearing);
     }
 
-    void Open(GridPickerKind kind) => SetState(s => s.ActivePicker = kind);
-    void ClosePicker() => SetState(s => s.ActivePicker = GridPickerKind.None);
+    void OnPageAppearing()
+    {
+        // Cross-page voice trigger: ActivityFeedPage's voice tile sets this
+        // flag and navigates here. Fire after the page is visible so the
+        // overlay attaches to the right window.
+        if (OpenVoiceOnNextMount)
+        {
+            OpenVoiceOnNextMount = false;
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                try { await ToggleVoiceSheetAsync(); }
+                catch (Exception ex) { _logger?.LogError(ex, "Voice toggle from OnAppearing failed"); }
+            });
+        }
+    }
+
+    void Open(GridPickerKind kind)
+    {
+        // Grind picker has a heavier open path: resolve a sensible default
+        // for the picker selection (bean history → method default) and load
+        // the active grinder's anchors for the live translation badge.
+        if (kind == GridPickerKind.GrindMicrons)
+        {
+            _ = OpenGrindPickerAsync();
+            return;
+        }
+        SetState(s => s.ActivePicker = kind);
+    }
+    void ClosePicker() => SetState(s =>
+    {
+        s.ActivePicker = GridPickerKind.None;
+        s.PickerGrindMicrons = null;
+        s.PickerGrindAnchors = null;
+        s.PickerGrinderName = null;
+        s.PickerGrinderUncalibrated = false;
+    });
+
+    async Task OpenGrindPickerAsync()
+    {
+        try
+        {
+            // 1) Default value resolution: existing state, then bean-method
+            // last-shot µm, then brew-method default.
+            int? micron = State.GrindMicrons;
+            if (micron == null && State.SelectedBagId.HasValue)
+            {
+                var bag = await _bagRepo.GetByIdAsync(State.SelectedBagId.Value);
+                if (bag != null)
+                {
+                    micron = await _shotRecords.GetMostRecentMicronsByBeanAsync(bag.BeanId, State.BrewMethod);
+                }
+            }
+            var range = State.BrewMethod.GrindMicronRange();
+            if (micron == null) micron = range.Default;
+
+            // 2) Anchors for the live badge. No grinder selected → no badge.
+            IReadOnlyList<BaristaNotes.Core.Services.Grind.GrindAnchor>? anchors = null;
+            string? grinderName = null;
+            bool uncalibrated = false;
+            if (State.SelectedGrinderId.HasValue)
+            {
+                var equip = State.AvailableEquipment.FirstOrDefault(e => e.Id == State.SelectedGrinderId.Value);
+                grinderName = equip?.Name;
+                // Auto-heal DF64 profiles created against the prior 0–9 dial
+                // assumption (they shipped with stale AnchorsJson). No-op for
+                // already-current data.
+                await _grinderProfiles.EnsureCurrentSeedsAsync(State.SelectedGrinderId.Value);
+                var profile = await _grinderProfiles.GetByEquipmentIdAsync(State.SelectedGrinderId.Value);
+                var parsed = BaristaNotes.Core.Services.Grind.DeterministicGrindInterpolator.ParseAnchors(profile?.AnchorsJson);
+                if (parsed.Count >= 2)
+                {
+                    anchors = parsed;
+                }
+                else
+                {
+                    anchors = BaristaNotes.Core.Services.Grind.KnownGrinderSeeds.TryGet(grinderName);
+                    uncalibrated = anchors == null;
+                }
+            }
+
+            SetState(s =>
+            {
+                s.PickerGrindMicrons = micron;
+                s.PickerGrindAnchors = anchors;
+                s.PickerGrinderName = grinderName;
+                s.PickerGrinderUncalibrated = uncalibrated;
+                s.ActivePicker = GridPickerKind.GrindMicrons;
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open grind picker");
+            SetState(s => s.ActivePicker = GridPickerKind.GrindMicrons);
+        }
+    }
 
     // ------------------------------------------------------------
     // Tile factory
@@ -437,18 +649,15 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             inverted: true);
     }
 
-    VisualNode NavTile(string label, Action onTap)
+    VisualNode NavTile(FontImageSource imageSource, Action onTap)
     {
         var isLight = Application.Current?.RequestedTheme != AppTheme.Dark;
         var bg = isLight ? AppColors.Light.Surface : AppColors.Dark.Surface;
         var labelColor = isLight ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
 
         return Border(
-            Label(label.ToUpperInvariant())
-                .FontSize(14)
-                .CharacterSpacing(3)
-                .FontAttributes(MauiControls.FontAttributes.Bold)
-                .TextColor(labelColor)
+            Image()
+                .Source(imageSource)
                 .HCenter()
                 .VCenter()
         )
@@ -583,7 +792,8 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     if (s.SelectedAccessoryIds.Contains(id)) s.SelectedAccessoryIds.Remove(id);
                     else s.SelectedAccessoryIds = s.SelectedAccessoryIds.Concat(new[] { id }).ToList();
                 }),
-                onDone: () => SetState(s => s.ActivePicker = GridPickerKind.None)),
+                onDone: () => SetState(s => s.ActivePicker = GridPickerKind.None),
+                onClear: () => SetState(s => { s.SelectedAccessoryIds = new List<int>(); s.ActivePicker = GridPickerKind.None; })),
 
             GridPickerKind.Rating => CategoricalPicker(
                 title: "Rating",
@@ -612,12 +822,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 current: (double)(State.ActualTime ?? State.ExpectedTime),
                 onSelect: v => SetState(s => { s.ActualTime = (decimal)v; s.ActivePicker = GridPickerKind.None; })),
 
-            GridPickerKind.GrindSetting => NumericScroller(
-                title: "Grind Setting",
-                unit: null,
-                spec: NumericSpecFor(GridPickerKind.GrindSetting),
-                current: ParseGrind(State.GrindSetting),
-                onSelect: v => SetState(s => { s.GrindSetting = FormatGrind(v); s.ActivePicker = GridPickerKind.None; })),
+            GridPickerKind.GrindMicrons => GrindMicronsPicker(),
 
             _ => VStack()
         };
@@ -687,7 +892,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 .VCenter()
                 .GridColumn(0),
             selected
-                ? Label("●").FontSize(14).TextColor(accentColor).VCenter().GridColumn(1)
+                ? Label("●").FontSize(14).TextColor(accentColor).VCenter().GridColumn(2).GridColumnSpan(2)
                 : null
         )
         .Padding(24, 18)
@@ -703,7 +908,8 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         List<(int Id, string Display)> items,
         Func<int, bool> isSelected,
         Action<int> onToggle,
-        Action onDone)
+        Action onDone,
+        Action? onClear = null)
     {
         var isLight = Application.Current?.RequestedTheme != AppTheme.Dark;
         var textPrimary = isLight ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
@@ -711,17 +917,21 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         var accent = isLight ? AppColors.Light.Primary : AppColors.Dark.Primary;
 
         return Grid(rows: "Auto,*,Auto", columns: "*",
-            Grid(rows: "*", columns: "Auto,*,Auto",
+            Grid(rows: "*", columns: "Auto,*,Auto,Auto",
                 Button("Close").OnClicked(ClosePicker)
                     .BackgroundColor(Colors.Transparent).TextColor(textSecondary).GridColumn(0),
                 Label(title.ToUpperInvariant())
                     .FontSize(12).CharacterSpacing(3)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(textSecondary).HCenter().VCenter().GridColumn(0).GridColumnSpan(3),
+                    .TextColor(textSecondary).HCenter().VCenter().GridColumn(0).GridColumnSpan(4),
+                onClear != null
+                    ? Button("Clear").OnClicked(() => onClear?.Invoke())
+                        .BackgroundColor(Colors.Transparent).TextColor(textSecondary).GridColumn(2)
+                    : null,
                 Button("Done").OnClicked(onDone)
                     .BackgroundColor(Colors.Transparent).TextColor(accent)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .GridColumn(2)
+                    .GridColumn(3)
             ).GridRow(0).Padding(12, 8),
 
             (items.Count == 0
@@ -746,7 +956,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             Label(text)
                 .FontSize(22)
                 .TextColor(textColor)
-                .VCenter().GridColumn(1)
+                .VCenter().GridColumn(2).GridColumnSpan(2)
         )
         .Padding(24, 16)
         .OnTapped(onTap);
@@ -766,13 +976,9 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             GridPickerKind.DoseIn => new((double)profile.DoseMin, (double)profile.DoseMax, (double)profile.DoseStep, profile.DoseStep < 1 ? "0.#" : "0"),
             GridPickerKind.YieldOut => new((double)profile.OutputMin, (double)profile.OutputMax, (double)profile.OutputStep, profile.OutputStep < 1 ? "0.#" : "0"),
             GridPickerKind.ActualTime => new((double)profile.TimeMin, (double)profile.TimeMax, (double)profile.TimeStep, "0"),
-            GridPickerKind.GrindSetting => new(1.0, 30.0, 0.25, "0.##"),
             _ => new(0, 100, 1, "0")
         };
     }
-
-    static double ParseGrind(string s) => double.TryParse(s, out var v) ? v : 5.5;
-    static string FormatGrind(double v) => Math.Abs(v - Math.Round(v)) < 0.001 ? ((int)Math.Round(v)).ToString() : v.ToString("0.##");
 
     VisualNode NumericScroller(string title, string? unit, NumericFieldSpec spec, double current, Action<double> onSelect)
     {
@@ -820,5 +1026,670 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 )
             ).GridRow(1)
         ).BackgroundColor(isLight ? AppColors.Light.Surface : AppColors.Dark.Surface);
+    }
+
+    // ------------------------------------------------------------
+    // Grind picker: micron scroller + live grinder-native badge
+    // ------------------------------------------------------------
+
+    VisualNode GrindMicronsPicker()
+    {
+        var isLight = Application.Current?.RequestedTheme != AppTheme.Dark;
+        var textPrimary = isLight ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+        var textSecondary = isLight ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+        var accent = isLight ? AppColors.Light.Primary : AppColors.Dark.Primary;
+        var surface = isLight ? AppColors.Light.Surface : AppColors.Dark.Surface;
+
+        var range = State.BrewMethod.GrindMicronRange();
+
+        // Full µm domain always rendered. Variable density: brew-method's
+        // native Step inside [Min,Max], 50µm step outside. This lets users
+        // dial into atypical grinds for a given method without hiding the
+        // wider field of possibility.
+        const int domainMin = 40;
+        const int domainMax = 1500;
+        const int outsideStep = 50;
+        var values = new List<int>();
+        for (var v = domainMin; v < range.Min; v += outsideStep) values.Add(v);
+        for (var v = range.Min; v <= range.Max; v += range.Step) values.Add(v);
+        for (var v = range.Max + outsideStep; v <= domainMax; v += outsideStep) values.Add(v);
+
+        var current = State.PickerGrindMicrons ?? State.GrindMicrons ?? range.Default;
+        // Snap to nearest value present in the variable-step list.
+        var snappedIndex = 0;
+        var bestDelta = int.MaxValue;
+        for (var i = 0; i < values.Count; i++)
+        {
+            var d = Math.Abs(values[i] - current);
+            if (d < bestDelta) { bestDelta = d; snappedIndex = i; }
+        }
+        var snappedValue = values[snappedIndex];
+
+        return Grid(rows: "Auto,*,Auto", columns: "*",
+            // Header
+            Grid(rows: "*", columns: "Auto,*,Auto",
+                Button("Close").OnClicked(ClosePicker)
+                    .BackgroundColor(Colors.Transparent).TextColor(textSecondary).GridColumn(0),
+                Label("GRIND")
+                    .FontSize(12).CharacterSpacing(3)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(textSecondary).HCenter().VCenter().GridColumn(0).GridColumnSpan(3),
+                Button("Done")
+                    .OnClicked(() => CommitGrindMicrons(snappedValue))
+                    .BackgroundColor(Colors.Transparent).TextColor(accent)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .GridColumn(2)
+            ).GridRow(0).Padding(12, 8),
+
+            // Scrollable µm list. CollectionView so we can ScrollTo(index)
+            // on load to center the user's brew-method range without
+            // hiding out-of-range values.
+            CollectionView()
+                .ItemsSource(values, v =>
+                {
+                    var inRange = v >= range.Min && v <= range.Max;
+                    var selected = v == snappedValue;
+                    var rowHeight = selected ? 96 : (inRange ? 72 : 48);
+                    var fontSize = selected ? 56 : (inRange ? 32 : 20);
+                    var color = selected ? accent
+                        : inRange ? textPrimary
+                        : textSecondary.WithAlpha(0.5f);
+
+                    return Grid(rows: "*", columns: "*",
+                        Label($"{v} µm")
+                            .FontSize(fontSize)
+                            .FontAttributes(selected ? MauiControls.FontAttributes.Bold : MauiControls.FontAttributes.None)
+                            .TextColor(color)
+                            .HCenter().VCenter()
+                    )
+                    .HeightRequest(rowHeight)
+                    .OnTapped(() =>
+                    {
+                        if (selected) CommitGrindMicrons(v);
+                        else SetState(s => s.PickerGrindMicrons = v);
+                    });
+                })
+                .SelectionMode(MauiControls.SelectionMode.None)
+                .OnLoaded((sender, _) =>
+                {
+                    if (sender is MauiControls.CollectionView cv)
+                    {
+                        try
+                        {
+                            cv.ScrollTo(snappedIndex, position: MauiControls.ScrollToPosition.Center, animate: false);
+                        }
+                        catch
+                        {
+                            // Best-effort centering; ignore if the items aren't laid out yet.
+                        }
+                    }
+                })
+                .GridRow(1),
+
+            // Sticky bottom translation badge.
+            GrindTranslationBadge(snappedValue, textPrimary, textSecondary, accent)
+                .GridRow(2)
+        ).BackgroundColor(surface);
+    }
+
+    VisualNode GrindTranslationBadge(int microns, Color textPrimary, Color textSecondary, Color accent)
+    {
+        var anchors = State.PickerGrindAnchors;
+        string main;
+        string? cta = null;
+        Action? onTap = null;
+
+        if (!State.SelectedGrinderId.HasValue)
+        {
+            main = "Select grinder for dial setting";
+            cta = "→";
+            onTap = () => SetState(s => s.ActivePicker = GridPickerKind.Grinder);
+        }
+        else if (anchors == null || anchors.Count < 2)
+        {
+            // Grinder selected but uncalibrated.
+            main = $"{State.PickerGrinderName ?? "Grinder"} · Set up scale";
+            cta = "→";
+            // Navigate to grinder equipment detail so user can add anchors.
+            onTap = async () =>
+            {
+                ClosePicker();
+                if (State.SelectedGrinderId.HasValue)
+                    await MauiControls.Shell.Current.GoToAsync($"equipmentDetail?id={State.SelectedGrinderId.Value}");
+            };
+        }
+        else
+        {
+            var result = BaristaNotes.Core.Services.Grind.DeterministicGrindInterpolator
+                .Interpolate(anchors, microns);
+            if (result?.Suggested is decimal s)
+            {
+                // Round to a reasonable precision (0.1) for display.
+                var rounded = Math.Round(s, 1);
+                main = $"{State.PickerGrinderName ?? "Grinder"} · {rounded:0.#}";
+            }
+            else
+            {
+                main = $"{State.PickerGrinderName ?? "Grinder"} · —";
+            }
+        }
+
+        var badge = Grid(rows: "*", columns: "*,Auto",
+            Label(main)
+                .FontSize(16)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(textPrimary)
+                .VCenter().GridColumn(0),
+            cta != null
+                ? Label(cta).FontSize(20).TextColor(accent).VCenter().GridColumn(2).GridColumnSpan(2)
+                : null
+        )
+        .Padding(20, 18)
+        .BackgroundColor(textPrimary.WithAlpha(0.05f));
+
+        if (onTap != null) badge = badge.OnTapped(onTap);
+        return badge;
+    }
+
+    void CommitGrindMicrons(int microns)
+    {
+        SetState(s =>
+        {
+            s.GrindMicrons = microns;
+            s.PendingGrindHint = null;
+            s.ActivePicker = GridPickerKind.None;
+            s.PickerGrindMicrons = null;
+            s.PickerGrindAnchors = null;
+            s.PickerGrinderName = null;
+            s.PickerGrinderUncalibrated = false;
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    //  Voice command + camera flow
+    //  Ported from ShotLoggingPage so the grid's NavTile mic/camera buttons
+    //  open the window overlay and exercise the AI voice pipeline.
+    // ──────────────────────────────────────────────────────────────────────
+
+    private async void OnOverlayCloseRequested(object? sender, EventArgs e)
+    {
+        if (State.IsVoiceSheetOpen)
+        {
+            await CloseVoiceOverlayAsync();
+        }
+    }
+
+    private void OnOverlayExpandRequested(object? sender, EventArgs e)
+    {
+        if (State.IsVoiceSheetOpen && _overlayService.IsCollapsed)
+        {
+            _overlayService.Expand();
+        }
+    }
+
+    private async void OnMicPressStarted(object? sender, EventArgs e)
+    {
+        _logger.LogInformation("Push-to-talk: mic button pressed");
+        if (!State.IsVoiceSheetOpen || State.IsRecording) return;
+        await StartRecordingAsync();
+    }
+
+    private async void OnMicPressEnded(object? sender, EventArgs e)
+    {
+        _logger.LogInformation("Push-to-talk: mic button released");
+        if (!State.IsRecording) return;
+        await StopRecordingAsync();
+    }
+
+    private async void OnPauseSpeechRequested(object? sender, EventArgs e)
+    {
+        _logger.LogDebug("Pause speech requested - stopping listening for camera");
+        _speechPaused = true;
+        if (State.IsRecording)
+        {
+            await _speechRecognitionService.StopListeningAsync();
+            _overlayService.UpdateContent(new OverlayContent(
+                StateText: "Taking photo...",
+                Transcript: State.VoiceTranscript,
+                IsListening: false,
+                IsProcessing: true,
+                AIResponse: State.LastAIResponse
+            ));
+        }
+    }
+
+    private void OnResumeSpeechRequested(object? sender, EventArgs e)
+    {
+        _logger.LogDebug("Resume speech requested via event");
+        _speechPaused = false;
+    }
+
+    /// <summary>
+    /// Refresh picker reference lists when voice commands create new
+    /// beans/bags/equipment/profiles in the background.
+    /// </summary>
+    private void OnDataChanged(object? sender, DataChangedEventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            try
+            {
+                switch (e.ChangeType)
+                {
+                    case DataChangeType.BeanCreated:
+                    case DataChangeType.BagCreated:
+                        var bags = await _bagService.GetActiveBagsForShotLoggingAsync();
+                        SetState(s => s.AvailableBags = bags);
+                        break;
+                    case DataChangeType.EquipmentCreated:
+                        var equipment = (await _equipmentService.GetAllActiveEquipmentAsync()).ToList();
+                        SetState(s => s.AvailableEquipment = equipment);
+                        break;
+                    case DataChangeType.ProfileCreated:
+                        var users = await _userProfileService.GetAllProfilesAsync();
+                        SetState(s => s.AvailableUsers = users);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing pickers after voice data change");
+            }
+        });
+    }
+
+    /// <summary>
+    /// Toggles the voice overlay. When opening, shows the window overlay in
+    /// "Ready" state — mic is NOT auto-armed; user push-and-hold starts the
+    /// recording via the overlay's MicPressStarted event.
+    /// </summary>
+    private async Task ToggleVoiceSheetAsync()
+    {
+        if (State.IsVoiceSheetOpen)
+        {
+            await CloseVoiceOverlayAsync();
+            return;
+        }
+
+        // Fresh conversation context for each session.
+        _voiceCommandService.ClearConversationHistory();
+        SetState(s => s.VoiceChatHistory = new List<VoiceChatMessage>());
+
+        _overlayService.Show();
+        _overlayService.UpdateContent(new OverlayContent(
+            StateText: "Ready",
+            Transcript: "",
+            IsListening: false,
+            IsProcessing: false,
+            IsReady: true
+        ));
+
+        SetState(s => s.IsVoiceSheetOpen = true);
+        await Task.CompletedTask;
+    }
+
+    private async Task CloseVoiceOverlayAsync()
+    {
+        if (State.IsRecording)
+        {
+            await StopRecordingAsync();
+        }
+        SetState(s => s.IsVoiceSheetOpen = false);
+        _overlayService.Hide();
+    }
+
+    private async Task StartRecordingAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Starting voice recording (push-to-talk)");
+
+            var hasPermission = await _speechRecognitionService.RequestPermissionsAsync();
+            if (!hasPermission)
+            {
+                _logger.LogWarning("Speech recognition permission denied");
+                AddChatMessage("Microphone permission is required. Please enable it in Settings.",
+                    isUser: false, isError: true);
+                await ShowPermissionDeniedDialogAsync();
+                return;
+            }
+
+            _voiceCts = new CancellationTokenSource();
+
+            SetState(s =>
+            {
+                s.IsRecording = true;
+                s.VoiceTranscript = "";
+                s.VoiceState = SpeechRecognitionState.Listening;
+                s.VoiceCommandCommitted = false;
+            });
+
+            _overlayService.UpdateContent(new OverlayContent(
+                StateText: "Listening...",
+                Transcript: "",
+                IsListening: true,
+                IsProcessing: false
+            ));
+
+            _speechRecognitionService.PartialResultReceived += OnPartialResultReceived;
+            _ = ListenForSpeechAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error starting voice recording");
+            AddChatMessage("Failed to start recording. Please try again.",
+                isUser: false, isError: true);
+        }
+    }
+
+    private async Task ListenForSpeechAsync()
+    {
+        _logger.LogInformation("ListenForSpeechAsync started (single-shot push-to-talk)");
+        try
+        {
+            if (_voiceCts?.Token.IsCancellationRequested ?? true) return;
+
+            var result = await _speechRecognitionService.StartListeningAsync(
+                _voiceCts?.Token ?? CancellationToken.None);
+
+            _logger.LogInformation("Speech recognition returned: Success={Success}, Transcript='{Transcript}'",
+                result.Success, result.Transcript ?? "(null)");
+
+            // If cancelled by button release, StopRecordingAsync handles processing.
+            if (_voiceCts?.Token.IsCancellationRequested ?? true) return;
+
+            if (result.Success && !string.IsNullOrWhiteSpace(result.Transcript))
+            {
+                var transcript = result.Transcript;
+                SetState(s => s.VoiceTranscript = "");
+                await ProcessTranscriptAsync(transcript);
+            }
+            else if (!string.IsNullOrWhiteSpace(State.VoiceTranscript))
+            {
+                var transcript = State.VoiceTranscript;
+                SetState(s => s.VoiceTranscript = "");
+                await ProcessTranscriptAsync(transcript);
+            }
+            else
+            {
+                SetState(s =>
+                {
+                    s.IsRecording = false;
+                    s.VoiceState = SpeechRecognitionState.Idle;
+                });
+                _overlayService.UpdateContent(new OverlayContent(
+                    StateText: "Ready",
+                    Transcript: "",
+                    IsListening: false,
+                    IsProcessing: false,
+                    IsReady: true,
+                    AIResponse: State.LastAIResponse
+                ));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("ListenForSpeechAsync cancelled (push-to-talk release)");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during speech listening");
+        }
+        finally
+        {
+            StopSilenceTimer();
+            _speechRecognitionService.PartialResultReceived -= OnPartialResultReceived;
+        }
+    }
+
+    private async Task StopRecordingAsync()
+    {
+        _logger.LogInformation("StopRecordingAsync called (push-to-talk release)");
+        StopSilenceTimer();
+
+        var pendingTranscript = State.VoiceTranscript;
+
+        _voiceCts?.Cancel();
+        await _speechRecognitionService.StopListeningAsync();
+        _speechRecognitionService.PartialResultReceived -= OnPartialResultReceived;
+
+        SetState(s =>
+        {
+            s.IsRecording = false;
+            s.VoiceTranscript = "";
+            s.VoiceState = SpeechRecognitionState.Idle;
+        });
+
+        if (!string.IsNullOrWhiteSpace(pendingTranscript))
+        {
+            await ProcessTranscriptAsync(pendingTranscript);
+        }
+        else
+        {
+            _overlayService.UpdateContent(new OverlayContent(
+                StateText: "Ready",
+                Transcript: "",
+                IsListening: false,
+                IsProcessing: false,
+                IsReady: true,
+                AIResponse: State.LastAIResponse
+            ));
+        }
+    }
+
+    private async Task ProcessTranscriptAsync(string transcript)
+    {
+        _logger.LogInformation("ProcessTranscriptAsync START: '{Transcript}'", transcript);
+        AddChatMessage(transcript, isUser: true);
+        SetState(s => s.VoiceState = SpeechRecognitionState.Processing);
+
+        _overlayService.UpdateContent(new OverlayContent(
+            StateText: "Processing...",
+            Transcript: transcript,
+            IsListening: false,
+            IsProcessing: true
+        ));
+
+        try
+        {
+            var commandResult = await _voiceCommandService.ProcessCommandAsync(
+                new VoiceCommandRequestDto(transcript, 1.0),
+                CancellationToken.None);
+
+            AddChatMessage(commandResult.Message, isUser: false, isError: !commandResult.Success);
+            SetState(s =>
+            {
+                s.LastAIResponse = commandResult.Message;
+                s.VoiceTranscript = "";
+                s.VoiceState = SpeechRecognitionState.Idle;
+            });
+
+            if (_speechPaused) _speechPaused = false;
+
+            _overlayService.UpdateContent(new OverlayContent(
+                StateText: commandResult.Success ? "Done" : "Error",
+                Transcript: "",
+                IsListening: false,
+                IsProcessing: false,
+                IsReady: true,
+                AIResponse: commandResult.Message
+            ));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing voice command");
+            var errorMessage = "Sorry, something went wrong. Please try again.";
+            AddChatMessage(errorMessage, isUser: false, isError: true);
+            SetState(s =>
+            {
+                s.LastAIResponse = errorMessage;
+                s.VoiceState = SpeechRecognitionState.Idle;
+            });
+            if (_speechPaused) _speechPaused = false;
+
+            _overlayService.UpdateContent(new OverlayContent(
+                StateText: "Error",
+                Transcript: "",
+                IsListening: false,
+                IsProcessing: false,
+                IsReady: true,
+                ErrorMessage: "Something went wrong",
+                AIResponse: errorMessage
+            ));
+        }
+    }
+
+    private void AddChatMessage(string text, bool isUser, bool isError = false)
+    {
+        SetState(s =>
+        {
+            s.VoiceChatHistory.Add(new VoiceChatMessage
+            {
+                IsUser = isUser,
+                Text = text,
+                Timestamp = DateTime.Now,
+                IsError = isError
+            });
+        });
+    }
+
+    private async Task ShowPermissionDeniedDialogAsync()
+    {
+        var page = ContainerPage;
+        if (page == null) return;
+        var openSettings = await page.DisplayAlert(
+            "Permission Required",
+            "Speech recognition requires microphone and speech permissions. Please enable them in Settings.",
+            "Open Settings",
+            "Cancel");
+        if (openSettings) AppInfo.ShowSettingsUI();
+    }
+
+    private void OnPartialResultReceived(object? sender, string partialText)
+    {
+        ResetSilenceTimer();
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            string newTranscript = "";
+            SetState(s =>
+            {
+                s.LastAIResponse = "";
+                if (!string.IsNullOrEmpty(s.VoiceTranscript) && !string.IsNullOrEmpty(partialText))
+                    s.VoiceTranscript += " " + partialText;
+                else
+                    s.VoiceTranscript = partialText;
+                newTranscript = s.VoiceTranscript;
+            });
+
+            _overlayService.UpdateContent(new OverlayContent(
+                StateText: "Listening...",
+                Transcript: newTranscript,
+                IsListening: true,
+                IsProcessing: false
+            ));
+        });
+    }
+
+    private void ResetSilenceTimer()
+    {
+        lock (_silenceLock)
+        {
+            if (_silenceTimer == null)
+            {
+                _silenceTimer = new System.Timers.Timer(SilenceTimeoutMs) { AutoReset = false };
+                _silenceTimer.Elapsed += OnSilenceDetected;
+            }
+            _silenceTimer.Stop();
+            _silenceTimer.Start();
+        }
+    }
+
+    private void StopSilenceTimer()
+    {
+        lock (_silenceLock)
+        {
+            if (_silenceTimer != null)
+            {
+                _silenceTimer.Stop();
+                _silenceTimer.Elapsed -= OnSilenceDetected;
+                _silenceTimer.Dispose();
+                _silenceTimer = null;
+            }
+        }
+    }
+
+    private void OnSilenceDetected(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        if (!State.IsRecording) return;
+        if (string.IsNullOrWhiteSpace(State.VoiceTranscript)) return;
+
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            await _speechRecognitionService.StopListeningAsync();
+        });
+    }
+
+    /// <summary>
+    /// Captures a photo and analyzes it (people count → coffee needs).
+    /// Mirrors the camera flow from ShotLoggingPage.
+    /// </summary>
+    private async Task CaptureAndAnalyzePhotoAsync()
+    {
+        try
+        {
+            if (!MediaPicker.Default.IsCaptureSupported)
+            {
+                if (ContainerPage != null)
+                    await ContainerPage.DisplayAlert("Camera Unavailable",
+                        "Camera is not available on this device.", "OK");
+                return;
+            }
+
+            if (!await _visionService.IsAvailableAsync())
+            {
+                if (ContainerPage != null)
+                    await ContainerPage.DisplayAlert("Vision Unavailable",
+                        "Vision service is not configured.", "OK");
+                return;
+            }
+
+            var photo = await MediaPicker.Default.CapturePhotoAsync(new MediaPickerOptions
+            {
+                Title = "Take a photo of the room",
+                MaximumWidth = 1024,
+                MaximumHeight = 1024,
+                CompressionQuality = 70
+            });
+            if (photo == null) return;
+
+            using var stream = await photo.OpenReadAsync();
+            var result = await _visionService.AnalyzeImageAsync(
+                stream,
+                "Count the people in this image and tell me how many cups of coffee I need to make.");
+
+            if (result.Success)
+            {
+                var message = result.Message ??
+                    $"I see {result.PeopleCount} {(result.PeopleCount == 1 ? "person" : "people")}. " +
+                    $"You'll need {result.CupsNeeded} {(result.CupsNeeded == 1 ? "cup" : "cups")} of coffee, " +
+                    $"which requires about {result.BeansNeededGrams}g of beans.";
+
+                if (ContainerPage != null)
+                    await ContainerPage.DisplayAlert("Analysis Complete", message, "OK");
+            }
+            else if (ContainerPage != null)
+            {
+                await ContainerPage.DisplayAlert("Analysis Failed",
+                    result.ErrorMessage ?? "Could not analyze the photo.", "OK");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error capturing and analyzing photo");
+            if (ContainerPage != null)
+                await ContainerPage.DisplayAlert("Error",
+                    $"Failed to capture or analyze photo: {ex.Message}", "OK");
+        }
     }
 }

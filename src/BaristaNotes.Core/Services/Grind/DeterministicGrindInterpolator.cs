@@ -28,16 +28,25 @@ public static class DeterministicGrindInterpolator
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    /// <summary>Community-consensus seed anchors for the Turin DF64 (stepless 0–9 scale).</summary>
+    /// <summary>
+    /// Anchor curve for the Turin DF64 family (Gen 1, Gen 2, DF64v, DF64E,
+    /// MiiCoffee, G-IOTA — all share the 0–90 stepless dial). Derived from the
+    /// Honest Coffee Guide DF64V brew-method chart (Dec 2025): for each method
+    /// we take the dial-range midpoint and the micron-range midpoint, then
+    /// keep the points that yield a strictly monotonic dial-by-micron curve.
+    /// Sanity-checked: 550µm sits between V60 (500,41) and Aeropress (600,50)
+    /// and interpolates to ~46, inside the chart's V60 dial range (30–59).
+    /// </summary>
     public static readonly IReadOnlyList<GrindAnchor> DF64SeedAnchors = new[]
     {
-        new GrindAnchor(200m, 1.2m, "community"),   // Ristretto / Turkish-adjacent
-        new GrindAnchor(300m, 2.0m, "community"),   // Standard espresso
-        new GrindAnchor(400m, 2.8m, "community"),   // Moka / tight Aeropress
-        new GrindAnchor(600m, 4.2m, "community"),   // Aeropress / tight pour-over
-        new GrindAnchor(725m, 5.5m, "community"),   // V60 / typical Onyx filter spec
-        new GrindAnchor(900m, 6.8m, "community"),   // Chemex / open pour-over
-        new GrindAnchor(1100m, 8.0m, "community"),  // French press
+        new GrindAnchor(50m,   0m,  "df64v-chart"),  // Turkish floor
+        new GrindAnchor(140m,  6m,  "df64v-chart"),  // Turkish midpoint
+        new GrindAnchor(280m,  18m, "df64v-chart"),  // Espresso midpoint
+        new GrindAnchor(500m,  41m, "df64v-chart"),  // Moka top / V60 lower
+        new GrindAnchor(600m,  50m, "df64v-chart"),  // Aeropress / Filter cluster
+        new GrindAnchor(700m,  60m, "df64v-chart"),  // V60 / Pour-over upper
+        new GrindAnchor(1000m, 75m, "df64v-chart"),  // French press mid
+        new GrindAnchor(1300m, 90m, "df64v-chart"),  // Cold brew / drip ceiling
     };
 
     public static IReadOnlyList<GrindAnchor> ParseAnchors(string? anchorsJson)

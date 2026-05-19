@@ -486,7 +486,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
 
     async void NavigateToShot(int shotId)
     {
-        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingPageProps>("shot-logging", props =>
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingGridPageProps>("shot-logging", props =>
         {
             props.ShotId = shotId;
         });

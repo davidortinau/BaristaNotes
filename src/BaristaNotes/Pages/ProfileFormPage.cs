@@ -163,7 +163,6 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
             )
             .RowSpacing(1)
             .BackgroundColor(DividerColor())
-            .Padding(1)
             .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
         )
         .Set(MauiControls.Shell.NavBarIsVisibleProperty, false)
@@ -412,8 +411,9 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
 
         return Border(
             Label(label)
-                .FontSize(13)
-                .CharacterSpacing(2)
+                .FontSize(18)
+                .FontFamily("ManropeSemibold")
+                .CharacterSpacing(1)
                 .FontAttributes(MauiControls.FontAttributes.Bold)
                 .TextColor(fg)
                 .HCenter()

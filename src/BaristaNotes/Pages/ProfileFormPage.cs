@@ -246,7 +246,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
 
         return ScrollView(
             Grid(
-                rows: "Auto,Auto,Auto,Auto",
+                rows: "Auto,Auto,Auto,*",
                 columns: "*",
                 NameFieldTile().GridRow(0),
                 PhotoTile(isEditMode).GridRow(1),
@@ -263,6 +263,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
                     .StrokeThickness(0)
                     .StrokeShape(new Rectangle())
                     .MinimumHeightRequest(24)
+                    .VerticalOptions(LayoutOptions.Fill)
                     .GridRow(3)
             )
             .RowSpacing(1)

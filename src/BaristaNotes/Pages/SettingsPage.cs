@@ -120,31 +120,33 @@ partial class SettingsPage : Component<SettingsPageState>
 
     VisualNode RenderBody()
     {
-        return ScrollView(
-            Grid(
-                rows: "Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto",
-                columns: "*",
-                SectionLabel("APPEARANCE").GridRow(0),
-                ThemePickerRow().GridRow(1),
-                SectionLabel("MANAGE").GridRow(2),
-                ManageTile("EQUIPMENT", "Machines, grinders, accessories",
-                    async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("equipment")).GridRow(3),
-                ManageTile("BEANS", "Coffee beans and roasters",
-                    async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("beans")).GridRow(4),
-                ManageTile("PROFILES", "Household members",
-                    async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("profiles")).GridRow(5),
-                SectionLabel("ABOUT").GridRow(6),
-                AboutTile().GridRow(7),
-                // Spacer so list doesn't crowd the bottom nav under the divider
-                Border()
-                    .BackgroundColor(SurfaceColor())
-                    .StrokeThickness(0)
-                    .StrokeShape(new Rectangle())
-                    .MinimumHeightRequest(16)
-                    .GridRow(8)
+        return Grid("*", "*",
+            ScrollView(
+                Grid(
+                    rows: "Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*",
+                    columns: "*",
+                    SectionLabel("APPEARANCE").GridRow(0),
+                    ThemePickerRow().GridRow(1),
+                    SectionLabel("MANAGE").GridRow(2),
+                    ManageTile("EQUIPMENT", "Machines, grinders, accessories",
+                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("equipment")).GridRow(3),
+                    ManageTile("BEANS", "Coffee beans and roasters",
+                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("beans")).GridRow(4),
+                    ManageTile("PROFILES", "Household members",
+                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("profiles")).GridRow(5),
+                    SectionLabel("ABOUT").GridRow(6),
+                    AboutTile().GridRow(7),
+                    Border()
+                        .BackgroundColor(SurfaceColor())
+                        .StrokeThickness(0)
+                        .StrokeShape(new Rectangle())
+                        .MinimumHeightRequest(16)
+                        .VerticalOptions(LayoutOptions.Fill)
+                        .GridRow(8)
+                )
+                .RowSpacing(1)
+                .BackgroundColor(DividerColor())
             )
-            .RowSpacing(1)
-            .BackgroundColor(DividerColor())
         )
         .BackgroundColor(SurfaceColor());
     }

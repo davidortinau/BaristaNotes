@@ -325,7 +325,7 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
 
         return ScrollView(
             Grid(
-                rows: "Auto,Auto,Auto,Auto,Auto,Auto,Auto",
+                rows: "Auto,Auto,Auto,Auto,Auto,Auto,*",
                 columns: "*",
                 RoastDateTile().GridRow(0),
                 NotesTile().GridRow(1),
@@ -340,6 +340,7 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
                     .StrokeThickness(0)
                     .StrokeShape(new Rectangle())
                     .MinimumHeightRequest(24)
+                    .VerticalOptions(LayoutOptions.Fill)
                     .GridRow(6)
             )
             .RowSpacing(1)

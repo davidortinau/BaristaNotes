@@ -652,11 +652,18 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 .MinimumHeightRequest(24)
         );
 
-        var rowsSpec = string.Join(",", Enumerable.Repeat("Auto", sections.Count));
-        var children = sections.Select((node, i) => node.GridRow(i)).ToArray();
+        var rowsSpec = string.Join(",", Enumerable.Repeat("Auto", sections.Count)) + ",*";
+        var children = sections.Select((node, i) => node.GridRow(i)).ToList();
+        children.Add(Border()
+            .BackgroundColor(SurfaceColor())
+            .StrokeThickness(0)
+            .StrokeShape(new Rectangle())
+            .MinimumHeightRequest(16)
+            .VerticalOptions(LayoutOptions.Fill)
+            .GridRow(sections.Count));
 
         return ScrollView(
-            Grid(rowsSpec, "*", children)
+            Grid(rowsSpec, "*", children.ToArray())
                 .RowSpacing(1)
                 .BackgroundColor(DividerColor())
         )

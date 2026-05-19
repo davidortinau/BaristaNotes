@@ -285,7 +285,7 @@ partial class EquipmentDetailPage : Component<EquipmentDetailPageState, Equipmen
 
         return ScrollView(
             Grid(
-                rows: "Auto,Auto,Auto,Auto,Auto",
+                rows: "Auto,Auto,Auto,Auto,*",
                 columns: "*",
                 NameFieldTile().GridRow(0),
                 TypePickerTile().GridRow(1),
@@ -304,6 +304,7 @@ partial class EquipmentDetailPage : Component<EquipmentDetailPageState, Equipmen
                     .StrokeThickness(0)
                     .StrokeShape(new Rectangle())
                     .MinimumHeightRequest(24)
+                    .VerticalOptions(LayoutOptions.Fill)
                     .GridRow(4)
             )
             .RowSpacing(1)

@@ -63,6 +63,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
     [Inject] BaristaNotes.Core.Data.Repositories.IEquipmentRepository _equipmentRepository;
     [Inject] BaristaNotes.Core.Data.Repositories.IGrinderProfileRepository _grinderProfileRepository;
     [Inject] BaristaNotes.Core.Services.Grind.IGrindTranslationService _grindTranslationService;
+    [Inject] IDataChangeNotifier _dataChangeNotifier;
 
     const int PageSize = 20;
 
@@ -412,6 +413,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 };
 
                 await _beanService.UpdateBeanAsync(State.BeanId.Value, updateDto);
+                _dataChangeNotifier.NotifyDataChanged(DataChangeType.BeanUpdated, State.BeanId.Value);
                 await _feedbackService.ShowSuccessAsync($"Bean '{State.Name}' updated");
             }
             else
@@ -435,6 +437,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                     return;
                 }
 
+                _dataChangeNotifier.NotifyDataChanged(DataChangeType.BeanCreated, result.Data);
                 await _feedbackService.ShowSuccessAsync($"Bean '{State.Name}' created");
             }
 
@@ -463,6 +466,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
             ActionButtonCommand = new Command(async () =>
             {
                 await _beanService.DeleteBeanAsync(State.BeanId!.Value);
+                _dataChangeNotifier.NotifyDataChanged(DataChangeType.BeanUpdated, State.BeanId!.Value);
                 await _feedbackService.ShowSuccessAsync($"Bean '{State.Name}' deleted");
                 await IPopupService.Current.PopAsync();
                 await MauiControls.Shell.Current.GoToAsync("..");

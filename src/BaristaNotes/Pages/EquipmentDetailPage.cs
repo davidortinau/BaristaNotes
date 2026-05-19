@@ -34,6 +34,7 @@ partial class EquipmentDetailPage : Component<EquipmentDetailPageState, Equipmen
 {
     [Inject] IEquipmentService _equipmentService;
     [Inject] IFeedbackService _feedbackService;
+    [Inject] IDataChangeNotifier _dataChangeNotifier;
 
     static readonly (EquipmentType type, string label)[] TypeChoices = new[]
     {
@@ -129,6 +130,7 @@ partial class EquipmentDetailPage : Component<EquipmentDetailPageState, Equipmen
                 };
 
                 await _equipmentService.UpdateEquipmentAsync(State.EquipmentId.Value, updateDto);
+                _dataChangeNotifier.NotifyDataChanged(DataChangeType.EquipmentUpdated, State.EquipmentId.Value);
                 await _feedbackService.ShowSuccessAsync($"'{State.Name}' updated");
             }
             else
@@ -140,7 +142,8 @@ partial class EquipmentDetailPage : Component<EquipmentDetailPageState, Equipmen
                     Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes
                 };
 
-                await _equipmentService.CreateEquipmentAsync(createDto);
+                var createdEquipment = await _equipmentService.CreateEquipmentAsync(createDto);
+                _dataChangeNotifier.NotifyDataChanged(DataChangeType.EquipmentCreated, createdEquipment);
                 await _feedbackService.ShowSuccessAsync($"'{State.Name}' created");
             }
 
@@ -169,6 +172,7 @@ partial class EquipmentDetailPage : Component<EquipmentDetailPageState, Equipmen
             ActionButtonCommand = new Command(async () =>
             {
                 await _equipmentService.ArchiveEquipmentAsync(State.EquipmentId!.Value);
+                _dataChangeNotifier.NotifyDataChanged(DataChangeType.EquipmentUpdated, State.EquipmentId!.Value);
                 await _feedbackService.ShowSuccessAsync($"'{State.Name}' archived");
                 await IPopupService.Current.PopAsync();
                 await MauiControls.Shell.Current.GoToAsync("..");

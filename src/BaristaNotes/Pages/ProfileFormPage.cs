@@ -1,4 +1,5 @@
 using BaristaNotes.Components;
+using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
@@ -32,6 +33,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
     [Inject] IUserProfileService _profileService;
     [Inject] IImagePickerService _imagePickerService;
     [Inject] IFeedbackService _feedbackService;
+    [Inject] IDataChangeNotifier _dataChangeNotifier;
 
     protected override void OnMounted()
     {
@@ -95,13 +97,15 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
                     State.ProfileId.Value,
                     new UpdateUserProfileDto { Name = State.Name });
 
+                _dataChangeNotifier.NotifyDataChanged(DataChangeType.ProfileUpdated, State.ProfileId.Value);
                 await _feedbackService.ShowSuccessAsync($"Profile '{State.Name}' updated");
             }
             else
             {
-                await _profileService.CreateProfileAsync(
+                var created = await _profileService.CreateProfileAsync(
                     new CreateUserProfileDto { Name = State.Name });
 
+                _dataChangeNotifier.NotifyDataChanged(DataChangeType.ProfileCreated, created);
                 await _feedbackService.ShowSuccessAsync($"Profile '{State.Name}' created");
             }
 
@@ -130,6 +134,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
             ActionButtonCommand = new Command(async () =>
             {
                 await _profileService.DeleteProfileAsync(State.ProfileId!.Value);
+                _dataChangeNotifier.NotifyDataChanged(DataChangeType.ProfileUpdated, State.ProfileId!.Value);
                 await _feedbackService.ShowSuccessAsync($"Profile '{State.Name}' deleted");
                 await IPopupService.Current.PopAsync();
                 await MauiControls.Shell.Current.GoToAsync("..");

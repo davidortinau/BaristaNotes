@@ -1,4 +1,5 @@
 using BaristaNotes.Components;
+using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
@@ -42,6 +43,7 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
     [Inject] IBagService _bagService;
     [Inject] IRatingService _ratingService;
     [Inject] IFeedbackService _feedbackService;
+    [Inject] IDataChangeNotifier _dataChangeNotifier;
 
     protected override void OnMounted()
     {
@@ -159,6 +161,9 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
                 return;
             }
 
+            _dataChangeNotifier.NotifyDataChanged(
+                isEditMode ? DataChangeType.BagUpdated : DataChangeType.BagCreated,
+                result.Data);
             await _feedbackService.ShowSuccessAsync(isEditMode ? "Bag updated" : $"Bag added for {State.BeanName}");
             await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
         }
@@ -185,6 +190,7 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
             ActionButtonCommand = new Command(async () =>
             {
                 await _bagService.DeleteBagAsync(State.BagId!.Value);
+                _dataChangeNotifier.NotifyDataChanged(DataChangeType.BagUpdated, State.BagId!.Value);
                 await _feedbackService.ShowSuccessAsync("Bag deleted");
                 await IPopupService.Current.PopAsync();
                 await MauiControls.Shell.Current.GoToAsync("..");
@@ -211,6 +217,7 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
                 await _feedbackService.ShowSuccessAsync("Bag marked as complete");
             }
 
+            _dataChangeNotifier.NotifyDataChanged(DataChangeType.BagUpdated, State.BagId.Value);
             SetState(s => s.IsComplete = !s.IsComplete);
         }
         catch (Exception ex)

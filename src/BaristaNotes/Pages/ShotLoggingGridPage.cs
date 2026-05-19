@@ -429,7 +429,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     Tile("YIELD", $"{State.ExpectedOutput:0.#}", () => Open(GridPickerKind.YieldOut), unit: "g")
                             .GridRow(2).GridColumn(2).GridColumnSpan(2),
 
-                    Tile("TIME", State.ActualTime.HasValue ? $"{State.ActualTime:0}" : $"{State.ExpectedTime:0}", () => Open(GridPickerKind.ActualTime), unit: "s")
+                    Tile("TIME", FormatTimeDisplay(State.ActualTime ?? State.ExpectedTime), () => Open(GridPickerKind.ActualTime), unit: TimeDisplayUnit(State.ActualTime ?? State.ExpectedTime))
                             .GridRow(3).GridColumn(0).GridColumnSpan(2),
                     Tile("GRIND", State.GrindMicrons.HasValue ? $"{State.GrindMicrons}" : "—",
                             () => Open(GridPickerKind.GrindMicrons), unit: State.GrindMicrons.HasValue ? "µm" : null).GridRow(3).GridColumn(2).GridColumnSpan(2),
@@ -722,7 +722,24 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 title: "Brew Method",
                 items: BrewMethodExtensions.All.Select(m => (Key: (object)m, Display: m.DisplayName())).ToList(),
                 isSelected: o => (BrewMethod)o == State.BrewMethod,
-                onSelect: o => SetState(s => { s.BrewMethod = (BrewMethod)o; s.ActivePicker = GridPickerKind.None; })),
+                onSelect: o => SetState(s =>
+                {
+                    var newMethod = (BrewMethod)o;
+                    if (newMethod != s.BrewMethod)
+                    {
+                        var newProfile = newMethod.Profile();
+                        // Re-anchor expected dose/output/time to the new method's defaults
+                        // so ranges like espresso (28s) don't bleed into pour-over (3-5 min).
+                        s.DoseIn = newProfile.DoseDefault;
+                        s.ExpectedOutput = newProfile.OutputDefault;
+                        s.ExpectedTime = newProfile.TimeDefault;
+                        // Clear actuals captured under the previous method.
+                        s.ActualTime = null;
+                        s.ActualOutput = null;
+                    }
+                    s.BrewMethod = newMethod;
+                    s.ActivePicker = GridPickerKind.None;
+                })),
 
             GridPickerKind.DrinkType => CategoricalPicker(
                 title: "Drink Type",
@@ -965,6 +982,30 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     // ------------------------------------------------------------
     // Numeric scroller picker
     // ------------------------------------------------------------
+
+    // Brew durations span 10s (espresso) to 24h (cold brew). Format the
+    // tile readout so each method reads naturally: seconds for espresso,
+    // m:ss for pour-over / french press, Hh Mm for cold brew / cold drip.
+    static string FormatTimeDisplay(decimal seconds)
+    {
+        var s = (int)Math.Round((double)seconds);
+        if (s < 60) return s.ToString("0");
+        if (s < 3600)
+        {
+            var m = s / 60;
+            var rem = s % 60;
+            return rem == 0 ? $"{m}:00" : $"{m}:{rem:00}";
+        }
+        var h = s / 3600;
+        var mins = (s % 3600) / 60;
+        return mins == 0 ? $"{h}h" : $"{h}h {mins}m";
+    }
+
+    static string? TimeDisplayUnit(decimal seconds)
+    {
+        var s = (int)Math.Round((double)seconds);
+        return s < 60 ? "s" : null;
+    }
 
     record NumericFieldSpec(double Min, double Max, double Step, string Format);
 
@@ -1277,23 +1318,35 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 switch (e.ChangeType)
                 {
                     case DataChangeType.BeanCreated:
+                    case DataChangeType.BeanUpdated:
                     case DataChangeType.BagCreated:
+                    case DataChangeType.BagUpdated:
+                    {
+                        // Bag display labels embed bean names, so refresh bags
+                        // whenever either bean or bag data changes.
                         var bags = await _bagService.GetActiveBagsForShotLoggingAsync();
                         SetState(s => s.AvailableBags = bags);
                         break;
+                    }
                     case DataChangeType.EquipmentCreated:
+                    case DataChangeType.EquipmentUpdated:
+                    {
                         var equipment = (await _equipmentService.GetAllActiveEquipmentAsync()).ToList();
                         SetState(s => s.AvailableEquipment = equipment);
                         break;
+                    }
                     case DataChangeType.ProfileCreated:
+                    case DataChangeType.ProfileUpdated:
+                    {
                         var users = await _userProfileService.GetAllProfilesAsync();
                         SetState(s => s.AvailableUsers = users);
                         break;
+                    }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error refreshing pickers after voice data change");
+                _logger.LogError(ex, "Error refreshing pickers after data change");
             }
         });
     }

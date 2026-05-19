@@ -1,15 +1,16 @@
-﻿using BaristaNotes.Core.Models.Enums;
+using BaristaNotes.Components;
+using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
-using BaristaNotes.Components;
-using BaristaNotes.Components.FormFields;
 using Fonts;
 using MauiReactor;
-using UXDivers.Popups.Services;
-using UXDivers.Popups.Maui.Controls;
+using MauiReactor.Shapes;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
+using UXDivers.Popups.Maui.Controls;
+using UXDivers.Popups.Services;
+using Application = Microsoft.Maui.Controls.Application;
 
 namespace BaristaNotes.Pages;
 
@@ -20,40 +21,32 @@ class BeanDetailPageProps
 
 class BeanDetailPageState
 {
-    // Form fields
     public int? BeanId { get; set; }
     public string Name { get; set; } = "";
     public string Roaster { get; set; } = "";
     public string Origin { get; set; } = "";
     public string Notes { get; set; } = "";
 
-    // Form state
     public bool IsSaving { get; set; }
     public bool IsLoading { get; set; }
     public string? ErrorMessage { get; set; }
 
-    // Rating aggregate
     public RatingAggregateDto? RatingAggregate { get; set; }
 
-    // Bags section
     public List<BagSummaryDto> Bags { get; set; } = new();
     public bool IsLoadingBags { get; set; }
 
-    // Shot history
     public List<ShotRecordDto> Shots { get; set; } = new();
     public bool IsLoadingShots { get; set; }
     public bool HasMoreShots { get; set; }
     public int ShotPageIndex { get; set; }
     public string? ShotLoadError { get; set; }
 
-    // Recipes
     public List<RecipeDto> Recipes { get; set; } = new();
     public bool IsLoadingRecipes { get; set; }
     public bool IsRefreshingRecipes { get; set; }
     public string? RecipesLoadError { get; set; }
 
-    // Grind translations (keyed by recipe.Id). Populated after recipes load
-    // and the user has an active grinder.
     public Dictionary<int, BaristaNotes.Core.Services.Grind.GrindTranslationResult> GrindTranslations { get; set; } = new();
     public bool IsTranslatingGrinds { get; set; }
     public int? ActiveGrinderId { get; set; }
@@ -98,6 +91,10 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
         base.OnWillUnmount();
     }
 
+    // ============================================================
+    // Loaders
+    // ============================================================
+
     async Task LoadBeanAsync()
     {
         if (!State.BeanId.HasValue || State.BeanId.Value <= 0) return;
@@ -126,7 +123,6 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 s.IsLoading = false;
             });
 
-            // Load bags, shot history, and recipes after bean loads
             _ = LoadBagsAsync();
             _ = LoadShotsAsync();
             _ = LoadRecipesAsync();
@@ -181,7 +177,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
         {
             var result = await _shotService.GetShotHistoryByBeanAsync(
                 State.BeanId.Value,
-                0, // First page
+                0,
                 PageSize);
 
             SetState(s =>
@@ -277,10 +273,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
         {
             SetState(s => s.IsTranslatingGrinds = true);
 
-            // Pick the user's first active grinder (scope keeps this simple — a
-            // proper "active equipment" picker is a separate feature).
-            var grinders = await _equipmentRepository.GetByTypeAsync(
-                BaristaNotes.Core.Models.Enums.EquipmentType.Grinder);
+            var grinders = await _equipmentRepository.GetByTypeAsync(EquipmentType.Grinder);
             if (ct.IsCancellationRequested) return;
             var grinder = grinders.FirstOrDefault(g => g.IsActive && !g.IsDeleted);
             if (grinder == null)
@@ -296,8 +289,6 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 return;
             }
 
-            // Ensure a profile exists so the deterministic path has anchors
-            // for known grinders (e.g. DF64 seed data).
             await _grinderProfileRepository.GetOrCreateForEquipmentAsync(grinder);
             if (ct.IsCancellationRequested) return;
 
@@ -317,10 +308,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                             BeanId: State.BeanId));
                     translations[recipe.Id] = result;
                 }
-                catch
-                {
-                    // Per-recipe failure is non-fatal — just skip.
-                }
+                catch { }
             }
 
             if (ct.IsCancellationRequested) return;
@@ -334,7 +322,6 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
         }
         catch (OperationCanceledException)
         {
-            // Page unmounted or new translation kicked off - nothing to do.
         }
         catch
         {
@@ -386,6 +373,10 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
         }
     }
 
+    // ============================================================
+    // Actions
+    // ============================================================
+
     bool ValidateForm()
     {
         if (string.IsNullOrWhiteSpace(State.Name))
@@ -412,7 +403,6 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
         {
             if (State.BeanId.HasValue && State.BeanId.Value > 0)
             {
-                // Update existing
                 var updateDto = new UpdateBeanDto
                 {
                     Name = State.Name,
@@ -426,7 +416,6 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
             }
             else
             {
-                // Create new
                 var createDto = new CreateBeanDto
                 {
                     Name = State.Name,
@@ -449,7 +438,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 await _feedbackService.ShowSuccessAsync($"Bean '{State.Name}' created");
             }
 
-            await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
+            await MauiControls.Shell.Current.GoToAsync("..");
         }
         catch (Exception ex)
         {
@@ -467,26 +456,30 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
 
         var popup = new SimpleActionPopup
         {
-            Title = $"Delete Bean?",
+            Title = "Delete Bean?",
             Text = $"Are you sure you want to delete '{State.Name}'? This action cannot be undone.",
             ActionButtonText = "Delete",
             SecondaryActionButtonText = "Cancel",
             ActionButtonCommand = new Command(async () =>
             {
-                await _beanService.DeleteBeanAsync(State.BeanId.Value);
+                await _beanService.DeleteBeanAsync(State.BeanId!.Value);
                 await _feedbackService.ShowSuccessAsync($"Bean '{State.Name}' deleted");
                 await IPopupService.Current.PopAsync();
                 await MauiControls.Shell.Current.GoToAsync("..");
-
             })
         };
 
         await IPopupService.Current.PushAsync(popup);
     }
 
+    async Task CancelAsync()
+    {
+        await MauiControls.Shell.Current.GoToAsync("..");
+    }
+
     async void NavigateToShot(int shotId)
     {
-        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingGridPageProps>("shot-logging", props =>
+        await MauiControls.Shell.Current.GoToAsync<ShotLoggingGridPageProps>("shot-logging", props =>
         {
             props.ShotId = shotId;
         });
@@ -494,7 +487,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
 
     async void NavigateToBag(int bagId)
     {
-        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<BagDetailPageProps>("bag-detail", props =>
+        await MauiControls.Shell.Current.GoToAsync<BagDetailPageProps>("bag-detail", props =>
         {
             props.BagId = bagId;
             props.BeanId = State.BeanId ?? 0;
@@ -506,66 +499,16 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
     {
         if (!State.BeanId.HasValue) return;
 
-        await Microsoft.Maui.Controls.Shell.Current.GoToAsync<BagDetailPageProps>("bag-detail", props =>
+        await MauiControls.Shell.Current.GoToAsync<BagDetailPageProps>("bag-detail", props =>
         {
-            props.BagId = null;  // null means create new
+            props.BagId = null;
             props.BeanId = State.BeanId.Value;
             props.BeanName = State.Name;
         });
     }
 
-    public override VisualNode Render()
-    {
-        var isEditMode = State.BeanId.HasValue && State.BeanId.Value > 0;
-        var title = isEditMode
-            ? (string.IsNullOrEmpty(State.Name) ? "Edit Bean" : $"Edit {State.Name}")
-            : "Add Bean";
-
-        if (State.IsLoading)
-        {
-            return ContentPage(
-                VStack(
-                    ActivityIndicator().IsRunning(true)
-                )
-                .VCenter()
-                .HCenter()
-            ).Title(title);
-        }
-
-        var page = ContentPage(
-            (isEditMode) ?
-                ToolbarItem().Text("Add Bag").IconImageSource(AppIcons.Add).Order(ToolbarItemOrder.Secondary).OnClicked(NavigateToAddBag) : null,
-            (isEditMode) ?
-                ToolbarItem().Text("Delete").IconImageSource(AppIcons.Delete).Order(ToolbarItemOrder.Secondary).OnClicked(DeleteBeanAsync) : null,
-            ScrollView(
-                VStack(spacing: 16,
-                    // Form section
-                    RenderForm(),
-
-                    // Rating section (edit mode only)
-                    isEditMode ? RenderRatings() : null,
-
-                    // Recipes section (edit mode only)
-                    isEditMode ? RenderRecipes() : null,
-
-                    // Bags section (edit mode only)
-                    isEditMode ? RenderBags() : null,
-
-                    // Shot history section (edit mode only)
-                    isEditMode ? RenderShotHistory() : null
-                )
-                .Padding(16)
-            )
-        ).Title(title)
-        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always))
-        .OnAppearing(OnPageAppearing);
-
-        return page;
-    }
-
     void OnPageAppearing()
     {
-        // Refresh bags and recipes when returning from child pages
         if (State.BeanId.HasValue && State.BeanId.Value > 0)
         {
             _ = LoadBagsAsync();
@@ -573,333 +516,364 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
         }
     }
 
-    VisualNode RenderForm()
+    // ============================================================
+    // Rendering
+    // ============================================================
+
+    public override VisualNode Render()
+    {
+        return ContentPage("Bean",
+            Grid(rows: "Auto,*,Auto", columns: "*",
+                HeaderTile().GridRow(0),
+                RenderBody().GridRow(1),
+                BottomNavRow().GridRow(2)
+            )
+            .RowSpacing(1)
+            .BackgroundColor(DividerColor())
+            .Padding(1)
+            .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
+        )
+        .Set(MauiControls.Shell.NavBarIsVisibleProperty, false)
+        .Set(MauiControls.Shell.TabBarIsVisibleProperty, false)
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
+        .OnAppearing(OnPageAppearing);
+    }
+
+    // ------------------------------------------------------------
+    // Theme helpers
+    // ------------------------------------------------------------
+
+    static bool IsLight() => Application.Current?.RequestedTheme != AppTheme.Dark;
+    static Color SurfaceColor() => IsLight() ? AppColors.Light.Surface : AppColors.Dark.Surface;
+    static Color SurfaceVariantColor() => IsLight() ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
+    static Color TextPrimary() => IsLight() ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+    static Color TextSecondary() => IsLight() ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+    static Color AccentColor() => IsLight() ? AppColors.Light.Primary : AppColors.Dark.Primary;
+    static Color DividerColor() => IsLight() ? AppColors.Light.Outline : AppColors.Dark.Outline;
+    static Color ErrorColor() => AppColors.Error;
+
+    // ------------------------------------------------------------
+    // Header tile
+    // ------------------------------------------------------------
+
+    VisualNode HeaderTile()
     {
         var isEditMode = State.BeanId.HasValue && State.BeanId.Value > 0;
+        var label = isEditMode ? "EDIT BEAN" : "NEW BEAN";
+        var title = isEditMode
+            ? (string.IsNullOrEmpty(State.Name) ? "Loading…" : State.Name)
+            : "Add bean";
 
-        return VStack(spacing: 16,
-            // Name field
-            new FormEntryField()
-                .Label("Name *")
-                .Placeholder("Bean name (required)")
-                .Text(State.Name)
-                .OnTextChanged(text => SetState(s => s.Name = text)),
+        var len = title.Length;
+        double valueFontSize = len switch
+        {
+            <= 12 => 28,
+            <= 20 => 22,
+            <= 28 => 18,
+            _ => 16
+        };
 
-            // Roaster field
-            new FormEntryField()
-                .Label("Roaster")
-                .Placeholder("Roaster name")
-                .Text(State.Roaster)
-                .OnTextChanged(text => SetState(s => s.Roaster = text)),
-
-            // Origin field
-            new FormEntryField()
-                .Label("Origin")
-                .Placeholder("Country or region of origin")
-                .Text(State.Origin)
-                .OnTextChanged(text => SetState(s => s.Origin = text)),
-
-            // Notes field
-            new FormEditorField()
-                .Label("Notes")
-                .Placeholder("Tasting notes, processing method, etc.")
-                .Text(State.Notes)
-                .HeightRequest(100)
-                .OnTextChanged(text => SetState(s => s.Notes = text)),
-
-            // Error message
-            State.ErrorMessage != null
-                ? Border(
-                    Label(State.ErrorMessage).TextColor(Colors.Red).Padding(12)
-                )
-                .BackgroundColor(Colors.Red.WithAlpha(0.1f))
-                .StrokeThickness(1)
-                .Stroke(Colors.Red)
-                : null,
-
-            // Action button            
-            Button(State.IsSaving ? "Saving..." : (isEditMode ? "Save Changes" : "Create Bean"))
-                .OnClicked(async () => await SaveBeanAsync())
-                .IsEnabled(!State.IsSaving)
-
-
-
-        );
+        return Border(
+            Grid(rows: "Auto,*", columns: "*",
+                Label(label)
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .GridRow(0),
+                Label(title)
+                    .FontSize(valueFontSize)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .LineBreakMode(LineBreakMode.WordWrap)
+                    .MaxLines(2)
+                    .VEnd()
+                    .GridRow(1)
+            )
+            .Padding(16, 56, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(120);
     }
 
-    VisualNode RenderRatings()
+    // ------------------------------------------------------------
+    // Body
+    // ------------------------------------------------------------
+
+    VisualNode RenderBody()
     {
-        return VStack(spacing: 12,
-            // Section header
-            BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
+        if (State.IsLoading)
+        {
+            return Border(
+                ActivityIndicator()
+                    .IsRunning(true)
+                    .VCenter()
+                    .HCenter()
+            )
+            .BackgroundColor(SurfaceColor())
+            .StrokeThickness(0)
+            .StrokeShape(new Rectangle());
+        }
 
-            Label("Bean Ratings")
-                .ThemeKey(ThemeKeys.SubHeadline),
+        var isEditMode = State.BeanId.HasValue && State.BeanId.Value > 0;
 
-            // Rating display component
-            new RatingDisplayComponent()
-                .RatingAggregate(State.RatingAggregate)
+        var sections = new List<VisualNode>
+        {
+            EntryTile("NAME", State.Name, "Bean name (required)",
+                text => SetState(s => s.Name = text), bigFont: true),
+            EntryTile("ROASTER", State.Roaster, "Roaster name",
+                text => SetState(s => s.Roaster = text)),
+            EntryTile("ORIGIN", State.Origin, "Country or region",
+                text => SetState(s => s.Origin = text)),
+            EditorTile("NOTES", State.Notes, "Tasting notes, processing method…",
+                text => SetState(s => s.Notes = text))
+        };
+
+        if (isEditMode)
+        {
+            sections.Add(RatingsSection());
+            sections.Add(RecipesSection());
+            sections.Add(BagsSection());
+            sections.Add(ShotHistorySection());
+        }
+
+        if (State.ErrorMessage != null)
+        {
+            sections.Add(ErrorTile(State.ErrorMessage));
+        }
+
+        sections.Add(
+            Border()
+                .BackgroundColor(SurfaceColor())
+                .StrokeThickness(0)
+                .StrokeShape(new Rectangle())
+                .MinimumHeightRequest(24)
         );
+
+        var rowsSpec = string.Join(",", Enumerable.Repeat("Auto", sections.Count));
+        var children = sections.Select((node, i) => node.GridRow(i)).ToArray();
+
+        return ScrollView(
+            Grid(rowsSpec, "*", children)
+                .RowSpacing(1)
+                .BackgroundColor(DividerColor())
+        )
+        .BackgroundColor(SurfaceColor());
     }
 
-    VisualNode RenderBags()
-    {
-        return VStack(spacing: 12,
-            // Section header
-            BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
+    // ------------------------------------------------------------
+    // Form field tiles
+    // ------------------------------------------------------------
 
-            Label("Bags")
-                .ThemeKey(ThemeKeys.SubHeadline),
-
-            // Loading state
-            State.IsLoadingBags
-                ? ActivityIndicator().IsRunning(true).HCenter()
-                : null,
-
-            // Empty state
-            !State.IsLoadingBags && State.Bags.Count == 0
-                ? VStack(spacing: 8,
-                    Label("No bags added yet")
-                        .TextColor(Colors.Gray)
-                        .FontSize(14)
-                        .HCenter()
-                )
-                : null,
-
-            // Bag list
-            State.Bags.Count > 0
-                ? VStack(spacing: 8,
-                    [.. State.Bags.Select(RenderBagItem)]
-                )
-                : null
-        );
-    }
-
-    VisualNode RenderBagItem(BagSummaryDto bag)
+    VisualNode EntryTile(string label, string value, string placeholder, Action<string> onChanged, bool bigFont = false)
     {
         return Border(
-            VStack(spacing: 8,
-                // Roast date and status
-                HStack(spacing: 8,
-                    Label($"Roasted {bag.FormattedRoastDate}")
-                        .ThemeKey(ThemeKeys.CardTitle)
-                        .HStart()
-                        .VCenter(),
+            Grid(rows: "Auto,Auto", columns: "*",
+                Label(label)
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .GridRow(0),
+                Entry()
+                    .Text(value)
+                    .Placeholder(placeholder)
+                    .PlaceholderColor(TextSecondary().WithAlpha(0.5f))
+                    .TextColor(TextPrimary())
+                    .FontSize(bigFont ? 22 : 18)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .BackgroundColor(Colors.Transparent)
+                    .OnTextChanged(text => onChanged(text))
+                    .GridRow(1)
+            )
+            .Padding(16, 14, 16, 10)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(bigFont ? 100 : 90);
+    }
 
-                    // Status badge
-                    Label(bag.StatusBadge)
-                        .ThemeKey(ThemeKeys.SecondaryText)
-                        .Padding(6, 2)
+    VisualNode EditorTile(string label, string value, string placeholder, Action<string> onChanged)
+    {
+        return Border(
+            Grid(rows: "Auto,Auto", columns: "*",
+                Label(label)
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .GridRow(0),
+                Editor()
+                    .Text(value)
+                    .Placeholder(placeholder)
+                    .PlaceholderColor(TextSecondary().WithAlpha(0.5f))
+                    .TextColor(TextPrimary())
+                    .FontSize(16)
+                    .BackgroundColor(Colors.Transparent)
+                    .AutoSize(EditorAutoSizeOption.TextChanges)
+                    .HeightRequest(100)
+                    .OnTextChanged((s, e) => onChanged(e.NewTextValue))
+                    .GridRow(1)
+            )
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(150);
+    }
+
+    // ------------------------------------------------------------
+    // Read-only sections (edit mode)
+    // ------------------------------------------------------------
+
+    VisualNode RatingsSection()
+    {
+        var hasRatings = State.RatingAggregate != null && State.RatingAggregate.HasRatings;
+
+        return Border(
+            VStack(spacing: 10,
+                Label("RATINGS")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary()),
+                hasRatings
+                    ? (VisualNode)new RatingDisplayComponent().RatingAggregate(State.RatingAggregate)
+                    : Label("No ratings yet")
+                        .FontSize(16)
+                        .TextColor(TextSecondary())
+            )
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(80);
+    }
+
+    VisualNode RecipesSection()
+    {
+        var actionLabel = State.IsRefreshingRecipes
+            ? "…"
+            : (State.Recipes.Count == 0 ? "FIND" : "REFRESH");
+
+        return Border(
+            VStack(spacing: 10,
+                Grid(rows: "Auto", columns: "*,Auto",
+                    Label("RECIPES")
+                        .FontSize(10)
+                        .CharacterSpacing(2)
+                        .FontAttributes(MauiControls.FontAttributes.Bold)
+                        .TextColor(TextSecondary())
+                        .VCenter()
+                        .GridColumn(0),
+                    State.IsRefreshingRecipes
+                        ? (VisualNode)ActivityIndicator()
+                            .IsRunning(true)
+                            .HeightRequest(20)
+                            .WidthRequest(20)
+                            .VCenter()
+                            .GridColumn(1)
+                        : MiniActionChip(actionLabel,
+                            async () => await RefreshRecipesAsync())
+                            .GridColumn(1)
                 ),
 
-                // Notes if present
-                bag.Notes != null
-                    ? Label(bag.Notes)
-                        .ThemeKey(ThemeKeys.SecondaryText)
-                        .LineBreakMode(Microsoft.Maui.LineBreakMode.WordWrap)
+                State.RecipesLoadError != null
+                    ? (VisualNode)Label(State.RecipesLoadError)
+                        .FontSize(13)
+                        .TextColor(ErrorColor())
                     : null,
 
-                // Stats row
-                HStack(spacing: 16,
-                    Label($"{bag.ShotCount} shots")
-                        .ThemeKey(ThemeKeys.SecondaryText),
+                State.IsLoadingRecipes && State.Recipes.Count == 0
+                    ? (VisualNode)ActivityIndicator().IsRunning(true).HCenter()
+                    : null,
 
-                    bag.AverageRating.HasValue
-                        ? HStack(spacing: 4,
-                            Label(bag.FormattedRating)
-                                .ThemeKey(ThemeKeys.PrimaryText),
-                            Label(AppIcons.GetRatingIcon((int)Math.Round(bag.AverageRating.Value)))
-                                .FontFamily(MaterialSymbolsFont.FontFamily)
-                                .FontSize(16)
-                                .ThemeKey(ThemeKeys.PrimaryText)
-                        )
-                        : Label("No ratings")
-                            .ThemeKey(ThemeKeys.SecondaryText)
-                )
+                !State.IsLoadingRecipes && !State.IsRefreshingRecipes && State.Recipes.Count == 0 && State.RecipesLoadError == null
+                    ? (VisualNode)VStack(spacing: 4,
+                        Label("No recipes yet.")
+                            .FontSize(14)
+                            .TextColor(TextPrimary()),
+                        Label("Tap REFRESH to look up brew guides.")
+                            .FontSize(12)
+                            .TextColor(TextSecondary())
+                    )
+                    : null,
+
+                State.Recipes.Count > 0
+                    ? (VisualNode)VStack(spacing: 8,
+                        State.Recipes.Select(RenderRecipeRow).ToArray()
+                    )
+                    : null
             )
-            .Padding(12)
+            .Padding(16, 14, 16, 14)
         )
-        .ThemeKey(ThemeKeys.CardBorder)
-        .OnTapped(() => NavigateToBag(bag.Id));
-    }
-
-    VisualNode RenderShotHistory()
-    {
-        return VStack(spacing: 12,
-            // Section header
-            BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
-
-            Label("Shot History")
-                .ThemeKey(ThemeKeys.SubHeadline),
-
-            // Error state
-            State.ShotLoadError != null
-                ? VStack(spacing: 8,
-                    Label(State.ShotLoadError).TextColor(Colors.Red),
-                    Button("Retry").OnClicked(async () => await LoadShotsAsync())
-                )
-                : null,
-
-            // Loading state (initial)
-            State.IsLoadingShots && State.Shots.Count == 0
-                ? ActivityIndicator().IsRunning(true)
-                : null,
-
-            // Empty state
-            !State.IsLoadingShots && State.Shots.Count == 0 && State.ShotLoadError == null
-                ? RenderEmptyShots()
-                : null,
-
-            // Shot list
-            State.Shots.Count > 0
-                ? CollectionView()
-                    .ItemsSource(State.Shots, RenderShotItem)
-                    .RemainingItemsThreshold(5)
-                    .OnRemainingItemsThresholdReached(() =>
-                    {
-                        if (State.HasMoreShots && !State.IsLoadingShots)
-                        {
-                            _ = LoadMoreShotsAsync();
-                        }
-                    })
-                    .HeightRequest(400) // Constrain height within ScrollView
-                : null,
-
-            // Loading more indicator
-            State.IsLoadingShots && State.Shots.Count > 0
-                ? ActivityIndicator().IsRunning(true).HCenter()
-                : null
-        );
-    }
-
-    VisualNode RenderEmptyShots()
-    {
-        return VStack(spacing: 12,
-            Label(MaterialSymbolsFont.Assignment)
-                .FontFamily(MaterialSymbolsFont.FontFamily)
-                .FontSize(48)
-                .HCenter(),
-            Label("No shots recorded with this bean yet")
-                .ThemeKey(ThemeKeys.SecondaryText)
-                .HCenter()
-        )
-        .Padding(24);
-    }
-
-    VisualNode RenderShotItem(ShotRecordDto shot)
-    {
-        return Border(
-            new ShotRecordCard().Shot(shot)
-        )
+        .BackgroundColor(SurfaceColor())
         .StrokeThickness(0)
-        .OnTapped(() => NavigateToShot(shot.Id))
-        .Margin(0, 4);
+        .StrokeShape(new Rectangle());
     }
 
-    VisualNode RenderRecipes()
-    {
-        return VStack(spacing: 12,
-            BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
-
-            HStack(spacing: 8,
-                Label("Recipes")
-                    .ThemeKey(ThemeKeys.SubHeadline)
-                    .HStart()
-                    .VCenter(),
-
-                State.IsRefreshingRecipes
-                    ? (VisualNode)ActivityIndicator().IsRunning(true).HeightRequest(20).WidthRequest(20).VCenter()
-                    : Button()
-                        .Text(State.Recipes.Count == 0 ? "Find Recipes" : "Refresh")
-                        .OnClicked(async () => await RefreshRecipesAsync())
-                        .IsEnabled(!State.IsRefreshingRecipes)
-                        .HEnd()
-            ),
-
-            // Error state
-            State.RecipesLoadError != null
-                ? (VisualNode)Label(State.RecipesLoadError).TextColor(Colors.Red)
-                : null,
-
-            // Loading state
-            State.IsLoadingRecipes && State.Recipes.Count == 0
-                ? (VisualNode)ActivityIndicator().IsRunning(true).HCenter()
-                : null,
-
-            // Empty state
-            !State.IsLoadingRecipes && !State.IsRefreshingRecipes && State.Recipes.Count == 0 && State.RecipesLoadError == null
-                ? (VisualNode)VStack(spacing: 8,
-                    Label("No recipes yet for this bean.")
-                        .ThemeKey(ThemeKeys.SecondaryText)
-                        .HCenter(),
-                    Label("Tap \"Find Recipes\" to look up official brew guides.")
-                        .ThemeKey(ThemeKeys.SecondaryText)
-                        .FontSize(12)
-                        .HCenter()
-                )
-                .Padding(0, 12)
-                : null,
-
-            // Recipe list
-            State.Recipes.Count > 0
-                ? (VisualNode)VStack(spacing: 8,
-                    [.. State.Recipes.Select(RenderRecipeItem)]
-                )
-                : null
-        );
-    }
-
-    VisualNode RenderRecipeItem(RecipeDto recipe)
+    VisualNode RenderRecipeRow(RecipeDto recipe)
     {
         string sourceLabel = recipe.Source switch
         {
-            RecipeSource.RoasterSite => "Roaster",
-            RecipeSource.AIGenerated => "AI suggested",
-            RecipeSource.Manual => "Custom",
-            _ => recipe.Source.ToString()
+            RecipeSource.RoasterSite => "ROASTER",
+            RecipeSource.AIGenerated => "AI",
+            RecipeSource.Manual => "CUSTOM",
+            _ => recipe.Source.ToString().ToUpperInvariant()
         };
 
         var paramsRow = BuildParamsRow(recipe);
 
         return Border(
             VStack(spacing: 6,
-                HStack(spacing: 8,
+                Grid(rows: "Auto", columns: "*,Auto,Auto",
                     Label(recipe.BrewMethod.DisplayName())
-                        .ThemeKey(ThemeKeys.CardTitle)
-                        .HStart()
-                        .VCenter(),
-
+                        .FontSize(16)
+                        .FontAttributes(MauiControls.FontAttributes.Bold)
+                        .TextColor(TextPrimary())
+                        .GridColumn(0),
                     Label(sourceLabel)
-                        .ThemeKey(ThemeKeys.SecondaryText)
-                        .FontSize(11)
-                        .Padding(6, 2),
-
+                        .FontSize(9)
+                        .CharacterSpacing(1.5)
+                        .FontAttributes(MauiControls.FontAttributes.Bold)
+                        .TextColor(TextSecondary())
+                        .VCenter()
+                        .Padding(6, 2)
+                        .GridColumn(1),
                     recipe.IsEditedByUser
-                        ? (VisualNode)Label("edited")
-                            .ThemeKey(ThemeKeys.SecondaryText)
-                            .FontSize(11)
+                        ? (VisualNode)Label("EDITED")
+                            .FontSize(9)
+                            .CharacterSpacing(1.5)
+                            .FontAttributes(MauiControls.FontAttributes.Bold)
+                            .TextColor(TextSecondary())
+                            .VCenter()
                             .Padding(6, 2)
+                            .GridColumn(2)
                         : null
-                ),
+                )
+                .ColumnSpacing(6),
 
                 !string.IsNullOrWhiteSpace(recipe.Title)
                     ? (VisualNode)Label(recipe.Title!)
-                        .ThemeKey(ThemeKeys.SecondaryText)
                         .FontSize(12)
+                        .TextColor(TextSecondary())
                     : null,
 
                 paramsRow,
 
                 !string.IsNullOrWhiteSpace(recipe.GrindHint)
                     ? (VisualNode)Label($"Grind: {recipe.GrindHint}")
-                        .ThemeKey(ThemeKeys.SecondaryText)
                         .FontSize(12)
+                        .TextColor(TextSecondary())
                     : null,
 
-                // Grinder-specific translation chip, shown only when we have
-                // an active grinder and either a result or a loading state.
                 !string.IsNullOrWhiteSpace(recipe.GrindHint) && State.ActiveGrinderId.HasValue
-                    ? GrindTranslationChip.Render(
+                    ? (VisualNode)GrindTranslationChip.Render(
                         State.GrindTranslations.TryGetValue(recipe.Id, out var t) ? t : null,
                         loading: State.IsTranslatingGrinds
                                  && !State.GrindTranslations.ContainsKey(recipe.Id))
@@ -907,15 +881,16 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
 
                 !string.IsNullOrWhiteSpace(recipe.Notes)
                     ? (VisualNode)Label(recipe.Notes!)
-                        .ThemeKey(ThemeKeys.SecondaryText)
                         .FontSize(12)
-                        .LineBreakMode(Microsoft.Maui.LineBreakMode.WordWrap)
+                        .TextColor(TextSecondary())
+                        .LineBreakMode(LineBreakMode.WordWrap)
                     : null,
 
                 !string.IsNullOrWhiteSpace(recipe.SourceUrl)
-                    ? (VisualNode)Label("View source")
-                        .TextColor(Colors.Blue)
+                    ? (VisualNode)Label("View source →")
                         .FontSize(12)
+                        .FontAttributes(MauiControls.FontAttributes.Bold)
+                        .TextColor(AccentColor())
                         .OnTapped(async () =>
                         {
                             try
@@ -924,13 +899,15 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                                     recipe.SourceUrl!,
                                     Microsoft.Maui.ApplicationModel.BrowserLaunchMode.SystemPreferred);
                             }
-                            catch { /* best effort */ }
+                            catch { }
                         })
                     : null
             )
             .Padding(12)
         )
-        .ThemeKey(ThemeKeys.CardBorder);
+        .BackgroundColor(SurfaceVariantColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle());
     }
 
     static VisualNode BuildParamsRow(RecipeDto recipe)
@@ -955,10 +932,292 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
         if (recipe.BrewTempC.HasValue) parts.Add($"{recipe.BrewTempC:0.#}°C");
 
         if (parts.Count == 0)
-            return Label("No parameters captured.").ThemeKey(ThemeKeys.SecondaryText).FontSize(12);
+        {
+            return Label("No parameters captured.")
+                .FontSize(12)
+                .TextColor(TextSecondary());
+        }
 
         return Label(string.Join(" · ", parts))
-            .ThemeKey(ThemeKeys.PrimaryText)
-            .FontSize(13);
+            .FontSize(13)
+            .FontAttributes(MauiControls.FontAttributes.Bold)
+            .TextColor(TextPrimary());
+    }
+
+    VisualNode BagsSection()
+    {
+        return Border(
+            VStack(spacing: 10,
+                Grid(rows: "Auto", columns: "*,Auto",
+                    Label("BAGS")
+                        .FontSize(10)
+                        .CharacterSpacing(2)
+                        .FontAttributes(MauiControls.FontAttributes.Bold)
+                        .TextColor(TextSecondary())
+                        .VCenter()
+                        .GridColumn(0),
+                    MiniActionChip("+ BAG", NavigateToAddBag)
+                        .GridColumn(1)
+                ),
+
+                State.IsLoadingBags
+                    ? (VisualNode)ActivityIndicator().IsRunning(true).HCenter()
+                    : null,
+
+                !State.IsLoadingBags && State.Bags.Count == 0
+                    ? (VisualNode)Label("No bags added yet")
+                        .FontSize(14)
+                        .TextColor(TextSecondary())
+                    : null,
+
+                State.Bags.Count > 0
+                    ? (VisualNode)VStack(spacing: 8,
+                        State.Bags.Select(RenderBagRow).ToArray()
+                    )
+                    : null
+            )
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle());
+    }
+
+    VisualNode RenderBagRow(BagSummaryDto bag)
+    {
+        return Border(
+            VStack(spacing: 6,
+                Grid(rows: "Auto", columns: "*,Auto",
+                    Label($"Roasted {bag.FormattedRoastDate}")
+                        .FontSize(16)
+                        .FontAttributes(MauiControls.FontAttributes.Bold)
+                        .TextColor(TextPrimary())
+                        .GridColumn(0),
+                    Label(bag.StatusBadge.ToUpperInvariant())
+                        .FontSize(9)
+                        .CharacterSpacing(1.5)
+                        .FontAttributes(MauiControls.FontAttributes.Bold)
+                        .TextColor(TextSecondary())
+                        .VCenter()
+                        .Padding(6, 2)
+                        .GridColumn(1)
+                ),
+
+                bag.Notes != null
+                    ? (VisualNode)Label(bag.Notes)
+                        .FontSize(13)
+                        .TextColor(TextSecondary())
+                        .LineBreakMode(LineBreakMode.WordWrap)
+                    : null,
+
+                HStack(spacing: 16,
+                    Label($"{bag.ShotCount} shots")
+                        .FontSize(12)
+                        .TextColor(TextSecondary()),
+                    bag.AverageRating.HasValue
+                        ? (VisualNode)HStack(spacing: 4,
+                            Label(bag.FormattedRating)
+                                .FontSize(12)
+                                .FontAttributes(MauiControls.FontAttributes.Bold)
+                                .TextColor(TextPrimary()),
+                            Label(AppIcons.GetRatingIcon((int)Math.Round(bag.AverageRating.Value)))
+                                .FontFamily(MaterialSymbolsFont.FontFamily)
+                                .FontSize(14)
+                                .TextColor(TextPrimary())
+                        )
+                        : Label("no ratings")
+                            .FontSize(12)
+                            .TextColor(TextSecondary())
+                )
+            )
+            .Padding(12)
+        )
+        .BackgroundColor(SurfaceVariantColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .OnTapped(() => NavigateToBag(bag.Id));
+    }
+
+    VisualNode ShotHistorySection()
+    {
+        return Border(
+            VStack(spacing: 10,
+                Label("SHOT HISTORY")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary()),
+
+                State.ShotLoadError != null
+                    ? (VisualNode)VStack(spacing: 6,
+                        Label(State.ShotLoadError)
+                            .FontSize(13)
+                            .TextColor(ErrorColor()),
+                        MiniActionChip("RETRY", async () => await LoadShotsAsync())
+                    )
+                    : null,
+
+                State.IsLoadingShots && State.Shots.Count == 0
+                    ? (VisualNode)ActivityIndicator().IsRunning(true).HCenter()
+                    : null,
+
+                !State.IsLoadingShots && State.Shots.Count == 0 && State.ShotLoadError == null
+                    ? (VisualNode)Label("No shots recorded with this bean yet")
+                        .FontSize(14)
+                        .TextColor(TextSecondary())
+                    : null,
+
+                State.Shots.Count > 0
+                    ? (VisualNode)CollectionView()
+                        .ItemsSource(State.Shots, RenderShotItem)
+                        .RemainingItemsThreshold(5)
+                        .OnRemainingItemsThresholdReached(() =>
+                        {
+                            if (State.HasMoreShots && !State.IsLoadingShots)
+                            {
+                                _ = LoadMoreShotsAsync();
+                            }
+                        })
+                        .HeightRequest(420)
+                    : null,
+
+                State.IsLoadingShots && State.Shots.Count > 0
+                    ? (VisualNode)ActivityIndicator().IsRunning(true).HCenter()
+                    : null
+            )
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle());
+    }
+
+    VisualNode RenderShotItem(ShotRecordDto shot)
+    {
+        return Border(
+            new ShotRecordCard().Shot(shot)
+        )
+        .StrokeThickness(0)
+        .BackgroundColor(SurfaceVariantColor())
+        .Margin(0, 4)
+        .OnTapped(() => NavigateToShot(shot.Id));
+    }
+
+    // ------------------------------------------------------------
+    // Mini action chip
+    // ------------------------------------------------------------
+
+    VisualNode MiniActionChip(string label, Action onTap)
+    {
+        return Border(
+            Label(label)
+                .FontSize(11)
+                .CharacterSpacing(1.5)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(SurfaceColor())
+                .HCenter()
+                .VCenter()
+        )
+        .BackgroundColor(TextPrimary())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .Padding(12, 8)
+        .MinimumHeightRequest(32)
+        .OnTapped(onTap);
+    }
+
+    VisualNode ErrorTile(string message)
+    {
+        return Border(
+            Grid(rows: "Auto,Auto", columns: "*",
+                Label("ERROR")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(SurfaceColor().WithAlpha(0.8f))
+                    .GridRow(0),
+                Label(message)
+                    .FontSize(16)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(SurfaceColor())
+                    .GridRow(1)
+            )
+            .Padding(16, 12, 16, 12)
+        )
+        .BackgroundColor(ErrorColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(60);
+    }
+
+    // ------------------------------------------------------------
+    // Bottom nav row
+    // ------------------------------------------------------------
+
+    VisualNode BottomNavRow()
+    {
+        var isEditMode = State.BeanId.HasValue && State.BeanId.Value > 0;
+
+        if (isEditMode)
+        {
+            return Grid(rows: "Auto", columns: "*,*,*",
+                ActionTile("CANCEL", inverted: false,
+                    onTap: async () => await CancelAsync()).GridColumn(0),
+                ActionTile("DELETE", inverted: false, danger: true,
+                    onTap: async () => await DeleteBeanAsync()).GridColumn(1),
+                ActionTile(State.IsSaving ? "SAVING…" : "SAVE", inverted: true,
+                    onTap: async () => { if (!State.IsSaving) await SaveBeanAsync(); }).GridColumn(2)
+            )
+            .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
+            .ColumnSpacing(1)
+            .BackgroundColor(DividerColor());
+        }
+
+        return Grid(rows: "Auto", columns: "*,*",
+            ActionTile("CANCEL", inverted: false,
+                onTap: async () => await CancelAsync()).GridColumn(0),
+            ActionTile(State.IsSaving ? "SAVING…" : "ADD", inverted: true,
+                onTap: async () => { if (!State.IsSaving) await SaveBeanAsync(); }).GridColumn(1)
+        )
+        .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
+        .ColumnSpacing(1)
+        .BackgroundColor(DividerColor());
+    }
+
+    VisualNode ActionTile(string label, bool inverted, Action onTap, bool danger = false)
+    {
+        Color bg;
+        Color fg;
+        if (danger)
+        {
+            bg = ErrorColor();
+            fg = SurfaceColor();
+        }
+        else if (inverted)
+        {
+            bg = TextPrimary();
+            fg = SurfaceColor();
+        }
+        else
+        {
+            bg = SurfaceColor();
+            fg = TextPrimary();
+        }
+
+        return Border(
+            Label(label)
+                .FontSize(13)
+                .CharacterSpacing(2)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(fg)
+                .HCenter()
+                .VCenter()
+        )
+        .BackgroundColor(bg)
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(72)
+        .Padding(8, 18, 8, 30)
+        .OnTapped(onTap);
     }
 }

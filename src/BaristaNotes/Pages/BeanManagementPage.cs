@@ -1,13 +1,12 @@
-﻿using BaristaNotes.Core.Services;
+using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
-using BaristaNotes.Integrations.Popups;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using Fonts;
 using MauiReactor;
-using Microsoft.Extensions.DependencyInjection;
+using MauiReactor.Shapes;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
-using UXDivers.Popups.Services;
+using Application = Microsoft.Maui.Controls.Application;
 
 namespace BaristaNotes.Pages;
 
@@ -20,19 +19,24 @@ class BeanManagementState
 
 partial class BeanManagementPage : Component<BeanManagementState>
 {
-    [Inject]
-    IBeanService _beanService;
-
-    [Inject]
-    IFeedbackService _feedbackService;
-
-    [Inject]
-    IServiceProvider _services;
+    [Inject] IBeanService _beanService;
+    [Inject] IFeedbackService _feedbackService;
 
     protected override void OnMounted()
     {
         base.OnMounted();
         SetState(s => s.IsLoading = true);
+        _ = LoadDataAsync();
+    }
+
+    protected override void OnPropsChanged()
+    {
+        base.OnPropsChanged();
+        _ = LoadDataAsync();
+    }
+
+    void OnPageAppearing()
+    {
         _ = LoadDataAsync();
     }
 
@@ -59,11 +63,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
 
     async Task NavigateToAddBean()
     {
-        var popup = _services.GetRequiredService<AddCoffeePopup>();
-        popup.OnCreated = summary => { _ = LoadDataAsync(); };
-
-        await popup.InitializeAsync();
-        await IPopupService.Current.PushAsync(popup);
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync("bean-detail");
     }
 
     async void NavigateToEditBean(BeanDto bean)
@@ -74,142 +74,240 @@ partial class BeanManagementPage : Component<BeanManagementState>
         });
     }
 
+    async Task NavigateBack()
+    {
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
+    }
+
+    // ============================================================
+    // Rendering
+    // ============================================================
+
     public override VisualNode Render()
+    {
+        return ContentPage("Beans",
+            Grid(rows: "Auto,*,Auto", columns: "*",
+                HeaderTile().GridRow(0),
+                RenderBody().GridRow(1),
+                BottomNavRow().GridRow(2)
+            )
+            .RowSpacing(1)
+            .BackgroundColor(DividerColor())
+            .Padding(1)
+            .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
+        )
+        .Set(MauiControls.Shell.NavBarIsVisibleProperty, false)
+        .Set(MauiControls.Shell.TabBarIsVisibleProperty, false)
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
+        .OnAppearing(() => OnPageAppearing());
+    }
+
+    // ------------------------------------------------------------
+    // Theme helpers
+    // ------------------------------------------------------------
+
+    static bool IsLight() => Application.Current?.RequestedTheme != AppTheme.Dark;
+    static Color SurfaceColor() => IsLight() ? AppColors.Light.Surface : AppColors.Dark.Surface;
+    static Color TextPrimary() => IsLight() ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+    static Color TextSecondary() => IsLight() ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+    static Color AccentColor() => IsLight() ? AppColors.Light.Primary : AppColors.Dark.Primary;
+    static Color DividerColor() => IsLight() ? AppColors.Light.Outline : AppColors.Dark.Outline;
+
+    // ------------------------------------------------------------
+    // Header tile
+    // ------------------------------------------------------------
+
+    VisualNode HeaderTile()
+    {
+        var count = State.Beans.Count;
+        var countText = count == 1 ? "1 bean" : $"{count} beans";
+
+        return Border(
+            Grid(rows: "Auto,*", columns: "*",
+                Label("BEANS")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .GridRow(0),
+                Label(countText)
+                    .FontSize(28)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .VEnd()
+                    .GridRow(1)
+            )
+            .Padding(16, 56, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(120);
+    }
+
+    // ------------------------------------------------------------
+    // Body
+    // ------------------------------------------------------------
+
+    VisualNode RenderBody()
     {
         if (State.IsLoading)
         {
-            return ContentPage(
-                VStack(
-                    ActivityIndicator()
-                        .IsRunning(true)
-                        .VCenter()
-                        .HCenter()
-                )
-                .VCenter()
-                .HCenter()
-            ).Title("Beans")
-            .OnAppearing(() => OnPageAppearing());
+            return Border(
+                ActivityIndicator()
+                    .IsRunning(true)
+                    .VCenter()
+                    .HCenter()
+            )
+            .BackgroundColor(SurfaceColor())
+            .StrokeThickness(0)
+            .StrokeShape(new Rectangle());
         }
 
-        if (!string.IsNullOrEmpty(State.ErrorMessage))
+        if (State.ErrorMessage != null)
         {
-            return ContentPage(
-                VStack(
-                    Label(MaterialSymbolsFont.Warning)
-                        .FontFamily(MaterialSymbolsFont.FontFamily)
-                        .FontSize(48)
+            return Border(
+                VStack(spacing: 12,
+                    Label("ERROR")
+                        .FontSize(10).CharacterSpacing(2)
+                        .FontAttributes(MauiControls.FontAttributes.Bold)
+                        .TextColor(TextSecondary())
                         .HCenter(),
-                    Label(State.ErrorMessage)
+                    Label(State.ErrorMessage ?? "Unknown error")
+                        .FontSize(16)
+                        .TextColor(TextPrimary())
                         .HCenter(),
                     Button("Retry")
                         .OnClicked(async () =>
                         {
-                            SetState(s => s.ErrorMessage = null);
+                            SetState(s => { s.ErrorMessage = null; s.IsLoading = true; });
                             await LoadDataAsync();
                         })
-                        .Margin(0, 16, 0, 0)
-                )
-                .Padding(10)
-                .VCenter()
-                .HCenter()
-                .Spacing(16)
-            ).Title("Beans")
-            .OnAppearing(() => OnPageAppearing());
+                        .BackgroundColor(AccentColor())
+                        .TextColor(SurfaceColor())
+                ).VCenter().HCenter().Padding(24)
+            )
+            .BackgroundColor(SurfaceColor())
+            .StrokeThickness(0)
+            .StrokeShape(new Rectangle());
         }
 
-        return ContentPage(
-            ToolbarItem("+ Add")
-                .Order(MauiControls.ToolbarItemOrder.Primary)
-                .Priority(0)
-                .OnClicked(async () => await NavigateToAddBean()),
-
-            // Bean list
-            State.Beans.Count == 0
-                ? RenderEmptyState()
-                : CollectionView()
-                    .ItemsSource(State.Beans, RenderBeanItem)
-                    .Header(
-                        ContentView().HeightRequest(DeviceInfo.Platform == DevicePlatform.iOS ? 180 : 16)
-                    )
-                    .Footer(
-                        ContentView().HeightRequest(80)
-                    )
-                    .Margin(16, 0)
-
-        ).Title("Beans")
-        .Padding(10)
-        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always))
-        .OnAppearing(() => OnPageAppearing());
-    }
-
-    void OnPageAppearing()
-    {
-        // Refresh data when returning from detail page
-        _ = LoadDataAsync();
-    }
-
-    VisualNode RenderEmptyState()
-    {
-        return VStack(spacing: 12,
-            Label(MaterialSymbolsFont.Coffee)
-                .FontFamily(MaterialSymbolsFont.FontFamily)
-                .FontSize(64)
-                .HCenter(),
-            Label("No Beans Yet")
-                .ThemeKey(ThemeKeys.CardTitle)
-                .HCenter(),
-            Label("Add your favorite coffee beans to track freshness and tasting notes")
-                .ThemeKey(ThemeKeys.CardSubtitle)
-                .HCenter()
-        )
-        .VCenter()
-        .HCenter()
-        .Padding(24);
-    }
-
-    VisualNode RenderBeanItem(BeanDto bean)
-    {
-        return Border(
-            VStack(spacing: 4,
-                Label(bean.Name)
-                    .ThemeKey(ThemeKeys.CardTitle),
-                bean.Roaster != null
-                    ? HStack(spacing: 4,
-                        Label(MaterialSymbolsFont.Factory)
-                            .FontFamily(MaterialSymbolsFont.FontFamily)
-                            .FontSize(14)
-                            .ThemeKey(ThemeKeys.SecondaryText),
-                        Label(bean.Roaster)
-                            .FontSize(14)
-                            .ThemeKey(ThemeKeys.SecondaryText)
-                      )
-                    : null,
-                bean.Origin != null
-                    ? HStack(spacing: 4,
-                        Label(MaterialSymbolsFont.Globe)
-                            .FontFamily(MaterialSymbolsFont.FontFamily)
-                            .FontSize(14)
-                            .ThemeKey(ThemeKeys.SecondaryText),
-                        Label(bean.Origin)
-                            .FontSize(14)
-                            .ThemeKey(ThemeKeys.SecondaryText)
-                      )
-                    : null,
-                bean.RoastDate.HasValue
-                    ? HStack(spacing: 4,
-                        Label(MaterialSymbolsFont.Calendar_today)
-                            .FontFamily(MaterialSymbolsFont.FontFamily)
-                            .FontSize(12)
-                            .ThemeKey(ThemeKeys.MutedText),
-                        Label($"Roasted: {bean.RoastDate.Value:MMM d, yyyy}")
-                            .ThemeKey(ThemeKeys.MutedText)
-                      )
-                    : null
+        if (State.Beans.Count == 0)
+        {
+            return Border(
+                VStack(spacing: 12,
+                    Label("NO BEANS")
+                        .FontSize(10).CharacterSpacing(2)
+                        .FontAttributes(MauiControls.FontAttributes.Bold)
+                        .TextColor(TextSecondary())
+                        .HCenter(),
+                    Label("Add your favorite coffee beans")
+                        .FontSize(16)
+                        .TextColor(TextPrimary())
+                        .HCenter()
+                        .HorizontalTextAlignment(TextAlignment.Center)
+                ).VCenter().HCenter().Padding(32)
             )
-            .Padding(12)
+            .BackgroundColor(SurfaceColor())
+            .StrokeThickness(0)
+            .StrokeShape(new Rectangle());
+        }
+
+        return CollectionView()
+            .ItemsSource(State.Beans, RenderBeanRow)
+            .BackgroundColor(DividerColor());
+    }
+
+    VisualNode RenderBeanRow(BeanDto bean)
+    {
+        var subtitle = !string.IsNullOrWhiteSpace(bean.Roaster)
+            ? bean.Roaster!.ToUpperInvariant()
+            : (!string.IsNullOrWhiteSpace(bean.Origin) ? bean.Origin!.ToUpperInvariant() : "BEAN");
+
+        return Border(
+            Grid(rows: "Auto,Auto", columns: "*,Auto",
+                Label(subtitle)
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .LineBreakMode(LineBreakMode.TailTruncation)
+                    .GridRow(0).GridColumn(0),
+                Label(bean.Name)
+                    .FontSize(20)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .LineBreakMode(LineBreakMode.TailTruncation)
+                    .GridRow(1).GridColumn(0),
+                Label("→")
+                    .FontSize(22)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .VCenter()
+                    .GridRow(0).GridRowSpan(2).GridColumn(1)
+            )
+            .Padding(16, 14, 16, 14)
         )
-        .ThemeKey(ThemeKeys.CardBorder)
-        .OnTapped(() => NavigateToEditBean(bean))
-        .Margin(0, 4);
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(80)
+        .Margin(0, 0, 0, 1)
+        .OnTapped(() => NavigateToEditBean(bean));
+    }
+
+    // ------------------------------------------------------------
+    // Bottom nav row
+    // ------------------------------------------------------------
+
+    VisualNode BottomNavRow()
+    {
+        return Grid(rows: "Auto", columns: "*,*,*,*",
+            NavTile(AppIcons.CoffeeCup,
+                async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("//shots"))
+                .GridColumn(0),
+            NavTile(AppIcons.Feed,
+                async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("//history"))
+                .GridColumn(1),
+            NavTile(AppIcons.Settings,
+                async () => await NavigateBack())
+                .GridColumn(2),
+            NavTile(AppIcons.Add,
+                async () => await NavigateToAddBean(), inverted: true)
+                .GridColumn(3)
+        )
+        .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
+        .ColumnSpacing(1)
+        .BackgroundColor(DividerColor());
+    }
+
+    VisualNode NavTile(FontImageSource imageSource, Action onTap, bool inverted = false)
+    {
+        FontImageSource source = imageSource;
+        if (inverted)
+        {
+            source = new FontImageSource
+            {
+                FontFamily = imageSource.FontFamily,
+                Glyph = imageSource.Glyph,
+                Size = imageSource.Size,
+                Color = SurfaceColor()
+            };
+        }
+
+        var bg = inverted ? TextPrimary() : SurfaceColor();
+
+        return Border(
+            Image()
+                .Source(source)
+                .HCenter()
+                .VCenter()
+        )
+        .BackgroundColor(bg)
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(72)
+        .Padding(16, 18, 16, 30)
+        .OnTapped(onTap);
     }
 }

@@ -1,26 +1,27 @@
-﻿using BaristaNotes.Components;
+using BaristaNotes.Components;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Services;
 using BaristaNotes.Styles;
 using Fonts;
 using MauiReactor;
+using MauiReactor.Shapes;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups.Services;
+using Application = Microsoft.Maui.Controls.Application;
 
 namespace BaristaNotes.Pages;
 
 class BagDetailPageProps
 {
-    public int? BagId { get; set; }  // If null/0, we're creating; otherwise editing
+    public int? BagId { get; set; }
     public int BeanId { get; set; }
     public string BeanName { get; set; } = "";
 }
 
 class BagDetailPageState
 {
-    // Form fields
     public int? BagId { get; set; }
     public int BeanId { get; set; }
     public string BeanName { get; set; } = "";
@@ -28,11 +29,9 @@ class BagDetailPageState
     public string Notes { get; set; } = "";
     public bool IsComplete { get; set; }
 
-    // Read-only info
     public int ShotCount { get; set; }
     public RatingAggregateDto? RatingAggregate { get; set; }
 
-    // Form state
     public bool IsLoading { get; set; }
     public bool IsSaving { get; set; }
     public string? ErrorMessage { get; set; }
@@ -179,17 +178,16 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
 
         var popup = new SimpleActionPopup
         {
-            Title = $"Delete Bag?",
-            Text = "Are you sure you want to delete this bag? This will also delete all {State.ShotCount} associated shot records. This action cannot be undone.",
+            Title = "Delete Bag?",
+            Text = $"Are you sure you want to delete this bag? This will also delete all {State.ShotCount} associated shot records. This action cannot be undone.",
             ActionButtonText = "Delete",
             SecondaryActionButtonText = "Cancel",
             ActionButtonCommand = new Command(async () =>
             {
-                await _bagService.DeleteBagAsync(State.BagId.Value);
+                await _bagService.DeleteBagAsync(State.BagId!.Value);
                 await _feedbackService.ShowSuccessAsync("Bag deleted");
                 await IPopupService.Current.PopAsync();
                 await MauiControls.Shell.Current.GoToAsync("..");
-
             })
         };
 
@@ -221,164 +219,385 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
         }
     }
 
+    async Task CancelAsync()
+    {
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
+    }
+
+    // ============================================================
+    // Rendering
+    // ============================================================
+
     public override VisualNode Render()
     {
-        var isEditMode = State.BagId.HasValue && State.BagId.Value > 0;
-        var title = isEditMode ? "Edit Bag" : "Add Bag";
+        return ContentPage("Bag",
+            Grid(rows: "Auto,*,Auto", columns: "*",
+                HeaderTile().GridRow(0),
+                RenderBody().GridRow(1),
+                BottomNavRow().GridRow(2)
+            )
+            .RowSpacing(1)
+            .BackgroundColor(DividerColor())
+            .Padding(1)
+            .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
+        )
+        .Set(MauiControls.Shell.NavBarIsVisibleProperty, false)
+        .Set(MauiControls.Shell.TabBarIsVisibleProperty, false)
+        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never));
+    }
 
+    // ------------------------------------------------------------
+    // Theme helpers
+    // ------------------------------------------------------------
+
+    static bool IsLight() => Application.Current?.RequestedTheme != AppTheme.Dark;
+    static Color SurfaceColor() => IsLight() ? AppColors.Light.Surface : AppColors.Dark.Surface;
+    static Color SurfaceVariantColor() => IsLight() ? AppColors.Light.SurfaceVariant : AppColors.Dark.SurfaceVariant;
+    static Color TextPrimary() => IsLight() ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+    static Color TextSecondary() => IsLight() ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+    static Color DividerColor() => IsLight() ? AppColors.Light.Outline : AppColors.Dark.Outline;
+    static Color ErrorColor() => AppColors.Error;
+
+    // ------------------------------------------------------------
+    // Header tile
+    // ------------------------------------------------------------
+
+    VisualNode HeaderTile()
+    {
+        var isEditMode = State.BagId.HasValue && State.BagId.Value > 0;
+        var label = isEditMode ? "EDIT BAG" : "NEW BAG";
+        var title = State.BeanName.Length > 0 ? State.BeanName : "Bag";
+
+        var len = title.Length;
+        double valueFontSize = len switch
+        {
+            <= 12 => 28,
+            <= 20 => 22,
+            <= 28 => 18,
+            _ => 16
+        };
+
+        return Border(
+            Grid(rows: "Auto,*", columns: "*",
+                Label(label)
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .GridRow(0),
+                Label(title)
+                    .FontSize(valueFontSize)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .LineBreakMode(LineBreakMode.WordWrap)
+                    .MaxLines(2)
+                    .VEnd()
+                    .GridRow(1)
+            )
+            .Padding(16, 56, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(120);
+    }
+
+    // ------------------------------------------------------------
+    // Body
+    // ------------------------------------------------------------
+
+    VisualNode RenderBody()
+    {
         if (State.IsLoading)
         {
-            return ContentPage(
-                VStack(
-                    ActivityIndicator().IsRunning(true)
-                )
-                .Center()
-            )
-            .Title(title);
-        }
-
-        return ContentPage(
-            isEditMode
-                ? ToolbarItem().Text("Delete").IconImageSource(AppIcons.Delete).Order(ToolbarItemOrder.Secondary).OnClicked(async () => await DeleteBagAsync())
-                : null,
-            ScrollView(
-                VStack(spacing: 16,
-                    // Form section
-                    RenderForm(),
-
-                    // Status section (edit mode only)
-                    isEditMode ? RenderStatusSection() : null,
-
-                    // Stats section (edit mode only)
-                    isEditMode ? RenderStatsSection() : null,
-
-                    // Rating section (edit mode only)
-                    isEditMode ? RenderRatings() : null
-                )
-                .Padding(16)
-            )
-        )
-        .Title(title)
-        .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Always));
-    }
-
-    VisualNode RenderForm()
-    {
-        return VStack(spacing: 16,
-            // Bean name (read-only display)
-            VStack(spacing: 4,
-                Label("Bean")
-                    .ThemeKey(ThemeKeys.SecondaryText),
-                Label(State.BeanName)
-                    .ThemeKey(ThemeKeys.CardTitle)
-            ),
-
-            // Roast Date picker
-            VStack(spacing: 8,
-                Label("Roast Date")
-                    .ThemeKey(ThemeKeys.SecondaryText),
-                Border(
-                    DatePicker()
-                        .Date(State.RoastDate)
-                        .MaximumDate(DateTime.Now)
-                        .OnDateSelected((s, e) => SetState(state => state.RoastDate = e.NewDate ?? DateTime.Now))
-                )
-                .Padding(8)
-                .ThemeKey(ThemeKeys.CardBorder)
-            ),
-
-            // Notes field
-            VStack(spacing: 8,
-                Label("Notes (optional)")
-                    .ThemeKey(ThemeKeys.SecondaryText),
-                Border(
-                    Editor()
-                        .Text(State.Notes)
-                        .OnTextChanged((s, e) => SetState(state => state.Notes = e.NewTextValue))
-                        .Placeholder("e.g., From Trader Joe's, Gift from friend")
-                        .PlaceholderColor(Colors.Gray)
-                        .HeightRequest(100)
-                        .BackgroundColor(Colors.Transparent)
-                )
-                .Padding(8)
-                .ThemeKey(ThemeKeys.CardBorder)
-            ),
-
-            // Error message
-            !string.IsNullOrEmpty(State.ErrorMessage)
-                ? Border(
-                    Label(State.ErrorMessage).TextColor(Colors.Red).Padding(12)
-                )
-                .BackgroundColor(Colors.Red.WithAlpha(0.1f))
-                .StrokeThickness(1)
-                .Stroke(Colors.Red)
-                : null,
-
-            // Save button
-            Button(State.IsSaving ? "Saving..." : (State.BagId.HasValue && State.BagId.Value > 0 ? "Save Changes" : "Add Bag"))
-                .OnClicked(async () => await SaveBagAsync())
-                .IsEnabled(!State.IsSaving)
-                .HeightRequest(48)
-        );
-    }
-
-    VisualNode RenderStatusSection()
-    {
-        return VStack(spacing: 12,
-            BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
-
-            Label("Status")
-                .ThemeKey(ThemeKeys.SubHeadline),
-
-            HStack(spacing: 12,
-                Label(State.IsComplete ? "Complete" : "Active")
-                    .ThemeKey(ThemeKeys.PrimaryText)
-                    .VCenter(),
-
-                Button(State.IsComplete ? "Reactivate" : "Mark Complete")
-                    .OnClicked(async () => await ToggleBagStatus())
-                    .ThemeKey(ThemeKeys.SecondaryButton)
-                    .HEnd()
-            )
-        );
-    }
-
-    VisualNode RenderStatsSection()
-    {
-        return VStack(spacing: 12,
-            BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
-
-            HStack(spacing: 24,
-                VStack(spacing: 4,
-                    Label("Shots Logged")
-                        .ThemeKey(ThemeKeys.SecondaryText),
-                    Label(State.ShotCount.ToString())
-                        .ThemeKey(ThemeKeys.CardTitle)
-                )
-            )
-        );
-    }
-
-    VisualNode RenderRatings()
-    {
-        if (State.RatingAggregate == null || !State.RatingAggregate.HasRatings)
-        {
-            return VStack(spacing: 12,
-                BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
-                Label("No ratings yet")
-                    .ThemeKey(ThemeKeys.SecondaryText)
+            return Border(
+                ActivityIndicator()
+                    .IsRunning(true)
+                    .VCenter()
                     .HCenter()
-            );
+            )
+            .BackgroundColor(SurfaceColor())
+            .StrokeThickness(0)
+            .StrokeShape(new Rectangle());
         }
 
-        return VStack(spacing: 12,
-            BoxView().HeightRequest(1).Color(Colors.Gray.WithAlpha(0.3f)),
+        var isEditMode = State.BagId.HasValue && State.BagId.Value > 0;
 
-            Label("Bag Ratings")
-                .ThemeKey(ThemeKeys.SubHeadline),
+        return ScrollView(
+            Grid(
+                rows: "Auto,Auto,Auto,Auto,Auto,Auto,Auto",
+                columns: "*",
+                RoastDateTile().GridRow(0),
+                NotesTile().GridRow(1),
+                isEditMode ? StatusTile().GridRow(2) : EmptyTile().GridRow(2),
+                isEditMode ? StatsTile().GridRow(3) : EmptyTile().GridRow(3),
+                isEditMode ? RatingsTile().GridRow(4) : EmptyTile().GridRow(4),
+                State.ErrorMessage != null
+                    ? ErrorTile(State.ErrorMessage).GridRow(5)
+                    : EmptyTile().GridRow(5),
+                Border()
+                    .BackgroundColor(SurfaceColor())
+                    .StrokeThickness(0)
+                    .StrokeShape(new Rectangle())
+                    .MinimumHeightRequest(24)
+                    .GridRow(6)
+            )
+            .RowSpacing(1)
+            .BackgroundColor(DividerColor())
+        )
+        .BackgroundColor(SurfaceColor());
+    }
 
-            new RatingDisplayComponent()
-                .RatingAggregate(State.RatingAggregate)
-        );
+    VisualNode EmptyTile() =>
+        Border()
+            .BackgroundColor(SurfaceColor())
+            .StrokeThickness(0)
+            .StrokeShape(new Rectangle())
+            .MinimumHeightRequest(0);
+
+    VisualNode RoastDateTile()
+    {
+        return Border(
+            VStack(spacing: 8,
+                Label("ROAST DATE")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary()),
+                DatePicker()
+                    .Date(State.RoastDate)
+                    .MaximumDate(DateTime.Now)
+                    .FontSize(20)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .BackgroundColor(Colors.Transparent)
+                    .OnDateSelected((s, e) => SetState(state => state.RoastDate = e.NewDate ?? DateTime.Now))
+            )
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(90);
+    }
+
+    VisualNode NotesTile()
+    {
+        return Border(
+            Grid(rows: "Auto,Auto", columns: "*",
+                Label("NOTES")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .GridRow(0),
+                Editor()
+                    .Text(State.Notes)
+                    .Placeholder("From Trader Joe's, gift from friend…")
+                    .PlaceholderColor(TextSecondary().WithAlpha(0.5f))
+                    .TextColor(TextPrimary())
+                    .FontSize(16)
+                    .BackgroundColor(Colors.Transparent)
+                    .AutoSize(EditorAutoSizeOption.TextChanges)
+                    .HeightRequest(100)
+                    .OnTextChanged((s, e) => SetState(state => state.Notes = e.NewTextValue))
+                    .GridRow(1)
+            )
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(150);
+    }
+
+    VisualNode StatusTile()
+    {
+        var statusLabel = State.IsComplete ? "COMPLETE" : "ACTIVE";
+        var actionLabel = State.IsComplete ? "REACTIVATE" : "MARK COMPLETE";
+
+        return Border(
+            Grid(rows: "Auto,Auto", columns: "*,Auto",
+                Label("STATUS")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .GridRow(0).GridColumn(0).GridColumnSpan(2),
+                Label(statusLabel)
+                    .FontSize(22)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .VCenter()
+                    .GridRow(1).GridColumn(0),
+                Border(
+                    Label(actionLabel)
+                        .FontSize(11)
+                        .CharacterSpacing(1.5)
+                        .FontAttributes(MauiControls.FontAttributes.Bold)
+                        .TextColor(SurfaceColor())
+                        .HCenter()
+                        .VCenter()
+                )
+                .BackgroundColor(TextPrimary())
+                .StrokeThickness(0)
+                .StrokeShape(new Rectangle())
+                .Padding(14, 10)
+                .MinimumHeightRequest(40)
+                .OnTapped(async () => await ToggleBagStatus())
+                .VCenter()
+                .GridRow(1).GridColumn(1)
+            )
+            .RowSpacing(8)
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(100);
+    }
+
+    VisualNode StatsTile()
+    {
+        return Border(
+            Grid(rows: "Auto,Auto", columns: "*",
+                Label("SHOTS LOGGED")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .GridRow(0),
+                Label(State.ShotCount.ToString())
+                    .FontSize(28)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .GridRow(1)
+            )
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(100);
+    }
+
+    VisualNode RatingsTile()
+    {
+        var hasRatings = State.RatingAggregate != null && State.RatingAggregate.HasRatings;
+
+        return Border(
+            VStack(spacing: 8,
+                Label("RATINGS")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary()),
+                hasRatings
+                    ? (VisualNode)new RatingDisplayComponent().RatingAggregate(State.RatingAggregate)
+                    : Label("No ratings yet")
+                        .FontSize(16)
+                        .TextColor(TextSecondary())
+            )
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(90);
+    }
+
+    VisualNode ErrorTile(string message)
+    {
+        return Border(
+            Grid(rows: "Auto,Auto", columns: "*",
+                Label("ERROR")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(SurfaceColor().WithAlpha(0.8f))
+                    .GridRow(0),
+                Label(message)
+                    .FontSize(16)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(SurfaceColor())
+                    .GridRow(1)
+            )
+            .Padding(16, 12, 16, 12)
+        )
+        .BackgroundColor(ErrorColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(60);
+    }
+
+    // ------------------------------------------------------------
+    // Bottom nav row
+    // ------------------------------------------------------------
+
+    VisualNode BottomNavRow()
+    {
+        var isEditMode = State.BagId.HasValue && State.BagId.Value > 0;
+
+        if (isEditMode)
+        {
+            return Grid(rows: "Auto", columns: "*,*,*",
+                ActionTile("CANCEL", inverted: false,
+                    onTap: async () => await CancelAsync()).GridColumn(0),
+                ActionTile("DELETE", inverted: false, danger: true,
+                    onTap: async () => await DeleteBagAsync()).GridColumn(1),
+                ActionTile(State.IsSaving ? "SAVING…" : "SAVE", inverted: true,
+                    onTap: async () => { if (!State.IsSaving) await SaveBagAsync(); }).GridColumn(2)
+            )
+            .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
+            .ColumnSpacing(1)
+            .BackgroundColor(DividerColor());
+        }
+
+        return Grid(rows: "Auto", columns: "*,*",
+            ActionTile("CANCEL", inverted: false,
+                onTap: async () => await CancelAsync()).GridColumn(0),
+            ActionTile(State.IsSaving ? "SAVING…" : "ADD", inverted: true,
+                onTap: async () => { if (!State.IsSaving) await SaveBagAsync(); }).GridColumn(1)
+        )
+        .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
+        .ColumnSpacing(1)
+        .BackgroundColor(DividerColor());
+    }
+
+    VisualNode ActionTile(string label, bool inverted, Action onTap, bool danger = false)
+    {
+        Color bg;
+        Color fg;
+        if (danger)
+        {
+            bg = ErrorColor();
+            fg = SurfaceColor();
+        }
+        else if (inverted)
+        {
+            bg = TextPrimary();
+            fg = SurfaceColor();
+        }
+        else
+        {
+            bg = SurfaceColor();
+            fg = TextPrimary();
+        }
+
+        return Border(
+            Label(label)
+                .FontSize(13)
+                .CharacterSpacing(2)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(fg)
+                .HCenter()
+                .VCenter()
+        )
+        .BackgroundColor(bg)
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(72)
+        .Padding(8, 18, 8, 30)
+        .OnTapped(onTap);
     }
 }

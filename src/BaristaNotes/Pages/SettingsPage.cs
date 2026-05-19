@@ -145,7 +145,8 @@ partial class SettingsPage : Component<SettingsPageState>
             )
             .RowSpacing(1)
             .BackgroundColor(DividerColor())
-        );
+        )
+        .BackgroundColor(SurfaceColor());
     }
 
     VisualNode SectionLabel(string text)

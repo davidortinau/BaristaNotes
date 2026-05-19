@@ -837,7 +837,18 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 unit: "s",
                 spec: NumericSpecFor(GridPickerKind.ActualTime),
                 current: (double)(State.ActualTime ?? State.ExpectedTime),
-                onSelect: v => SetState(s => { s.ActualTime = (decimal)v; s.ActivePicker = GridPickerKind.None; })),
+                onSelect: v => SetState(s =>
+                {
+                    // The TIME tile is the only UI for brew duration, so we
+                    // mirror to ExpectedTime as well. Otherwise ExpectedTime
+                    // carries over from the previous shot's brew method and
+                    // can land outside the new method's validation range
+                    // (e.g. 28s espresso → V60 which requires ≥ 60s).
+                    var time = (decimal)v;
+                    s.ActualTime = time;
+                    s.ExpectedTime = time;
+                    s.ActivePicker = GridPickerKind.None;
+                })),
 
             GridPickerKind.GrindMicrons => GrindMicronsPicker(),
 

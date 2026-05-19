@@ -87,7 +87,6 @@ class ShotLoggingGridState
     public List<BagSummaryDto> AvailableBags { get; set; } = new();
     public List<UserProfileDto> AvailableUsers { get; set; } = new();
     public List<EquipmentDto> AvailableEquipment { get; set; } = new();
-    public List<string> DrinkTypes { get; set; } = new() { "Espresso", "Americano", "Latte", "Cappuccino", "Flat White", "Cortado", "Pour Over" };
 
     // Edit mode display
     public string? BeanName { get; set; }
@@ -248,6 +247,11 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     s.SelectedGrinderId = shot.Grinder?.Id;
                     s.SelectedAccessoryIds = shot.Accessories?.Select(a => a.Id).ToList() ?? new();
                     s.TastingNotes = shot.TastingNotes;
+                    // Backfill: ensure drink type is valid for the loaded brew method
+                    // (older records may carry mismatched combinations).
+                    var validForLoaded = shot.BrewMethod.DrinkTypesFor();
+                    if (!validForLoaded.Contains(s.DrinkType))
+                        s.DrinkType = validForLoaded[0];
                     s.IsLoading = false;
                 });
             }
@@ -270,6 +274,9 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                         s.ExpectedOutput = lastShot.ExpectedOutput;
                         s.Rating = (lastShot.Rating ?? 3) - 1;
                         s.SelectedBagId = lastShot.Bag?.Id;
+                        var validForLast = lastShot.BrewMethod.DrinkTypesFor();
+                        if (!validForLast.Contains(s.DrinkType))
+                            s.DrinkType = validForLast[0];
                     }
 
                     var lastMakerId = _preferencesService.GetLastMadeById();
@@ -736,6 +743,10 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                         // Clear actuals captured under the previous method.
                         s.ActualTime = null;
                         s.ActualOutput = null;
+                        // Snap drink type to a valid option for the new method.
+                        var validDrinks = newMethod.DrinkTypesFor();
+                        if (!validDrinks.Contains(s.DrinkType))
+                            s.DrinkType = validDrinks[0];
                     }
                     s.BrewMethod = newMethod;
                     s.ActivePicker = GridPickerKind.None;
@@ -743,7 +754,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
 
             GridPickerKind.DrinkType => CategoricalPicker(
                 title: "Drink Type",
-                items: State.DrinkTypes.Select(d => (Key: (object)d, Display: d)).ToList(),
+                items: State.BrewMethod.DrinkTypesFor().Select(d => (Key: (object)d, Display: d)).ToList(),
                 isSelected: o => (string)o == State.DrinkType,
                 onSelect: o => SetState(s => { s.DrinkType = (string)o; s.ActivePicker = GridPickerKind.None; })),
 

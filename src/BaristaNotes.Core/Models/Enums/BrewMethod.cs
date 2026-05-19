@@ -160,6 +160,31 @@ public static class BrewMethodExtensions
     };
 
     /// <summary>
+    /// Drink types that are reasonable for a given brew method. Espresso is the
+    /// only method with a meaningful menu (milk drinks, lungo/ristretto, etc.);
+    /// every other method is effectively a single drink (Pour Over, French Press,
+    /// Cold Brew…) so the picker collapses to one option.
+    /// The first entry is treated as the default when switching methods.
+    /// </summary>
+    public static IReadOnlyList<string> DrinkTypesFor(this BrewMethod method) => method switch
+    {
+        BrewMethod.Espresso       => new[] { "Espresso", "Ristretto", "Lungo", "Americano", "Macchiato", "Cortado", "Flat White", "Cappuccino", "Latte", "Mocha" },
+        BrewMethod.V60            => new[] { "Pour Over" },
+        BrewMethod.PourOver       => new[] { "Pour Over" },
+        BrewMethod.Drip           => new[] { "Drip" },
+        BrewMethod.Aeropress      => new[] { "Aeropress" },
+        BrewMethod.FrenchPress    => new[] { "French Press" },
+        BrewMethod.Moka           => new[] { "Moka" },
+        BrewMethod.Turkish        => new[] { "Turkish" },
+        BrewMethod.Siphon         => new[] { "Siphon" },
+        BrewMethod.Cupping        => new[] { "Cupping" },
+        BrewMethod.ColdBrew       => new[] { "Cold Brew" },
+        BrewMethod.ColdDrip       => new[] { "Cold Drip" },
+        BrewMethod.SteepAndRelease => new[] { "Steep & Release" },
+        _ => new[] { method.DisplayName() }
+    };
+
+    /// <summary>
     /// All brew methods in canonical display order (fine → coarse, hot → cold).
     /// </summary>
     public static IReadOnlyList<BrewMethod> All { get; } = new[]

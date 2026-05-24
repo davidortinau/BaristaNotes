@@ -140,6 +140,13 @@
 		<PackageReference Include="Microsoft.Maui.DevFlow.Agent" Version="0.25.0-dev" />
 	</ItemGroup>
 
+	<!-- Microsoft.Maui.Labs.HotReload (DEBUG only): IHotReloadAware + MetadataUpdateHandler.
+	     Lets any class (not just Components) react to .NET Hot Reload updates.
+	     Tracking: dotnet/maui-labs#254, dotnet/maui#35229. -->
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<PackageReference Include="Microsoft.Maui.Labs.HotReload" Version="0.1.0-dev" />
+	</ItemGroup>
+
 	<!-- HotReload Sentinel (DEBUG only): in-app overlay + diagnostics endpoint. -->
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
 		<ProjectReference Include="..\..\..\hotreload-sentinel\src\HotReloadSentinel.Diagnostics\HotReloadSentinel.Diagnostics.csproj" />

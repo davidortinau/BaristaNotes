@@ -10,15 +10,42 @@ public class BaristaAppState
     public string? InitializationError { get; set; }
 }
 
+#if DEBUG
+// MauiReactor's source generator emits the parameterless ctor for Component<T>,
+// so HotReloadInitialize() is called from OnMounted instead. The MUH0001
+// analyzer only inspects constructors, so suppress it here.
+#pragma warning disable MUH0001
+#endif
 public partial class BaristaApp : Component<BaristaAppState>
+#if DEBUG
+    , Microsoft.Maui.Labs.HotReload.IHotReloadAware
+#endif
 {
     [Inject] IThemeService _themeService;
     [Inject] IServiceProvider _serviceProvider;
     [Inject] ILogger<BaristaApp> _logger;
 
+#if DEBUG
+
+    public void OnHotReload(Type[]? updatedTypes)
+    {
+        var names = updatedTypes is null
+            ? "<null>"
+            : string.Join(", ", updatedTypes.Select(t => t.FullName));
+        _logger?.LogInformation("🔥 BaristaApp.OnHotReload fired. Updated types: {Types}", names);
+        // Force a re-render of the MauiReactor component tree so view-level
+        // edits are reflected immediately, even when no state changed.
+        Invalidate();
+    }
+#endif
+
     protected override async void OnMounted()
     {
         base.OnMounted();
+#if DEBUG
+        // Register with the HotReload registry (source-gen emitted method).
+        HotReloadInitialize();
+#endif
         await InitializeAsync();
     }
 
@@ -62,3 +89,6 @@ public partial class BaristaApp : Component<BaristaAppState>
         return new AppShell();
     }
 }
+#if DEBUG
+#pragma warning restore MUH0001
+#endif

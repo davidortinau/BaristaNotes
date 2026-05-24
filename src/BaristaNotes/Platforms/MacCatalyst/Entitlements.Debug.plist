@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <!--
+        Debug-only entitlements. App Sandbox is intentionally DISABLED in Debug
+        so that `dotnet watch` can inject its startup hook
+        (Microsoft.Extensions.DotNetDeltaApplier.dll) which lives outside the
+        app bundle in the SDK directory. Sandbox blocks reading that path and
+        causes the app to fail to start under `dotnet watch`.
+
+        Release builds continue to use the sandboxed Entitlements.plist.
+    -->
+    <dict>
+        <key>com.apple.security.network.client</key>
+        <true/>
+        <key>com.apple.security.network.server</key>
+        <true/>
+    </dict>
+</plist>

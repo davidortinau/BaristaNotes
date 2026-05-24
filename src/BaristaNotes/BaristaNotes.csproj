@@ -147,6 +147,14 @@
 		<PackageReference Include="Microsoft.Maui.Labs.HotReload" Version="0.1.0-dev" />
 	</ItemGroup>
 
+	<!-- Mac Catalyst: use sandbox-disabled entitlements in Debug so dotnet watch's
+	     startup hook (Microsoft.Extensions.DotNetDeltaApplier.dll, loaded from the
+	     SDK directory) is not blocked by App Sandbox. Release uses the default
+	     sandboxed Entitlements.plist for App Store distribution. -->
+	<PropertyGroup Condition="$(TargetFramework.Contains('-maccatalyst')) and '$(Configuration)' == 'Debug'">
+		<CodesignEntitlements>Platforms/MacCatalyst/Entitlements.Debug.plist</CodesignEntitlements>
+	</PropertyGroup>
+
 	<!-- HotReload Sentinel (DEBUG only): in-app overlay + diagnostics endpoint. -->
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
 		<ProjectReference Include="..\..\..\hotreload-sentinel\src\HotReloadSentinel.Diagnostics\HotReloadSentinel.Diagnostics.csproj" />

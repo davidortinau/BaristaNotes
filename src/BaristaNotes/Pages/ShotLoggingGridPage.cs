@@ -421,7 +421,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 Grid(
                     rows: "Auto,*,*,*,*,*,*,Auto",
                     columns: "*,*,*,*",
-                    Tile("BREW METHOD", State.BrewMethod.DisplayName(),
+                    Tile("METHOD", State.BrewMethod.DisplayName(),
                             () => Open(GridPickerKind.BrewMethod)).GridRow(0).GridColumn(0).GridColumnSpan(2),
                     Tile("BAG", BagDisplayValue(),
                             () => Open(GridPickerKind.Bag)).GridRow(0).GridColumn(2).GridColumnSpan(2),
@@ -1343,27 +1343,27 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     case DataChangeType.BeanUpdated:
                     case DataChangeType.BagCreated:
                     case DataChangeType.BagUpdated:
-                    {
-                        // Bag display labels embed bean names, so refresh bags
-                        // whenever either bean or bag data changes.
-                        var bags = await _bagService.GetActiveBagsForShotLoggingAsync();
-                        SetState(s => s.AvailableBags = bags);
-                        break;
-                    }
+                        {
+                            // Bag display labels embed bean names, so refresh bags
+                            // whenever either bean or bag data changes.
+                            var bags = await _bagService.GetActiveBagsForShotLoggingAsync();
+                            SetState(s => s.AvailableBags = bags);
+                            break;
+                        }
                     case DataChangeType.EquipmentCreated:
                     case DataChangeType.EquipmentUpdated:
-                    {
-                        var equipment = (await _equipmentService.GetAllActiveEquipmentAsync()).ToList();
-                        SetState(s => s.AvailableEquipment = equipment);
-                        break;
-                    }
+                        {
+                            var equipment = (await _equipmentService.GetAllActiveEquipmentAsync()).ToList();
+                            SetState(s => s.AvailableEquipment = equipment);
+                            break;
+                        }
                     case DataChangeType.ProfileCreated:
                     case DataChangeType.ProfileUpdated:
-                    {
-                        var users = await _userProfileService.GetAllProfilesAsync();
-                        SetState(s => s.AvailableUsers = users);
-                        break;
-                    }
+                        {
+                            var users = await _userProfileService.GetAllProfilesAsync();
+                            SetState(s => s.AvailableUsers = users);
+                            break;
+                        }
                 }
             }
             catch (Exception ex)

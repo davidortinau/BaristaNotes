@@ -58,6 +58,16 @@
 		<EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
 	</PropertyGroup>
 
+	<!-- Disable the managed linker so the dotnet watch startup hook
+	     (Microsoft.Extensions.DotNetDeltaApplier.dll) can call BCL APIs like
+	     System.Environment.GetCommandLineArgs() that nothing else in the app
+	     references. Without this, `dotnet watch run` aborts at startup with
+	     MissingMethodException on iOS / Mac Catalyst under .NET 11 Preview 4.
+	     Per the .NET 11 P4 release notes for dotnet watch on mobile. -->
+	<PropertyGroup>
+		<MtouchLink>None</MtouchLink>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<!-- App Icon -->
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\beans.png" Color="#362E27" />

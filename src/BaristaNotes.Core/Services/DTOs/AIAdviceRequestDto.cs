@@ -29,4 +29,10 @@ public record AIAdviceRequestDto
     /// Machine and grinder if logged.
     /// </summary>
     public EquipmentContextDto? Equipment { get; init; }
+
+    /// <summary>
+    /// Persona the shot was made for, with their learned Context.
+    /// Lets the model tailor advice to a person's stated preferences.
+    /// </summary>
+    public UserProfileDto? MadeFor { get; init; }
 }

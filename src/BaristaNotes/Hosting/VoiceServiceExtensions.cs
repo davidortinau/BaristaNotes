@@ -11,6 +11,7 @@ internal static class VoiceServiceExtensions
             .AddSingleton<IDataChangeNotifier, DataChangeNotifier>()
             .AddSingleton<INavigationRegistry, NavigationRegistry>()
             .AddScoped<BaristaNotes.Services.AI.NavigationTools>()
+            .AddScoped<BaristaNotes.Services.AI.ProfileContextTools>()
             .AddScoped<VoiceCommandService>()
             .AddScoped<IVoiceCommandService>(sp => sp.GetRequiredService<VoiceCommandService>());
 

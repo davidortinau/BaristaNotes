@@ -329,6 +329,56 @@ public class AIPromptBuilderTests
         Assert.Contains("Test Bean", prompt);
     }
 
+    [Fact]
+    public void BuildPrompt_IncludesMadeForPersona_WhenContextPresent()
+    {
+        var context = CreateBasicContext() with
+        {
+            MadeFor = new UserProfileDto
+            {
+                Id = 7,
+                Name = "Angie",
+                Context = "Prefers single-origin pour overs in the morning. Sensitive to bitter notes."
+            }
+        };
+
+        var prompt = AIPromptBuilder.BuildPrompt(context);
+
+        Assert.Contains("Made For: Angie", prompt);
+        Assert.Contains("single-origin pour overs", prompt);
+        Assert.Contains("Persona context", prompt);
+    }
+
+    [Fact]
+    public void BuildPrompt_NotesMadeForPersona_WhenContextEmpty()
+    {
+        var context = CreateBasicContext() with
+        {
+            MadeFor = new UserProfileDto
+            {
+                Id = 7,
+                Name = "Angie",
+                Context = null
+            }
+        };
+
+        var prompt = AIPromptBuilder.BuildPrompt(context);
+
+        Assert.Contains("Made For: Angie", prompt);
+        Assert.Contains("No persona preferences recorded yet", prompt);
+    }
+
+    [Fact]
+    public void BuildPrompt_OmitsMadeForSection_WhenNull()
+    {
+        var context = CreateBasicContext();
+
+        var prompt = AIPromptBuilder.BuildPrompt(context);
+
+        Assert.DoesNotContain("Made For:", prompt);
+        Assert.DoesNotContain("Persona context", prompt);
+    }
+
     private AIAdviceRequestDto CreateBasicContext(
         decimal doseIn = 18m,
         decimal? actualOutput = null,

@@ -415,7 +415,15 @@ public class ShotService : IShotService
             CurrentShot = currentShot,
             HistoricalShots = historicalShots,
             BeanInfo = beanContext,
-            Equipment = equipmentContext
+            Equipment = equipmentContext,
+            MadeFor = shot.MadeFor == null ? null : new UserProfileDto
+            {
+                Id = shot.MadeFor.Id,
+                Name = shot.MadeFor.Name,
+                AvatarPath = shot.MadeFor.AvatarPath,
+                Context = shot.MadeFor.Context,
+                CreatedAt = shot.MadeFor.CreatedAt
+            }
         };
     }
 
@@ -575,6 +583,7 @@ public class ShotService : IShotService
             Id = shot.MadeBy.Id,
             Name = shot.MadeBy.Name,
             AvatarPath = shot.MadeBy.AvatarPath,
+            Context = shot.MadeBy.Context,
             CreatedAt = shot.MadeBy.CreatedAt
         },
         MadeFor = shot.MadeFor == null ? null : new UserProfileDto
@@ -582,6 +591,7 @@ public class ShotService : IShotService
             Id = shot.MadeFor.Id,
             Name = shot.MadeFor.Name,
             AvatarPath = shot.MadeFor.AvatarPath,
+            Context = shot.MadeFor.Context,
             CreatedAt = shot.MadeFor.CreatedAt
         },
         DoseIn = shot.DoseIn,

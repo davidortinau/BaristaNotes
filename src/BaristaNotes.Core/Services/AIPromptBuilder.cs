@@ -57,6 +57,21 @@ public static class AIPromptBuilder
                 sb.AppendLine($"- Grinder: {context.Equipment.GrinderName}");
         }
 
+        // Persona this shot was made for (if any)
+        if (context.MadeFor != null && !string.IsNullOrWhiteSpace(context.MadeFor.Context))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"## Made For: {context.MadeFor.Name}");
+            sb.AppendLine("Persona context (their stated coffee preferences — weight advice accordingly):");
+            sb.AppendLine(context.MadeFor.Context);
+        }
+        else if (context.MadeFor != null)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"## Made For: {context.MadeFor.Name}");
+            sb.AppendLine("(No persona preferences recorded yet.)");
+        }
+
         // Historical shots (best rated first)
         if (context.HistoricalShots.Count > 0)
         {

@@ -132,6 +132,14 @@ public partial class VoiceCommandService : IVoiceCommandService
         - "What profiles do I have?" - lists all user profiles
         - "Find profile named David" - searches profiles by name
 
+        PERSONA CONTEXT (per-profile learned preferences for coffee recommendations):
+        Each user profile has a free-form Context field describing their coffee preferences.
+        - "What does Angie like?" or "Tell me about David's preferences" → Use FindProfiles to get the ID, then GetProfileContext.
+        - "Remember that David prefers single-origin pour overs" → FindProfiles → AppendProfileContext (one short factual sentence per call).
+        - "Update Angie's preferences based on her shot history" → FindProfiles → SummarizePreferencesFromHistory → read the facts → propose 2-4 sentences → call SetProfileContext (replace) or AppendProfileContext.
+        - Always prefer APPEND over SET when adding a single observation; only SET when consolidating or rewriting from a summary.
+        - Cap is 2000 chars; the tool will refuse overflow.
+
         VISION/CAMERA CAPABILITIES:
         When the user asks you to "look at", "see", "count people in", or asks about coffee needs for a group/room:
         - "Look at this room and tell me how many cups of coffee I need" → Use AnalyzeRoomForCoffee tool

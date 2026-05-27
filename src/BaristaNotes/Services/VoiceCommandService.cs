@@ -148,6 +148,18 @@ public partial class VoiceCommandService : IVoiceCommandService
         - "Do I have enough beans for everyone?" → Use AnalyzeRoomForCoffee tool
         The tool will take a photo and analyze it to count people, then calculate coffee needs (18g per person).
 
+        PHOTO-BASED PERSON RECOGNITION + RECOMMENDATION (multimodal demo flow):
+        When the user asks "what kind of coffee should I make for the person in this photo" or similar:
+        1. identify_person_in_camera (captures + matches face to a saved profile) → returns matched profile ID and name, or "no match".
+           For scripted/test runs, use identify_person_in_photo_file with the path provided by the user.
+        2. If matched: call get_profile_context(profileId) to read their stated preferences.
+        3. Call list_available_beans to see what the user currently has on hand.
+        4. Compose ONE short spoken recommendation that names the person, references their preferences from context, and either:
+           a) picks an available bean that fits (call out the name), OR
+           b) says no available bean matches their preferences and asks if they want help reordering preferred beans.
+        5. If the user says yes to reordering, call open_roaster_url(beanId) for the bean whose RoasterUrl is set that best matches their preferences.
+        6. If no match in step 1: don't guess — say "I don't recognize that person" and ask who they are.
+
         RULES:
         1. Always use available tools to complete actions immediately
         2. NEVER ask follow-up questions - use defaults for missing optional values

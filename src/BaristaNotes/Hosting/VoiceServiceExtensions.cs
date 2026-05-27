@@ -12,6 +12,7 @@ internal static class VoiceServiceExtensions
             .AddSingleton<INavigationRegistry, NavigationRegistry>()
             .AddScoped<BaristaNotes.Services.AI.NavigationTools>()
             .AddScoped<BaristaNotes.Services.AI.ProfileContextTools>()
+            .AddScoped<BaristaNotes.Services.AI.PhotoQueryTools>()
             .AddScoped<VoiceCommandService>()
             .AddScoped<IVoiceCommandService>(sp => sp.GetRequiredService<VoiceCommandService>());
 

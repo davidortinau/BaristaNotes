@@ -196,6 +196,103 @@ public class VisionService : IVisionService
         }
     }
 
+    /// <inheritdoc />
+    public async Task<PersonIdentificationResult> IdentifyPersonFromPhotoAsync(
+        byte[] targetPhoto,
+        IReadOnlyList<PersonIdentificationCandidate> candidates,
+        CancellationToken ct = default)
+    {
+        if (targetPhoto.Length == 0)
+            return PersonIdentificationResult.Error("Target photo was empty.");
+        if (candidates.Count == 0)
+            return PersonIdentificationResult.NoMatch("No candidate avatars supplied.");
+
+        try
+        {
+            var client = GetOrCreateVisionClient();
+            if (client is null)
+                return PersonIdentificationResult.Error("Vision service is not configured.");
+
+            var systemPrompt = """
+                You are a face-matching assistant. You will see one TARGET photo followed by N candidate avatars,
+                each labeled with a numeric ID and a display name. Decide whether the person in the TARGET photo
+                clearly matches one of the candidates.
+
+                Return ONLY JSON in this exact shape, no prose:
+                { "matchedId": <number or null>, "rationale": "<one short sentence>" }
+
+                Rules:
+                - Only return a matchedId if you are confident the same individual appears in both photos.
+                - If unsure, return null. Do NOT guess.
+                - Rationale should be at most ~140 chars.
+                """;
+
+            var userContent = new List<AIContent>
+            {
+                new TextContent("TARGET photo:"),
+                new DataContent(targetPhoto, "image/jpeg"),
+                new TextContent($"Candidates ({candidates.Count}):")
+            };
+            foreach (var c in candidates)
+            {
+                userContent.Add(new TextContent($"ID {c.ProfileId} — {c.Name}:"));
+                userContent.Add(new DataContent(c.AvatarBytes, "image/jpeg"));
+            }
+            userContent.Add(new TextContent("Return ONLY the JSON object now."));
+
+            var messages = new List<ChatMessage>
+            {
+                new(ChatRole.System, systemPrompt),
+                new(ChatRole.User, userContent.ToArray())
+            };
+
+            var options = new ChatOptions { ResponseFormat = ChatResponseFormat.Json };
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(TimeoutSeconds));
+
+            var response = await client.GetResponseAsync(messages, options, cts.Token);
+            var text = response.Text ?? string.Empty;
+
+            _logger.LogInformation("IdentifyPersonFromPhoto raw response: {Resp}", text);
+
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(text);
+                var root = doc.RootElement;
+                string? rationale = root.TryGetProperty("rationale", out var r) ? r.GetString() : null;
+
+                if (!root.TryGetProperty("matchedId", out var idEl) || idEl.ValueKind == System.Text.Json.JsonValueKind.Null)
+                    return PersonIdentificationResult.NoMatch(rationale);
+
+                if (idEl.ValueKind != System.Text.Json.JsonValueKind.Number || !idEl.TryGetInt32(out var matchedId))
+                    return PersonIdentificationResult.NoMatch(rationale);
+
+                var matched = candidates.FirstOrDefault(c => c.ProfileId == matchedId);
+                if (matched is null)
+                {
+                    _logger.LogWarning("Model returned matchedId {Id} not in candidates", matchedId);
+                    return PersonIdentificationResult.NoMatch(rationale);
+                }
+
+                return PersonIdentificationResult.Match(matched.ProfileId, matched.Name, rationale);
+            }
+            catch (System.Text.Json.JsonException jx)
+            {
+                _logger.LogWarning(jx, "IdentifyPersonFromPhoto could not parse model JSON");
+                return PersonIdentificationResult.Error("Model response was not parseable JSON.");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return PersonIdentificationResult.Error("Identification timed out.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error identifying person from photo");
+            return PersonIdentificationResult.Error($"Identification failed: {ex.Message}");
+        }
+    }
+
     /// <summary>
     /// Gets or creates the Azure OpenAI vision client (gpt-4o).
     /// </summary>

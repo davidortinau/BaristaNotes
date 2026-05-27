@@ -43,6 +43,7 @@ internal static class AIToolHarness
             _ = sp.GetRequiredService<VoiceCommandService>();
             _ = sp.GetRequiredService<NavigationTools>();
             _ = sp.GetRequiredService<ProfileContextTools>();
+            _ = sp.GetRequiredService<PhotoQueryTools>();
 
             var tools = VoiceTools.Default.Tools;
             logger.LogInformation("AI-HARNESS: VoiceTools.Default.Tools count = {Count}", tools.Count);
@@ -63,6 +64,7 @@ internal static class AIToolHarness
                 ("navigate_to", new() { ["pageName"] = "history" }),
                 ("get_profile_context", new() { ["profileId"] = 1 }),
                 ("summarize_preferences_from_history", new() { ["profileId"] = 1 }),
+                ("list_available_beans", new()),
             };
 
             var passed = 0;

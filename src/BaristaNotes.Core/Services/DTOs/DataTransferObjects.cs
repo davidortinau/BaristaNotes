@@ -212,6 +212,7 @@ public record BeanDto
     public DateTime? RoastDate { get; init; }
     public string? Origin { get; init; }
     public string? Notes { get; init; }
+    public string? RoasterUrl { get; init; }
     public bool IsActive { get; init; }
     public DateTime CreatedAt { get; init; }
     public RatingAggregateDto? RatingAggregate { get; init; }
@@ -224,6 +225,7 @@ public record CreateBeanDto
     public DateTime? RoastDate { get; init; }
     public string? Origin { get; init; }
     public string? Notes { get; init; }
+    public string? RoasterUrl { get; init; }
 }
 
 public record UpdateBeanDto
@@ -233,6 +235,7 @@ public record UpdateBeanDto
     public DateTime? RoastDate { get; init; }
     public string? Origin { get; init; }
     public string? Notes { get; init; }
+    public string? RoasterUrl { get; init; }
     public bool? IsActive { get; init; }
 }
 

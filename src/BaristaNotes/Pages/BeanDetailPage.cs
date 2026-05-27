@@ -15,6 +15,7 @@ class BeanDetailPageState
     public string Roaster { get; set; } = "";
     public string Origin { get; set; } = "";
     public string Notes { get; set; } = "";
+    public string RoasterUrl { get; set; } = "";
 
     public bool IsSaving { get; set; }
     public bool IsLoading { get; set; }
@@ -109,6 +110,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 s.Roaster = bean.Roaster ?? "";
                 s.Origin = bean.Origin ?? "";
                 s.Notes = bean.Notes ?? "";
+                s.RoasterUrl = bean.RoasterUrl ?? "";
                 s.RatingAggregate = bean.RatingAggregate;
                 s.IsLoading = false;
             });
@@ -398,7 +400,8 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                     Name = State.Name,
                     Roaster = string.IsNullOrWhiteSpace(State.Roaster) ? null : State.Roaster,
                     Origin = string.IsNullOrWhiteSpace(State.Origin) ? null : State.Origin,
-                    Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes
+                    Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes,
+                    RoasterUrl = string.IsNullOrWhiteSpace(State.RoasterUrl) ? string.Empty : State.RoasterUrl.Trim()
                 };
 
                 await _beanService.UpdateBeanAsync(State.BeanId.Value, updateDto);
@@ -412,7 +415,8 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                     Name = State.Name,
                     Roaster = string.IsNullOrWhiteSpace(State.Roaster) ? null : State.Roaster,
                     Origin = string.IsNullOrWhiteSpace(State.Origin) ? null : State.Origin,
-                    Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes
+                    Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes,
+                    RoasterUrl = string.IsNullOrWhiteSpace(State.RoasterUrl) ? null : State.RoasterUrl.Trim()
                 };
 
                 var result = await _beanService.CreateBeanAsync(createDto);
@@ -619,6 +623,8 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 text => SetState(s => s.Roaster = text)),
             EntryTile("ORIGIN", State.Origin, "Country or region",
                 text => SetState(s => s.Origin = text)),
+            EntryTile("ROASTER URL", State.RoasterUrl, "https://… (where to reorder these beans)",
+                text => SetState(s => s.RoasterUrl = text)),
             EditorTile("NOTES", State.Notes, "Tasting notes, processing method…",
                 text => SetState(s => s.Notes = text))
         };

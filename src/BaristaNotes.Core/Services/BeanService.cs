@@ -89,6 +89,7 @@ public class BeanService : IBeanService
                 Roaster = dto.Roaster,
                 Origin = dto.Origin,
                 Notes = dto.Notes,
+                RoasterUrl = dto.RoasterUrl,
                 IsActive = true,
                 CreatedAt = DateTime.Now,
                 SyncId = Guid.NewGuid(),
@@ -133,6 +134,8 @@ public class BeanService : IBeanService
             bean.Origin = dto.Origin;
         if (dto.Notes != null)
             bean.Notes = dto.Notes;
+        if (dto.RoasterUrl != null)
+            bean.RoasterUrl = dto.RoasterUrl.Length == 0 ? null : dto.RoasterUrl;
         if (dto.IsActive.HasValue)
             bean.IsActive = dto.IsActive.Value;
 
@@ -356,6 +359,7 @@ public class BeanService : IBeanService
         RoastDate = null,
         Origin = bean.Origin,
         Notes = bean.Notes,
+        RoasterUrl = bean.RoasterUrl,
         IsActive = bean.IsActive,
         CreatedAt = bean.CreatedAt
     };
@@ -377,6 +381,9 @@ public class BeanService : IBeanService
 
         if (dto.Notes?.Length > 500)
             errors.Add(nameof(dto.Notes), new List<string> { "Notes must be 500 characters or less" });
+
+        if (dto.RoasterUrl?.Length > 500)
+            errors.Add(nameof(dto.RoasterUrl), new List<string> { "Roaster URL must be 500 characters or less" });
 
         if (dto.RoastDate.HasValue && dto.RoastDate.Value > DateTime.Now)
             errors.Add(nameof(dto.RoastDate), new List<string> { "Roast date cannot be in the future" });

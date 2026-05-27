@@ -7,6 +7,7 @@ public class Bean
     public string? Roaster { get; set; }
     public string? Origin { get; set; }
     public string? Notes { get; set; }
+    public string? RoasterUrl { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     

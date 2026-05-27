@@ -49,6 +49,7 @@ public class BaristaNotesContext : DbContext
             entity.Property(e => e.Roaster).HasMaxLength(100);
             entity.Property(e => e.Origin).HasMaxLength(100);
             entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.RoasterUrl).HasMaxLength(500);
             entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.SyncId).IsRequired();

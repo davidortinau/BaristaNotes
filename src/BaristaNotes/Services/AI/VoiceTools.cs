@@ -12,6 +12,7 @@ namespace BaristaNotes.Services.AI;
 [AIToolSource(typeof(VoiceCommandService))]
 [AIToolSource(typeof(NavigationTools))]
 [AIToolSource(typeof(ProfileContextTools))]
+[AIToolSource(typeof(PhotoQueryTools))]
 public partial class VoiceTools : AIToolContext
 {
 }

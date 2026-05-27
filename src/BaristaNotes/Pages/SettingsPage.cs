@@ -127,7 +127,7 @@ partial class SettingsPage : Component<SettingsPageState>
                         async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("equipment")).GridRow(3),
                     ManageTile("BEANS", "Coffee beans and roasters",
                         async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("beans")).GridRow(4),
-                    ManageTile("PROFILES", "Household members",
+                    ManageTile("PROFILES", "Coffee lovers",
                         async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("profiles")).GridRow(5),
                     SectionLabel("ABOUT").GridRow(6),
                     AboutTile().GridRow(7),

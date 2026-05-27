@@ -1,4 +1,4 @@
-namespace BaristaNotes;
+﻿namespace BaristaNotes;
 
 public static class MauiProgram
 {
@@ -7,8 +7,8 @@ public static class MauiProgram
         var builder = MauiApp.CreateBuilder();
 
         builder
-            .ConfigureBaristaApp()        // MauiReactor + theme + resources + UXDivers + CT + Syncfusion + fonts + handlers
-            .AddAppConfiguration()        // Shiny json bundle (+ Development) + Syncfusion license
+            .ConfigureBaristaApp()        // MauiReactor + theme + resources + UXDivers + CT + fonts + handlers
+            .AddAppConfiguration()        // Shiny json bundle (+ Development) 
             .AddDataAccess()              // DbContext + repositories + preferences store
             .AddDomainServices()          // shot/equipment/bean/bag/profile/rating/recipe + popups
             .AddRecipeSourcing()          // 4 roaster adapters + registry + AI generator

@@ -6,7 +6,7 @@ internal static class ConfigurationExtensions
     /// Loads <c>appsettings.json</c> via Shiny's platform bundle support
     /// (Android Assets / iOS-Mac Bundle Resources / Windows embedded) and, in
     /// DEBUG, layers <c>appsettings.Development.json</c> on top for local API
-    /// keys. Also registers the Syncfusion license if a key is present.
+    /// keys. 
     /// </summary>
     public static MauiAppBuilder AddAppConfiguration(this MauiAppBuilder builder)
     {
@@ -15,12 +15,6 @@ internal static class ConfigurationExtensions
 #else
         builder.Configuration.AddJsonPlatformBundle();
 #endif
-
-        var sfKey = builder.Configuration["Syncfusion:Key"];
-        if (!string.IsNullOrEmpty(sfKey))
-        {
-            Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(sfKey);
-        }
 
         return builder;
     }

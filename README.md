@@ -88,7 +88,6 @@ This project serves as a learning resource for:
 - **CommunityToolkit.Maui 13.0.0**: MAUI community extensions and behaviors
 - **UXDivers.Popups.Maui 0.9.0**: Modal dialogs and user feedback
 - **The49.Maui.BottomSheet 8.0.3**: Bottom sheet UI pattern
-- **Syncfusion.Maui.Gauges 31.2.16**: Radial gauge for interactive ratings
 - **Shiny.Extensions.Configuration 3.3.4**: Platform-aware configuration loading for cross-platform apps
 - **Microsoft.Extensions.AI 9.5.0-preview**: AI service abstractions for provider-agnostic integration
 - **Microsoft.Extensions.AI.OpenAI 9.5.0-preview**: OpenAI implementation for AI advice features

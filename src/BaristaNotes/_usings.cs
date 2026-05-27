@@ -20,7 +20,6 @@ global using BaristaNotes.Services;
 global using Fonts;
 global using BaristaNotes.Styles;
 global using Microsoft.Maui.Handlers;
-global using Syncfusion.Maui.Core.Hosting;
 global using Microsoft.Maui.Essentials.AI;
 global using Microsoft.Extensions.AI;
 global using MauiReactor.Shapes;

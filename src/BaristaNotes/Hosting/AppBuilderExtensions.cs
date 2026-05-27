@@ -15,7 +15,6 @@ internal static class AppBuilderExtensions
             })
             .UseUXDiversPopups()
             .UseMauiCommunityToolkit()
-            .ConfigureSyncfusionCore()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("Manrope-Regular.ttf", "Manrope");

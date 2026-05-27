@@ -1,5 +1,4 @@
 ﻿using BaristaNotes.Core.Services;
-using Microsoft.Extensions.Logging;
 
 namespace BaristaNotes.Services;
 

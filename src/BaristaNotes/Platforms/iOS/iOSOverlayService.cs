@@ -5,7 +5,6 @@
 using UIKit;
 using CoreGraphics;
 using Foundation;
-using BaristaNotes.Core.Services;
 
 namespace BaristaNotes.Platforms.iOS;
 

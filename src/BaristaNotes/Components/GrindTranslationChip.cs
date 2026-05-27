@@ -1,7 +1,4 @@
 using BaristaNotes.Core.Services.Grind;
-using BaristaNotes.Styles;
-using MauiReactor;
-using Microsoft.Maui.Graphics;
 using static MauiReactor.Component;
 
 namespace BaristaNotes.Components;

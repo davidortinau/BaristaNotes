@@ -139,8 +139,9 @@
 		<PackageReference Include="Syncfusion.Maui.Gauges" Version="32.1.22" />
 		
 		<!-- AI Advice Service -->
-		<PackageReference Include="Microsoft.Extensions.AI" Version="10.1.1" />
-		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.1.1-preview.1.25612.2" />
+		<PackageReference Include="Microsoft.Extensions.AI" Version="10.4.1" />
+		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.4.1" />
+		<PackageReference Include="Microsoft.Maui.AI.Attributes" Version="0.1.0-preview.10.26274.3" />
 		<PackageReference Include="Azure.AI.OpenAI" Version="2.1.0" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.1" />
 	</ItemGroup>

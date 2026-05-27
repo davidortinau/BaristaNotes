@@ -1,8 +1,4 @@
 ﻿using CommunityToolkit.Maui.Media;
-using BaristaNotes.Core.Models.Enums;
-using BaristaNotes.Core.Services;
-using BaristaNotes.Core.Services.DTOs;
-using Microsoft.Extensions.Logging;
 using System.Globalization;
 
 namespace BaristaNotes.Services;

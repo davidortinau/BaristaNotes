@@ -1,25 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
-using Microsoft.EntityFrameworkCore;
-using System.Reflection;
-using Shiny;
-using CommunityToolkit.Maui;
-using CommunityToolkit.Maui.Media;
-using MauiReactor;
-using UXDivers.Popups.Maui;
-using BaristaNotes.Core.Data;
-using BaristaNotes.Core.Data.Repositories;
-using BaristaNotes.Core.Services;
-using BaristaNotes.Core.Services.Recipes;
-using BaristaNotes.Infrastructure;
-using BaristaNotes.Services;
-using Fonts;
-using BaristaNotes.Styles;
-using Microsoft.Maui.Handlers;
-using Syncfusion.Maui.Core.Hosting;
-using Microsoft.Maui.Essentials.AI;
-
-#if IOS
+﻿#if IOS
 using BaristaNotes.Platforms.iOS;
 #endif
 
@@ -31,9 +10,9 @@ public static class MauiProgram
 	{
 		var startupTimer = System.Diagnostics.Stopwatch.StartNew();
 		void LogTiming(string phase) => Console.WriteLine($"[STARTUP] {phase}: {startupTimer.ElapsedMilliseconds}ms");
-		
+
 		LogTiming("CreateMauiApp entered");
-		
+
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiReactorApp<BaristaApp>(app =>
@@ -216,7 +195,9 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ISpeechRecognitionService, SpeechRecognitionService>();
 		builder.Services.AddSingleton<IDataChangeNotifier, DataChangeNotifier>();
 		builder.Services.AddSingleton<INavigationRegistry, NavigationRegistry>();
-		builder.Services.AddScoped<IVoiceCommandService, VoiceCommandService>();
+		builder.Services.AddScoped<BaristaNotes.Services.AI.NavigationTools>();
+		builder.Services.AddScoped<VoiceCommandService>();
+		builder.Services.AddScoped<IVoiceCommandService>(sp => sp.GetRequiredService<VoiceCommandService>());
 
 		// Voice overlay using WindowOverlay pattern (cross-platform)
 		builder.UseVoiceOverlay();
@@ -232,9 +213,16 @@ public static class MauiProgram
 		var app = builder.Build();
 		LogTiming("Build() completed");
 
+#if DEBUG
+		// AI tool harness: drives the source-generated VoiceTools.Default.Tools
+		// surface end-to-end through the live DI graph. Read with:
+		//   maui devflow logs --limit 300 | grep AI-HARNESS
+		_ = Task.Run(() => BaristaNotes.Services.AI.AIToolHarness.RunAsync(app.Services));
+#endif
+
 		// Theme initialization moved to BaristaApp.OnMounted() to avoid blocking main thread
 		// Database migration moved to async startup to avoid iOS watchdog timeout
-		
+
 		LogTiming("CreateMauiApp returning (deferred: theme init, db migration)");
 		return app;
 	}

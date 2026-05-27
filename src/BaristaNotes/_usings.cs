@@ -2,5 +2,35 @@
 global using Microsoft.Maui.Hosting;
 global using Microsoft.Maui.Graphics;
 global using MauiControls = Microsoft.Maui.Controls;
-
+global using Microsoft.Extensions.Logging;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.EntityFrameworkCore;
+global using CommunityToolkit.Maui;
+global using CommunityToolkit.Maui.Media;
 global using MauiReactor;
+global using UXDivers.Popups.Maui;
+global using BaristaNotes.Core.Data;
+global using BaristaNotes.Core.Data.Repositories;
+global using BaristaNotes.Core.Services;
+global using BaristaNotes.Core.Services.Recipes;
+global using BaristaNotes.Infrastructure;
+global using BaristaNotes.Services;
+global using Fonts;
+global using BaristaNotes.Styles;
+global using Microsoft.Maui.Handlers;
+global using Syncfusion.Maui.Core.Hosting;
+global using Microsoft.Maui.Essentials.AI;
+global using Microsoft.Extensions.AI;
+global using MauiReactor.Shapes;
+global using BaristaNotes.Core.Services.DTOs;
+global using BaristaNotes.Core.Models.Enums;
+global using BaristaNotes.Models;
+global using BaristaNotes.Components;
+global using BaristaNotes.Pages;
+global using UXDivers.Popups.Services;
+global using UXDivers.Popups.Maui.Controls;
+
+global using Path = System.IO.Path;
+global using IPopupService = UXDivers.Popups.Services.IPopupService;
+global using RoundRectangle = MauiReactor.Shapes.RoundRectangle;
+global using SpeechToTextOptions = CommunityToolkit.Maui.Media.SpeechToTextOptions;

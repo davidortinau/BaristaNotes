@@ -80,6 +80,19 @@ public class UserProfileContextTests
         Assert.Equal("keep me", existing.Context);
     }
 
+    [Fact]
+    public async Task UpdateProfile_EmptyStringContext_ClearsExistingContext()
+    {
+        var existing = new UserProfile { Id = 1, Name = "David", Context = "clear me" };
+        var (sut, repo) = CreateSut();
+        repo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+        repo.Setup(r => r.UpdateAsync(It.IsAny<UserProfile>())).ReturnsAsync((UserProfile p) => p);
+
+        await sut.UpdateProfileAsync(1, new UpdateUserProfileDto { Context = string.Empty });
+
+        Assert.Null(existing.Context);
+    }
+
     private static (IUserProfileService sut, Mock<IUserProfileRepository> repo) CreateSut()
     {
         var repo = new Mock<IUserProfileRepository>();

@@ -117,7 +117,8 @@ public class ProfileContextTools
 
             await _userProfileService.UpdateProfileAsync(profileId, new UpdateUserProfileDto
             {
-                Context = trimmed.Length == 0 ? null : trimmed
+                // UpdateProfileAsync treats empty string as explicit clear; null = no change.
+                Context = trimmed.Length == 0 ? string.Empty : trimmed
             });
 
             return trimmed.Length == 0

@@ -60,12 +60,20 @@ public class UserProfileService : IUserProfileService
             profile.AvatarPath = dto.AvatarPath;
         if (dto.Context != null)
         {
-            if (dto.Context.Length > 2000)
-                throw new ValidationException(new Dictionary<string, List<string>>
-                {
-                    [nameof(dto.Context)] = new() { "Context must be 2000 characters or less" }
-                });
-            profile.Context = dto.Context;
+            // Empty string is an explicit clear request (null = "do not update").
+            if (dto.Context.Length == 0)
+            {
+                profile.Context = null;
+            }
+            else
+            {
+                if (dto.Context.Length > 2000)
+                    throw new ValidationException(new Dictionary<string, List<string>>
+                    {
+                        [nameof(dto.Context)] = new() { "Context must be 2000 characters or less" }
+                    });
+                profile.Context = dto.Context;
+            }
         }
 
         profile.LastModifiedAt = DateTime.Now;

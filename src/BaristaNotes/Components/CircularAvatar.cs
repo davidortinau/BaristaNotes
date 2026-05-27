@@ -30,7 +30,7 @@ public class CircularAvatar : Component
                     .AutomationId("ProfileAvatarPlaceholder")
                 // Show the actual image when available
                 : (VisualNode)new MauiReactor.Image()
-                    .Source(_imagePath)
+                    .Source(ImageSource.FromFile(_imagePath))
                     .Aspect(Aspect.AspectFill)
                     .WidthRequest(_size)
                     .HeightRequest(_size)

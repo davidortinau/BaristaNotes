@@ -93,6 +93,7 @@ public class BaristaNotesContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(50);
             entity.Property(e => e.AvatarPath).HasMaxLength(500);
+            entity.Property(e => e.Context).HasMaxLength(2000);
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.SyncId).IsRequired();
             entity.Property(e => e.LastModifiedAt).IsRequired();

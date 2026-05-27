@@ -14,6 +14,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 {
     [Inject] IUserProfileService _profileService;
     [Inject] IFeedbackService _feedbackService;
+    [Inject] IImageProcessingService _imageProcessingService;
 
     protected override void OnMounted()
     {
@@ -210,27 +211,36 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
     VisualNode RenderProfileRow(UserProfileDto profile)
     {
+        string? avatarFullPath = null;
+        if (!string.IsNullOrEmpty(profile.AvatarPath) && _imageProcessingService.ImageExists(profile.AvatarPath))
+        {
+            avatarFullPath = _imageProcessingService.GetImagePath(profile.AvatarPath);
+        }
+
         return Border(
-            Grid(rows: "Auto,Auto", columns: "*,Auto",
+            Grid(rows: "Auto,Auto", columns: "Auto,*,Auto",
+                new CircularAvatar(avatarFullPath, 48)
+                    .GridRow(0).GridRowSpan(2).GridColumn(0),
                 Label("MEMBER")
                     .FontSize(10)
                     .CharacterSpacing(2)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .TextColor(TextSecondary())
-                    .GridRow(0).GridColumn(0),
+                    .GridRow(0).GridColumn(1),
                 Label(profile.Name)
                     .FontSize(20)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .TextColor(TextPrimary())
                     .LineBreakMode(LineBreakMode.TailTruncation)
-                    .GridRow(1).GridColumn(0),
+                    .GridRow(1).GridColumn(1),
                 Label("→")
                     .FontSize(22)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .TextColor(TextPrimary())
                     .VCenter()
-                    .GridRow(0).GridRowSpan(2).GridColumn(1)
+                    .GridRow(0).GridRowSpan(2).GridColumn(2)
             )
+            .ColumnSpacing(12)
             .Padding(16, 14, 16, 14)
         )
         .BackgroundColor(SurfaceColor())

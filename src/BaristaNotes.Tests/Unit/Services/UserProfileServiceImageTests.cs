@@ -31,7 +31,7 @@ public class UserProfileServiceImageTests
         
         // Assert
         Assert.True(result.Success);
-        Assert.Equal("profile_avatar_1.jpg", result.NewAvatarPath);
+        Assert.Matches(@"^profile_avatar_1_[0-9a-f]{8}\.jpg$", result.NewAvatarPath!);
     }
     
     [Fact]

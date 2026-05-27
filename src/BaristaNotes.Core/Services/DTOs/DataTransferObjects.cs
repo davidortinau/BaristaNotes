@@ -241,6 +241,7 @@ public record UserProfileDto
     public int Id { get; init; }
     public string Name { get; init; } = string.Empty;
     public string? AvatarPath { get; init; }
+    public string? Context { get; init; }
     public DateTime CreatedAt { get; init; }
 }
 
@@ -248,12 +249,14 @@ public record CreateUserProfileDto
 {
     public string Name { get; init; } = string.Empty;
     public string? AvatarPath { get; init; }
+    public string? Context { get; init; }
 }
 
 public record UpdateUserProfileDto
 {
     public string? Name { get; init; }
     public string? AvatarPath { get; init; }
+    public string? Context { get; init; }
 }
 
 public record PagedResult<T>

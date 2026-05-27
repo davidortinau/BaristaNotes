@@ -7,6 +7,7 @@ class ProfileFormPageState
 {
     public int? ProfileId { get; set; }
     public string Name { get; set; } = "";
+    public string Context { get; set; } = "";
     public bool IsSaving { get; set; }
     public bool IsLoading { get; set; }
     public string? ErrorMessage { get; set; }
@@ -51,6 +52,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
             {
                 s.ProfileId = profile.Id;
                 s.Name = profile.Name;
+                s.Context = profile.Context ?? "";
                 s.IsLoading = false;
             });
         }
@@ -84,7 +86,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
             {
                 await _profileService.UpdateProfileAsync(
                     State.ProfileId.Value,
-                    new UpdateUserProfileDto { Name = State.Name });
+                    new UpdateUserProfileDto { Name = State.Name, Context = State.Context });
 
                 _dataChangeNotifier.NotifyDataChanged(DataChangeType.ProfileUpdated, State.ProfileId.Value);
                 await _feedbackService.ShowSuccessAsync($"Profile '{State.Name}' updated");
@@ -92,7 +94,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
             else
             {
                 var created = await _profileService.CreateProfileAsync(
-                    new CreateUserProfileDto { Name = State.Name });
+                    new CreateUserProfileDto { Name = State.Name, Context = string.IsNullOrWhiteSpace(State.Context) ? null : State.Context });
 
                 _dataChangeNotifier.NotifyDataChanged(DataChangeType.ProfileCreated, created);
                 await _feedbackService.ShowSuccessAsync($"Profile '{State.Name}' created");
@@ -239,25 +241,26 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
 
         return ScrollView(
             Grid(
-                rows: "Auto,Auto,Auto,*",
+                rows: "Auto,Auto,Auto,Auto,*",
                 columns: "*",
                 NameFieldTile().GridRow(0),
                 PhotoTile(isEditMode).GridRow(1),
+                ContextFieldTile().GridRow(2),
                 State.ErrorMessage != null
-                    ? ErrorTile(State.ErrorMessage).GridRow(2)
+                    ? ErrorTile(State.ErrorMessage).GridRow(3)
                     : Border()
                         .BackgroundColor(SurfaceColor())
                         .StrokeThickness(0)
                         .StrokeShape(new Rectangle())
                         .MinimumHeightRequest(0)
-                        .GridRow(2),
+                        .GridRow(3),
                 Border()
                     .BackgroundColor(SurfaceColor())
                     .StrokeThickness(0)
                     .StrokeShape(new Rectangle())
                     .MinimumHeightRequest(24)
                     .VerticalOptions(LayoutOptions.Fill)
-                    .GridRow(3)
+                    .GridRow(4)
             )
             .RowSpacing(1)
             .BackgroundColor(DividerColor())
@@ -312,6 +315,44 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
                     : Label("Save the profile first to add a photo")
                         .FontSize(14)
                         .TextColor(TextSecondary())
+            )
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(SurfaceColor())
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle());
+    }
+
+    VisualNode ContextFieldTile()
+    {
+        var charCount = (State.Context ?? string.Empty).Length;
+        var counterColor = charCount > 2000 ? ErrorColor() : TextSecondary();
+
+        return Border(
+            VStack(spacing: 8,
+                Label("ABOUT THIS PERSON")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary()),
+                Label("Preferences, history, notes the assistant can read and learn from.")
+                    .FontSize(12)
+                    .TextColor(TextSecondary()),
+                Editor()
+                    .Text(State.Context)
+                    .Placeholder("e.g. Likes single-origin pour overs in the morning. Sensitive to bitter notes.")
+                    .PlaceholderColor(TextSecondary().WithAlpha(0.5f))
+                    .TextColor(TextPrimary())
+                    .FontSize(15)
+                    .BackgroundColor(Colors.Transparent)
+                    .HeightRequest(140)
+                    .AutoSize(EditorAutoSizeOption.Disabled)
+                    .OnTextChanged(text => SetState(s => s.Context = text ?? ""))
+                    .AutomationId("ProfileContextEditor"),
+                Label($"{charCount}/2000")
+                    .FontSize(11)
+                    .TextColor(counterColor)
+                    .HEnd()
             )
             .Padding(16, 14, 16, 14)
         )

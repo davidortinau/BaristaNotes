@@ -38,6 +38,7 @@ public class UserProfileService : IUserProfileService
         {
             Name = dto.Name,
             AvatarPath = dto.AvatarPath,
+            Context = dto.Context,
             CreatedAt = DateTime.Now,
             SyncId = Guid.NewGuid(),
             LastModifiedAt = DateTime.Now
@@ -57,6 +58,15 @@ public class UserProfileService : IUserProfileService
             profile.Name = dto.Name;
         if (dto.AvatarPath != null)
             profile.AvatarPath = dto.AvatarPath;
+        if (dto.Context != null)
+        {
+            if (dto.Context.Length > 2000)
+                throw new ValidationException(new Dictionary<string, List<string>>
+                {
+                    [nameof(dto.Context)] = new() { "Context must be 2000 characters or less" }
+                });
+            profile.Context = dto.Context;
+        }
 
         profile.LastModifiedAt = DateTime.Now;
 
@@ -108,8 +118,9 @@ public class UserProfileService : IUserProfileService
                 return ProfileImageUpdateResult.FailureResult("Profile not found");
             }
 
-            // Generate filename
-            var filename = $"profile_avatar_{profileId}.jpg";
+            // Generate unique filename so MAUI's image cache picks up the new bytes
+            var shortId = Guid.NewGuid().ToString("N").Substring(0, 8);
+            var filename = $"profile_avatar_{profileId}_{shortId}.jpg";
 
             // Delete old image if exists
             if (!string.IsNullOrEmpty(profile.AvatarPath))
@@ -170,6 +181,7 @@ public class UserProfileService : IUserProfileService
         Id = profile.Id,
         Name = profile.Name,
         AvatarPath = profile.AvatarPath,
+        Context = profile.Context,
         CreatedAt = profile.CreatedAt
     };
 
@@ -184,6 +196,9 @@ public class UserProfileService : IUserProfileService
 
         if (dto.AvatarPath?.Length > 500)
             errors.Add(nameof(dto.AvatarPath), new List<string> { "Avatar path must be 500 characters or less" });
+
+        if (dto.Context?.Length > 2000)
+            errors.Add(nameof(dto.Context), new List<string> { "Context must be 2000 characters or less" });
 
         if (errors.Any())
             throw new ValidationException(errors);

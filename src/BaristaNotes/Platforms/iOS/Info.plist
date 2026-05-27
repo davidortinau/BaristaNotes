@@ -38,5 +38,7 @@
 	<string>BaristaNotes uses speech recognition to let you log shots hands-free while brewing.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>BaristaNotes needs microphone access to hear your voice commands.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Bluetooth is not used by BaristaNotes. This entry is required because the debug-only MAUI DevFlow diagnostic agent probes the Bluetooth subsystem at startup.</string>
 </dict>
 </plist>

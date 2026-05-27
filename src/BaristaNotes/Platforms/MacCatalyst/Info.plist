@@ -36,5 +36,11 @@
 	</array>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>BaristaNotes uses the microphone to capture voice commands for logging shots, navigating the app, and dictating tasting notes.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>BaristaNotes uses speech recognition to convert your spoken commands into actions like logging a shot or navigating to a bean.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Bluetooth is not used by BaristaNotes. This entry is required because the debug-only MAUI DevFlow diagnostic agent probes the Bluetooth subsystem at startup.</string>
 </dict>
 </plist>

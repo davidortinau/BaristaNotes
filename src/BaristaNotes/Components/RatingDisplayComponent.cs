@@ -1,7 +1,4 @@
 ﻿using MauiReactor;
-using BaristaNotes.Core.Services.DTOs;
-using BaristaNotes.Styles;
-using Fonts;
 
 namespace BaristaNotes.Components;
 

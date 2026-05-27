@@ -1,6 +1,4 @@
 ﻿using MauiReactor;
-using BaristaNotes.Pages;
-using BaristaNotes.Styles;
 
 namespace BaristaNotes;
 

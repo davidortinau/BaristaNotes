@@ -1,10 +1,3 @@
-using BaristaNotes.Core.Services;
-using BaristaNotes.Core.Services.DTOs;
-using BaristaNotes.Services;
-using BaristaNotes.Styles;
-using Fonts;
-using MauiReactor;
-using MauiReactor.Shapes;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using Application = Microsoft.Maui.Controls.Application;
 

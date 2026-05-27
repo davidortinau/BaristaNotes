@@ -1,15 +1,5 @@
-using MauiReactor;
-using MauiReactor.Shapes;
-using BaristaNotes.Core.Services;
-using BaristaNotes.Core.Services.DTOs;
-using BaristaNotes.Core.Models.Enums;
-using BaristaNotes.Components;
-using BaristaNotes.Styles;
-using BaristaNotes.Models;
 using BaristaNotes.Integrations.Popups;
-using Fonts;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
-using UXDivers.Popups.Services;
 using Application = Microsoft.Maui.Controls.Application;
 
 namespace BaristaNotes.Pages;

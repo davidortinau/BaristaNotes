@@ -1,5 +1,4 @@
 ﻿using MauiReactor;
-using MauiReactor.Shapes;
 
 namespace BaristaNotes.Styles;
 

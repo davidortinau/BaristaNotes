@@ -1,5 +1,4 @@
 ﻿using BaristaNotes.Core.Services;
-using Microsoft.Maui.Handlers;
 #if IOS
 using UIKit;
 using Foundation;

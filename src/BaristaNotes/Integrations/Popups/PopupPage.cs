@@ -1,6 +1,5 @@
 ﻿using MauiReactor;
 using MauiReactor.Internals;
-using UXDivers.Popups.Maui;
 
 namespace BaristaNotes.Integrations.Popups;
 

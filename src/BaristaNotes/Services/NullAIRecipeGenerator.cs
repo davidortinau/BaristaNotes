@@ -1,5 +1,4 @@
 ﻿using BaristaNotes.Core.Models;
-using BaristaNotes.Core.Services.Recipes;
 
 namespace BaristaNotes.Services;
 

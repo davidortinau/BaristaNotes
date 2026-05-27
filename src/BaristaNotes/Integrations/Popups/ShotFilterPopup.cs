@@ -1,11 +1,5 @@
 ﻿using BaristaNotes.Core.Services.DTOs;
-using BaristaNotes.Models;
-using BaristaNotes.Styles;
-using Fonts;
-using UXDivers.Popups.Maui.Controls;
-using UXDivers.Popups.Services;
 using Controls = Microsoft.Maui.Controls;
-using Microsoft.Maui;
 
 namespace BaristaNotes.Integrations.Popups;
 

@@ -1,12 +1,7 @@
 ﻿using System.Reactive.Subjects;
-using BaristaNotes.Models;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
-using Microsoft.Extensions.Logging;
-using UXDivers.Popups.Services;
-using UXDivers.Popups.Maui.Controls;
 using UXDivers.Popups;
-using Fonts;
 
 namespace BaristaNotes.Services;
 

@@ -1,7 +1,4 @@
 ﻿using BaristaNotes.Core.Data;
-using BaristaNotes.Services;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace BaristaNotes;
 

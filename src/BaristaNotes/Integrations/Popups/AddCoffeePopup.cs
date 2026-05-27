@@ -1,12 +1,6 @@
 ﻿using BaristaNotes.Core.Services;
-using BaristaNotes.Core.Services.DTOs;
-using BaristaNotes.Services;
-using BaristaNotes.Styles;
-using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Media;
-using UXDivers.Popups.Maui.Controls;
-using UXDivers.Popups.Services;
 using Controls = Microsoft.Maui.Controls;
 
 namespace BaristaNotes.Integrations.Popups;
@@ -271,7 +265,7 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
         {
             BackgroundColor = AppColors.Dark.SurfaceVariant,
             StrokeThickness = 0,
-            StrokeShape = new RoundRectangle { CornerRadius = 16 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 16 },
             WidthRequest = 140,
             HeightRequest = 80,
             Padding = new Thickness(12, 10),
@@ -538,7 +532,7 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
         {
             BackgroundColor = isToday ? AppColors.Dark.Primary : AppColors.Dark.SurfaceVariant,
             StrokeThickness = 0,
-            StrokeShape = new RoundRectangle { CornerRadius = ChipCornerRadius },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = ChipCornerRadius },
             HeightRequest = 32,
             Padding = new Thickness(16, 0),
             HorizontalOptions = LayoutOptions.Start,
@@ -619,7 +613,7 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
         {
             BackgroundColor = AppColors.Dark.SurfaceVariant,
             StrokeThickness = 0,
-            StrokeShape = new RoundRectangle { CornerRadius = cornerRadius },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = cornerRadius },
             HeightRequest = fieldHeight
         };
 
@@ -700,7 +694,7 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
         {
             BackgroundColor = AppColors.Dark.SurfaceVariant,
             StrokeThickness = 0,
-            StrokeShape = new RoundRectangle { CornerRadius = ChipCornerRadius },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = ChipCornerRadius },
             Padding = new Thickness(12, 4),
             HeightRequest = 28,
             Content = label

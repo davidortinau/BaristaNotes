@@ -3,14 +3,10 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Azure.AI.OpenAI;
-using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Logging;
+using Microsoft.Maui.AI.Attributes;
 using Microsoft.Recognizers.Text;
 using Microsoft.Recognizers.Text.Number;
-using BaristaNotes.Core.Models.Enums;
-using BaristaNotes.Core.Services;
-using BaristaNotes.Core.Services.DTOs;
-using BaristaNotes.Pages;
+using BaristaNotes.Services.AI;
 using IConfiguration = Microsoft.Extensions.Configuration.IConfiguration;
 
 namespace BaristaNotes.Services;
@@ -25,7 +21,7 @@ internal static class VoiceCommandCulture
 /// Service for processing voice commands using AI tool calling.
 /// Supports on-device AI (Apple Intelligence) with Azure OpenAI fallback.
 /// </summary>
-public class VoiceCommandService : IVoiceCommandService
+public partial class VoiceCommandService : IVoiceCommandService
 {
     private readonly IShotService _shotService;
     private readonly IBeanService _beanService;
@@ -157,6 +153,7 @@ public class VoiceCommandService : IVoiceCommandService
         """;
 
     private readonly INavigationRegistry _navigationRegistry;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IOverlayService? _overlayService;
     private readonly IVisionService? _visionService;
 
@@ -170,6 +167,7 @@ public class VoiceCommandService : IVoiceCommandService
         INavigationRegistry navigationRegistry,
         IConfiguration configuration,
         ILogger<VoiceCommandService> logger,
+        IServiceProvider serviceProvider,
         IChatClient? chatClient = null,
         IOverlayService? overlayService = null,
         IVisionService? visionService = null)
@@ -181,6 +179,7 @@ public class VoiceCommandService : IVoiceCommandService
         _userProfileService = userProfileService;
         _dataChangeNotifier = dataChangeNotifier;
         _navigationRegistry = navigationRegistry;
+        _serviceProvider = serviceProvider;
         _configuration = configuration;
         _logger = logger;
         _localClient = chatClient;
@@ -369,7 +368,7 @@ public class VoiceCommandService : IVoiceCommandService
             _logger.LogDebug("Using Azure OpenAI for voice commands");
             return new ChatClientBuilder(azureClient)
                 .UseFunctionInvocation()
-                .Build();
+                .Build(_serviceProvider);
         }
 
         _logger.LogWarning("No AI client available for voice commands. Configure AzureOpenAI:Endpoint and AzureOpenAI:ApiKey in settings.");
@@ -653,44 +652,21 @@ public class VoiceCommandService : IVoiceCommandService
         return result;
     }
 
-    private ChatOptions CreateChatOptions()
+    private static ChatOptions CreateChatOptions()
     {
+        // Tools are source-generated via [ExportAIFunction] on VoiceCommandService
+        // and NavigationTools, aggregated through VoiceTools : AIToolContext.
         return new ChatOptions
         {
-            Tools =
-            [
-                AIFunctionFactory.Create(LogShotToolAsync),
-                AIFunctionFactory.Create(AddBeanToolAsync),
-                AIFunctionFactory.Create(AddBagToolAsync),
-                AIFunctionFactory.Create(RateLastShotToolAsync),
-                AIFunctionFactory.Create(AddTastingNotesToolAsync),
-                AIFunctionFactory.Create(AddEquipmentToolAsync),
-                AIFunctionFactory.Create(AddProfileToolAsync),
-                AIFunctionFactory.Create(GetShotCountToolAsync),
-                AIFunctionFactory.Create(GetAvailablePagesToolAsync),
-                AIFunctionFactory.Create(NavigateToToolAsync),
-                AIFunctionFactory.Create(NavigateToShotDetailToolAsync),
-                AIFunctionFactory.Create(NavigateToProfileDetailToolAsync),
-                AIFunctionFactory.Create(FilterShotsToolAsync),
-                AIFunctionFactory.Create(GetLastShotToolAsync),
-                AIFunctionFactory.Create(FindShotsToolAsync),
-                AIFunctionFactory.Create(GetBeanCountToolAsync),
-                AIFunctionFactory.Create(FindBeansToolAsync),
-                AIFunctionFactory.Create(GetBagCountToolAsync),
-                AIFunctionFactory.Create(FindBagsToolAsync),
-                AIFunctionFactory.Create(GetEquipmentCountToolAsync),
-                AIFunctionFactory.Create(FindEquipmentToolAsync),
-                AIFunctionFactory.Create(GetProfileCountToolAsync),
-                AIFunctionFactory.Create(FindProfilesToolAsync),
-                AIFunctionFactory.Create(AnalyzeRoomForCoffeeToolAsync),
-            ]
+            Tools = [.. VoiceTools.Default.Tools]
         };
     }
 
     #region Tool Functions
 
+    [ExportAIFunction("log_shot")]
     [Description("Logs a new espresso shot with the specified parameters")]
-    private async Task<string> LogShotToolAsync(
+    internal async Task<string> LogShotToolAsync(
         [Description("Coffee dose in grams (input weight)")] double doseGrams,
         [Description("Coffee output/yield in grams")] double outputGrams,
         [Description("Extraction time in seconds")] int timeSeconds,
@@ -771,8 +747,9 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
+    [ExportAIFunction("add_bean")]
     [Description("Creates a new coffee bean entry")]
-    private async Task<string> AddBeanToolAsync(
+    internal async Task<string> AddBeanToolAsync(
         [Description("Name of the coffee bean")] string name,
         [Description("Roaster company name")] string? roaster = null,
         [Description("Origin country or region")] string? origin = null)
@@ -819,8 +796,9 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
+    [ExportAIFunction("add_bag")]
     [Description("Creates a new bag of an existing coffee bean")]
-    private async Task<string> AddBagToolAsync(
+    internal async Task<string> AddBagToolAsync(
         [Description("Name of the bean for this bag")] string beanName,
         [Description("Roast date (YYYY-MM-DD, 'today', 'yesterday', or days ago like '3 days ago')")] string? roastDate = null)
     {
@@ -914,8 +892,9 @@ public class VoiceCommandService : IVoiceCommandService
         return DateTime.Today;
     }
 
+    [ExportAIFunction("rate_last_shot")]
     [Description("Rates the most recently logged shot")]
-    private async Task<string> RateLastShotToolAsync(
+    internal async Task<string> RateLastShotToolAsync(
         [Description("Rating from 0-4 (0=terrible, 4=excellent)")] int rating)
     {
         _logger.LogInformation("RateLastShot tool called: {Rating}", rating);
@@ -955,8 +934,9 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
+    [ExportAIFunction("add_equipment")]
     [Description("Creates new coffee equipment (machine, grinder, tamper, etc.)")]
-    private async Task<string> AddEquipmentToolAsync(
+    internal async Task<string> AddEquipmentToolAsync(
         [Description("Equipment name")] string name,
         [Description("Type of equipment: 'machine', 'grinder', 'tamper', 'puckscreen', or 'other'")] string type)
     {
@@ -1008,8 +988,9 @@ public class VoiceCommandService : IVoiceCommandService
         };
     }
 
+    [ExportAIFunction("add_profile")]
     [Description("Creates a new user profile")]
-    private async Task<string> AddProfileToolAsync(
+    internal async Task<string> AddProfileToolAsync(
         [Description("Person's name")] string name)
     {
         _logger.LogInformation("AddProfile tool called: {Name}", name);
@@ -1039,8 +1020,9 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
+    [ExportAIFunction("get_shot_count")]
     [Description("Gets shot count for a time period")]
-    private async Task<string> GetShotCountToolAsync(
+    internal async Task<string> GetShotCountToolAsync(
         [Description("Period: 'today', 'this week', 'this month', or 'all time' (default 'all time')")] string period = "all time",
         [Description("Filter by bean name")] string? beanName = null,
         [Description("Filter by who made the shot")] string? madeBy = null,
@@ -1138,8 +1120,9 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
+    [ExportAIFunction("add_tasting_notes")]
     [Description("Adds tasting notes to the most recently logged shot")]
-    private async Task<string> AddTastingNotesToolAsync(
+    internal async Task<string> AddTastingNotesToolAsync(
         [Description("Tasting notes describing flavor, body, acidity, etc.")] string notes)
     {
         _logger.LogInformation("AddTastingNotes tool called: {Notes}", notes);
@@ -1182,146 +1165,9 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
-    [Description("Gets available pages in the app that can be navigated to. Call this to discover navigation options before navigating.")]
-    private Task<string> GetAvailablePagesToolAsync()
-    {
-        _logger.LogInformation("GetAvailablePages tool called");
-
-        try
-        {
-            var destinations = _navigationRegistry.GetDestinations();
-            if (!destinations.Any())
-            {
-                return Task.FromResult("No pages discovered. The app may still be initializing.");
-            }
-
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine("Available pages:");
-            foreach (var dest in destinations)
-            {
-                sb.AppendLine($"- {dest.DisplayName} (route: {dest.Route}): {dest.Description}");
-            }
-
-            return Task.FromResult(sb.ToString());
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting available pages");
-            return Task.FromResult("Error discovering available pages.");
-        }
-    }
-
-    [Description("Navigates to a specific page in the app. Use GetAvailablePages first if unsure what pages exist.")]
-    private Task<string> NavigateToToolAsync(
-        [Description("Page name or alias to navigate to (e.g., 'activity', 'new shot', 'settings')")] string pageName)
-    {
-        _logger.LogInformation("NavigateTo tool called: {Page}", pageName);
-
-        try
-        {
-            // Use the navigation registry to find the destination
-            var destination = _navigationRegistry.FindDestination(pageName);
-            if (destination == null)
-            {
-                // List available options
-                var destinations = _navigationRegistry.GetDestinations();
-                var availablePages = string.Join(", ", destinations.Select(d => d.DisplayName));
-                return Task.FromResult($"Unknown page '{pageName}'. Available pages: {availablePages}. Use GetAvailablePages for more details.");
-            }
-
-            var route = destination.Route;
-
-            // Navigate on main thread
-            MainThread.BeginInvokeOnMainThread(async () =>
-            {
-                try
-                {
-                    await Microsoft.Maui.Controls.Shell.Current.GoToAsync(route);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error navigating to {Route}", route);
-                }
-            });
-
-            _logger.LogInformation("Navigating via voice to: {Route} ({DisplayName})", route, destination.DisplayName);
-            return Task.FromResult($"I've taken you to {destination.DisplayName}.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error navigating via voice");
-            return Task.FromResult("Sorry, I couldn't navigate there. Please try again.");
-        }
-    }
-
-    [Description("Navigate to a specific shot's detail page by shot ID. Use this after finding a shot with FindShots or GetLastShot when the user says 'show me' a specific shot.")]
-    private Task<string> NavigateToShotDetailToolAsync(
-        [Description("The shot ID (integer) to navigate to")] int shotId)
-    {
-        _logger.LogInformation("NavigateToShotDetail tool called: {ShotId}", shotId);
-
-        try
-        {
-            // Navigate on main thread using the ShotLoggingPage with ShotId prop
-            MainThread.BeginInvokeOnMainThread(async () =>
-            {
-                try
-                {
-                    await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingGridPageProps>(
-                        "shot-logging",
-                        props => props.ShotId = shotId);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error navigating to shot detail {ShotId}", shotId);
-                }
-            });
-
-            _logger.LogInformation("Navigating via voice to shot detail: {ShotId}", shotId);
-            return Task.FromResult($"I've opened the shot details.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error navigating to shot detail via voice");
-            return Task.FromResult("Sorry, I couldn't open that shot. Please try again.");
-        }
-    }
-
-    [Description("Navigate to a specific profile's detail/edit page by profile ID. Use this after finding a profile with FindProfiles when the user says 'show me' a specific profile.")]
-    private Task<string> NavigateToProfileDetailToolAsync(
-        [Description("The profile ID (integer) to navigate to")] int profileId)
-    {
-        _logger.LogInformation("NavigateToProfileDetail tool called: {ProfileId}", profileId);
-
-        try
-        {
-            // Navigate on main thread using the ProfileFormPage with ProfileId prop
-            MainThread.BeginInvokeOnMainThread(async () =>
-            {
-                try
-                {
-                    await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ProfileFormPageProps>(
-                        "profile-form",
-                        props => props.ProfileId = profileId);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error navigating to profile detail {ProfileId}", profileId);
-                }
-            });
-
-            _logger.LogInformation("Navigating via voice to profile detail: {ProfileId}", profileId);
-            return Task.FromResult($"I've opened the profile details.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error navigating to profile detail via voice");
-            return Task.FromResult("Sorry, I couldn't open that profile. Please try again.");
-        }
-    }
-
+    [ExportAIFunction("filter_shots")]
     [Description("Filters shots by criteria and navigates to activity feed")]
-    private async Task<string> FilterShotsToolAsync(
+    internal async Task<string> FilterShotsToolAsync(
         [Description("Filter by bean name")] string? beanName = null,
         [Description("Filter by period: 'today', 'this week', 'this month'")] string? period = null,
         [Description("Filter by minimum rating (0-4)")] int? minRating = null)
@@ -1391,8 +1237,9 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
+    [ExportAIFunction("get_last_shot")]
     [Description("Gets details about the most recent/last shot including all settings and values")]
-    private async Task<string> GetLastShotToolAsync()
+    internal async Task<string> GetLastShotToolAsync()
     {
         _logger.LogInformation("GetLastShot tool called");
 
@@ -1461,8 +1308,9 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
+    [ExportAIFunction("find_shots")]
     [Description("Finds and summarizes shots matching specified criteria (bean, rating, person, time period)")]
-    private async Task<string> FindShotsToolAsync(
+    internal async Task<string> FindShotsToolAsync(
         [Description("Filter by bean name")] string? beanName = null,
         [Description("Filter by who made the shot")] string? madeBy = null,
         [Description("Filter by who the shot was made for")] string? madeFor = null,
@@ -1582,8 +1430,9 @@ public class VoiceCommandService : IVoiceCommandService
         return parts.Count > 0 ? string.Join(", ", parts) : "all";
     }
 
+    [ExportAIFunction("get_bean_count")]
     [Description("Gets the count of unique beans the user has tried")]
-    private async Task<string> GetBeanCountToolAsync(
+    internal async Task<string> GetBeanCountToolAsync(
         [Description("Optional roaster name to filter by")] string? roaster = null,
         [Description("Optional origin to filter by (e.g., 'Ethiopia', 'Colombia')")] string? origin = null)
     {
@@ -1619,8 +1468,9 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
+    [ExportAIFunction("find_beans")]
     [Description("Finds and lists beans matching the search criteria")]
-    private async Task<string> FindBeansToolAsync(
+    internal async Task<string> FindBeansToolAsync(
         [Description("Optional roaster name to filter by (e.g., 'Storyville', 'Blue Bottle')")] string? roaster = null,
         [Description("Optional origin to filter by (e.g., 'Ethiopia', 'Colombia', 'Kenya')")] string? origin = null,
         [Description("Optional bean name to search for")] string? name = null,
@@ -1662,7 +1512,7 @@ public class VoiceCommandService : IVoiceCommandService
             var results = beans.Take(limit).ToList();
             var beanDescriptions = results.Select(b =>
             {
-                var parts = new List<string> { b.Name };
+                var parts = new List<string> { $"[id:{b.Id}] {b.Name}" };
                 if (!string.IsNullOrEmpty(b.Roaster)) parts.Add($"by {b.Roaster}");
                 if (!string.IsNullOrEmpty(b.Origin)) parts.Add($"from {b.Origin}");
                 if (b.RatingAggregate != null && b.RatingAggregate.AverageRating > 0)
@@ -1684,8 +1534,9 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
+    [ExportAIFunction("get_bag_count")]
     [Description("Gets the count of bags (physical bags of coffee) the user has")]
-    private async Task<string> GetBagCountToolAsync(
+    internal async Task<string> GetBagCountToolAsync(
         [Description("Whether to include completed/finished bags (default true)")] bool includeCompleted = true)
     {
         _logger.LogInformation("GetBagCount tool called: IncludeCompleted={IncludeCompleted}", includeCompleted);
@@ -1725,8 +1576,9 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
+    [ExportAIFunction("find_bags")]
     [Description("Finds and lists bags (physical bags of coffee) matching the search criteria")]
-    private async Task<string> FindBagsToolAsync(
+    internal async Task<string> FindBagsToolAsync(
         [Description("Optional bean name to filter by")] string? beanName = null,
         [Description("Optional roaster name to filter by")] string? roaster = null,
         [Description("Whether to include only active (not completed) bags (default true)")] bool activeOnly = true,
@@ -1778,7 +1630,7 @@ public class VoiceCommandService : IVoiceCommandService
             var results = matchingBags.Take(limit).ToList();
             var bagDescriptions = results.Select(x =>
             {
-                var parts = new List<string> { x.Bean.Name };
+                var parts = new List<string> { $"[bag id:{x.Bag.Id}] {x.Bean.Name}" };
                 parts.Add($"roasted {x.Bag.RoastDate:MMM d}");
                 if (x.Bag.ShotCount > 0)
                     parts.Add($"{x.Bag.ShotCount} shots");
@@ -1819,8 +1671,9 @@ public class VoiceCommandService : IVoiceCommandService
         return parts.Count > 0 ? string.Join(" ", parts) : "";
     }
 
+    [ExportAIFunction("get_equipment_count")]
     [Description("Gets the count of equipment items the user has")]
-    private async Task<string> GetEquipmentCountToolAsync(
+    internal async Task<string> GetEquipmentCountToolAsync(
         [Description("Optional equipment type filter: 'machine', 'grinder', 'tamper', 'puck screen', or 'other'")] string? type = null)
     {
         _logger.LogInformation("GetEquipmentCount tool called: Type={Type}", type);
@@ -1849,8 +1702,9 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
+    [ExportAIFunction("find_equipment")]
     [Description("Finds and lists equipment matching the search criteria")]
-    private async Task<string> FindEquipmentToolAsync(
+    internal async Task<string> FindEquipmentToolAsync(
         [Description("Optional equipment type filter: 'machine', 'grinder', 'tamper', 'puck screen', or 'other'")] string? type = null,
         [Description("Optional name to search for")] string? name = null,
         [Description("Maximum number of results to return (default 5)")] int limit = 5)
@@ -1911,8 +1765,9 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
+    [ExportAIFunction("get_profile_count")]
     [Description("Gets the count of user profiles")]
-    private async Task<string> GetProfileCountToolAsync()
+    internal async Task<string> GetProfileCountToolAsync()
     {
         _logger.LogInformation("GetProfileCount tool called");
 
@@ -1931,8 +1786,9 @@ public class VoiceCommandService : IVoiceCommandService
         }
     }
 
+    [ExportAIFunction("find_profiles")]
     [Description("Finds and lists user profiles")]
-    private async Task<string> FindProfilesToolAsync(
+    internal async Task<string> FindProfilesToolAsync(
         [Description("Optional name to search for")] string? name = null,
         [Description("Maximum number of results to return (default 5)")] int limit = 5)
     {
@@ -1983,8 +1839,9 @@ public class VoiceCommandService : IVoiceCommandService
         return parts.Count > 0 ? string.Join(", ", parts) : "";
     }
 
+    [ExportAIFunction("analyze_room_for_coffee")]
     [Description("Takes a photo and analyzes it to count people and determine how many cups of coffee are needed. Use this when the user wants to 'look at' a room, 'count people', or asks about coffee needs for a group.")]
-    private async Task<string> AnalyzeRoomForCoffeeToolAsync(
+    internal async Task<string> AnalyzeRoomForCoffeeToolAsync(
         [Description("The user's question about the image, e.g., 'how many cups of coffee do I need?'")] string userQuestion)
     {
         _logger.LogInformation("AnalyzeRoomForCoffee tool called with question: {Question}", userQuestion);

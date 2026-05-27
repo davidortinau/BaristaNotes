@@ -1,6 +1,4 @@
 ﻿using MauiReactor;
-using MauiReactor.Shapes;
-using BaristaNotes.Styles;
 
 namespace BaristaNotes.Components.FormFields;
 

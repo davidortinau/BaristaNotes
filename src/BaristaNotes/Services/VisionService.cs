@@ -1,10 +1,5 @@
 ﻿using System.ClientModel;
 using Azure.AI.OpenAI;
-using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using BaristaNotes.Core.Services;
-using BaristaNotes.Core.Services.DTOs;
 
 namespace BaristaNotes.Services;
 

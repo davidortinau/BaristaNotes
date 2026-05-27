@@ -128,8 +128,8 @@ public class ShotServiceTests
     }
     
     [Theory]
-    [InlineData(0, "Rating must be between 1 and 5")]
-    [InlineData(6, "Rating must be between 1 and 5")]
+    [InlineData(-1, "Rating must be between 0 and 4")]
+    [InlineData(5, "Rating must be between 0 and 4")]
     public async Task CreateShotAsync_InvalidRating_ThrowsValidationException(int rating, string expectedError)
     {
         // Arrange
@@ -296,7 +296,7 @@ public class ShotServiceTests
         
         var dto = new UpdateShotDto
         {
-            Rating = 5,
+            Rating = 4,
             DrinkType = "Espresso" // Required field
         };
         
@@ -306,7 +306,7 @@ public class ShotServiceTests
         // Assert
         Assert.Equal(25, existingShot.ActualTime); // Unchanged
         Assert.Equal(38, existingShot.ActualOutput); // Unchanged
-        Assert.Equal(5, existingShot.Rating); // Changed
+        Assert.Equal(4, existingShot.Rating); // Changed
         Assert.Equal("Espresso", existingShot.DrinkType);
     }
     
@@ -359,8 +359,8 @@ public class ShotServiceTests
     }
     
     [Theory]
-    [InlineData(0, "Rating must be between 1 and 5 stars")]
-    [InlineData(6, "Rating must be between 1 and 5 stars")]
+    [InlineData(-1, "Rating must be between 0 and 4")]
+    [InlineData(5, "Rating must be between 0 and 4")]
     public async Task UpdateShotAsync_InvalidRating_ThrowsValidationException(int rating, string expectedError)
     {
         // Arrange

@@ -642,8 +642,8 @@ public class ShotService : IShotService
         if (string.IsNullOrWhiteSpace(dto.DrinkType))
             errors.Add(nameof(dto.DrinkType), new List<string> { "Drink type is required" });
 
-        if (dto.Rating.HasValue && (dto.Rating < 1 || dto.Rating > 5))
-            errors.Add(nameof(dto.Rating), new List<string> { "Rating must be between 1 and 5" });
+        if (dto.Rating.HasValue && (dto.Rating < 0 || dto.Rating > 4))
+            errors.Add(nameof(dto.Rating), new List<string> { "Rating must be between 0 and 4 (0=Terrible, 4=Excellent)" });
 
         if (errors.Any())
             throw new ValidationException(errors);
@@ -667,8 +667,8 @@ public class ShotService : IShotService
         if (dto.ActualOutput.HasValue && (dto.ActualOutput <= 0 || (decimal)dto.ActualOutput.Value > (decimal)profile.OutputMax))
             errors.Add(nameof(dto.ActualOutput), new List<string> { $"Output weight must be between 0 and {profile.OutputMax} grams" });
 
-        if (dto.Rating.HasValue && (dto.Rating < 1 || dto.Rating > 5))
-            errors.Add(nameof(dto.Rating), new List<string> { "Rating must be between 1 and 5 stars" });
+        if (dto.Rating.HasValue && (dto.Rating < 0 || dto.Rating > 4))
+            errors.Add(nameof(dto.Rating), new List<string> { "Rating must be between 0 and 4 (0=Terrible, 4=Excellent)" });
 
         if (string.IsNullOrWhiteSpace(dto.DrinkType))
             errors.Add(nameof(dto.DrinkType), new List<string> { "Drink type is required" });

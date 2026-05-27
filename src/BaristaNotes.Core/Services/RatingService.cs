@@ -101,8 +101,8 @@ public class RatingService : IRatingService
         // Calculate average
         aggregate.AverageRating = ratedShots.Average();
 
-        // Build distribution (1-5 star counts)
-        for (int rating = 1; rating <= 5; rating++)
+        // Build distribution (0-4 scale: 0=Terrible, 4=Excellent — per constitution §V)
+        for (int rating = 0; rating <= 4; rating++)
         {
             aggregate.Distribution[rating] = ratedShots.Count(r => r == rating);
         }

@@ -379,7 +379,7 @@ public class ShotRecordRepositoryTests : IDisposable
         // Act - Update editable fields
         saved.ActualTime = 28.5m;
         saved.ActualOutput = 42.0m;
-        saved.Rating = 5;
+        saved.Rating = 4;
         saved.DrinkType = "Latte";
         saved.LastModifiedAt = DateTime.Now;
         
@@ -391,7 +391,7 @@ public class ShotRecordRepositoryTests : IDisposable
         Assert.NotNull(retrieved);
         Assert.Equal(28.5m, retrieved.ActualTime);
         Assert.Equal(42.0m, retrieved.ActualOutput);
-        Assert.Equal(5, retrieved.Rating);
+        Assert.Equal(4, retrieved.Rating);
         Assert.Equal("Latte", retrieved.DrinkType);
         Assert.True(retrieved.LastModifiedAt > DateTime.Now.AddMinutes(-1));
     }

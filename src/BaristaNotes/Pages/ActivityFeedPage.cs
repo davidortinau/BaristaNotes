@@ -322,9 +322,16 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         var ratio = $"{shot.DoseIn:0.#}g → {shot.ActualOutput ?? shot.ExpectedOutput:0.#}g";
         var timeSec = shot.ActualTime ?? shot.ExpectedTime;
         var timeText = $"{timeSec:0}s";
-        var ratingText = shot.Rating.HasValue
-            ? new string('★', shot.Rating.Value + 1) + new string('☆', 4 - shot.Rating.Value)
-            : "";
+        // Canonical 0-4 (constitution §V). The Math.Clamp is a one-line safety
+        // net for the cold-launch race window where the migration hasn't yet
+        // shifted legacy 1-5 data — without it, Rating=5 throws inside the
+        // UICollectionView cell-creation block.
+        string ratingText = "";
+        if (shot.Rating.HasValue)
+        {
+            var r = Math.Clamp(shot.Rating.Value, 0, 4);
+            ratingText = new string('★', r + 1) + new string('☆', 4 - r);
+        }
         var bean = shot.Bean?.Name ?? shot.Bag?.BeanName ?? "—";
         var when = FormatTimestamp(shot.Timestamp);
 

@@ -125,9 +125,9 @@ public record UpdateShotDto
     public decimal? PreinfusionTime { get; init; }
 
     /// <summary>
-    /// Taste rating on 1-5 scale (1=dislike, 5=excellent).
+    /// Taste rating on 0-4 scale (0=Terrible, 1=Bad, 2=Average, 3=Good, 4=Excellent).
     /// Optional - null means no change to existing value.
-    /// If provided, must be between 1 and 5 inclusive.
+    /// If provided, must be between 0 and 4 inclusive. See constitution §V.
     /// </summary>
     public int? Rating { get; init; }
 

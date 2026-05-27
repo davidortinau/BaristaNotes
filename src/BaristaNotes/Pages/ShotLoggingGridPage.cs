@@ -65,7 +65,7 @@ class ShotLoggingGridState
     /// </summary>
     public string? PendingGrindHint { get; set; }
 
-    public int Rating { get; set; } = 2; // UI 0-4 (1-5 service)
+    public int Rating { get; set; } = 2; // 0-4 scale (constitution §V): 0=Terrible..4=Excellent
     public string? TastingNotes { get; set; }
 
     public int? SelectedBagId { get; set; }
@@ -231,7 +231,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     s.ExpectedOutput = shot.ExpectedOutput;
                     s.ActualTime = shot.ActualTime;
                     s.ActualOutput = shot.ActualOutput;
-                    s.Rating = shot.Rating.HasValue ? Math.Max(0, shot.Rating.Value - 1) : 2;
+                    s.Rating = shot.Rating ?? 2;
                     s.SelectedBagId = shot.Bag?.Id;
                     s.SelectedMaker = shot.MadeBy;
                     s.SelectedRecipient = shot.MadeFor;
@@ -264,7 +264,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                         s.GrindMicrons = lastShot.GrindMicrons;
                         s.ExpectedTime = lastShot.ExpectedTime;
                         s.ExpectedOutput = lastShot.ExpectedOutput;
-                        s.Rating = (lastShot.Rating ?? 3) - 1;
+                        s.Rating = lastShot.Rating ?? 2;
                         s.SelectedBagId = lastShot.Bag?.Id;
                         var validForLast = lastShot.BrewMethod.DrinkTypesFor();
                         if (!validForLast.Contains(s.DrinkType))
@@ -322,7 +322,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     ExpectedOutput = State.ExpectedOutput,
                     ActualTime = State.ActualTime,
                     ActualOutput = State.ActualOutput,
-                    Rating = State.Rating + 1,
+                    Rating = State.Rating,
                     DrinkType = State.DrinkType,
                     BrewMethod = State.BrewMethod,
                     TastingNotes = State.TastingNotes
@@ -348,7 +348,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     ActualOutput = State.ActualOutput,
                     DrinkType = State.DrinkType,
                     BrewMethod = State.BrewMethod,
-                    Rating = State.Rating + 1,
+                    Rating = State.Rating,
                     TastingNotes = State.TastingNotes
                 };
                 await _shotService.CreateShotAsync(dto);
@@ -687,8 +687,9 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
 
     string RatingDisplayValue()
     {
-        var n = State.Rating + 1;
-        return $"{n}/5";
+        // Display the 0-4 rating (constitution §V) as a five-star glyph row.
+        var n = State.Rating;
+        return new string('★', n + 1) + new string('☆', 4 - n);
     }
 
     string EquipmentName(int? id)
@@ -817,9 +818,9 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
 
             GridPickerKind.Rating => CategoricalPicker(
                 title: "Rating",
-                items: Enumerable.Range(1, 5).Select(i => (Key: (object)i, Display: new string('★', i) + new string('☆', 5 - i))).ToList(),
-                isSelected: o => State.Rating == ((int)o - 1),
-                onSelect: o => SetState(s => { s.Rating = (int)o - 1; s.ActivePicker = GridPickerKind.None; })),
+                items: Enumerable.Range(0, 5).Select(i => (Key: (object)i, Display: new string('★', i + 1) + new string('☆', 4 - i))).ToList(),
+                isSelected: o => State.Rating == (int)o,
+                onSelect: o => SetState(s => { s.Rating = (int)o; s.ActivePicker = GridPickerKind.None; })),
 
             GridPickerKind.DoseIn => NumericScroller(
                 title: "Dose In",

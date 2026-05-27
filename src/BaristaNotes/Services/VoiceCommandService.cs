@@ -701,9 +701,9 @@ public partial class VoiceCommandService : IVoiceCommandService
             // Get the most recent shot to inherit defaults (grind setting, drink type, made by/for, equipment)
             var lastShot = await _shotService.GetMostRecentShotAsync();
 
-            // Convert 0-4 scale to service 1-5 scale (0->1, 4->5)
-            // Default to rating 2 (average) if not specified
-            var serviceRating = rating.HasValue ? rating.Value + 1 : 3; // 2+1=3 on 1-5 scale
+            // Default to rating 2 (Average) on the canonical 0-4 scale (constitution §V)
+            // if not specified. No conversion — the service now accepts 0-4 directly.
+            var ratingValue = rating ?? 2;
 
             var createDto = new CreateShotDto
             {
@@ -714,7 +714,7 @@ public partial class VoiceCommandService : IVoiceCommandService
                 ExpectedTime = (decimal)timeSeconds,
                 ActualOutput = (decimal)outputGrams,
                 ActualTime = (decimal)timeSeconds,
-                Rating = serviceRating,
+                Rating = ratingValue,
                 TastingNotes = tastingNotes,
                 // Inherit from last shot or use sensible defaults
                 GrindMicrons = lastShot?.GrindMicrons,
@@ -912,12 +912,10 @@ public partial class VoiceCommandService : IVoiceCommandService
                 return "No shots found to rate. Log a shot first.";
             }
 
-            // Convert 0-4 scale to service 1-5 scale
-            var serviceRating = rating + 1;
-
+            // Service now uses canonical 0-4 scale (constitution §V) — no conversion.
             var updateDto = new UpdateShotDto
             {
-                Rating = serviceRating,
+                Rating = rating,
                 DrinkType = lastShot.DrinkType
             };
 
@@ -1084,11 +1082,10 @@ public partial class VoiceCommandService : IVoiceCommandService
                     s.MadeFor?.Name?.Contains(madeFor, StringComparison.OrdinalIgnoreCase) == true);
             }
 
-            // Apply rating filter (convert from 0-4 to 1-5 for comparison)
+            // Apply rating filter (canonical 0-4 — no conversion)
             if (minRating.HasValue)
             {
-                var minRatingService = minRating.Value + 1;
-                shots = shots.Where(s => s.Rating.HasValue && s.Rating.Value >= minRatingService);
+                shots = shots.Where(s => s.Rating.HasValue && s.Rating.Value >= minRating.Value);
             }
 
             var count = shots.Count();
@@ -1263,8 +1260,8 @@ public partial class VoiceCommandService : IVoiceCommandService
 
             if (lastShot.Rating.HasValue)
             {
-                var rating = lastShot.Rating.Value - 1; // Convert from 1-5 to 0-4 scale
-                details.Add($"• Rating: {rating}/4");
+                // Canonical 0-4 scale (constitution §V) — no conversion needed.
+                details.Add($"• Rating: {lastShot.Rating.Value}/4");
             }
 
             if (lastShot.Bean != null)
@@ -1358,11 +1355,10 @@ public partial class VoiceCommandService : IVoiceCommandService
                     s.MadeFor?.Name?.Contains(madeFor, StringComparison.OrdinalIgnoreCase) == true);
             }
 
-            // Apply rating filter (convert from 0-4 to 1-5 for comparison)
+            // Apply rating filter (canonical 0-4 — no conversion)
             if (minRating.HasValue)
             {
-                var minRatingService = minRating.Value + 1;
-                filtered = filtered.Where(s => s.Rating.HasValue && s.Rating.Value >= minRatingService);
+                filtered = filtered.Where(s => s.Rating.HasValue && s.Rating.Value >= minRating.Value);
             }
 
             // Apply period filter

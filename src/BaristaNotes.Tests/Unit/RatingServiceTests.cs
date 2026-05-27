@@ -71,18 +71,18 @@ public class RatingServiceTests : IDisposable
         _context.Bags.AddRange(bag1, bag2);
         await _context.SaveChangesAsync();
 
-        // Bag 1: Ratings 5, 4, 4
+        // Bag 1: Ratings 4, 3, 3 (post-migration 0-4 scale)
         _context.ShotRecords.AddRange(
-            CreateShot(bag1.Id, 5),
             CreateShot(bag1.Id, 4),
-            CreateShot(bag1.Id, 4)
+            CreateShot(bag1.Id, 3),
+            CreateShot(bag1.Id, 3)
         );
 
-        // Bag 2: Ratings 3, 2, 5
+        // Bag 2: Ratings 2, 1, 4 (post-migration 0-4 scale)
         _context.ShotRecords.AddRange(
-            CreateShot(bag2.Id, 3),
             CreateShot(bag2.Id, 2),
-            CreateShot(bag2.Id, 5)
+            CreateShot(bag2.Id, 1),
+            CreateShot(bag2.Id, 4)
         );
 
         await _context.SaveChangesAsync();
@@ -90,18 +90,18 @@ public class RatingServiceTests : IDisposable
         // Act
         var result = await _ratingService.GetBeanRatingAsync(bean.Id);
 
-        // Assert: Average = (5+4+4+3+2+5)/6 = 23/6 = 3.833...
+        // Assert: Average = (4+3+3+2+1+4)/6 = 17/6 = 2.833...
         Assert.True(result.HasRatings);
         Assert.Equal(6, result.TotalShots);
         Assert.Equal(6, result.RatedShots);
-        Assert.Equal(3.83, result.AverageRating, 2); // 2 decimal precision
+        Assert.Equal(2.83, result.AverageRating, 2); // 2 decimal precision
 
-        // Distribution: 5:2, 4:2, 3:1, 2:1, 1:0
-        Assert.Equal(2, result.GetCountForRating(5));
+        // Distribution: 4:2, 3:2, 2:1, 1:1, 0:0
         Assert.Equal(2, result.GetCountForRating(4));
-        Assert.Equal(1, result.GetCountForRating(3));
+        Assert.Equal(2, result.GetCountForRating(3));
         Assert.Equal(1, result.GetCountForRating(2));
-        Assert.Equal(0, result.GetCountForRating(1));
+        Assert.Equal(1, result.GetCountForRating(1));
+        Assert.Equal(0, result.GetCountForRating(0));
     }
 
     [Fact]
@@ -217,9 +217,9 @@ public class RatingServiceTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Create 100 shots to test accuracy
-        var shots = Enumerable.Range(1, 100).Select(i =>
+        var shots = Enumerable.Range(0, 100).Select(i =>
         {
-            int rating = (i % 5) + 1; // Cycles through 1-5
+            int rating = i % 5; // Cycles through 0-4 (constitution §V)
             return CreateShot(bag.Id, rating);
         }).ToList();
 
@@ -229,17 +229,17 @@ public class RatingServiceTests : IDisposable
         // Act
         var result = await _ratingService.GetBeanRatingAsync(bean.Id);
 
-        // Assert: Each rating 1-5 should appear 20 times (100 / 5 = 20)
+        // Assert: Each rating 0-4 should appear 20 times (100 / 5 = 20)
         Assert.Equal(100, result.RatedShots);
+        Assert.Equal(20, result.GetCountForRating(0));
         Assert.Equal(20, result.GetCountForRating(1));
         Assert.Equal(20, result.GetCountForRating(2));
         Assert.Equal(20, result.GetCountForRating(3));
         Assert.Equal(20, result.GetCountForRating(4));
-        Assert.Equal(20, result.GetCountForRating(5));
 
         // Each percentage should be 20%
-        Assert.Equal(20.0, result.GetPercentageForRating(1));
-        Assert.Equal(20.0, result.GetPercentageForRating(5));
+        Assert.Equal(20.0, result.GetPercentageForRating(0));
+        Assert.Equal(20.0, result.GetPercentageForRating(4));
     }
 
     #endregion
@@ -274,21 +274,21 @@ public class RatingServiceTests : IDisposable
         await _context.SaveChangesAsync();
 
         _context.ShotRecords.AddRange(
-            CreateShot(bag.Id, 5),
             CreateShot(bag.Id, 4),
-            CreateShot(bag.Id, 5)
+            CreateShot(bag.Id, 3),
+            CreateShot(bag.Id, 4)
         );
         await _context.SaveChangesAsync();
 
         // Act
         var result = await _ratingService.GetBagRatingAsync(bag.Id);
 
-        // Assert: Average = (5+4+5)/3 = 4.67
+        // Assert: Average = (4+3+4)/3 = 3.67
         Assert.Equal(3, result.TotalShots);
         Assert.Equal(3, result.RatedShots);
-        Assert.Equal(4.67, result.AverageRating, 2);
-        Assert.Equal(2, result.GetCountForRating(5));
-        Assert.Equal(1, result.GetCountForRating(4));
+        Assert.Equal(3.67, result.AverageRating, 2);
+        Assert.Equal(2, result.GetCountForRating(4));
+        Assert.Equal(1, result.GetCountForRating(3));
     }
 
     [Fact]
@@ -329,22 +329,22 @@ public class RatingServiceTests : IDisposable
         _context.Bags.AddRange(bag1, bag2, bag3);
         await _context.SaveChangesAsync();
 
-        // Bag 1: Avg = 4.8 (5,5,5,5,4)
+        // Bag 1: Avg = 3.8 (4,4,4,4,3) on 0-4 scale
         _context.ShotRecords.AddRange(
-            CreateShot(bag1.Id, 5),
-            CreateShot(bag1.Id, 5),
-            CreateShot(bag1.Id, 5),
-            CreateShot(bag1.Id, 5),
-            CreateShot(bag1.Id, 4)
+            CreateShot(bag1.Id, 4),
+            CreateShot(bag1.Id, 4),
+            CreateShot(bag1.Id, 4),
+            CreateShot(bag1.Id, 4),
+            CreateShot(bag1.Id, 3)
         );
 
-        // Bag 2: Avg = 3.2 (4,3,3,3,3)
+        // Bag 2: Avg = 2.2 (3,2,2,2,2) on 0-4 scale
         _context.ShotRecords.AddRange(
-            CreateShot(bag2.Id, 4),
             CreateShot(bag2.Id, 3),
-            CreateShot(bag2.Id, 3),
-            CreateShot(bag2.Id, 3),
-            CreateShot(bag2.Id, 3)
+            CreateShot(bag2.Id, 2),
+            CreateShot(bag2.Id, 2),
+            CreateShot(bag2.Id, 2),
+            CreateShot(bag2.Id, 2)
         );
 
         // Bag 3: No shots yet
@@ -359,16 +359,16 @@ public class RatingServiceTests : IDisposable
         // Bag 1 assertions
         Assert.True(result.ContainsKey(bag1.Id));
         Assert.Equal(5, result[bag1.Id].RatedShots);
-        Assert.Equal(4.8, result[bag1.Id].AverageRating, 1);
-        Assert.Equal(4, result[bag1.Id].GetCountForRating(5));
-        Assert.Equal(1, result[bag1.Id].GetCountForRating(4));
+        Assert.Equal(3.8, result[bag1.Id].AverageRating, 1);
+        Assert.Equal(4, result[bag1.Id].GetCountForRating(4));
+        Assert.Equal(1, result[bag1.Id].GetCountForRating(3));
 
         // Bag 2 assertions
         Assert.True(result.ContainsKey(bag2.Id));
         Assert.Equal(5, result[bag2.Id].RatedShots);
-        Assert.Equal(3.2, result[bag2.Id].AverageRating, 1);
-        Assert.Equal(1, result[bag2.Id].GetCountForRating(4));
-        Assert.Equal(4, result[bag2.Id].GetCountForRating(3));
+        Assert.Equal(2.2, result[bag2.Id].AverageRating, 1);
+        Assert.Equal(1, result[bag2.Id].GetCountForRating(3));
+        Assert.Equal(4, result[bag2.Id].GetCountForRating(2));
 
         // Bag 3 assertions (no shots)
         Assert.True(result.ContainsKey(bag3.Id));
@@ -403,8 +403,8 @@ public class RatingServiceTests : IDisposable
             await _context.SaveChangesAsync();
             bagIds.Add(bag.Id);
 
-            // Add 5 shots per bag
-            _context.ShotRecords.AddRange(Enumerable.Range(1, 5).Select(j => CreateShot(bag.Id, (j % 5) + 1)));
+            // Add 5 shots per bag (rating 0-4 cycling per constitution §V)
+            _context.ShotRecords.AddRange(Enumerable.Range(0, 5).Select(j => CreateShot(bag.Id, j % 5)));
         }
         await _context.SaveChangesAsync();
 

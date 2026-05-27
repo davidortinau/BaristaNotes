@@ -38,6 +38,12 @@
 	<string>Assets.xcassets/appicon.appiconset</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>BaristaNotes uses the microphone to capture voice commands for logging shots, navigating the app, and dictating tasting notes.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>BaristaNotes uses the camera to capture photos of your espresso shots and coffee beans for visual reference.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>BaristaNotes accesses your photo library to attach images to shots and beans.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>BaristaNotes saves captured shot photos to your photo library.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>BaristaNotes uses speech recognition to convert your spoken commands into actions like logging a shot or navigating to a bean.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>

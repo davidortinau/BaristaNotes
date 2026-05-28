@@ -48,6 +48,23 @@ internal static class AIToolHarness
             var tools = VoiceTools.Default.Tools;
             logger.LogInformation("AI-HARNESS: VoiceTools.Default.Tools count = {Count}", tools.Count);
 
+            // Side-effecting tools we do NOT invoke at startup but DO assert are registered.
+            var requiredRegistrations = new[]
+            {
+                "navigate_to",
+                "identify_person_in_camera",
+                "identify_person_in_photo_file",
+                "open_roaster_url",
+            };
+            foreach (var name in requiredRegistrations)
+            {
+                var present = tools.OfType<AIFunction>().Any(t => t.Name == name);
+                if (present)
+                    logger.LogInformation("AI-HARNESS REGISTERED {Tool}", name);
+                else
+                    logger.LogWarning("AI-HARNESS MISSING {Tool}: not present in generated context", name);
+            }
+
             // Read-only probes only. Every method here uses optional parameters with
             // safe defaults so empty arg dictionaries are valid.
             var probes = new (string Name, Dictionary<string, object?> Args)[]
@@ -61,7 +78,8 @@ internal static class AIToolHarness
                 ("get_last_shot", new()),
                 ("find_shots", new() { ["limit"] = 3 }),
                 ("find_beans", new() { ["limit"] = 3 }),
-                ("navigate_to", new() { ["pageName"] = "history" }),
+                // NOTE: do NOT probe navigate_to here — it actually changes the
+                // visible Shell route on startup. Just verify it's registered.
                 ("get_profile_context", new() { ["profileId"] = 1 }),
                 ("summarize_preferences_from_history", new() { ["profileId"] = 1 }),
                 ("list_available_beans", new()),

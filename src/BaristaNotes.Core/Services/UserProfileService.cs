@@ -109,15 +109,33 @@ public class UserProfileService : IUserProfileService
             await imageStream.CopyToAsync(memoryStream);
             memoryStream.Position = 0;
 
+            // Downsample BEFORE validation. iOS PHPicker returns full-resolution
+            // photos (HEIC/JPEG often 5–15 MB) regardless of MediaPickerOptions
+            // MaximumWidth/Height, which is why the same picker works on the
+            // simulator (small sample photos) but silently fails the 1 MB cap on
+            // real devices like the user's DX24 iPhone.
+            using var downsampled = await _imageProcessingService.DownsampleAsync(memoryStream, 400, 85);
+            Stream workingStream;
+            if (downsampled != null)
+            {
+                workingStream = downsampled;
+            }
+            else
+            {
+                memoryStream.Position = 0;
+                workingStream = memoryStream;
+            }
+
             // Validate image
-            var validationResult = await _imageProcessingService.ValidateImageAsync(memoryStream);
+            workingStream.Position = 0;
+            var validationResult = await _imageProcessingService.ValidateImageAsync(workingStream);
             if (validationResult != ImageValidationResult.Valid)
             {
                 return ProfileImageUpdateResult.FailureResult(GetValidationErrorMessage(validationResult));
             }
 
             // Reset position after validation
-            memoryStream.Position = 0;
+            workingStream.Position = 0;
 
             // Load profile
             var profile = await _profileRepository.GetByIdAsync(profileId);
@@ -137,7 +155,7 @@ public class UserProfileService : IUserProfileService
             }
 
             // Save new image
-            await _imageProcessingService.SaveImageAsync(memoryStream, filename);
+            await _imageProcessingService.SaveImageAsync(workingStream, filename);
 
             // Update profile
             profile.AvatarPath = filename;

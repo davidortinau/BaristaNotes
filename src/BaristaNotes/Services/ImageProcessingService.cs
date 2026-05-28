@@ -1,4 +1,6 @@
 ﻿using BaristaNotes.Core.Services;
+using Microsoft.Maui.Graphics;
+using Microsoft.Maui.Graphics.Platform;
 
 namespace BaristaNotes.Services;
 
@@ -95,5 +97,57 @@ public class ImageProcessingService : IImageProcessingService
     public bool ImageExists(string filename)
     {
         return File.Exists(GetImagePath(filename));
+    }
+
+    public async Task<MemoryStream?> DownsampleAsync(Stream imageStream, int maxDimension, int quality)
+    {
+        if (maxDimension < 1) throw new ArgumentOutOfRangeException(nameof(maxDimension));
+        if (quality < 1 || quality > 100) throw new ArgumentOutOfRangeException(nameof(quality));
+
+        // Buffer to memory so PlatformImage.FromStream can do random access (and so we
+        // can fall back to the original if decoding fails).
+        using var source = new MemoryStream();
+        if (imageStream.CanSeek) imageStream.Position = 0;
+        await imageStream.CopyToAsync(source);
+        source.Position = 0;
+
+        try
+        {
+            using var image = PlatformImage.FromStream(source);
+            if (image is null)
+            {
+                _logger.LogWarning("PlatformImage.FromStream returned null; cannot downsample");
+                return null;
+            }
+
+            var w = image.Width;
+            var h = image.Height;
+            _logger.LogDebug("Source image: {Width}x{Height} ({Bytes} bytes)", w, h, source.Length);
+
+            // Only downsize if larger than target on either axis.
+            Microsoft.Maui.Graphics.IImage scaled;
+            if (w > maxDimension || h > maxDimension)
+            {
+                scaled = image.Downsize(maxDimension, true);
+            }
+            else
+            {
+                scaled = image;
+            }
+
+            var output = new MemoryStream();
+            await scaled.SaveAsync(output, ImageFormat.Jpeg, quality / 100f);
+            output.Position = 0;
+            _logger.LogDebug(
+                "Downsampled image: {Width}x{Height} → {Bytes} bytes (q={Quality})",
+                scaled.Width, scaled.Height, output.Length, quality);
+
+            return output;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Image downsample failed; caller should fall back to original");
+            return null;
+        }
     }
 }

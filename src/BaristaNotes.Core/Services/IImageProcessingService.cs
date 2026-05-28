@@ -38,4 +38,16 @@ public interface IImageProcessingService
     /// <param name="filename">Filename to check.</param>
     /// <returns>True if file exists.</returns>
     bool ImageExists(string filename);
+
+    /// <summary>
+    /// Downsamples an image stream to fit within a square bounding box, re-encodes
+    /// as JPEG at the given quality, and returns a new seekable MemoryStream
+    /// positioned at 0. Used to shrink full-resolution photos returned by the
+    /// platform photo picker (which may ignore MediaPickerOptions size hints on iOS).
+    /// </summary>
+    /// <param name="imageStream">Source image (any format the platform decoder supports).</param>
+    /// <param name="maxDimension">Maximum width/height in pixels.</param>
+    /// <param name="quality">JPEG quality 0–100.</param>
+    /// <returns>New MemoryStream owned by the caller, or null if decoding failed.</returns>
+    Task<MemoryStream?> DownsampleAsync(Stream imageStream, int maxDimension, int quality);
 }

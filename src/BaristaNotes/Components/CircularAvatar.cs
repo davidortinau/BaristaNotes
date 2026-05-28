@@ -22,15 +22,20 @@ public class CircularAvatar : Component
             string.IsNullOrEmpty(_imagePath)
                 // Show a person icon as placeholder when no image
                 ? Label(MaterialSymbolsFont.Person)
-                    .FontFamily("MaterialSymbolsOutlined")
+                    .FontFamily(MaterialSymbolsFont.FontFamily)
                     .FontSize(_size * 0.5)
                     .TextColor(Colors.Gray)
                     .HCenter()
                     .VCenter()
                     .AutomationId("ProfileAvatarPlaceholder")
-                // Show the actual image when available
+                // Show the actual image when available.
+                // NOTE: use FromStream rather than FromFile — on iOS, ImageSource.FromFile
+                // can hit the bundle-resource lookup path first and fail to load arbitrary
+                // sandbox paths (Documents/...). FromStream with File.OpenRead is reliable
+                // on both iOS and Android. The unique-filename trick in UpdateProfileImage
+                // still busts MAUI's image cache per-update.
                 : (VisualNode)new MauiReactor.Image()
-                    .Source(ImageSource.FromFile(_imagePath))
+                    .Source(ImageSource.FromStream(ct => Task.FromResult<Stream>(File.OpenRead(_imagePath!))))
                     .Aspect(Aspect.AspectFill)
                     .WidthRequest(_size)
                     .HeightRequest(_size)

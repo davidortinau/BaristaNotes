@@ -108,22 +108,25 @@ public class UserProfileService : IUserProfileService
             using var memoryStream = new MemoryStream();
             await imageStream.CopyToAsync(memoryStream);
             memoryStream.Position = 0;
+            Console.WriteLine($"[ProfileImage] source bytes from picker: {memoryStream.Length}");
 
             // Downsample BEFORE validation. iOS PHPicker returns full-resolution
             // photos (HEIC/JPEG often 5–15 MB) regardless of MediaPickerOptions
             // MaximumWidth/Height, which is why the same picker works on the
-            // simulator (small sample photos) but silently fails the 1 MB cap on
-            // real devices like the user's DX24 iPhone.
+            // simulator (small sample photos) but silently failed the old 1 MB
+            // cap on real devices.
             using var downsampled = await _imageProcessingService.DownsampleAsync(memoryStream, 400, 85);
             Stream workingStream;
             if (downsampled != null)
             {
                 workingStream = downsampled;
+                Console.WriteLine($"[ProfileImage] downsample OK: {downsampled.Length} bytes");
             }
             else
             {
                 memoryStream.Position = 0;
                 workingStream = memoryStream;
+                Console.WriteLine($"[ProfileImage] downsample returned null; using original {memoryStream.Length} bytes");
             }
 
             // Validate image
@@ -131,6 +134,7 @@ public class UserProfileService : IUserProfileService
             var validationResult = await _imageProcessingService.ValidateImageAsync(workingStream);
             if (validationResult != ImageValidationResult.Valid)
             {
+                Console.WriteLine($"[ProfileImage] validation FAILED: {validationResult}");
                 return ProfileImageUpdateResult.FailureResult(GetValidationErrorMessage(validationResult));
             }
 
@@ -141,6 +145,7 @@ public class UserProfileService : IUserProfileService
             var profile = await _profileRepository.GetByIdAsync(profileId);
             if (profile == null)
             {
+                Console.WriteLine($"[ProfileImage] profile {profileId} not found");
                 return ProfileImageUpdateResult.FailureResult("Profile not found");
             }
 
@@ -155,19 +160,21 @@ public class UserProfileService : IUserProfileService
             }
 
             // Save new image
-            await _imageProcessingService.SaveImageAsync(workingStream, filename);
+            var savedPath = await _imageProcessingService.SaveImageAsync(workingStream, filename);
+            Console.WriteLine($"[ProfileImage] saved to: {savedPath}");
 
             // Update profile
             profile.AvatarPath = filename;
             profile.LastModifiedAt = DateTime.UtcNow;
 
             await _profileRepository.UpdateAsync(profile);
+            Console.WriteLine($"[ProfileImage] profile {profileId} updated with AvatarPath={filename}");
 
             return ProfileImageUpdateResult.SuccessResult(filename);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error updating profile image: {ex.Message}");
+            Console.WriteLine($"[ProfileImage] EXCEPTION: {ex}");
             return ProfileImageUpdateResult.FailureResult("Failed to save image");
         }
     }

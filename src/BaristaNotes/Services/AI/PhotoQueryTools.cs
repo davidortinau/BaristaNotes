@@ -143,7 +143,7 @@ public class PhotoQueryTools
         return $"Matched profile ID:{result.MatchedProfileId} ({result.MatchedName}). {result.Rationale}".Trim();
     }
 
-    [Description("Lists the active beans the user has on hand (with bean ID, name, roaster, and whether a roaster URL is set). Call before recommending a coffee so you don't recommend a bean the user does not have.")]
+    [Description("Lists the active beans the user has on hand (with bean ID, name, roaster, origin, and whether a cached purchase URL exists). Call before recommending a coffee so you don't recommend a bean the user does not have.")]
     [ExportAIFunction("list_available_beans")]
     public async Task<string> ListAvailableBeansAsync()
     {
@@ -159,7 +159,7 @@ public class PhotoQueryTools
             sb.AppendLine($"Active beans ({beans.Count}):");
             foreach (var b in beans)
             {
-                var url = string.IsNullOrWhiteSpace(b.RoasterUrl) ? "no URL" : "URL set";
+                var url = string.IsNullOrWhiteSpace(b.RoasterUrl) ? "no cached URL" : "URL cached";
                 sb.Append($"- ID:{b.Id} {b.Name}");
                 if (!string.IsNullOrWhiteSpace(b.Roaster)) sb.Append($" by {b.Roaster}");
                 if (!string.IsNullOrWhiteSpace(b.Origin)) sb.Append($" ({b.Origin})");
@@ -174,12 +174,24 @@ public class PhotoQueryTools
         }
     }
 
-    [Description("Opens the device browser to a bean's roaster URL so the user can reorder. Call after the user agrees to 'reorder' or 'order more'. Returns an error if the bean has no RoasterUrl set.")]
+    [Description(
+        "Opens the device browser so the user can reorder a bean. " +
+        "If the bean already has a cached purchase URL, opens it directly. " +
+        "If it does not, you (the AI) must determine the best place to buy this bean — " +
+        "prefer the roaster's own online store; otherwise pick a reputable retailer with the best deal — " +
+        "and pass the full https:// URL as suggestedUrl. The URL will be validated, cached on the bean " +
+        "for next time, and opened. Call after the user agrees to 'reorder' or 'order more'.")]
     [ExportAIFunction("open_roaster_url")]
     public async Task<string> OpenRoasterUrlAsync(
-        [Description("The bean ID (integer) whose roaster URL to open")] int beanId)
+        [Description("The bean ID (integer) whose purchase page to open")] int beanId,
+        [Description("Optional. A full https:// URL where the user can buy this bean. " +
+                     "Required only when the bean has no cached URL yet — in that case YOU should choose " +
+                     "the best purchase location (roaster's own store preferred, else a reputable retailer with the best price) " +
+                     "and pass it here. Ignored if the bean already has a cached URL.")]
+        string? suggestedUrl = null)
     {
-        _logger.LogInformation("OpenRoasterUrl tool called: {BeanId}", beanId);
+        _logger.LogInformation("OpenRoasterUrl tool called: bean={BeanId} suggestedUrl={HasSuggestion}",
+            beanId, !string.IsNullOrWhiteSpace(suggestedUrl));
 
         try
         {
@@ -187,24 +199,55 @@ public class PhotoQueryTools
             if (bean is null)
                 return $"No bean found with ID {beanId}.";
 
-            if (string.IsNullOrWhiteSpace(bean.RoasterUrl))
-                return $"{bean.Name} has no roaster URL set. Add one on the bean's detail page first.";
+            var urlToOpen = bean.RoasterUrl;
+            var cached = !string.IsNullOrWhiteSpace(urlToOpen);
 
-            if (!Uri.TryCreate(bean.RoasterUrl, UriKind.Absolute, out var uri)
+            if (!cached)
+            {
+                if (string.IsNullOrWhiteSpace(suggestedUrl))
+                {
+                    return $"{bean.Name} has no cached purchase URL. " +
+                           "Decide where to buy it (prefer the roaster's own store, else the best-value reputable retailer) " +
+                           "and call open_roaster_url again with suggestedUrl set to the full https:// URL.";
+                }
+                urlToOpen = suggestedUrl.Trim();
+            }
+
+            if (!Uri.TryCreate(urlToOpen, UriKind.Absolute, out var uri)
                 || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             {
-                return $"{bean.Name} has an invalid roaster URL ({bean.RoasterUrl}). Update it to a full https:// URL.";
+                return $"The {(cached ? "cached" : "suggested")} URL for {bean.Name} is invalid ({urlToOpen}). Provide a full https:// URL.";
+            }
+
+            // Cache the discovered URL so we don't search again next time.
+            if (!cached)
+            {
+                try
+                {
+                    await _beanService.UpdateBeanAsync(bean.Id, new Core.Services.DTOs.UpdateBeanDto
+                    {
+                        RoasterUrl = uri.ToString()
+                    });
+                    _logger.LogInformation("Cached roaster URL for bean {BeanId}: {Url}", bean.Id, uri);
+                }
+                catch (Exception ex)
+                {
+                    // Don't fail the open just because caching failed.
+                    _logger.LogWarning(ex, "Failed to cache roaster URL for bean {BeanId}", bean.Id);
+                }
             }
 
             await MainThread.InvokeOnMainThreadAsync(async () =>
                 await Browser.Default.OpenAsync(uri, BrowserLaunchMode.SystemPreferred));
 
-            return $"Opened the roaster page for {bean.Name}.";
+            return cached
+                ? $"Opened the cached purchase page for {bean.Name}."
+                : $"Opened a purchase page for {bean.Name} and cached the URL for next time.";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error opening roaster URL for bean {BeanId}", beanId);
-            return $"Sorry, I couldn't open the roaster page: {ex.Message}";
+            return $"Sorry, I couldn't open the purchase page: {ex.Message}";
         }
     }
 }

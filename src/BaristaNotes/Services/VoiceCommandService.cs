@@ -157,7 +157,7 @@ public partial class VoiceCommandService : IVoiceCommandService
         4. Compose ONE short spoken recommendation that names the person, references their preferences from context, and either:
            a) picks an available bean that fits (call out the name), OR
            b) says no available bean matches their preferences and asks if they want help reordering preferred beans.
-        5. If the user says yes to reordering, call open_roaster_url(beanId) for the bean whose RoasterUrl is set that best matches their preferences.
+        5. If the user says yes to reordering, call open_roaster_url(beanId). If the bean has no cached URL, YOU decide where to buy it (prefer the roaster's own online store; otherwise the reputable retailer with the best deal) and call open_roaster_url(beanId, suggestedUrl: "https://...") with the full URL. The URL gets cached on the bean so subsequent reorders are one-click.
         6. If no match in step 1: don't guess — say "I don't recognize that person" and ask who they are.
 
         RULES:

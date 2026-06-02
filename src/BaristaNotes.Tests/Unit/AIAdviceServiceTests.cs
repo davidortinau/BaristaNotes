@@ -277,7 +277,7 @@ public class AIAdviceServiceTests
         Assert.Contains("Local Roaster", prompt);
         Assert.Contains("Ethiopia", prompt);
         Assert.Contains("Fruity, floral", prompt);
-        Assert.Contains("no previous shots", prompt.ToLower());
+        Assert.Contains("no previous brews", prompt.ToLower());
         Assert.Contains("JSON", prompt);
         Assert.Contains("dose", prompt);
         Assert.Contains("grind", prompt);
@@ -311,7 +311,7 @@ public class AIAdviceServiceTests
         Assert.NotEmpty(prompt);
         Assert.Contains("Bean Information", prompt);
         Assert.Contains("Colombia Supremo", prompt);
-        Assert.Contains("Previous Shots", prompt);
+        Assert.Contains("Previous Brews", prompt);
         Assert.Contains("18g in", prompt);
         Assert.Contains("36g out", prompt);
         Assert.Contains("rated 4/4", prompt);

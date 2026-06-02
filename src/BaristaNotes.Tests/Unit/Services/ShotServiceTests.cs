@@ -868,6 +868,44 @@ public class ShotServiceTests
     }
 
     [Fact]
+    public async Task GetBeanRecommendationContextAsync_PreservesBrewMethodOnEachHistoricalShot()
+    {
+        // Regression: previously the DTO projection did not copy BrewMethod, so
+        // every historical shot silently defaulted to Espresso — defeating
+        // brew-method-aware AI recommendations for pour-over / French press /
+        // cold brew users. See AIAdviceService.InferBrewMethodFromHistory.
+        var beanId = 1;
+        var bean = new BaristaNotes.Core.Models.Bean { Id = beanId, Name = "Test Bean" };
+        var bag = new BaristaNotes.Core.Models.Bag
+        {
+            Id = 1,
+            BeanId = beanId,
+            Bean = bean,
+            RoastDate = DateTime.Now.AddDays(-7),
+            IsDeleted = false
+        };
+
+        var shots = new List<BaristaNotes.Core.Models.ShotRecord>
+        {
+            new() { Id = 1, BagId = 1, Bag = bag, BrewMethod = BaristaNotes.Core.Models.Enums.BrewMethod.PourOver, Rating = 4, DoseIn = 20, ActualOutput = 320, ActualTime = 210, DrinkType = "Pour Over", IsDeleted = false, Timestamp = DateTime.Now.AddDays(-1), SyncId = Guid.NewGuid() },
+            new() { Id = 2, BagId = 1, Bag = bag, BrewMethod = BaristaNotes.Core.Models.Enums.BrewMethod.FrenchPress, Rating = 3, DoseIn = 30, ActualOutput = 500, ActualTime = 240, DrinkType = "French Press", IsDeleted = false, Timestamp = DateTime.Now.AddDays(-2), SyncId = Guid.NewGuid() },
+        };
+
+        _mockShotRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(shots);
+        _mockBagRepository.Setup(r => r.GetBagsForBeanAsync(beanId, true)).ReturnsAsync(new List<BaristaNotes.Core.Models.Bag> { bag });
+
+        var result = await _service.GetBeanRecommendationContextAsync(beanId);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.HistoricalShots);
+        Assert.Equal(2, result.HistoricalShots.Count);
+        Assert.Equal(BaristaNotes.Core.Models.Enums.BrewMethod.PourOver, result.HistoricalShots[0].BrewMethod);
+        Assert.Equal(BaristaNotes.Core.Models.Enums.BrewMethod.FrenchPress, result.HistoricalShots[1].BrewMethod);
+        Assert.Equal("Pour Over", result.HistoricalShots[0].DrinkType);
+        Assert.Equal("French Press", result.HistoricalShots[1].DrinkType);
+    }
+
+    [Fact]
     public async Task GetBeanRecommendationContextAsync_LimitsHistoricalShotsToTen()
     {
         // Arrange

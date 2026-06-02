@@ -459,4 +459,162 @@ public class AIPromptBuilderTests
             }
         };
     }
+
+    // --- Brew-method-aware prompt tests ------------------------------------
+    // These tests guard the rule that AI advice must be grounded in the
+    // selected brew method. Espresso-only assumptions (1:2 ratio, 25–35s)
+    // must NOT leak into pour over, French press, or cold brew prompts.
+
+    [Theory]
+    [InlineData(BaristaNotes.Core.Models.Enums.BrewMethod.Espresso, "Espresso")]
+    [InlineData(BaristaNotes.Core.Models.Enums.BrewMethod.PourOver, "Pour Over")]
+    [InlineData(BaristaNotes.Core.Models.Enums.BrewMethod.FrenchPress, "French Press")]
+    [InlineData(BaristaNotes.Core.Models.Enums.BrewMethod.ColdBrew, "Cold Brew")]
+    public void BuildPrompt_NamesBrewMethodInClosingQuestion(
+        BaristaNotes.Core.Models.Enums.BrewMethod method,
+        string expectedDisplay)
+    {
+        var context = CreateBasicContext();
+        context = context with
+        {
+            CurrentShot = context.CurrentShot with { BrewMethod = method }
+        };
+
+        var prompt = AIPromptBuilder.BuildPrompt(context);
+
+        Assert.Contains(expectedDisplay, prompt);
+        Assert.Contains("Brew method:", prompt);
+    }
+
+    [Fact]
+    public void BuildAdviceSystemPrompt_Espresso_MentionsExtractionRatioAndShotTime()
+    {
+        var prompt = AIPromptBuilder.BuildAdviceSystemPrompt(
+            BaristaNotes.Core.Models.Enums.BrewMethod.Espresso);
+
+        Assert.Contains("espresso", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1:2", prompt);
+        Assert.Contains("25", prompt);
+    }
+
+    [Fact]
+    public void BuildAdviceSystemPrompt_FrenchPress_DoesNotMentionEspressoRatios()
+    {
+        var prompt = AIPromptBuilder.BuildAdviceSystemPrompt(
+            BaristaNotes.Core.Models.Enums.BrewMethod.FrenchPress);
+
+        Assert.Contains("French Press", prompt);
+        Assert.Contains("steep", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("coarse", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("1:2 to 1:2.5", prompt);
+        Assert.DoesNotContain("25–35s", prompt);
+    }
+
+    [Fact]
+    public void BuildAdviceSystemPrompt_PourOver_MentionsBloomAndPour()
+    {
+        var prompt = AIPromptBuilder.BuildAdviceSystemPrompt(
+            BaristaNotes.Core.Models.Enums.BrewMethod.PourOver);
+
+        Assert.Contains("pour", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("bloom", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("1:2 to 1:2.5", prompt);
+    }
+
+    [Fact]
+    public void BuildAdviceSystemPrompt_ColdBrew_MentionsSteepHoursAndCoarseGrind()
+    {
+        var prompt = AIPromptBuilder.BuildAdviceSystemPrompt(
+            BaristaNotes.Core.Models.Enums.BrewMethod.ColdBrew);
+
+        Assert.Contains("Cold Brew", prompt);
+        Assert.Contains("h", prompt); // hours appear in the range
+        Assert.Contains("coarse", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("25–35s", prompt);
+    }
+
+    [Fact]
+    public void BuildAdviceSystemPrompt_AlwaysPinsBrewMethodAndWarnsAgainstCrossMethodAssumptions()
+    {
+        foreach (BaristaNotes.Core.Models.Enums.BrewMethod method in
+            Enum.GetValues(typeof(BaristaNotes.Core.Models.Enums.BrewMethod)))
+        {
+            var prompt = AIPromptBuilder.BuildAdviceSystemPrompt(method);
+            Assert.Contains(BaristaNotes.Core.Models.Enums.BrewMethodExtensions.DisplayName(method), prompt);
+            Assert.Contains("do NOT apply assumptions from other brewing methods", prompt);
+        }
+    }
+
+    [Fact]
+    public void BuildPassiveAdviceSystemPrompt_NamesTheBrewMethod()
+    {
+        var prompt = AIPromptBuilder.BuildPassiveAdviceSystemPrompt(
+            BaristaNotes.Core.Models.Enums.BrewMethod.Aeropress);
+
+        Assert.Contains("Aeropress", prompt);
+    }
+
+    [Fact]
+    public void BuildRecommendationSystemPrompt_NamesTheBrewMethodAndForbidsEspressoForOthers()
+    {
+        var prompt = AIPromptBuilder.BuildRecommendationSystemPrompt(
+            BaristaNotes.Core.Models.Enums.BrewMethod.V60);
+
+        Assert.Contains("V60", prompt);
+        Assert.Contains("do NOT return espresso-style parameters", prompt);
+    }
+
+    [Fact]
+    public void BuildNewBeanPrompt_FrenchPress_UsesFrenchPressRangesInJsonHints()
+    {
+        var context = new BeanRecommendationContextDto
+        {
+            BeanId = 1,
+            BeanName = "Test Bean",
+            HasHistory = false
+        };
+
+        var prompt = AIPromptBuilder.BuildNewBeanPrompt(
+            context,
+            BaristaNotes.Core.Models.Enums.BrewMethod.FrenchPress);
+
+        Assert.Contains("French Press", prompt);
+        // French press dose default range is much larger than espresso's 18–20
+        Assert.Contains("French Press range 10", prompt);
+        // Espresso-only suggested ranges must NOT leak in
+        Assert.DoesNotContain("typically 18-20", prompt);
+        Assert.DoesNotContain("typically 36-50", prompt);
+        Assert.DoesNotContain("typically 25-35", prompt);
+    }
+
+    [Fact]
+    public void BuildReturningBeanPrompt_PourOver_TaggesHistoricalShotsWithTheirMethod()
+    {
+        var context = new BeanRecommendationContextDto
+        {
+            BeanId = 1,
+            BeanName = "Test Bean",
+            HasHistory = true,
+            HistoricalShots = new List<ShotContextDto>
+            {
+                new ShotContextDto
+                {
+                    BrewMethod = BaristaNotes.Core.Models.Enums.BrewMethod.PourOver,
+                    DoseIn = 20m,
+                    ActualOutput = 320m,
+                    ActualTime = 210m,
+                    Rating = 4,
+                    Timestamp = DateTime.UtcNow.AddDays(-1)
+                }
+            }
+        };
+
+        var prompt = AIPromptBuilder.BuildReturningBeanPrompt(
+            context,
+            BaristaNotes.Core.Models.Enums.BrewMethod.PourOver);
+
+        Assert.Contains("Pour Over", prompt);
+        Assert.Contains("Pour Over range", prompt);
+        Assert.Contains("Pour Over, 20g in", prompt);
+    }
 }

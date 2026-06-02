@@ -479,6 +479,8 @@ public class ShotService : IShotService
                     GrindMicrons = s.GrindMicrons,
                     Rating = s.Rating,
                     TastingNotes = null,
+                    BrewMethod = s.BrewMethod,
+                    DrinkType = s.DrinkType,
                     Timestamp = s.Timestamp
                 })
                 .ToList();

@@ -33,12 +33,6 @@ public class AIAdviceService : IAIAdviceService
     private const string SourceOnDevice = "via Apple Intelligence";
     private const string SourceCloud = "via Azure OpenAI";
 
-    private const string SystemPrompt = @"You are an expert barista assistant helping improve espresso shots.
-Analyze the shot data and provide 1-3 specific parameter adjustments.
-Consider extraction ratio (target 1:2 to 1:2.5), time (25-35s), grind, and dose.
-Be practical and specific with amounts (e.g., '0.5g', '2 clicks finer', '3 seconds').
-Provide brief reasoning in one sentence.";
-
     public AIAdviceService(
         IShotService shotService,
         IFeedbackService feedbackService,
@@ -95,10 +89,14 @@ Provide brief reasoning in one sentence.";
             // Build the prompt using shared utility
             var userMessage = AIPromptBuilder.BuildPrompt(context);
 
+            // System prompt is tailored to the brew method — don't hand the
+            // model espresso-only assumptions for a pour over or French press.
+            var systemPrompt = AIPromptBuilder.BuildAdviceSystemPrompt(context.CurrentShot.BrewMethod);
+
             // Build messages
             var messages = new List<ChatMessage>
             {
-                new ChatMessage(ChatRole.System, SystemPrompt),
+                new ChatMessage(ChatRole.System, systemPrompt),
                 new ChatMessage(ChatRole.User, userMessage)
             };
 
@@ -191,7 +189,7 @@ Provide brief reasoning in one sentence.";
 
             var messages = new List<ChatMessage>
             {
-                new ChatMessage(ChatRole.System, "You are a brief espresso advisor. Give ONE short sentence of advice (max 15 words)."),
+                new ChatMessage(ChatRole.System, AIPromptBuilder.BuildPassiveAdviceSystemPrompt(context.CurrentShot.BrewMethod)),
                 new ChatMessage(ChatRole.User, passivePrompt)
             };
 
@@ -465,12 +463,29 @@ Provide brief reasoning in one sentence.";
     }
 
     /// <summary>
-    /// System prompt for bean recommendations.
+    /// Picks the most common brew method from the bean's historical shots
+    /// (with ties broken by the most recent shot's method). Falls back to
+    /// Espresso when the bean has no history at all. Used by
+    /// <see cref="GetRecommendationsForBeanAsync"/> so the AI returns
+    /// parameters in the right ballpark for the method the user actually uses
+    /// this bean for.
     /// </summary>
-    private const string RecommendationSystemPrompt = @"You are an expert barista assistant.
-Recommend espresso extraction parameters based on bean characteristics.
-Use standard ratios (1:2 to 1:2.5), typical times (25-35s).
-Adjust for roast level: darker roasts need coarser grind.";
+    private static BrewMethod InferBrewMethodFromHistory(IReadOnlyList<ShotContextDto>? historicalShots)
+    {
+        if (historicalShots == null || historicalShots.Count == 0)
+        {
+            return BrewMethod.Espresso;
+        }
+
+        var mostCommon = historicalShots
+            .GroupBy(s => s.BrewMethod)
+            .OrderByDescending(g => g.Count())
+            .ThenByDescending(g => g.Max(s => s.Timestamp))
+            .First()
+            .Key;
+
+        return mostCommon;
+    }
 
     /// <inheritdoc />
     public async Task<AIRecommendationDto> GetRecommendationsForBeanAsync(
@@ -500,19 +515,25 @@ Adjust for roast level: darker roasts need coarser grind.";
                 };
             }
 
+            // Beans aren't bound to a single brew method, so infer the user's
+            // most-used method from this bean's history (falling back to
+            // Espresso when there is none). This keeps the recommendation
+            // grounded — a French-press drinker doesn't want espresso ratios.
+            var brewMethod = InferBrewMethodFromHistory(context.HistoricalShots);
+
             // Build prompt based on whether bean has history
             var userMessage = context.HasHistory
-                ? AIPromptBuilder.BuildReturningBeanPrompt(context)
-                : AIPromptBuilder.BuildNewBeanPrompt(context);
+                ? AIPromptBuilder.BuildReturningBeanPrompt(context, brewMethod)
+                : AIPromptBuilder.BuildNewBeanPrompt(context, brewMethod);
 
             var recommendationType = context.HasHistory
                 ? RecommendationType.ReturningBean
                 : RecommendationType.NewBean;
 
-            // Build messages
+            // Build messages with a brew-method-aware system prompt
             var messages = new List<ChatMessage>
             {
-                new ChatMessage(ChatRole.System, RecommendationSystemPrompt),
+                new ChatMessage(ChatRole.System, AIPromptBuilder.BuildRecommendationSystemPrompt(brewMethod)),
                 new ChatMessage(ChatRole.User, userMessage)
             };
 

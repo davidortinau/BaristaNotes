@@ -6,6 +6,7 @@ namespace BaristaNotes.Pages;
 class EquipmentDetailPageProps
 {
     public int? EquipmentId { get; set; }
+    public EquipmentType? PresetType { get; set; }
 }
 
 class EquipmentDetailPageState
@@ -47,6 +48,10 @@ partial class EquipmentDetailPage : Component<EquipmentDetailPageState, Equipmen
                 s.IsLoading = true;
             });
             _ = LoadEquipmentAsync();
+        }
+        else if (Props.PresetType.HasValue)
+        {
+            SetState(s => s.SelectedType = Props.PresetType.Value);
         }
     }
 

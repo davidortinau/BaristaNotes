@@ -499,7 +499,52 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             _ = OpenGrindPickerAsync();
             return;
         }
+
+        // If the picker has no data, skip the empty list and route the user
+        // straight to the form that creates the missing content. This keeps
+        // shot logging frictionless for new users and dead ends impossible.
+        if (TryNavigateForEmptyPicker(kind))
+            return;
+
         SetState(s => s.ActivePicker = kind);
+    }
+
+    bool TryNavigateForEmptyPicker(GridPickerKind kind)
+    {
+        switch (kind)
+        {
+            case GridPickerKind.Bag when State.AvailableBags.Count == 0:
+                _ = MauiControls.Shell.Current.GoToAsync("bean-detail");
+                return true;
+
+            case GridPickerKind.MadeBy when State.AvailableUsers.Count == 0:
+            case GridPickerKind.MadeFor when State.AvailableUsers.Count == 0:
+                _ = MauiControls.Shell.Current.GoToAsync<ProfileFormPageProps>(
+                    "profile-form", props => props.ProfileId = null);
+                return true;
+
+            case GridPickerKind.Machine
+                when !State.AvailableEquipment.Any(e => e.Type == EquipmentType.Machine):
+                _ = MauiControls.Shell.Current.GoToAsync<EquipmentDetailPageProps>(
+                    "equipment-detail", props => props.PresetType = EquipmentType.Machine);
+                return true;
+
+            case GridPickerKind.Grinder
+                when !State.AvailableEquipment.Any(e => e.Type == EquipmentType.Grinder):
+                _ = MauiControls.Shell.Current.GoToAsync<EquipmentDetailPageProps>(
+                    "equipment-detail", props => props.PresetType = EquipmentType.Grinder);
+                return true;
+
+            case GridPickerKind.Accessories
+                when !State.AvailableEquipment.Any(e =>
+                    e.Type != EquipmentType.Machine && e.Type != EquipmentType.Grinder):
+                _ = MauiControls.Shell.Current.GoToAsync<EquipmentDetailPageProps>(
+                    "equipment-detail", props => props.PresetType = EquipmentType.Tamper);
+                return true;
+
+            default:
+                return false;
+        }
     }
     void ClosePicker() => SetState(s =>
     {
@@ -755,8 +800,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 title: "Bag",
                 items: State.AvailableBags.Select(b => (Key: (object)b.Id, Display: BagDisplayLabel(b))).ToList(),
                 isSelected: o => State.SelectedBagId == (int)o,
-                onSelect: o => SetState(s => { s.SelectedBagId = (int)o; s.ActivePicker = GridPickerKind.None; }),
-                emptyMessage: "No active bags. Add a bag from Settings."),
+                onSelect: o => SetState(s => { s.SelectedBagId = (int)o; s.ActivePicker = GridPickerKind.None; })),
 
             GridPickerKind.MadeBy => CategoricalPicker(
                 title: "Made By",
@@ -1199,7 +1243,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         {
             main = "Select grinder for dial setting";
             cta = "→";
-            onTap = () => SetState(s => s.ActivePicker = GridPickerKind.Grinder);
+            onTap = () => Open(GridPickerKind.Grinder);
         }
         else if (anchors == null || anchors.Count < 2)
         {

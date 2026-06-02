@@ -1,5 +1,9 @@
 ﻿using MauiReactor;
+using MauiReactor.Animations;
+using MauiReactor.Shapes;
 using BaristaNotes.Core.Services.Exceptions;
+using BaristaNotes.Integrations.Popups;
+using UXDivers.Popups.Services;
 using Microsoft.Maui.Controls.PlatformConfiguration;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using Application = Microsoft.Maui.Controls.Application;
@@ -110,6 +114,12 @@ class ShotLoggingGridState
     public bool VoiceCommandCommitted { get; set; }
     public List<VoiceChatMessage> VoiceChatHistory { get; set; } = new();
     public string LastAIResponse { get; set; } = "";
+
+    // AI advice state — drives the bottom-row loading bar overlay and the
+    // ShotAdvicePopup. Only used in edit mode (Props.ShotId.HasValue).
+    public bool IsLoadingAdvice { get; set; }
+    public double LoadingBarPosition { get; set; } = -120;
+    public BaristaNotes.Core.Services.DTOs.AIAdviceResponseDto? LastAdvice { get; set; }
 }
 
 class ShotLoggingGridPageProps
@@ -140,6 +150,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     [Inject] IOverlayService _overlayService;
     [Inject] IVisionService _visionService;
     [Inject] IDataChangeNotifier _dataChangeNotifier;
+    [Inject] BaristaNotes.Services.IAIAdviceService _aiAdviceService;
 
     // Cancellation token for voice commands.
     private CancellationTokenSource? _voiceCts;
@@ -453,8 +464,20 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                         .GridRow(7).GridColumn(1),
                     NavTile(AppIcons.Voice, async () => await ToggleVoiceSheetAsync())
                         .GridRow(7).GridColumn(2),
-                    NavTile(AppIcons.Camera, async () => await CaptureAndAnalyzePhotoAsync())
-                        .GridRow(7).GridColumn(3)
+                    Props.ShotId.HasValue
+                        ? NavTile(AppIcons.Ai, async () => await RequestAdviceAsync())
+                            .GridRow(7).GridColumn(3)
+                        : NavTile(AppIcons.Camera, async () => await CaptureAndAnalyzePhotoAsync())
+                            .GridRow(7).GridColumn(3),
+
+                    // Loading-bar overlay: in-row, drawn AFTER the NavTiles so
+                    // it z-orders on top. TranslationY pulls it onto the
+                    // divider line just above the tiles. Rendered only while
+                    // loading so there is no idle footprint.
+                    State.IsLoadingAdvice
+                        ? RenderAdviceLoadingBar()
+                            .GridRow(7).GridColumnSpan(4)
+                        : null
 
                 )
                 .ColumnSpacing(1)
@@ -1802,6 +1825,131 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             if (ContainerPage != null)
                 await ContainerPage.DisplayAlert("Error",
                     $"Failed to capture or analyze photo: {ex.Message}", "OK");
+        }
+    }
+
+    // ============================================================
+    //  AI advice flow (edit mode only)
+    // ============================================================
+
+    /// <summary>
+    /// Animated gradient bar that rides the divider line just above the
+    /// bottom NavTile row while AI advice is being fetched. Rendered in
+    /// row 7 AFTER the NavTiles (z-order = render order) and pulled up
+    /// with a small negative TranslationY so it sits on the divider, not
+    /// over the tile glyphs.
+    /// </summary>
+    VisualNode RenderAdviceLoadingBar()
+    {
+        var isLight = Application.Current?.RequestedTheme != AppTheme.Dark;
+        var primary = isLight ? AppColors.Light.Primary : AppColors.Dark.Primary;
+
+        var gradient = new MauiControls.LinearGradientBrush
+        {
+            StartPoint = new Point(0, 0.5),
+            EndPoint = new Point(1, 0.5),
+            GradientStops = new MauiControls.GradientStopCollection
+            {
+                new MauiControls.GradientStop(Colors.Transparent, 0.0f),
+                new MauiControls.GradientStop(primary, 0.5f),
+                new MauiControls.GradientStop(Colors.Transparent, 1.0f),
+            }
+        };
+
+        return Grid(
+            BoxView()
+                .HeightRequest(4)
+                .WidthRequest(120)
+                .Background(gradient)
+                .HorizontalOptions(LayoutOptions.Start)
+                .TranslationX(() => State.LoadingBarPosition),
+
+            new AnimationController
+            {
+                new SequenceAnimation
+                {
+                    new DoubleAnimation()
+                        .StartValue(-120)
+                        .TargetValue(400)
+                        .Duration(TimeSpan.FromSeconds(1))
+                        .Easing(Easing.Linear)
+                        .OnTick(v => SetState(s => s.LoadingBarPosition = v, false))
+                }
+                .RepeatForever()
+            }
+            .IsEnabled(State.IsLoadingAdvice)
+        )
+        .HeightRequest(4)
+        .VerticalOptions(LayoutOptions.Start)
+        .TranslationY(-3);
+    }
+
+    /// <summary>
+    /// Requests AI advice for the shot currently being edited and shows it
+    /// in a <see cref="ShotAdvicePopup"/>. Guarded on Props.ShotId and on
+    /// <see cref="IAIAdviceService.IsConfiguredAsync"/>. 10 s timeout.
+    /// </summary>
+    async Task RequestAdviceAsync()
+    {
+        if (!Props.ShotId.HasValue) return;
+        if (State.IsLoadingAdvice) return; // re-entrancy guard
+
+        try
+        {
+            if (!await _aiAdviceService.IsConfiguredAsync())
+            {
+                await _feedbackService.ShowErrorAsync(
+                    "AI advice is not available",
+                    "Please update the app or contact support.");
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to check AI advice configuration");
+            await _feedbackService.ShowErrorAsync("AI advice is not available", ex.Message);
+            return;
+        }
+
+        SetState(s =>
+        {
+            s.IsLoadingAdvice = true;
+            s.LastAdvice = null;
+        });
+
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var response = await _aiAdviceService.GetAdviceForShotAsync(Props.ShotId.Value, cts.Token);
+
+            SetState(s =>
+            {
+                s.IsLoadingAdvice = false;
+                s.LastAdvice = response;
+            });
+
+            if (response.Success)
+            {
+                var popup = new ShotAdvicePopup(response);
+                await IPopupService.Current.PushAsync(popup);
+            }
+            else
+            {
+                await _feedbackService.ShowErrorAsync(
+                    "Could not get advice",
+                    response.ErrorMessage ?? "The AI did not return a usable response.");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            SetState(s => s.IsLoadingAdvice = false);
+            await _feedbackService.ShowErrorAsync("Request timed out", "Please try again.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch AI advice for shot {ShotId}", Props.ShotId.Value);
+            SetState(s => s.IsLoadingAdvice = false);
+            await _feedbackService.ShowErrorAsync("Failed to get advice", ex.Message);
         }
     }
 }

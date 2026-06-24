@@ -149,6 +149,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
 
     [Inject] IShotService _shotService;
     [Inject] IBagService _bagService;
+    [Inject] IRecipeService _recipeService;
     [Inject] IEquipmentService _equipmentService;
     [Inject] IUserProfileService _userProfileService;
     [Inject] IPreferencesService _preferencesService;
@@ -445,7 +446,8 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     Tile("METHOD", State.BrewMethod.DisplayName(),
                             () => Open(GridPickerKind.BrewMethod)).GridRow(0).GridColumn(0).GridColumnSpan(2),
                     Tile("BAG", BagDisplayValue(),
-                            () => Open(GridPickerKind.Bag)).GridRow(0).GridColumn(2).GridColumnSpan(2),
+                            () => Open(GridPickerKind.Bag),
+                            onLongPress: () => _ = OpenRecipeForSelectedBagAsync()).GridRow(0).GridColumn(2).GridColumnSpan(2),
 
                     Tile("DRINK TYPE", State.DrinkType,
                             () => Open(GridPickerKind.DrinkType)).GridRow(1).GridColumn(0).GridColumnSpan(2),
@@ -668,7 +670,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     // Tile factory
     // ------------------------------------------------------------
 
-    VisualNode Tile(string label, string value, Action onTap, string? unit = null, bool inverted = false, double topInsetPadding = 0, double bottomInsetPadding = 0, string? subtitle = null)
+    VisualNode Tile(string label, string value, Action onTap, string? unit = null, bool inverted = false, double topInsetPadding = 0, double bottomInsetPadding = 0, string? subtitle = null, Action? onLongPress = null)
     {
         var isLight = Application.Current?.RequestedTheme != AppTheme.Dark;
         var bg = inverted
@@ -737,7 +739,58 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         .StrokeThickness(0)
         .StrokeShape(new Rectangle())
         .MinimumHeightRequest(120)
-        .OnTapped(onTap);
+        .OnTapped(onTap)
+        .OnLoaded((sender, _) => AttachLongPress(sender, onLongPress));
+    }
+
+    // MauiReactor 4.0.17 has no fluent wrapper for the .NET 11
+    // LongPressGestureRecognizer, so attach it to the native control on load.
+    // Guarded so repeated load/unload cycles don't stack recognizers.
+    static void AttachLongPress(object? sender, Action? onLongPress)
+    {
+        if (onLongPress is null || sender is not MauiControls.View view)
+            return;
+
+        if (view.GestureRecognizers.OfType<MauiControls.LongPressGestureRecognizer>().Any())
+            return;
+
+        var recognizer = new MauiControls.LongPressGestureRecognizer();
+        recognizer.LongPressed += (_, _) => onLongPress();
+        view.GestureRecognizers.Add(recognizer);
+    }
+
+    // Long-press on the BAG tile jumps to the recipe for the selected bag's
+    // bean + current brew method. Shows a toast when nothing matches.
+    async Task OpenRecipeForSelectedBagAsync()
+    {
+        var bag = State.SelectedBagId.HasValue
+            ? State.AvailableBags.FirstOrDefault(b => b.Id == State.SelectedBagId.Value)
+            : null;
+
+        if (bag is null)
+        {
+            await _feedbackService.ShowInfoAsync("Select a bag first to view its recipe.");
+            return;
+        }
+
+        try
+        {
+            var recipe = await _recipeService.GetRecipeForBeanAndMethodAsync(bag.BeanId, State.BrewMethod);
+            if (recipe is null)
+            {
+                await _feedbackService.ShowInfoAsync(
+                    $"No {State.BrewMethod.DisplayName()} recipe for {bag.BeanName} yet.");
+                return;
+            }
+
+            await MauiControls.Shell.Current.GoToAsync<BeanDetailPageProps>(
+                "bean-detail", props => props.BeanId = bag.BeanId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open recipe for bagId: {BagId}", bag.Id);
+            await _feedbackService.ShowErrorAsync("Couldn't open the recipe.");
+        }
     }
 
     // ------------------------------------------------------------

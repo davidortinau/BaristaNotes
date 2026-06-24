@@ -147,7 +147,7 @@
 
 	<!-- MAUI DevFlow (DEBUG only): in-process agent for UI inspection, logs, network, preferences. -->
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-		<PackageReference Include="Microsoft.Maui.DevFlow.Agent" Version="0.25.0-dev" />
+		<PackageReference Include="Microsoft.Maui.DevFlow.Agent" Version="0.26.1-dev" />
 	</ItemGroup>
 
 	<!-- Microsoft.Maui.Labs.HotReload (DEBUG only): IHotReloadAware + MetadataUpdateHandler.

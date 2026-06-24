@@ -40,6 +40,7 @@ enum GridPickerKind
     YieldOut,
     ActualTime,
     GrindMicrons,
+    WaterTemp,
 }
 
 class ShotLoggingGridState
@@ -59,6 +60,16 @@ class ShotLoggingGridState
     /// default if null when opened.
     /// </summary>
     public int? GrindMicrons { get; set; }
+
+    /// <summary>
+    /// Brew water temperature in canonical Celsius. Null = not recorded.
+    /// Displayed/entered in the user's preferred unit (<see cref="TempUnit"/>).
+    /// </summary>
+    public decimal? WaterTempC { get; set; }
+
+    /// <summary>User's preferred temperature display unit (loaded from prefs).</summary>
+    public BaristaNotes.Core.Models.Enums.TemperatureUnit TempUnit { get; set; }
+        = BaristaNotes.Core.Models.Enums.TemperatureUnit.Fahrenheit;
 
     /// <summary>
     /// Transient grind hint surfaced when a recipe was applied but didn't
@@ -238,6 +249,8 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     s.DrinkType = shot.DrinkType;
                     s.DoseIn = shot.DoseIn;
                     s.GrindMicrons = shot.GrindMicrons;
+                    s.WaterTempC = shot.WaterTempC;
+                    s.TempUnit = _preferencesService.GetTemperatureUnit();
                     s.ExpectedTime = shot.ExpectedTime;
                     s.ExpectedOutput = shot.ExpectedOutput;
                     s.ActualTime = shot.ActualTime;
@@ -273,6 +286,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                         s.DrinkType = lastShot.DrinkType;
                         s.DoseIn = lastShot.DoseIn;
                         s.GrindMicrons = lastShot.GrindMicrons;
+                        s.WaterTempC = lastShot.WaterTempC;
                         s.ExpectedTime = lastShot.ExpectedTime;
                         s.ExpectedOutput = lastShot.ExpectedOutput;
                         s.Rating = lastShot.Rating ?? 2;
@@ -292,6 +306,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     s.SelectedMachineId = _preferencesService.GetLastMachineId();
                     s.SelectedGrinderId = _preferencesService.GetLastGrinderId();
                     s.SelectedAccessoryIds = _preferencesService.GetLastAccessoryIds();
+                    s.TempUnit = _preferencesService.GetTemperatureUnit();
                     s.IsLoading = false;
                 });
             }
@@ -329,6 +344,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     MadeForId = State.SelectedRecipient?.Id,
                     DoseIn = State.DoseIn,
                     GrindMicrons = State.GrindMicrons,
+                    WaterTempC = State.WaterTempC,
                     ExpectedTime = State.ExpectedTime,
                     ExpectedOutput = State.ExpectedOutput,
                     ActualTime = State.ActualTime,
@@ -353,6 +369,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     MadeForId = State.SelectedRecipient?.Id,
                     DoseIn = State.DoseIn,
                     GrindMicrons = State.GrindMicrons,
+                    WaterTempC = State.WaterTempC,
                     ExpectedTime = State.ExpectedTime,
                     ExpectedOutput = State.ExpectedOutput,
                     ActualTime = State.ActualTime,
@@ -444,18 +461,19 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     Tile("GRIND", State.GrindMicrons.HasValue ? $"{State.GrindMicrons}" : "—",
                             () => Open(GridPickerKind.GrindMicrons), unit: State.GrindMicrons.HasValue ? "µm" : null).GridRow(3).GridColumn(2).GridColumnSpan(2),
 
+                    Tile("WATER TEMP", WaterTempMain(),
+                            () => Open(GridPickerKind.WaterTemp), unit: WaterTempUnit())
+                            .GridRow(4).GridColumn(0).GridColumnSpan(2),
                     Tile("MADE BY", State.SelectedMaker?.Name ?? "—",
-                            () => Open(GridPickerKind.MadeBy)).GridRow(4).GridColumn(0).GridColumnSpan(2),
+                            () => Open(GridPickerKind.MadeBy)).GridRow(4).GridColumn(2).GridColumnSpan(2),
+
                     Tile("MADE FOR", State.SelectedRecipient?.Name ?? "—",
-                            () => Open(GridPickerKind.MadeFor)).GridRow(4).GridColumn(2).GridColumnSpan(2),
-
+                            () => Open(GridPickerKind.MadeFor)).GridRow(5).GridColumn(0).GridColumnSpan(2),
                     Tile("MACHINE", EquipmentName(State.SelectedMachineId),
-                            () => Open(GridPickerKind.Machine)).GridRow(5).GridColumn(0).GridColumnSpan(2),
-                    Tile("GRINDER", EquipmentName(State.SelectedGrinderId),
-                            () => Open(GridPickerKind.Grinder)).GridRow(5).GridColumn(2).GridColumnSpan(2),
+                            () => Open(GridPickerKind.Machine)).GridRow(5).GridColumn(2).GridColumnSpan(2),
 
-                    Tile("ACCESSORIES", AccessoriesDisplayValue(),
-                            () => Open(GridPickerKind.Accessories)).GridRow(6).GridColumn(0).GridColumnSpan(2),
+                    Tile("GRINDER", EquipmentName(State.SelectedGrinderId),
+                            () => Open(GridPickerKind.Grinder)).GridRow(6).GridColumn(0).GridColumnSpan(2),
                     SaveTile().GridRow(6).GridColumn(2).GridColumnSpan(2),
 
                     NavTile(AppIcons.Feed, async () => await MauiControls.Shell.Current.GoToAsync("//history"))
@@ -498,6 +516,15 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
 
     void OnPageAppearing()
     {
+        // The shots tab is retained by Shell, so OnMounted does not re-run when
+        // returning from Settings. Re-read the temperature unit preference here
+        // so a unit change in Settings is reflected on the WATER TEMP tile.
+        var pref = _preferencesService.GetTemperatureUnit();
+        if (pref != State.TempUnit)
+        {
+            SetState(s => s.TempUnit = pref);
+        }
+
         // Cross-page voice trigger: ActivityFeedPage's voice tile sets this
         // flag and navigates here. Fire after the page is visible so the
         // overlay attaches to the right window.
@@ -641,7 +668,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     // Tile factory
     // ------------------------------------------------------------
 
-    VisualNode Tile(string label, string value, Action onTap, string? unit = null, bool inverted = false, double topInsetPadding = 0, double bottomInsetPadding = 0)
+    VisualNode Tile(string label, string value, Action onTap, string? unit = null, bool inverted = false, double topInsetPadding = 0, double bottomInsetPadding = 0, string? subtitle = null)
     {
         var isLight = Application.Current?.RequestedTheme != AppTheme.Dark;
         var bg = inverted
@@ -677,21 +704,28 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     .TextColor(labelColor)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .GridRow(0),
-                HStack(spacing: 4,
-                    Label(value)
-                        .FontSize(valueFontSize)
-                        .FontAttributes(MauiControls.FontAttributes.Bold)
-                        .TextColor(valueColor)
-                        .LineBreakMode(LineBreakMode.WordWrap)
-                        .MaxLines(2)
-                        .VEnd()
-                        .HorizontalOptions(LayoutOptions.Fill),
-                    hasUnit
-                        ? Label(unit)
-                            .FontSize(Math.Max(12, valueFontSize * 0.45))
-                            .TextColor(valueColor.WithAlpha(0.6f))
-                            .Margin(0, 0, 0, valueFontSize >= 32 ? 8 : 4)
+                VStack(spacing: 2,
+                    HStack(spacing: 4,
+                        Label(value)
+                            .FontSize(valueFontSize)
+                            .FontAttributes(MauiControls.FontAttributes.Bold)
+                            .TextColor(valueColor)
+                            .LineBreakMode(LineBreakMode.WordWrap)
+                            .MaxLines(2)
                             .VEnd()
+                            .HorizontalOptions(LayoutOptions.Fill),
+                        hasUnit
+                            ? Label(unit)
+                                .FontSize(Math.Max(12, valueFontSize * 0.45))
+                                .TextColor(valueColor.WithAlpha(0.6f))
+                                .Margin(0, 0, 0, valueFontSize >= 32 ? 8 : 4)
+                                .VEnd()
+                            : null
+                    ),
+                    subtitle != null
+                        ? Label(subtitle)
+                            .FontSize(13)
+                            .TextColor(valueColor.WithAlpha(0.6f))
                         : null
                 )
                 .GridRow(1)
@@ -923,6 +957,8 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
 
             GridPickerKind.GrindMicrons => GrindMicronsPicker(),
 
+            GridPickerKind.WaterTemp => WaterTempPicker(),
+
             _ => VStack()
         };
     }
@@ -1130,24 +1166,37 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     .TextColor(textSecondary).HCenter().VCenter().GridColumn(0).GridColumnSpan(3)
             ).GridRow(0).Padding(12, 8),
 
-            ScrollView(
-                VStack(spacing: 0,
-                    values.Select((v, i) =>
+            CollectionView()
+                .ItemsSource(values, v =>
+                {
+                    var selected = Math.Abs(v - values[snappedIndex]) < 1e-9;
+                    var text = unit != null ? $"{v.ToString(spec.Format)}{unit}" : v.ToString(spec.Format);
+                    return Grid(rows: "*", columns: "*",
+                        Label(text)
+                            .FontSize(selected ? 56 : 32)
+                            .FontAttributes(selected ? MauiControls.FontAttributes.Bold : MauiControls.FontAttributes.None)
+                            .TextColor(selected ? accent : textPrimary)
+                            .HCenter().VCenter()
+                    )
+                    .HeightRequest(selected ? 96 : 72)
+                    .OnTapped(() => onSelect(v));
+                })
+                .SelectionMode(MauiControls.SelectionMode.None)
+                .OnLoaded((sender, _) =>
+                {
+                    if (sender is MauiControls.CollectionView cv)
                     {
-                        var selected = i == snappedIndex;
-                        var text = unit != null ? $"{v.ToString(spec.Format)}{unit}" : v.ToString(spec.Format);
-                        return Grid(rows: "*", columns: "*",
-                            Label(text)
-                                .FontSize(selected ? 56 : 32)
-                                .FontAttributes(selected ? MauiControls.FontAttributes.Bold : MauiControls.FontAttributes.None)
-                                .TextColor(selected ? accent : textPrimary)
-                                .HCenter().VCenter()
-                        )
-                        .HeightRequest(selected ? 96 : 72)
-                        .OnTapped(() => onSelect(v));
-                    }).ToArray()
-                )
-            ).GridRow(1)
+                        try
+                        {
+                            cv.ScrollTo(snappedIndex, position: MauiControls.ScrollToPosition.Center, animate: false);
+                        }
+                        catch
+                        {
+                            // Best-effort centering; ignore if items aren't laid out yet.
+                        }
+                    }
+                })
+                .GridRow(1)
         ).BackgroundColor(isLight ? AppColors.Light.Surface : AppColors.Dark.Surface);
     }
 
@@ -1326,6 +1375,63 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             s.PickerGrinderName = null;
             s.PickerGrinderUncalibrated = false;
         });
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    //  Water temperature: canonical Celsius storage, display/entry in the
+    //  user's preferred unit (Settings → Units). °F is whole degrees; °C uses
+    //  0.5° steps. The tile shows the preferred unit as the main value and the
+    //  other unit as a subtitle.
+    // ──────────────────────────────────────────────────────────────────────
+
+    bool PrefersFahrenheit
+        => State.TempUnit == BaristaNotes.Core.Models.Enums.TemperatureUnit.Fahrenheit;
+
+    static double CelsiusToFahrenheit(decimal c) => (double)c * 9.0 / 5.0 + 32.0;
+    static decimal FahrenheitToCelsius(double f) => Math.Round((decimal)((f - 32.0) * 5.0 / 9.0), 2);
+
+    string WaterTempMain()
+    {
+        if (!State.WaterTempC.HasValue) return "—";
+        return PrefersFahrenheit
+            ? $"{CelsiusToFahrenheit(State.WaterTempC.Value):0}"
+            : $"{State.WaterTempC.Value:0.#}";
+    }
+
+    string? WaterTempUnit()
+    {
+        if (!State.WaterTempC.HasValue) return null;
+        return PrefersFahrenheit ? "°F" : "°C";
+    }
+
+    string? WaterTempSub()
+    {
+        if (!State.WaterTempC.HasValue) return null;
+        return PrefersFahrenheit
+            ? $"{State.WaterTempC.Value:0.#} °C"
+            : $"{CelsiusToFahrenheit(State.WaterTempC.Value):0} °F";
+    }
+
+    VisualNode WaterTempPicker()
+    {
+        var f = PrefersFahrenheit;
+        var spec = f
+            ? new NumericFieldSpec(150, 212, 1, "0")
+            : new NumericFieldSpec(65, 100, 0.5, "0.#");
+        double current = State.WaterTempC.HasValue
+            ? (f ? CelsiusToFahrenheit(State.WaterTempC.Value) : (double)State.WaterTempC.Value)
+            : (f ? 200 : 93);
+
+        return NumericScroller(
+            title: "Water Temp",
+            unit: f ? "°F" : "°C",
+            spec: spec,
+            current: current,
+            onSelect: v => SetState(s =>
+            {
+                s.WaterTempC = f ? FahrenheitToCelsius(v) : (decimal)v;
+                s.ActivePicker = GridPickerKind.None;
+            }));
     }
 
     // ──────────────────────────────────────────────────────────────────────

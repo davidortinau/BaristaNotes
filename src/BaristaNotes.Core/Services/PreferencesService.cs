@@ -19,6 +19,7 @@ public class PreferencesService : IPreferencesService
     private const string KeyLastExpectedTime = "last_expected_time";
     private const string KeyLastExpectedOutput = "last_expected_output";
     private const string KeyLastPreinfusionTime = "last_preinfusion_time";
+    private const string KeyTemperatureUnit = "temperature_unit";
     
     public PreferencesService(IPreferencesStore store)
     {
@@ -146,6 +147,12 @@ public class PreferencesService : IPreferencesService
     
     public void SetLastPreinfusionTime(decimal? preinfusionTime)
         => _store.Set(KeyLastPreinfusionTime, preinfusionTime.HasValue ? (double)preinfusionTime.Value : -1.0);
+
+    public Models.Enums.TemperatureUnit GetTemperatureUnit()
+        => (Models.Enums.TemperatureUnit)_store.Get(KeyTemperatureUnit, (int)Models.Enums.TemperatureUnit.Fahrenheit);
+
+    public void SetTemperatureUnit(Models.Enums.TemperatureUnit unit)
+        => _store.Set(KeyTemperatureUnit, (int)unit);
     
     public void ClearAll()
     {
@@ -162,5 +169,6 @@ public class PreferencesService : IPreferencesService
         _store.Remove(KeyLastExpectedTime);
         _store.Remove(KeyLastExpectedOutput);
         _store.Remove(KeyLastPreinfusionTime);
+        _store.Remove(KeyTemperatureUnit);
     }
 }

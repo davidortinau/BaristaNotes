@@ -76,6 +76,7 @@ public class ShotService : IShotService
             ParametersJson = dto.ParametersJson,
             DoseIn = dto.DoseIn,
             GrindMicrons = dto.GrindMicrons,
+            WaterTempC = dto.WaterTempC,
             ExpectedTime = dto.ExpectedTime,
             ExpectedOutput = dto.ExpectedOutput,
             DrinkType = dto.DrinkType,
@@ -168,6 +169,9 @@ public class ShotService : IShotService
 
         if (dto.GrindMicrons.HasValue)
             shot.GrindMicrons = dto.GrindMicrons.Value;
+
+        if (dto.WaterTempC.HasValue)
+            shot.WaterTempC = dto.WaterTempC.Value;
 
         if (dto.ExpectedTime.HasValue)
             shot.ExpectedTime = dto.ExpectedTime.Value;
@@ -598,6 +602,7 @@ public class ShotService : IShotService
         },
         DoseIn = shot.DoseIn,
         GrindMicrons = shot.GrindMicrons,
+        WaterTempC = shot.WaterTempC,
         ExpectedTime = shot.ExpectedTime,
         ExpectedOutput = shot.ExpectedOutput,
         DrinkType = shot.DrinkType,

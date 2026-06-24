@@ -40,6 +40,14 @@ public class ShotRecord
     /// </summary>
     public int? GrindMicrons { get; set; }
 
+    /// <summary>
+    /// Brew water temperature in canonical Celsius. Nullable because older
+    /// rows pre-migration and "didn't record" cases legitimately have no
+    /// value. Display unit (°F/°C) is a user preference; conversion happens
+    /// at display/entry time.
+    /// </summary>
+    public decimal? WaterTempC { get; set; }
+
     public decimal ExpectedTime { get; set; }
     public decimal ExpectedOutput { get; set; }
     public string DrinkType { get; set; } = string.Empty;

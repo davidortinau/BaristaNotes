@@ -31,16 +31,49 @@ Auto-generated from all feature plans. Last updated: 2025-12-24
 
 ```text
 src/
-tests/
+  BaristaNotes/          # MAUI head: net11.0-android;net11.0-ios;net11.0-maccatalyst (+windows on Win)
+  BaristaNotes.Core/     # net11.0 shared models/services
+  BaristaNotes.Tests/    # net11.0 xUnit tests
+  BaristaNotes.sln
+specs/                   # Feature plans (001-*, 002-*, etc.)
+scripts/
 ```
+
+**Actual TFM is `net11.0`**, not 10.0 — ignore the ".NET 10.0" strings in the auto-generated lines above; they are stale spec metadata, not the build truth.
 
 ## Commands
 
-# Add commands for C# / .NET 10.0
+```bash
+# Build (pick the TFM you intend to run)
+dotnet build src/BaristaNotes -f net11.0-ios
+dotnet build src/BaristaNotes -f net11.0-maccatalyst
+dotnet build src/BaristaNotes -f net11.0-android
+
+# Run on iOS sim / Mac Catalyst (prefer DevFlow for the full loop — see below)
+dotnet build src/BaristaNotes -t:Run -f net11.0-ios
+dotnet build src/BaristaNotes -t:Run -f net11.0-maccatalyst
+
+# Tests (xUnit)
+dotnet test src/BaristaNotes.Tests
+dotnet test src/BaristaNotes.Tests --filter "FullyQualifiedName~ShotRecord"   # single test/class
+
+# Clean if the SourceGen cache acts up (CS0436 duplicate-type errors)
+dotnet build src/BaristaNotes -t:Clean
+rm -rf src/BaristaNotes/obj src/BaristaNotes/bin
+```
+
+For any running-app work (build → deploy → inspect → fix), use the **`maui-devflow-debug`** skill — not `osascript`, `xcrun simctl io`, or `adb shell`. Standard loop:
+
+```bash
+dotnet build src/BaristaNotes -t:Run -f net11.0-ios   # or maui devflow run
+maui devflow wait
+# then: screenshot / inspect / interact / read logs
+maui devflow MAUI logs --follow
+```
 
 ## Code Style
 
-C# / .NET 10.0: Follow standard conventions
+C# / .NET 11.0: Follow standard conventions. File-scoped namespaces; nullable reference types enabled; `record` for DTOs where appropriate; MauiReactor `Component<TState>` for UI.
 
 ## MAUI UI Guidelines (MANDATORY)
 
@@ -110,6 +143,52 @@ public override VisualNode Render()
     // Adjust layout based on orientation...
 }
 ```
+
+## DevFlow: Target Selection & Waiting (MANDATORY)
+
+Repeated failure mode: agent boots a stale simulator while the user already has the right one running, or sits in `maui devflow wait` for minutes while the app has been foreground the whole time.
+
+**Before** invoking `maui devflow run` / `wait` or `xcrun simctl boot`:
+
+1. Check what's already running and prefer it:
+   - `xcrun simctl list devices booted` — use the booted simulator if there is one
+   - `maui devflow broker status` — if an agent is already connected to a device/sim, that's your target
+   - `xcrun devicectl list devices` — for physical devices (DX24, etc.)
+2. The user runs **iPhone 17 Pro on iOS 26.x**. Do NOT default to iOS 18.x simulators; pick the newest matching runtime if you must boot fresh.
+3. Never spin up a second simulator of the same family — kill the stale one or attach to the live one.
+
+**While waiting**: if `maui devflow wait` exceeds ~30s but you have other signals the app is up (logs streaming, process running, screenshot succeeds), **stop waiting and screenshot/inspect to verify state**. Treat >60s on any single debug step as a signal to pivot, not to wait longer.
+
+## Visual Tree Inspection Before Tap Attribution (MANDATORY)
+
+Trust-breaking failure mode: agent describes a tap-induced behavior ("the + button is launching the camera through a hidden layer") that the user can plainly see is wrong, because the agent inferred instead of inspected.
+
+**Before** claiming what a UI element is, what page is active, or why a tap had an unexpected effect:
+
+1. `screenshot` to confirm what's actually on screen
+2. `inspect` (visual tree) to confirm the element id/type/handler at the coordinates you tapped
+3. Only then describe the result
+
+Never explain an unexpected behavior with a phantom "hidden control behind another control" or a "pre-existing layered handler" without visual-tree evidence. If the user says "that's not what I see," they're right — go re-inspect, don't re-argue.
+
+## Sample / Test Data: Exercise the App, Don't Touch the DB (MANDATORY)
+
+Direct user rule: *"you should seed the app data by exercising the app, not bypassing the app and going to the database."*
+
+- Seed users, beans, shots, equipment, etc. via the app's own forms — `maui devflow interact` taps, mock voice commands through `VoiceCommandService`, or manual entry the user can repeat.
+- Direct EF Core / raw SQLite `INSERT`s into `barista_notes.db` are for **read-only debugging only**, never for creating sample state.
+- This is a single-user dev app with no historical data on anyone's machine other than the user's own. **Do not author EF Core migrations, "database reset" steps, or data-preservation ceremony "just in case"** — if you think you need one, ask first.
+
+## MediaPicker & Image Pipeline (MANDATORY for any avatar / photo work)
+
+Hard-won DX24 lessons. These will be hit again — don't rediscover them:
+
+- **`MediaPicker.PickPhotosAsync`'s `MaximumWidthHeight` / `CompressionQuality` only apply to camera capture, NOT library picks.** A library pick on a real iPhone returns a full-resolution HEIC/JPEG (5–15 MB). Downsample explicitly with `Microsoft.Maui.Graphics.Platform.PlatformImage` *before* any size-cap validation, or your validator will silently reject every photo.
+- **For absolute sandbox paths, load via `ImageSource.FromStream(...)`**, not `Image.Source(absolutePath)` or `ImageSource.FromFile(absolutePath)`. The latter sometimes hits bundle-resource resolution first on iOS and fails to load arbitrary sandbox files.
+- **HEIC decode can silently return null** from `PlatformImage.FromStream`. Detect null and fall back; never let the original full-res stream proceed to a size-capped validator unchanged.
+- **Cache-bust on re-pick.** If your file naming scheme reuses the same path (e.g. `profile_avatar_{id}.jpg`), `Image` will return the cached version. Either rename per-pick or append a cache-bust query/suffix.
+- **Missing-glyph "?" in a `CircularAvatar`-style placeholder usually means font family mismatch**, not a broken image. Check that the control's requested family string (e.g. `"MaterialSymbolsOutlined"`) matches what's actually registered in `MauiProgram.cs` (e.g. `MaterialSymbolsFont.FontFamily = "MaterialIcons..."`). Verify font registration **before** going down image-pipeline rabbit holes.
+- Test image features on the physical device (DX24) *before* declaring victory — the simulator's sample photos are small enough to hide every bug above.
 
 ## Logging Standards (MANDATORY)
 

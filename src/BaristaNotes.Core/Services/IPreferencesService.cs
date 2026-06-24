@@ -40,7 +40,10 @@ public interface IPreferencesService
     
     decimal? GetLastPreinfusionTime();
     void SetLastPreinfusionTime(decimal? preinfusionTime);
-    
+
+    Models.Enums.TemperatureUnit GetTemperatureUnit();
+    void SetTemperatureUnit(Models.Enums.TemperatureUnit unit);
+
     void ClearAll();
 }
 

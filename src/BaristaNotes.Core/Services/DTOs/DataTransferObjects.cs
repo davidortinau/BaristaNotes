@@ -19,6 +19,8 @@ public record ShotRecordDto
     public decimal DoseIn { get; init; }
     /// <summary>Grind size in microns (canonical). Null if not recorded.</summary>
     public int? GrindMicrons { get; init; }
+    /// <summary>Water temperature in canonical Celsius. Null if not recorded.</summary>
+    public decimal? WaterTempC { get; init; }
     public decimal ExpectedTime { get; init; }
     public decimal ExpectedOutput { get; init; }
     public string DrinkType { get; init; } = string.Empty;
@@ -48,6 +50,8 @@ public record CreateShotDto
     public decimal DoseIn { get; init; }
     /// <summary>Grind size in microns. Null = not recorded.</summary>
     public int? GrindMicrons { get; init; }
+    /// <summary>Water temperature in canonical Celsius. Null = not recorded.</summary>
+    public decimal? WaterTempC { get; init; }
     public decimal ExpectedTime { get; init; }
     public decimal ExpectedOutput { get; init; }
     public string DrinkType { get; init; } = string.Empty;
@@ -148,6 +152,12 @@ public record UpdateShotDto
     /// Optional - null means no change to existing value.
     /// </summary>
     public int? GrindMicrons { get; init; }
+
+    /// <summary>
+    /// Water temperature in canonical Celsius.
+    /// Optional - null means no change to existing value.
+    /// </summary>
+    public decimal? WaterTempC { get; init; }
 
     /// <summary>
     /// Expected extraction time in seconds.

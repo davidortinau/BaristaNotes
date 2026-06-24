@@ -115,6 +115,7 @@ public class BaristaNotesContext : DbContext
             // older rows pre-migration and "didn't record" cases legitimately
             // have no value.
             entity.Property(e => e.GrindMicrons);
+            entity.Property(e => e.WaterTempC).HasPrecision(5, 2);
             entity.Property(e => e.ExpectedTime).IsRequired().HasPrecision(5, 2);
             entity.Property(e => e.ExpectedOutput).IsRequired().HasPrecision(5, 2);
             entity.Property(e => e.DrinkType).IsRequired().HasMaxLength(50);

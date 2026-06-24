@@ -431,6 +431,13 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                 }
 
                 _dataChangeNotifier.NotifyDataChanged(DataChangeType.BeanCreated, result.Data);
+
+                var bagResult = await _bagService.CreateNewBagForBeanAsync(result.Data.Id, DateTime.Today);
+                if (bagResult.Success && bagResult.Data is not null)
+                {
+                    _dataChangeNotifier.NotifyDataChanged(DataChangeType.BagCreated, bagResult.Data.Id);
+                }
+
                 await _feedbackService.ShowSuccessAsync($"Bean '{State.Name}' created");
             }
 

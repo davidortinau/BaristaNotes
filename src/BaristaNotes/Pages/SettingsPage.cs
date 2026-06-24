@@ -7,6 +7,8 @@ class SettingsPageState
 {
     public bool IsLoading { get; set; }
     public ThemeMode CurrentThemeMode { get; set; } = ThemeMode.System;
+    public BaristaNotes.Core.Models.Enums.TemperatureUnit TemperatureUnit { get; set; }
+        = BaristaNotes.Core.Models.Enums.TemperatureUnit.Fahrenheit;
 }
 
 partial class SettingsPage : Component<SettingsPageState>
@@ -14,10 +16,14 @@ partial class SettingsPage : Component<SettingsPageState>
     [Inject]
     IThemeService _themeService;
 
+    [Inject]
+    BaristaNotes.Core.Services.IPreferencesService _preferencesService;
+
     protected override void OnMounted()
     {
         base.OnMounted();
         _ = LoadCurrentTheme();
+        SetState(s => s.TemperatureUnit = _preferencesService.GetTemperatureUnit());
     }
 
     async Task LoadCurrentTheme()
@@ -30,6 +36,12 @@ partial class SettingsPage : Component<SettingsPageState>
     {
         await _themeService.SetThemeModeAsync(mode);
         SetState(s => s.CurrentThemeMode = mode);
+    }
+
+    void OnTempUnitSelected(BaristaNotes.Core.Models.Enums.TemperatureUnit unit)
+    {
+        _preferencesService.SetTemperatureUnit(unit);
+        SetState(s => s.TemperatureUnit = unit);
     }
 
     async Task OpenVoiceFromSettingsAsync()
@@ -118,26 +130,28 @@ partial class SettingsPage : Component<SettingsPageState>
         return Grid("*", "*",
             ScrollView(
                 Grid(
-                    rows: "Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*",
+                    rows: "Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*",
                     columns: "*",
                     SectionLabel("APPEARANCE").GridRow(0),
                     ThemePickerRow().GridRow(1),
-                    SectionLabel("MANAGE").GridRow(2),
+                    SectionLabel("UNITS").GridRow(2),
+                    TempUnitPickerRow().GridRow(3),
+                    SectionLabel("MANAGE").GridRow(4),
                     ManageTile("EQUIPMENT", "Machines, grinders, accessories",
-                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("equipment")).GridRow(3),
+                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("equipment")).GridRow(5),
                     ManageTile("BEANS", "Coffee beans and roasters",
-                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("beans")).GridRow(4),
+                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("beans")).GridRow(6),
                     ManageTile("PROFILES", "Coffee lovers",
-                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("profiles")).GridRow(5),
-                    SectionLabel("ABOUT").GridRow(6),
-                    AboutTile().GridRow(7),
+                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("profiles")).GridRow(7),
+                    SectionLabel("ABOUT").GridRow(8),
+                    AboutTile().GridRow(9),
                     Border()
                         .BackgroundColor(SurfaceColor())
                         .StrokeThickness(0)
                         .StrokeShape(new Rectangle())
                         .MinimumHeightRequest(16)
                         .VerticalOptions(LayoutOptions.Fill)
-                        .GridRow(8)
+                        .GridRow(10)
                 )
                 .RowSpacing(1)
                 .BackgroundColor(DividerColor())
@@ -201,6 +215,46 @@ partial class SettingsPage : Component<SettingsPageState>
         .StrokeShape(new Rectangle())
         .MinimumHeightRequest(96)
         .OnTapped(async () => await OnThemeSelected(mode));
+    }
+
+    VisualNode TempUnitPickerRow()
+    {
+        return Grid(rows: "Auto", columns: "*,*",
+            TempUnitOptionTile(BaristaNotes.Core.Models.Enums.TemperatureUnit.Fahrenheit, "FAHRENHEIT", "°F").GridColumn(0),
+            TempUnitOptionTile(BaristaNotes.Core.Models.Enums.TemperatureUnit.Celsius, "CELSIUS", "°C").GridColumn(1)
+        )
+        .ColumnSpacing(1)
+        .BackgroundColor(DividerColor());
+    }
+
+    VisualNode TempUnitOptionTile(BaristaNotes.Core.Models.Enums.TemperatureUnit unit, string label, string glyph)
+    {
+        var isSelected = State.TemperatureUnit == unit;
+        var bg = isSelected ? TextPrimary() : SurfaceColor();
+        var fg = isSelected ? SurfaceColor() : TextPrimary();
+
+        return Border(
+            Grid(rows: "Auto,*", columns: "*",
+                Label(label)
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(fg.WithAlpha(0.7f))
+                    .GridRow(0),
+                Label(glyph)
+                    .FontSize(28)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(fg)
+                    .VEnd()
+                    .GridRow(1)
+            )
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(bg)
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(96)
+        .OnTapped(() => OnTempUnitSelected(unit));
     }
 
     VisualNode ManageTile(string label, string subtitle, Action onTapped)

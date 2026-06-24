@@ -31,6 +31,7 @@ enum GridPickerKind
     Bag,
     MadeBy,
     MadeFor,
+    People,
     DrinkType,
     Machine,
     Grinder,
@@ -464,17 +465,15 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     Tile("WATER TEMP", WaterTempMain(),
                             () => Open(GridPickerKind.WaterTemp), unit: WaterTempUnit())
                             .GridRow(4).GridColumn(0).GridColumnSpan(2),
-                    Tile("MADE BY", State.SelectedMaker?.Name ?? "—",
-                            () => Open(GridPickerKind.MadeBy)).GridRow(4).GridColumn(2).GridColumnSpan(2),
+                    PeopleTile()
+                            .GridRow(4).GridColumn(2).GridColumnSpan(2),
 
-                    Tile("MADE FOR", State.SelectedRecipient?.Name ?? "—",
-                            () => Open(GridPickerKind.MadeFor)).GridRow(5).GridColumn(0).GridColumnSpan(2),
                     Tile("MACHINE", EquipmentName(State.SelectedMachineId),
-                            () => Open(GridPickerKind.Machine)).GridRow(5).GridColumn(2).GridColumnSpan(2),
-
+                            () => Open(GridPickerKind.Machine)).GridRow(5).GridColumn(0).GridColumnSpan(2),
                     Tile("GRINDER", EquipmentName(State.SelectedGrinderId),
-                            () => Open(GridPickerKind.Grinder)).GridRow(6).GridColumn(0).GridColumnSpan(2),
-                    SaveTile().GridRow(6).GridColumn(2).GridColumnSpan(2),
+                            () => Open(GridPickerKind.Grinder)).GridRow(5).GridColumn(2).GridColumnSpan(2),
+
+                    SaveTile().GridRow(6).GridColumn(0).GridColumnSpan(4),
 
                     NavTile(AppIcons.Feed, async () => await MauiControls.Shell.Current.GoToAsync("//history"))
                         .GridRow(7).GridColumn(0),
@@ -569,6 +568,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
 
             case GridPickerKind.MadeBy when State.AvailableUsers.Count == 0:
             case GridPickerKind.MadeFor when State.AvailableUsers.Count == 0:
+            case GridPickerKind.People when State.AvailableUsers.Count == 0:
                 _ = MauiControls.Shell.Current.GoToAsync<ProfileFormPageProps>(
                     "profile-form", props => props.ProfileId = null);
                 return true;
@@ -740,6 +740,96 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         .OnTapped(onTap);
     }
 
+    // ------------------------------------------------------------
+    // People tile: combined "made by → made for" with avatars.
+    // Tapping opens the split-screen PeoplePicker.
+    // ------------------------------------------------------------
+
+    VisualNode PeopleTile()
+    {
+        var isLight = Application.Current?.RequestedTheme != AppTheme.Dark;
+        var bg = isLight ? AppColors.Light.Surface : AppColors.Dark.Surface;
+        var labelColor = isLight ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+        var valueColor = isLight ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+        var accent = isLight ? AppColors.Light.Primary : AppColors.Dark.Primary;
+
+        return Border(
+            Grid(rows: "Auto,*", columns: "*",
+                Label("MADE BY / FOR")
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .TextColor(labelColor)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .GridRow(0),
+                HStack(spacing: 8,
+                    PersonChip(State.SelectedMaker, valueColor, labelColor),
+                    Label(MaterialSymbolsFont.Arrow_right_alt)
+                        .FontFamily(MaterialSymbolsFont.FontFamily)
+                        .FontSize(22)
+                        .TextColor(accent)
+                        .VCenter(),
+                    PersonChip(State.SelectedRecipient, valueColor, labelColor)
+                )
+                .HCenter()
+                .VCenter()
+                .GridRow(1)
+            )
+            .Padding(16, 14, 16, 14)
+        )
+        .BackgroundColor(bg)
+        .StrokeThickness(0)
+        .StrokeShape(new Rectangle())
+        .MinimumHeightRequest(120)
+        .OnTapped(() => Open(GridPickerKind.People));
+    }
+
+    // One person in the combined tile: small name label then a circular avatar.
+    VisualNode PersonChip(UserProfileDto? person, Color nameColor, Color mutedColor)
+    {
+        var name = person?.Name;
+        return VStack(spacing: 3,
+            PersonAvatar(person?.AvatarPath, 40),
+            Label(string.IsNullOrWhiteSpace(name) ? "—" : name)
+                .FontSize(11)
+                .TextColor(string.IsNullOrWhiteSpace(name) ? mutedColor : nameColor)
+                .LineBreakMode(LineBreakMode.TailTruncation)
+                .MaxLines(1)
+                .HCenter()
+        )
+        .HCenter();
+    }
+
+    // Tight circular avatar (no outer margin), shared by tile + picker.
+    VisualNode PersonAvatar(string? imagePath, double size, bool highlighted = false)
+    {
+        var isLight = Application.Current?.RequestedTheme != AppTheme.Dark;
+        var accent = isLight ? AppColors.Light.Primary : AppColors.Dark.Primary;
+        var muted = isLight ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+        var radius = size / 2;
+
+        return Border(
+            string.IsNullOrEmpty(imagePath)
+                ? Label(MaterialSymbolsFont.Person)
+                    .FontFamily(MaterialSymbolsFont.FontFamily)
+                    .FontSize(size * 0.55)
+                    .TextColor(muted)
+                    .HCenter().VCenter()
+                : (VisualNode)new MauiReactor.Image()
+                    .Source(ImageSource.FromStream(ct => Task.FromResult<Stream>(File.OpenRead(imagePath!))))
+                    .Aspect(Aspect.AspectFill)
+                    .WidthRequest(size)
+                    .HeightRequest(size)
+        )
+        .WidthRequest(size)
+        .HeightRequest(size)
+        .StrokeShape(new RoundRectangle().CornerRadius(radius))
+        .StrokeThickness(highlighted ? 3 : 1)
+        .Stroke(highlighted ? accent : muted.WithAlpha(0.4f))
+        .BackgroundColor(muted.WithAlpha(0.12f))
+        .Padding(0)
+        .HCenter();
+    }
+
     VisualNode SaveTile()
     {
         return Tile(
@@ -859,27 +949,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 isSelected: o => State.SelectedBagId == (int)o,
                 onSelect: o => SetState(s => { s.SelectedBagId = (int)o; s.ActivePicker = GridPickerKind.None; })),
 
-            GridPickerKind.MadeBy => CategoricalPicker(
-                title: "Made By",
-                items: State.AvailableUsers.Select(u => (Key: (object)u.Id, Display: u.Name)).ToList(),
-                isSelected: o => State.SelectedMaker?.Id == (int)o,
-                onSelect: o =>
-                {
-                    var u = State.AvailableUsers.FirstOrDefault(x => x.Id == (int)o);
-                    SetState(s => { s.SelectedMaker = u; s.ActivePicker = GridPickerKind.None; });
-                },
-                emptyMessage: "No user profiles. Add one from Settings."),
-
-            GridPickerKind.MadeFor => CategoricalPicker(
-                title: "Made For",
-                items: State.AvailableUsers.Select(u => (Key: (object)u.Id, Display: u.Name)).ToList(),
-                isSelected: o => State.SelectedRecipient?.Id == (int)o,
-                onSelect: o =>
-                {
-                    var u = State.AvailableUsers.FirstOrDefault(x => x.Id == (int)o);
-                    SetState(s => { s.SelectedRecipient = u; s.ActivePicker = GridPickerKind.None; });
-                },
-                emptyMessage: "No user profiles. Add one from Settings."),
+            GridPickerKind.People => PeoplePicker(),
 
             GridPickerKind.Machine => CategoricalPicker(
                 title: "Machine",
@@ -965,6 +1035,117 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
 
     static string BagDisplayLabel(BagSummaryDto b)
         => $"{b.BeanName} · Roasted {b.FormattedRoastDate}";
+
+    // ------------------------------------------------------------
+    // People picker: split-screen. Left column scrolls the "made by"
+    // list, right column the "made for" list. Selecting either side
+    // updates state in place; the picker stays open until Done so both
+    // can be chosen in one visit. The selected row is centered
+    // vertically like the numeric scrollers.
+    // ------------------------------------------------------------
+
+    VisualNode PeoplePicker()
+    {
+        var isLight = Application.Current?.RequestedTheme != AppTheme.Dark;
+        var textPrimary = isLight ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+        var textSecondary = isLight ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+        var accent = isLight ? AppColors.Light.Primary : AppColors.Dark.Primary;
+        var surface = isLight ? AppColors.Light.Surface : AppColors.Dark.Surface;
+
+        return Grid(rows: "Auto,Auto,*", columns: "*",
+            // Header
+            Grid(rows: "*", columns: "Auto,*,Auto",
+                Button("Close").OnClicked(ClosePicker)
+                    .BackgroundColor(Colors.Transparent).TextColor(textSecondary).GridColumn(0),
+                Label("MADE BY / FOR")
+                    .FontSize(12).CharacterSpacing(3)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(textSecondary).HCenter().VCenter().GridColumn(0).GridColumnSpan(3),
+                Button("Done").OnClicked(ClosePicker)
+                    .BackgroundColor(Colors.Transparent).TextColor(accent)
+                    .FontAttributes(MauiControls.FontAttributes.Bold).GridColumn(2)
+            ).GridRow(0).Padding(12, 8),
+
+            // Column sub-headers
+            Grid(rows: "*", columns: "*,Auto,*",
+                Label("BY")
+                    .FontSize(11).CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(textSecondary).HCenter().GridColumn(0),
+                Label(MaterialSymbolsFont.Arrow_right_alt)
+                    .FontFamily(MaterialSymbolsFont.FontFamily)
+                    .FontSize(20).TextColor(accent).HCenter().VCenter().GridColumn(1),
+                Label("FOR")
+                    .FontSize(11).CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(textSecondary).HCenter().GridColumn(2)
+            ).GridRow(1).Padding(12, 4, 12, 8),
+
+            // Two scrolling columns, separated by a hairline divider.
+            Grid(rows: "*", columns: "*,1,*",
+                PeopleColumn(
+                    selectedId: State.SelectedMaker?.Id,
+                    onSelect: u => SetState(s => s.SelectedMaker = u),
+                    textPrimary, textSecondary, accent).GridColumn(0),
+                BoxView().Color(DividerColor()).GridColumn(1),
+                PeopleColumn(
+                    selectedId: State.SelectedRecipient?.Id,
+                    onSelect: u => SetState(s => s.SelectedRecipient = u),
+                    textPrimary, textSecondary, accent).GridColumn(2)
+            ).GridRow(2)
+        ).BackgroundColor(surface);
+    }
+
+    // A single scrolling column of profiles with the selected row centered.
+    VisualNode PeopleColumn(
+        int? selectedId,
+        Action<UserProfileDto> onSelect,
+        Color textPrimary,
+        Color textSecondary,
+        Color accent)
+    {
+        var users = State.AvailableUsers;
+        var selectedIndex = selectedId.HasValue
+            ? Math.Max(0, users.FindIndex(u => u.Id == selectedId.Value))
+            : 0;
+
+        return CollectionView()
+            .ItemsSource(users, u =>
+            {
+                var selected = selectedId == u.Id;
+                return Grid(rows: "Auto,Auto", columns: "*",
+                    PersonAvatar(u.AvatarPath, selected ? 72 : 52, highlighted: selected)
+                        .GridRow(0),
+                    Label(u.Name)
+                        .FontSize(selected ? 18 : 14)
+                        .FontAttributes(selected ? MauiControls.FontAttributes.Bold : MauiControls.FontAttributes.None)
+                        .TextColor(selected ? accent : textPrimary)
+                        .LineBreakMode(LineBreakMode.TailTruncation)
+                        .MaxLines(1)
+                        .HCenter()
+                        .Margin(0, 4, 0, 0)
+                        .GridRow(1)
+                )
+                .Padding(8, 14)
+                .RowSpacing(2)
+                .OnTapped(() => onSelect(u));
+            })
+            .SelectionMode(MauiControls.SelectionMode.None)
+            .OnLoaded((sender, _) =>
+            {
+                if (sender is MauiControls.CollectionView cv)
+                {
+                    try
+                    {
+                        cv.ScrollTo(selectedIndex, position: MauiControls.ScrollToPosition.Center, animate: false);
+                    }
+                    catch
+                    {
+                        // Best-effort centering; ignore if items aren't laid out yet.
+                    }
+                }
+            });
+    }
 
     // ------------------------------------------------------------
     // Categorical picker (single-select)

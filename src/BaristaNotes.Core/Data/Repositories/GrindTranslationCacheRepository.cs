@@ -19,12 +19,10 @@ public interface IGrindTranslationCacheRepository
 public class GrindTranslationCacheRepository : IGrindTranslationCacheRepository
 {
     private readonly BaristaNotesContext _context;
-    private readonly DbSet<GrindTranslationCache> _dbSet;
 
     public GrindTranslationCacheRepository(BaristaNotesContext context)
     {
         _context = context;
-        _dbSet = context.GrindTranslationCache;
     }
 
     public async Task<GrindTranslationCache?> FindAsync(
@@ -33,25 +31,31 @@ public class GrindTranslationCacheRepository : IGrindTranslationCacheRepository
         BrewMethod method)
     {
         var now = DateTime.UtcNow;
-        return await _dbSet
+        var targetModel = grinderModelNormalized;
+        var targetHint = grindHintNormalized;
+        var targetMethod = method;
+        return await _context.GrindTranslationCache
             .AsNoTracking()
             .FirstOrDefaultAsync(c =>
-                c.GrinderModelNormalized == grinderModelNormalized &&
-                c.GrindHintNormalized == grindHintNormalized &&
-                c.BrewMethod == method &&
+                c.GrinderModelNormalized == targetModel &&
+                c.GrindHintNormalized == targetHint &&
+                c.BrewMethod == targetMethod &&
                 c.ExpiresAt > now);
     }
 
     public async Task UpsertAsync(GrindTranslationCache entry)
     {
-        var existing = await _dbSet.FirstOrDefaultAsync(c =>
-            c.GrinderModelNormalized == entry.GrinderModelNormalized &&
-            c.GrindHintNormalized == entry.GrindHintNormalized &&
-            c.BrewMethod == entry.BrewMethod);
+        var targetModel = entry.GrinderModelNormalized;
+        var targetHint = entry.GrindHintNormalized;
+        var targetMethod = entry.BrewMethod;
+        var existing = await _context.GrindTranslationCache.FirstOrDefaultAsync(c =>
+            c.GrinderModelNormalized == targetModel &&
+            c.GrindHintNormalized == targetHint &&
+            c.BrewMethod == targetMethod);
 
         if (existing == null)
         {
-            await _dbSet.AddAsync(entry);
+            await _context.GrindTranslationCache.AddAsync(entry);
         }
         else
         {
@@ -69,9 +73,12 @@ public class GrindTranslationCacheRepository : IGrindTranslationCacheRepository
 
     public async Task PurgeExpiredAsync(DateTime utcNow)
     {
-        var expired = await _dbSet.Where(c => c.ExpiresAt <= utcNow).ToListAsync();
+        var cutoff = utcNow;
+        var expired = await _context.GrindTranslationCache
+            .Where(c => c.ExpiresAt <= cutoff)
+            .ToListAsync();
         if (expired.Count == 0) return;
-        _dbSet.RemoveRange(expired);
+        _context.GrindTranslationCache.RemoveRange(expired);
         await _context.SaveChangesAsync();
     }
 }

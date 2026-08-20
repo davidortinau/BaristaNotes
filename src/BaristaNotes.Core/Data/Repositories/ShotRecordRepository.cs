@@ -11,31 +11,31 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
     
     public override async Task<ShotRecord?> GetByIdAsync(int id)
     {
-        return await _dbSet
-            .Include(s => s.Bag)
-                .ThenInclude(b => b.Bean)
+        var shotId = id;
+        return await _context.ShotRecords
+            .Include("Bag.Bean")
             .Include(s => s.Machine)
             .Include(s => s.Grinder)
             .Include(s => s.MadeBy)
             .Include(s => s.MadeFor)
-            .Include(s => s.ShotEquipments)
-                .ThenInclude(se => se.Equipment)
-            .FirstOrDefaultAsync(s => s.Id == id);
+            .Include("ShotEquipments.Equipment")
+            .FirstOrDefaultAsync(s => s.Id == shotId);
     }
+
+    public override Task<List<ShotRecord>> GetAllAsync()
+        => _context.ShotRecords.ToListAsync();
     
     public async Task<ShotRecord?> GetMostRecentAsync()
     {
         // Load all records first, then order in memory to avoid SQLite DateTimeOffset limitations
-        var shots = await _dbSet
+        var shots = await _context.ShotRecords
             .AsNoTracking()
-            .Include(s => s.Bag)
-                .ThenInclude(b => b.Bean) // TODO T038-T039: Navigate through Bag to Bean
+            .Include("Bag.Bean") // TODO T038-T039: Navigate through Bag to Bean
             .Include(s => s.Machine)
             .Include(s => s.Grinder)
             .Include(s => s.MadeBy)
             .Include(s => s.MadeFor)
-            .Include(s => s.ShotEquipments)
-                .ThenInclude(se => se.Equipment)
+            .Include("ShotEquipments.Equipment")
             .Where(s => !s.IsDeleted)
             .ToListAsync();
             
@@ -45,16 +45,14 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
     public async Task<List<ShotRecord>> GetHistoryAsync(int pageIndex, int pageSize)
     {
         // Load all non-deleted records first, then order and paginate in memory
-        var allShots = await _dbSet
+        var allShots = await _context.ShotRecords
             .AsNoTracking()
-            .Include(s => s.Bag)
-                .ThenInclude(b => b.Bean)
+            .Include("Bag.Bean")
             .Include(s => s.Machine)
             .Include(s => s.Grinder)
             .Include(s => s.MadeBy)
             .Include(s => s.MadeFor)
-            .Include(s => s.ShotEquipments)
-                .ThenInclude(se => se.Equipment)
+            .Include("ShotEquipments.Equipment")
             .Where(s => !s.IsDeleted)
             .ToListAsync();
             
@@ -67,15 +65,16 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
     
     public async Task<List<ShotRecord>> GetByUserAsync(int userProfileId, int pageIndex, int pageSize)
     {
-        var allShots = await _dbSet
+        var targetUserProfileId = userProfileId;
+        var allShots = await _context.ShotRecords
             .AsNoTracking()
-            .Include(s => s.Bag)
-                .ThenInclude(b => b.Bean)
+            .Include("Bag.Bean")
             .Include(s => s.Machine)
             .Include(s => s.Grinder)
             .Include(s => s.MadeBy)
             .Include(s => s.MadeFor)
-            .Where(s => !s.IsDeleted && (s.MadeById == userProfileId || s.MadeForId == userProfileId))
+            .Where(s => !s.IsDeleted
+                && (s.MadeById == targetUserProfileId || s.MadeForId == targetUserProfileId))
             .ToListAsync();
             
         return allShots
@@ -87,15 +86,15 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
     
     public async Task<List<ShotRecord>> GetByBeanAsync(int beanId, int pageIndex, int pageSize)
     {
-        var allShots = await _dbSet
+        var targetBeanId = beanId;
+        var allShots = await _context.ShotRecords
             .AsNoTracking()
-            .Include(s => s.Bag)
-                .ThenInclude(b => b.Bean)
+            .Include("Bag.Bean")
             .Include(s => s.Machine)
             .Include(s => s.Grinder)
             .Include(s => s.MadeBy)
             .Include(s => s.MadeFor)
-            .Where(s => !s.IsDeleted && s.Bag.BeanId == beanId) // TODO T038-T039: Query through Bag
+            .Where(s => !s.IsDeleted && s.Bag.BeanId == targetBeanId) // TODO T038-T039: Query through Bag
             .ToListAsync();
             
         return allShots
@@ -107,20 +106,19 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
     
     public async Task<List<ShotRecord>> GetByEquipmentAsync(int equipmentId, int pageIndex, int pageSize)
     {
-        var allShots = await _dbSet
+        var targetEquipmentId = equipmentId;
+        var allShots = await _context.ShotRecords
             .AsNoTracking()
-            .Include(s => s.Bag)
-                .ThenInclude(b => b.Bean)
+            .Include("Bag.Bean")
             .Include(s => s.Machine)
             .Include(s => s.Grinder)
             .Include(s => s.MadeBy)
             .Include(s => s.MadeFor)
-            .Include(s => s.ShotEquipments)
-                .ThenInclude(se => se.Equipment)
+            .Include("ShotEquipments.Equipment")
             .Where(s => !s.IsDeleted && 
-                (s.MachineId == equipmentId || 
-                 s.GrinderId == equipmentId || 
-                 s.ShotEquipments.Any(se => se.EquipmentId == equipmentId)))
+                (s.MachineId == targetEquipmentId ||
+                 s.GrinderId == targetEquipmentId ||
+                 s.ShotEquipments.Any(se => se.EquipmentId == targetEquipmentId)))
             .ToListAsync();
             
         return allShots
@@ -132,21 +130,19 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
     
     public async Task<int> GetTotalCountAsync()
     {
-        return await _dbSet.Where(s => !s.IsDeleted).CountAsync();
+        return await _context.ShotRecords.Where(s => !s.IsDeleted).CountAsync();
     }
     
     public async Task<List<ShotRecord>> GetFilteredAsync(ShotFilterCriteriaDto? criteria, int pageIndex, int pageSize)
     {
-        var allShots = await _dbSet
+        var allShots = await _context.ShotRecords
             .AsNoTracking()
-            .Include(s => s.Bag)
-                .ThenInclude(b => b.Bean)
+            .Include("Bag.Bean")
             .Include(s => s.Machine)
             .Include(s => s.Grinder)
             .Include(s => s.MadeBy)
             .Include(s => s.MadeFor)
-            .Include(s => s.ShotEquipments)
-                .ThenInclude(se => se.Equipment)
+            .Include("ShotEquipments.Equipment")
             .Where(s => !s.IsDeleted)
             .ToListAsync();
         
@@ -177,7 +173,7 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
     
     public async Task<int> GetFilteredCountAsync(ShotFilterCriteriaDto? criteria)
     {
-        var allShots = await _dbSet
+        var allShots = await _context.ShotRecords
             .AsNoTracking()
             .Include(s => s.Bag)
             .Where(s => !s.IsDeleted)
@@ -205,7 +201,7 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
     
     public async Task<List<int>> GetBeanIdsWithShotsAsync()
     {
-        var shots = await _dbSet
+        var shots = await _context.ShotRecords
             .AsNoTracking()
             .Include(s => s.Bag)
             .Where(s => !s.IsDeleted && s.Bag != null)
@@ -220,7 +216,7 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
     
     public async Task<List<int>> GetMadeForIdsWithShotsAsync()
     {
-        var shots = await _dbSet
+        var shots = await _context.ShotRecords
             .AsNoTracking()
             .Where(s => !s.IsDeleted && s.MadeForId != null)
             .ToListAsync();
@@ -234,34 +230,34 @@ public class ShotRecordRepository : Repository<ShotRecord>, IShotRecordRepositor
 
     public async Task<ShotRecord?> GetMostRecentWithGrindAsync(int grinderId, int? beanId = null, BrewMethod? method = null)
     {
-        var query = _dbSet
+        var targetGrinderId = grinderId;
+        var candidates = await _context.ShotRecords
             .AsNoTracking()
             .Include(s => s.Bag)
             .Where(s => !s.IsDeleted
-                && s.GrinderId == grinderId
-                && s.GrindMicrons != null);
+                && s.GrinderId == targetGrinderId
+                && s.GrindMicrons != null)
+            .ToListAsync();
 
-        if (method.HasValue)
-            query = query.Where(s => s.BrewMethod == method.Value);
-
-        if (beanId.HasValue)
-            query = query.Where(s => s.Bag != null && s.Bag.BeanId == beanId.Value);
-
-        return await query
+        return candidates
+            .Where(s => !method.HasValue || s.BrewMethod == method.Value)
+            .Where(s => !beanId.HasValue || (s.Bag != null && s.Bag.BeanId == beanId.Value))
             .OrderByDescending(s => s.Timestamp)
-            .FirstOrDefaultAsync();
+            .FirstOrDefault();
     }
 
     public async Task<int?> GetMostRecentMicronsByBeanAsync(int beanId, BrewMethod method)
     {
-        return await _dbSet
+        var targetBeanId = beanId;
+        var targetMethod = method;
+        return await _context.ShotRecords
             .AsNoTracking()
             .Include(s => s.Bag)
             .Where(s => !s.IsDeleted
                 && s.GrindMicrons != null
-                && s.BrewMethod == method
+                && s.BrewMethod == targetMethod
                 && s.Bag != null
-                && s.Bag.BeanId == beanId)
+                && s.Bag.BeanId == targetBeanId)
             .OrderByDescending(s => s.Timestamp)
             .Select(s => s.GrindMicrons)
             .FirstOrDefaultAsync();

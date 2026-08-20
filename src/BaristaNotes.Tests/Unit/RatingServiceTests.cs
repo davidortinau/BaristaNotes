@@ -17,12 +17,7 @@ public class RatingServiceTests : IDisposable
 
     public RatingServiceTests()
     {
-        // Use in-memory database for testing
-        var options = new DbContextOptionsBuilder<BaristaNotesContext>()
-            .UseInMemoryDatabase(databaseName: $"RatingServiceTest_{Guid.NewGuid()}")
-            .Options;
-
-        _context = new BaristaNotesContext(options);
+        _context = SqliteTestContextFactory.Create();
         _ratingService = new RatingService(_context);
     }
 

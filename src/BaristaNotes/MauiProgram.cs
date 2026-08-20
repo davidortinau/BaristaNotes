@@ -20,16 +20,22 @@ public static class MauiProgram
         RouteRegistration.RegisterAll();
 
         var app = builder.Build();
+        var databaseInitialization =
+            app.Services.GetRequiredService<DatabaseInitializationService>();
+        _ = databaseInitialization.InitializeAsync();
 
 #if DEBUG
         // AI tool harness: drives the source-generated VoiceTools.Default.Tools
         // surface end-to-end through the live DI graph. Read with:
         //   maui devflow logs --limit 300 | grep AI-HARNESS
-        _ = Task.Run(() => BaristaNotes.Services.AI.AIToolHarness.RunAsync(app.Services));
+        _ = Task.Run(async () =>
+        {
+            await databaseInitialization.InitializeAsync();
+            await BaristaNotes.Services.AI.AIToolHarness.RunAsync(app.Services);
+        });
 #endif
 
-        // Theme initialization and database migration run from BaristaApp.OnMounted()
-        // to avoid blocking the main thread and the iOS watchdog timeout.
+        // Theme initialization runs from BaristaApp.OnMounted().
         return app;
     }
 }

@@ -2,7 +2,7 @@
 
 namespace BaristaNotes.Core.Data.Repositories;
 
-public class Repository<T> : IRepository<T> where T : class
+public abstract class Repository<T> : IRepository<T> where T : class
 {
     protected readonly BaristaNotesContext _context;
     protected readonly DbSet<T> _dbSet;
@@ -13,11 +13,9 @@ public class Repository<T> : IRepository<T> where T : class
         _dbSet = context.Set<T>();
     }
     
-    public virtual async Task<T?> GetByIdAsync(int id)
-        => await _dbSet.FindAsync(id);
-    
-    public virtual async Task<List<T>> GetAllAsync()
-        => await _dbSet.ToListAsync();
+    public abstract Task<T?> GetByIdAsync(int id);
+
+    public abstract Task<List<T>> GetAllAsync();
     
     public virtual async Task<T> AddAsync(T entity)
     {

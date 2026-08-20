@@ -20,11 +20,7 @@ public class ShotRecordBrewMethodTests : IDisposable
 
     public ShotRecordBrewMethodTests()
     {
-        var options = new DbContextOptionsBuilder<BaristaNotesContext>()
-            .UseInMemoryDatabase(databaseName: $"ShotBrewMethodTest_{Guid.NewGuid()}")
-            .Options;
-
-        _context = new BaristaNotesContext(options);
+        _context = SqliteTestContextFactory.Create();
         _repo = new ShotRecordRepository(_context);
 
         var bean = new Bean

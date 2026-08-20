@@ -15,11 +15,7 @@ public class ShotRecordRepositoryTests : IDisposable
     
     public ShotRecordRepositoryTests()
     {
-        var options = new DbContextOptionsBuilder<BaristaNotesContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-        
-        _context = new BaristaNotesContext(options);
+        _context = SqliteTestContextFactory.Create();
         _repository = new ShotRecordRepository(_context);
         
         // Create a default bean and bag for tests

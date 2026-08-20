@@ -20,12 +20,13 @@ public class RatingService : IRatingService
     /// <inheritdoc />
     public async Task<RatingAggregateDto> GetBeanRatingAsync(int beanId)
     {
+        var targetBeanId = beanId;
         // Query all shots for all bags belonging to this bean
         // Use composite index: IX_ShotRecords_BagId_Rating for performance
         var shots = await _context.ShotRecords
             .AsNoTracking()
             .Include(s => s.Bag)
-            .Where(s => !s.IsDeleted && s.Bag.BeanId == beanId)
+            .Where(s => !s.IsDeleted && s.Bag.BeanId == targetBeanId)
             .Select(s => new { s.Rating })
             .ToListAsync();
 
@@ -35,11 +36,12 @@ public class RatingService : IRatingService
     /// <inheritdoc />
     public async Task<RatingAggregateDto> GetBagRatingAsync(int bagId)
     {
+        var targetBagId = bagId;
         // Query shots for specific bag
         // Uses index: IX_ShotRecords_BagId
         var shots = await _context.ShotRecords
             .AsNoTracking()
-            .Where(s => !s.IsDeleted && s.BagId == bagId)
+            .Where(s => !s.IsDeleted && s.BagId == targetBagId)
             .Select(s => new { s.Rating })
             .ToListAsync();
 

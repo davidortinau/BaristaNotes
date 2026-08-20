@@ -164,6 +164,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     [Inject] IVisionService _visionService;
     [Inject] IDataChangeNotifier _dataChangeNotifier;
     [Inject] BaristaNotes.Services.IAIAdviceService _aiAdviceService;
+    [Inject] DatabaseInitializationService _databaseInitialization;
 
     // Cancellation token for voice commands.
     private CancellationTokenSource? _voiceCts;
@@ -226,6 +227,8 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     {
         try
         {
+            await _databaseInitialization.InitializeAsync();
+
             var bags = await _bagService.GetActiveBagsForShotLoggingAsync();
             var users = await _userProfileService.GetAllProfilesAsync();
             var equipment = (await _equipmentService.GetAllActiveEquipmentAsync()).ToList();

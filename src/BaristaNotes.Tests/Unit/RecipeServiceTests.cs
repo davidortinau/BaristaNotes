@@ -18,11 +18,7 @@ public class RecipeServiceTests : IDisposable
 
     public RecipeServiceTests()
     {
-        var options = new DbContextOptionsBuilder<BaristaNotesContext>()
-            .UseInMemoryDatabase(databaseName: $"RecipeServiceTest_{Guid.NewGuid()}")
-            .Options;
-
-        _context = new BaristaNotesContext(options);
+        _context = SqliteTestContextFactory.Create();
         var repo = new RecipeRepository(_context);
         _service = new RecipeService(repo);
 

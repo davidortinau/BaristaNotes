@@ -31,19 +31,30 @@ public class GrinderProfileRepository : Repository<GrinderProfile>, IGrinderProf
 {
     public GrinderProfileRepository(BaristaNotesContext context) : base(context) { }
 
+    public override Task<GrinderProfile?> GetByIdAsync(int id)
+    {
+        var profileId = id;
+        return _context.GrinderProfiles.FirstOrDefaultAsync(p => p.Id == profileId);
+    }
+
+    public override Task<List<GrinderProfile>> GetAllAsync()
+        => _context.GrinderProfiles.ToListAsync();
+
     public async Task<GrinderProfile?> GetByEquipmentIdAsync(int equipmentId)
     {
-        return await _dbSet
+        var targetEquipmentId = equipmentId;
+        return await _context.GrinderProfiles
             .AsNoTracking()
             .Include(p => p.Equipment)
-            .FirstOrDefaultAsync(p => p.EquipmentId == equipmentId && !p.IsDeleted);
+            .FirstOrDefaultAsync(p => p.EquipmentId == targetEquipmentId && !p.IsDeleted);
     }
 
     public async Task<GrinderProfile> GetOrCreateForEquipmentAsync(Equipment equipment)
     {
-        var existing = await _dbSet
+        var targetEquipmentId = equipment.Id;
+        var existing = await _context.GrinderProfiles
             .Include(p => p.Equipment)
-            .FirstOrDefaultAsync(p => p.EquipmentId == equipment.Id && !p.IsDeleted);
+            .FirstOrDefaultAsync(p => p.EquipmentId == targetEquipmentId && !p.IsDeleted);
         if (existing != null) return existing;
 
         var isDF64 = equipment.Name?.Contains("DF64", StringComparison.OrdinalIgnoreCase) == true;
@@ -64,7 +75,7 @@ public class GrinderProfileRepository : Repository<GrinderProfile>, IGrinderProf
             IsDeleted = false,
         };
 
-        await _dbSet.AddAsync(profile);
+        await _context.GrinderProfiles.AddAsync(profile);
         try
         {
             await _context.SaveChangesAsync();
@@ -74,9 +85,9 @@ public class GrinderProfileRepository : Repository<GrinderProfile>, IGrinderProf
             // Race: another caller created the profile for this equipment first.
             // Detach our candidate and return the persisted one.
             _context.Entry(profile).State = EntityState.Detached;
-            var persisted = await _dbSet
+            var persisted = await _context.GrinderProfiles
                 .Include(p => p.Equipment)
-                .FirstOrDefaultAsync(p => p.EquipmentId == equipment.Id && !p.IsDeleted);
+                .FirstOrDefaultAsync(p => p.EquipmentId == targetEquipmentId && !p.IsDeleted);
             if (persisted != null) return persisted;
             throw;
         }
@@ -86,10 +97,11 @@ public class GrinderProfileRepository : Repository<GrinderProfile>, IGrinderProf
 
     public async Task<GrinderProfile?> EnsureCurrentSeedsAsync(int equipmentId)
     {
+        var targetEquipmentId = equipmentId;
         // Tracked load so we can persist any fix-up in place.
-        var profile = await _dbSet
+        var profile = await _context.GrinderProfiles
             .Include(p => p.Equipment)
-            .FirstOrDefaultAsync(p => p.EquipmentId == equipmentId && !p.IsDeleted);
+            .FirstOrDefaultAsync(p => p.EquipmentId == targetEquipmentId && !p.IsDeleted);
         if (profile == null) return null;
 
         var name = profile.Equipment?.Name;

@@ -15,6 +15,8 @@ internal static class DataAccessExtensions
             options.UseSqlite($"Data Source={dbPath}"));
 
         builder.Services
+            .AddScoped<DatabaseInitializer>()
+            .AddSingleton<DatabaseInitializationService>()
             .AddScoped<IEquipmentRepository, EquipmentRepository>()
             .AddScoped<IBeanRepository, BeanRepository>()
             .AddScoped<IBagRepository, BagRepository>()

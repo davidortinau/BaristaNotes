@@ -36,43 +36,54 @@ public class BagRepository : IBagRepository
 
     public async Task<Bag?> GetByIdAsync(int id)
     {
+        var bagId = id;
         return await _context.Bags
             .Include(b => b.Bean)
             .Where(b => !b.IsDeleted)
-            .FirstOrDefaultAsync(b => b.Id == id);
+            .FirstOrDefaultAsync(b => b.Id == bagId);
     }
 
     public async Task<List<Bag>> GetBagsForBeanAsync(int beanId, bool includeCompleted = true)
     {
-        var query = _context.Bags
-            .Include(b => b.Bean)
-            .Where(b => b.BeanId == beanId && !b.IsDeleted);
-
-        if (!includeCompleted)
+        var targetBeanId = beanId;
+        if (includeCompleted)
         {
-            query = query.Where(b => !b.IsComplete);
+            return await _context.Bags
+                .Include(b => b.Bean)
+                .Where(b => b.BeanId == targetBeanId && !b.IsDeleted)
+                .OrderByDescending(b => b.RoastDate)
+                .ToListAsync();
         }
 
-        return await query
+        return await _context.Bags
+            .Include(b => b.Bean)
+            .Where(b => b.BeanId == targetBeanId && !b.IsDeleted && !b.IsComplete)
             .OrderByDescending(b => b.RoastDate)
             .ToListAsync();
     }
 
     public async Task<List<BagSummaryDto>> GetBagSummariesForBeanAsync(int beanId, bool includeCompleted = true)
     {
-        var query = _context.Bags
-            .Include(b => b.Bean)
-            .Include(b => b.ShotRecords)
-            .Where(b => b.BeanId == beanId && !b.IsDeleted);
-
-        if (!includeCompleted)
+        var targetBeanId = beanId;
+        List<Bag> bags;
+        if (includeCompleted)
         {
-            query = query.Where(b => !b.IsComplete);
+            bags = await _context.Bags
+                .Include(b => b.Bean)
+                .Include(b => b.ShotRecords)
+                .Where(b => b.BeanId == targetBeanId && !b.IsDeleted)
+                .OrderByDescending(b => b.RoastDate)
+                .ToListAsync();
         }
-
-        var bags = await query
-            .OrderByDescending(b => b.RoastDate)
-            .ToListAsync();
+        else
+        {
+            bags = await _context.Bags
+                .Include(b => b.Bean)
+                .Include(b => b.ShotRecords)
+                .Where(b => b.BeanId == targetBeanId && !b.IsDeleted && !b.IsComplete)
+                .OrderByDescending(b => b.RoastDate)
+                .ToListAsync();
+        }
 
         return bags.Select(b => new BagSummaryDto
         {
@@ -116,9 +127,10 @@ public class BagRepository : IBagRepository
 
     public async Task<Bag?> GetMostRecentActiveBagForBeanAsync(int beanId)
     {
+        var targetBeanId = beanId;
         return await _context.Bags
             .Include(b => b.Bean)
-            .Where(b => b.BeanId == beanId && !b.IsComplete && !b.IsDeleted)
+            .Where(b => b.BeanId == targetBeanId && !b.IsComplete && !b.IsDeleted)
             .OrderByDescending(b => b.RoastDate)
             .FirstOrDefaultAsync();
     }

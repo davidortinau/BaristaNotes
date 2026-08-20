@@ -25,6 +25,7 @@ class ActivityFeedState
 partial class ActivityFeedPage : Component<ActivityFeedState>
 {
     [Inject] IShotService _shotService;
+    [Inject] DatabaseInitializationService _databaseInitialization;
 
     protected override void OnMounted()
     {
@@ -37,6 +38,8 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
     {
         try
         {
+            await _databaseInitialization.InitializeAsync();
+
             if (isRefresh)
             {
                 SetState(s =>

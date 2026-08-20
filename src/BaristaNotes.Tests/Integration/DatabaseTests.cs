@@ -12,11 +12,7 @@ public class DatabaseTests : IDisposable
     
     public DatabaseTests()
     {
-        var options = new DbContextOptionsBuilder<BaristaNotesContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-        
-        _context = new BaristaNotesContext(options);
+        _context = SqliteTestContextFactory.Create();
     }
     
     public void Dispose()

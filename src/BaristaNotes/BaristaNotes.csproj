@@ -31,8 +31,6 @@
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
 		<WindowsPackageType>None</WindowsPackageType>
 
-		<UseMonoRuntime Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'windows'">true</UseMonoRuntime>
-
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">17.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
@@ -40,24 +38,17 @@
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 	</PropertyGroup>
 
-	<PropertyGroup>
-		<!--
-			NOTE: EF Core 10 precompiled queries (InterceptorsNamespaces +
-			Microsoft.EntityFrameworkCore.Tasks) were previously enabled here.
-			They are experimental / NativeAOT-focused and cause spurious
-			"LINQ expression could not be translated" errors on trivial queries
-			when the model or queries change during development. Re-enable only
-			when the model is stable and NativeAOT publishing is required.
-			See: https://learn.microsoft.com/ef/core/performance/nativeaot-and-precompiled-queries
-		-->
-	</PropertyGroup>
-
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net11.0-ios|AnyCPU'">
-		<!-- <PublishAot>true</PublishAot> -->
 		<MtouchInterpreter>all</MtouchInterpreter>
 		<EnableTrimAnalyzer>true</EnableTrimAnalyzer>
 		<EnableAotAnalyzer>true</EnableAotAnalyzer>
 		<EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(EnableNativeAot)' == 'true'">
+		<PublishAot>true</PublishAot>
+		<MtouchInterpreter></MtouchInterpreter>
+		<MtouchLink>Full</MtouchLink>
 	</PropertyGroup>
 
 	<!-- Disable the managed linker so the dotnet watch startup hook
@@ -111,22 +102,12 @@
 		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
 		
 		<!-- Entity Framework Core + SQLite -->
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.1" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.1">
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<!--
-			Microsoft.EntityFrameworkCore.Tasks auto-runs precompiled query
-			generation at build. Disabled for the same reason as the
-			InterceptorsNamespaces block above: unstable with an in-flux model.
-		-->
-		<!--
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Tasks" Version="10.0.1">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		-->
+		<!-- NativeAOT artifacts are generated and compiled by BaristaNotes.Core. -->
 		
 		<!-- CoreSync (for future sync capability - using latest available version) -->
 		<PackageReference Include="CoreSync.Sqlite" Version="0.1.122" />

@@ -19,7 +19,6 @@ public partial class BaristaApp : Component<BaristaAppState>
 #endif
 {
     [Inject] IThemeService _themeService;
-    [Inject] IServiceProvider _serviceProvider;
     [Inject] ILogger<BaristaApp> _logger;
 
 #if DEBUG
@@ -57,18 +56,6 @@ public partial class BaristaApp : Component<BaristaAppState>
             await _themeService.SetThemeModeAsync(savedMode);
             _logger.LogDebug("[STARTUP-ASYNC] Theme initialized: {ElapsedMs}ms", sw.ElapsedMilliseconds);
 
-            // Database migration. Single-user dev app; on a fresh install pages
-            // mounted before this completes can race. The migration is fast on
-            // an empty DB, so we just fire-and-forget here rather than gating
-            // the entire Shell behind it (which creates a second Window and
-            // breaks WindowOverlay-based services).
-            await Task.Run(async () =>
-            {
-                using var scope = _serviceProvider.CreateScope();
-                var context = scope.ServiceProvider.GetRequiredService<BaristaNotesContext>();
-                await context.Database.MigrateAsync();
-            });
-            _logger.LogDebug("[STARTUP-ASYNC] Database migrated: {ElapsedMs}ms", sw.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {
@@ -81,8 +68,7 @@ public partial class BaristaApp : Component<BaristaAppState>
     {
         // Always render AppShell so only one Window is created. Window-level
         // services (e.g. IOverlayService / VoiceOverlay) are bound to that
-        // single Window's handler mapping. Pages that query the DB during
-        // OnMounted should tolerate an in-flight migration on a fresh install.
+        // single Window's handler mapping.
         return new AppShell();
     }
 }

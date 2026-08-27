@@ -33,7 +33,7 @@
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">17.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 	</PropertyGroup>
@@ -91,44 +91,45 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-		<PackageReference Include="Microsoft.Maui.Essentials.AI" Version="10.0.40-ci" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.1" />
-		<PackageReference Include="Microsoft.Recognizers.Text.Number" Version="1.8.9" />
+		<PackageReference Include="Microsoft.Maui.Essentials.AI" Version="11.0.0-preview.6.26360.8" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="11.0.0-preview.7.26381.103" />
+		<PackageReference Include="Microsoft.Recognizers.Text.Number" Version="1.8.13" />
+		<PackageReference Include="NuGet.CommandLine" Version="7.9.0" PrivateAssets="all" />
 		
 		<!-- Maui Reactor (latest preview) -->
-		<PackageReference Include="Reactor.Maui" Version="4.0.17" />
+		<PackageReference Include="Reactor.Maui" Version="4.0.18" />
 		
 		<!-- Community Toolkit -->
-		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="15.0.0" />
 		
 		<!-- Entity Framework Core + SQLite -->
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11">
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.0-preview.7.26381.103" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="11.0.0-preview.7.26381.103">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<!-- NativeAOT artifacts are generated and compiled by BaristaNotes.Core. -->
 		
 		<!-- CoreSync (for future sync capability - using latest available version) -->
-		<PackageReference Include="CoreSync.Sqlite" Version="0.1.122" />
-		<PackageReference Include="CoreSync.Http.Client" Version="0.1.122" />
-		<PackageReference Include="Shiny.Extensions.Configuration" Version="3.3.4" />
-		<PackageReference Include="System.Reactive" Version="6.0.1" />
+		<PackageReference Include="CoreSync.Sqlite" Version="1.0.0" />
+		<PackageReference Include="CoreSync.Http.Client" Version="1.0.0" />
+		<PackageReference Include="Shiny.Extensions.Configuration" Version="5.4.0" />
+		<PackageReference Include="System.Reactive" Version="7.0.0" />
 		
 		<!-- UXDivers Popups for user feedback and modals -->
-		<PackageReference Include="UXDivers.Popups.Maui" Version="0.9.1" />
+		<PackageReference Include="UXDivers.Popups.Maui" Version="0.9.4" />
 		
 		<!-- AI Advice Service -->
-		<PackageReference Include="Microsoft.Extensions.AI" Version="10.4.1" />
-		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.4.1" />
-		<PackageReference Include="Microsoft.Maui.AI.Attributes" Version="0.1.0-preview.10.26274.3" />
+		<PackageReference Include="Microsoft.Extensions.AI" Version="10.9.0" />
+		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.9.0" />
+		<PackageReference Include="Microsoft.Maui.AI.Attributes" Version="0.1.0-preview.12.26421.1" />
 		<PackageReference Include="Azure.AI.OpenAI" Version="2.1.0" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="11.0.0-preview.7.26381.103" />
 	</ItemGroup>
 
 	<!-- MAUI DevFlow (DEBUG only): in-process agent for UI inspection, logs, network, preferences. -->
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-		<PackageReference Include="Microsoft.Maui.DevFlow.Agent" Version="0.26.1-dev" />
+		<PackageReference Include="Microsoft.Maui.DevFlow.Agent" Version="0.1.0-preview.13.0" />
 	</ItemGroup>
 
 	<!-- Microsoft.Maui.Labs.HotReload (DEBUG only): IHotReloadAware + MetadataUpdateHandler.
@@ -145,12 +146,6 @@
 	<PropertyGroup Condition="$(TargetFramework.Contains('-maccatalyst')) and '$(Configuration)' == 'Debug'">
 		<CodesignEntitlements>Platforms/MacCatalyst/Entitlements.Debug.plist</CodesignEntitlements>
 	</PropertyGroup>
-
-	<!-- HotReload Sentinel (DEBUG only): in-app overlay + diagnostics endpoint. -->
-	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-		<ProjectReference Include="..\..\..\hotreload-sentinel\src\HotReloadSentinel.Diagnostics\HotReloadSentinel.Diagnostics.csproj" />
-		<ProjectReference Include="..\..\..\hotreload-sentinel\src\HotReloadSentinel.Diagnostics.Maui\HotReloadSentinel.Diagnostics.Maui.csproj" />
-	</ItemGroup>
 
 	<!-- MauiReactor hot reload: v3+ uses a feature switch (no code call needed). -->
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">

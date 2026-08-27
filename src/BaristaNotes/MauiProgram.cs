@@ -15,7 +15,7 @@ public static class MauiProgram
             .AddImageServices()           // media picker + image picker/processing + vision
             .AddVoiceServices()           // speech-to-text + voice command + navigation + overlay
             .AddAIChatClients()           // Apple Intelligence (iOS) + advice + grind translation
-            .AddDebugDiagnostics();       // #if DEBUG: Debug logger + DevFlow + HotReload Sentinel
+            .AddDebugDiagnostics();       // #if DEBUG: Debug logger + DevFlow
 
         RouteRegistration.RegisterAll();
 

@@ -10,6 +10,7 @@ internal static class AIChatClientExtensions
     {
 #if IOS
 #pragma warning disable CA1416 // Validate platform compatibility
+#pragma warning disable MAUIAI0001 // Microsoft.Maui.Essentials.AI is experimental
         // Apple Intelligence requires iOS 26.0+. VoiceCommandService falls back
         // to OpenAI when local AI isn't available or fails.
         try
@@ -23,6 +24,7 @@ internal static class AIChatClientExtensions
             Console.WriteLine($"Apple Intelligence not available, will use OpenAI: {ex.Message}");
         }
 #pragma warning restore CA1416
+#pragma warning restore MAUIAI0001
 #endif
 
         builder.Services

@@ -30,6 +30,14 @@ public interface IVisionService
     Task<BeanLabelExtraction> ExtractBeanLabelAsync(Stream imageStream, CancellationToken ct = default);
 
     /// <summary>
+    /// Classifies a captured photo for the app's general photo workflow.
+    /// Unknown is returned when the next action is not obvious.
+    /// </summary>
+    Task<PhotoWorkflowAnalysis> ClassifyPhotoAsync(
+        Stream imageStream,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Compares a target photo against a set of candidate profile avatars and
     /// returns the best match (or null if no avatar plausibly matches).
     /// Multimodal call: gpt-4o receives the target image plus each candidate

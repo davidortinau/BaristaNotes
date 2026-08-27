@@ -4,6 +4,7 @@ using MauiReactor.Shapes;
 using BaristaNotes.Core.Services.Exceptions;
 using BaristaNotes.Integrations.Popups;
 using UXDivers.Popups.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.Controls.PlatformConfiguration;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using Application = Microsoft.Maui.Controls.Application;
@@ -132,6 +133,7 @@ class ShotLoggingGridState
     public bool IsLoadingAdvice { get; set; }
     public double LoadingBarPosition { get; set; } = -120;
     public BaristaNotes.Core.Services.DTOs.AIAdviceResponseDto? LastAdvice { get; set; }
+    public bool IsPhotoWorkflowBusy { get; set; }
 }
 
 class ShotLoggingGridPageProps
@@ -165,9 +167,13 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     [Inject] IDataChangeNotifier _dataChangeNotifier;
     [Inject] BaristaNotes.Services.IAIAdviceService _aiAdviceService;
     [Inject] DatabaseInitializationService _databaseInitialization;
+    [Inject] IServiceProvider _serviceProvider;
 
     // Cancellation token for voice commands.
     private CancellationTokenSource? _voiceCts;
+    private CancellationTokenSource? _photoWorkflowCts;
+    private bool _photoWorkflowActive;
+    private bool _isUnmounting;
 
     // Pauses speech recognition when the camera capture flow is active.
     private bool _speechPaused;
@@ -181,6 +187,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     protected override void OnMounted()
     {
         base.OnMounted();
+        _isUnmounting = false;
         SetState(s => s.IsLoading = true);
         _ = LoadDataAsync().ContinueWith(_ =>
         {
@@ -208,8 +215,12 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
 
     protected override void OnWillUnmount()
     {
+        _isUnmounting = true;
+        _photoWorkflowActive = false;
         _voiceCts?.Cancel();
         _voiceCts?.Dispose();
+        _photoWorkflowCts?.Cancel();
+        _photoWorkflowCts?.Dispose();
         StopSilenceTimer();
 
         _dataChangeNotifier.DataChanged -= OnDataChanged;
@@ -441,9 +452,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never));
         }
 
-        return ContentPage(title,
-                // ScrollView(
-                Grid(
+        var editorGrid = Grid(
                     rows: "Auto,*,*,*,*,*,*,Auto",
                     columns: "*,*,*,*",
                     Tile("METHOD", State.BrewMethod.DisplayName(),
@@ -506,7 +515,20 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 .RowSpacing(1)
                 .BackgroundColor(DividerColor())
                 .Padding(1)
-                .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
+                .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None))
+                .IsEnabled(!State.IsPhotoWorkflowBusy)
+                .Set(
+                    MauiControls.AutomationProperties.ExcludedWithChildrenProperty,
+                    State.IsPhotoWorkflowBusy);
+
+        return ContentPage(title,
+            Grid(
+                editorGrid,
+                State.IsPhotoWorkflowBusy
+                    ? RenderPhotoProcessingOverlay()
+                    : null
+            )
+            .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
         // )// ScrollView
         // .BackgroundColor(DividerColor())
         // // Extend under the status bar / notch — tiles compensate with topInsetPadding.
@@ -516,6 +538,34 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         .Set(MauiControls.Shell.TabBarIsVisibleProperty, false)
         .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
         .OnAppearing(OnPageAppearing);
+    }
+
+    VisualNode RenderPhotoProcessingOverlay()
+    {
+        return Grid(
+            Border(
+                VStack(spacing: AppSpacing.S,
+                    ActivityIndicator()
+                        .IsRunning(true)
+                        .AutomationId("PhotoProcessingIndicator"),
+                    Label("Reviewing photo")
+                        .ThemeKey(ThemeKeys.CardTitle)
+                        .HCenter(),
+                    Label("Finding the best next step…")
+                        .ThemeKey(ThemeKeys.SecondaryText)
+                        .HCenter()
+                )
+                .HCenter()
+            )
+            .ThemeKey(ThemeKeys.Card)
+            .Margin(AppSpacing.L)
+            .HCenter()
+            .VCenter()
+        )
+        .BackgroundColor(AppColors.Dark.Background.WithAlpha(0.72f))
+        .InputTransparent(false)
+        .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None))
+        .AutomationId("PhotoProcessingOverlay");
     }
 
     void OnPageAppearing()
@@ -2109,11 +2159,22 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     }
 
     /// <summary>
-    /// Captures a photo and analyzes it (people count → coffee needs).
-    /// Mirrors the camera flow from ShotLoggingPage.
+    /// Captures a photo, classifies its purpose, and routes it to the matching workflow.
     /// </summary>
     private async Task CaptureAndAnalyzePhotoAsync()
     {
+        if (_photoWorkflowActive)
+        {
+            return;
+        }
+
+        _photoWorkflowActive = true;
+        _photoWorkflowCts?.Cancel();
+        _photoWorkflowCts?.Dispose();
+        var workflowCts = new CancellationTokenSource();
+        _photoWorkflowCts = workflowCts;
+        var workflowToken = workflowCts.Token;
+
         try
         {
             if (!MediaPicker.Default.IsCaptureSupported)
@@ -2124,50 +2185,229 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 return;
             }
 
-            if (!await _visionService.IsAvailableAsync())
+            while (!workflowToken.IsCancellationRequested)
             {
-                if (ContainerPage != null)
-                    await ContainerPage.DisplayAlert("Vision Unavailable",
-                        "Vision service is not configured.", "OK");
+                var photo = await MediaPicker.Default.CapturePhotoAsync(new MediaPickerOptions
+                {
+                    Title = "Take a photo",
+                    MaximumWidth = 1024,
+                    MaximumHeight = 1024,
+                    CompressionQuality = 70
+                });
+                if (photo is null)
+                {
+                    return;
+                }
+
+                SetPhotoProcessing(true);
+
+                byte[] imageBytes;
+                using (var source = await photo.OpenReadAsync())
+                using (var buffer = new MemoryStream())
+                {
+                    await source.CopyToAsync(buffer, workflowToken);
+                    imageBytes = buffer.ToArray();
+                }
+
+                using var classificationStream = new MemoryStream(imageBytes, writable: false);
+                var analysis = await _visionService.ClassifyPhotoAsync(
+                    classificationStream,
+                    workflowToken);
+
+                PhotoIntentChoice choice;
+                if (analysis.Success
+                    && analysis.IsObvious
+                    && analysis.Intent != PhotoWorkflowIntent.Unknown)
+                {
+                    choice = ToPhotoIntentChoice(analysis.Intent);
+                }
+                else
+                {
+                    SetPhotoProcessing(false);
+                    choice = await AskForPhotoIntentAsync(workflowToken);
+                }
+
+                if (choice == PhotoIntentChoice.Retake)
+                {
+                    SetPhotoProcessing(false);
+                    continue;
+                }
+
+                await RouteCapturedPhotoAsync(choice, imageBytes, analysis, workflowToken);
                 return;
             }
-
-            var photo = await MediaPicker.Default.CapturePhotoAsync(new MediaPickerOptions
-            {
-                Title = "Take a photo of the room",
-                MaximumWidth = 1024,
-                MaximumHeight = 1024,
-                CompressionQuality = 70
-            });
-            if (photo == null) return;
-
-            using var stream = await photo.OpenReadAsync();
-            var result = await _visionService.AnalyzeImageAsync(
-                stream,
-                "Count the people in this image and tell me how many cups of coffee I need to make.");
-
-            if (result.Success)
-            {
-                var message = result.Message ??
-                    $"I see {result.PeopleCount} {(result.PeopleCount == 1 ? "person" : "people")}. " +
-                    $"You'll need {result.CupsNeeded} {(result.CupsNeeded == 1 ? "cup" : "cups")} of coffee, " +
-                    $"which requires about {result.BeansNeededGrams}g of beans.";
-
-                if (ContainerPage != null)
-                    await ContainerPage.DisplayAlert("Analysis Complete", message, "OK");
-            }
-            else if (ContainerPage != null)
-            {
-                await ContainerPage.DisplayAlert("Analysis Failed",
-                    result.ErrorMessage ?? "Could not analyze the photo.", "OK");
-            }
+        }
+        catch (OperationCanceledException) when (workflowToken.IsCancellationRequested)
+        {
+            _logger.LogDebug("Photo workflow cancelled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error capturing and analyzing photo");
+            SetPhotoProcessing(false);
             if (ContainerPage != null)
                 await ContainerPage.DisplayAlert("Error",
                     $"Failed to capture or analyze photo: {ex.Message}", "OK");
+        }
+        finally
+        {
+            _photoWorkflowActive = false;
+            SetPhotoProcessing(false);
+            if (ReferenceEquals(_photoWorkflowCts, workflowCts))
+            {
+                _photoWorkflowCts = null;
+            }
+            workflowCts.Dispose();
+        }
+    }
+
+    private void SetPhotoProcessing(bool isProcessing)
+    {
+        if (_isUnmounting || State.IsPhotoWorkflowBusy == isProcessing)
+        {
+            return;
+        }
+
+        SetState(s => s.IsPhotoWorkflowBusy = isProcessing);
+        if (isProcessing)
+        {
+            SemanticScreenReader.Default.Announce("Reviewing photo. Please wait.");
+        }
+    }
+
+    private static PhotoIntentChoice ToPhotoIntentChoice(PhotoWorkflowIntent intent)
+        => intent switch
+        {
+            PhotoWorkflowIntent.Coffee => PhotoIntentChoice.Coffee,
+            PhotoWorkflowIntent.Profile => PhotoIntentChoice.Profile,
+            PhotoWorkflowIntent.Room => PhotoIntentChoice.Room,
+            _ => PhotoIntentChoice.Cancel
+        };
+
+    private static async Task<PhotoIntentChoice> AskForPhotoIntentAsync(
+        CancellationToken cancellationToken)
+    {
+        var popup = new PhotoIntentPopup();
+        await IPopupService.Current.PushAsync(popup);
+        return await popup.WaitForChoiceAsync(cancellationToken);
+    }
+
+    private async Task RouteCapturedPhotoAsync(
+        PhotoIntentChoice choice,
+        byte[] imageBytes,
+        PhotoWorkflowAnalysis analysis,
+        CancellationToken cancellationToken)
+    {
+        switch (choice)
+        {
+            case PhotoIntentChoice.Coffee:
+                await OpenCoffeeFromPhotoAsync(imageBytes, analysis.CoffeeDetails, cancellationToken);
+                break;
+
+            case PhotoIntentChoice.Profile:
+                SetPhotoProcessing(false);
+                await MauiControls.Shell.Current.GoToAsync<ProfileFormPageProps>(
+                    "profile-form",
+                    props =>
+                    {
+                        props.ProfileId = null;
+                        props.StagedAvatarBytes = imageBytes;
+                    });
+                break;
+
+            case PhotoIntentChoice.Room:
+                await AnalyzeRoomPhotoAsync(imageBytes, cancellationToken);
+                break;
+
+            default:
+                SetPhotoProcessing(false);
+                break;
+        }
+    }
+
+    private async Task OpenCoffeeFromPhotoAsync(
+        byte[] imageBytes,
+        BeanLabelExtraction? coffeeDetails,
+        CancellationToken cancellationToken)
+    {
+        if (coffeeDetails is null
+            || (string.IsNullOrWhiteSpace(coffeeDetails.Name)
+                && string.IsNullOrWhiteSpace(coffeeDetails.Roaster)
+                && string.IsNullOrWhiteSpace(coffeeDetails.Origin)
+                && !coffeeDetails.RoastDate.HasValue
+                && string.IsNullOrWhiteSpace(coffeeDetails.Notes)))
+        {
+            using var extractionStream = new MemoryStream(imageBytes, writable: false);
+            coffeeDetails = await _visionService.ExtractBeanLabelAsync(
+                extractionStream,
+                cancellationToken);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (_isUnmounting)
+        {
+            return;
+        }
+
+        var prefill = coffeeDetails?.Success == true
+            ? coffeeDetails
+            : new BeanLabelExtraction { Success = true };
+        var popup = _serviceProvider.GetRequiredService<AddCoffeePopup>();
+        await popup.InitializeAsync(prefill);
+        popup.OnCreated = bag =>
+        {
+            if (_isUnmounting)
+            {
+                return;
+            }
+
+            SetState(s =>
+            {
+                s.AvailableBags.RemoveAll(existing => existing.Id == bag.Id);
+                s.AvailableBags.Insert(0, bag);
+                s.SelectedBagId = bag.Id;
+                s.BeanName = bag.BeanName;
+            });
+        };
+        SetPhotoProcessing(false);
+        await IPopupService.Current.PushAsync(popup);
+    }
+
+    private async Task AnalyzeRoomPhotoAsync(
+        byte[] imageBytes,
+        CancellationToken cancellationToken)
+    {
+        using var roomStream = new MemoryStream(imageBytes, writable: false);
+        var result = await _visionService.AnalyzeImageAsync(
+            roomStream,
+            "Count the people in this image and tell me how many cups of coffee I need to make.",
+            cancellationToken);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (_isUnmounting)
+        {
+            return;
+        }
+
+        SetPhotoProcessing(false);
+        if (result.Success)
+        {
+            var message = result.Message ??
+                $"I see {result.PeopleCount} {(result.PeopleCount == 1 ? "person" : "people")}. " +
+                $"You need {result.CupsNeeded} {(result.CupsNeeded == 1 ? "cup" : "cups")} of coffee, " +
+                $"which requires about {result.BeansNeededGrams}g of beans.";
+
+            if (ContainerPage != null)
+            {
+                await ContainerPage.DisplayAlert("Analysis Complete", message, "OK");
+            }
+        }
+        else if (ContainerPage != null)
+        {
+            await ContainerPage.DisplayAlert(
+                "Analysis Failed",
+                result.ErrorMessage ?? "Could not analyze the photo.",
+                "OK");
         }
     }
 

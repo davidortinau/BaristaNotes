@@ -11,11 +11,13 @@ class ProfileFormPageState
     public bool IsSaving { get; set; }
     public bool IsLoading { get; set; }
     public string? ErrorMessage { get; set; }
+    public byte[]? StagedAvatarBytes { get; set; }
 }
 
 class ProfileFormPageProps
 {
     public int? ProfileId { get; set; }
+    public byte[]? StagedAvatarBytes { get; set; }
 }
 
 partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageProps>
@@ -28,6 +30,11 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
     protected override void OnMounted()
     {
         base.OnMounted();
+
+        if (Props.StagedAvatarBytes is { Length: > 0 })
+        {
+            SetState(s => s.StagedAvatarBytes = Props.StagedAvatarBytes);
+        }
 
         if (Props.ProfileId.HasValue && Props.ProfileId.Value > 0)
         {
@@ -82,24 +89,46 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
 
         try
         {
+            int profileId;
             if (State.ProfileId.HasValue && State.ProfileId.Value > 0)
             {
+                profileId = State.ProfileId.Value;
                 await _profileService.UpdateProfileAsync(
-                    State.ProfileId.Value,
+                    profileId,
                     new UpdateUserProfileDto { Name = State.Name, Context = State.Context });
 
-                _dataChangeNotifier.NotifyDataChanged(DataChangeType.ProfileUpdated, State.ProfileId.Value);
-                await _feedbackService.ShowSuccessAsync($"Profile '{State.Name}' updated");
+                _dataChangeNotifier.NotifyDataChanged(DataChangeType.ProfileUpdated, profileId);
             }
             else
             {
                 var created = await _profileService.CreateProfileAsync(
                     new CreateUserProfileDto { Name = State.Name, Context = string.IsNullOrWhiteSpace(State.Context) ? null : State.Context });
 
+                profileId = created.Id;
+                SetState(s => s.ProfileId = profileId);
                 _dataChangeNotifier.NotifyDataChanged(DataChangeType.ProfileCreated, created);
-                await _feedbackService.ShowSuccessAsync($"Profile '{State.Name}' created");
             }
 
+            if (State.StagedAvatarBytes is { Length: > 0 } avatarBytes
+                && profileId > 0)
+            {
+                using var avatarStream = new MemoryStream(avatarBytes, writable: false);
+                var imageResult = await _profileService.UpdateProfileImageAsync(profileId, avatarStream);
+                if (!imageResult.Success)
+                {
+                    SetState(s =>
+                    {
+                        s.IsSaving = false;
+                        s.ErrorMessage = $"Profile saved, but the photo was not saved: {imageResult.ErrorMessage}";
+                    });
+                    return;
+                }
+
+                SetState(s => s.StagedAvatarBytes = null);
+                _dataChangeNotifier.NotifyDataChanged(DataChangeType.ProfileUpdated, profileId);
+            }
+
+            await _feedbackService.ShowSuccessAsync($"Profile '{State.Name}' saved");
             await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
         }
         catch (Exception ex)
@@ -307,7 +336,9 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
                     .CharacterSpacing(2)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .TextColor(TextSecondary()),
-                isEditMode && State.ProfileId.HasValue
+                State.StagedAvatarBytes is { Length: > 0 } stagedAvatarBytes
+                    ? StagedPhotoPreview(stagedAvatarBytes)
+                    : isEditMode && State.ProfileId.HasValue
                     ? (VisualNode)new ProfileImagePicker(
                             State.ProfileId.Value,
                             _imagePickerService,
@@ -321,6 +352,24 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
         .BackgroundColor(SurfaceColor())
         .StrokeThickness(0)
         .StrokeShape(new Rectangle());
+    }
+
+    VisualNode StagedPhotoPreview(byte[] avatarBytes)
+    {
+        return VStack(spacing: AppSpacing.S,
+            Border(
+                new MauiReactor.Image()
+                    .Source(ImageSource.FromStream(
+                        _ => Task.FromResult<Stream>(new MemoryStream(avatarBytes, writable: false))))
+                    .Aspect(Aspect.AspectFill)
+                    .HeightRequest(160)
+                    .AutomationId("StagedProfilePhoto")
+            )
+            .ThemeKey(ThemeKeys.Card)
+            .HeightRequest(160),
+            Label("This photo will be saved when you add the profile.")
+                .ThemeKey(ThemeKeys.Caption)
+        );
     }
 
     VisualNode ContextFieldTile()

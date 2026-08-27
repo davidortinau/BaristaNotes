@@ -97,10 +97,20 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
     /// Loads recent beans and distinct roaster/origin values, then renders the
     /// appropriate initial mode. Call before pushing the popup.
     /// </summary>
-    public async Task InitializeAsync()
+    public async Task InitializeAsync(BeanLabelExtraction? initialExtraction = null)
     {
+        if (initialExtraction is not null)
+        {
+            _pendingExtraction = initialExtraction;
+        }
+
         if (_initialized)
         {
+            if (initialExtraction is not null)
+            {
+                _mode = Mode.Type;
+                RenderCurrentMode();
+            }
             return;
         }
         _initialized = true;
@@ -125,7 +135,9 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
             _knownOrigins = Array.Empty<string>();
         }
 
-        _mode = _recentBeans.Count > 0 ? Mode.Browse : Mode.Type;
+        _mode = initialExtraction is not null || _recentBeans.Count == 0
+            ? Mode.Type
+            : Mode.Browse;
         RenderCurrentMode();
     }
 
@@ -359,6 +371,7 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
         };
         _notesEditor = new Controls.Editor
         {
+            Text = prefill?.Notes ?? string.Empty,
             Placeholder = "Tasting notes…",
             BackgroundColor = Colors.Transparent,
             TextColor = AppColors.Dark.TextPrimary,

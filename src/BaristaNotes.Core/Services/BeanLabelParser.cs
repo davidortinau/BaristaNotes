@@ -43,6 +43,7 @@ public static class BeanLabelParser
             result.Roaster = GetStringOrNull(root, "roaster");
             result.Origin = GetStringOrNull(root, "origin");
             result.RoastDate = GetDateOrNull(root, "roastDate");
+            result.Notes = GetStringOrNull(root, "notes");
             result.Success = true;
             return result;
         }

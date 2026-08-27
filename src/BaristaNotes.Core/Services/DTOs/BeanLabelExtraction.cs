@@ -11,6 +11,7 @@ public class BeanLabelExtraction
     public string? Roaster { get; set; }
     public string? Origin { get; set; }
     public DateTime? RoastDate { get; set; }
+    public string? Notes { get; set; }
 
     /// <summary>Raw model response text, kept for debugging.</summary>
     public string? RawResponse { get; set; }

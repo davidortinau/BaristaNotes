@@ -24,9 +24,35 @@ public class VisionService : IVisionService
           "name": string or null,       // The specific bean/blend name (e.g. "Yirgacheffe", "Monarch", "Black Cat Espresso")
           "roaster": string or null,    // The roastery/brand (e.g. "Blue Bottle", "Onyx", "Counter Culture")
           "origin": string or null,     // Country, region, or farm (e.g. "Ethiopia", "Colombia Huila")
-          "roastDate": "YYYY-MM-DD" or null  // Only if a roast date is explicitly printed
+          "roastDate": "YYYY-MM-DD" or null, // Only if a roast date is explicitly printed
+          "notes": string or null       // Useful printed variety, process, elevation, or tasting notes
         }
         If a field is unclear or missing from the label, use null. Never guess a date.
+        """;
+
+    private const string PhotoWorkflowSystemPrompt = """
+        Classify a photo taken from a coffee journal app and choose the next workflow.
+        Return ONLY JSON in this exact shape:
+        {
+          "intent": "coffee" | "profile" | "room" | "unknown",
+          "isObvious": true | false,
+          "rationale": "one short sentence",
+          "name": string or null,
+          "roaster": string or null,
+          "origin": string or null,
+          "roastDate": "YYYY-MM-DD" or null,
+          "notes": string or null
+        }
+
+        Intent rules:
+        - coffee: a coffee bean card, coffee bag, coffee box, or readable coffee label is the clear subject.
+        - profile: one person is the clear portrait subject and the image is suitable for a user avatar.
+        - room: a group, room, gathering, or scene where counting people for coffee is the clear purpose.
+        - unknown: mixed subjects, an unclear image, or any case where the next workflow is not obvious.
+
+        Set isObvious to false for uncertain or mixed cases. Never guess.
+        For coffee, extract only visible fields. Put useful variety, process, elevation, and tasting text in notes.
+        For all other intents, set the coffee fields to null.
         """;
 
     private const string SystemPrompt = """
@@ -193,6 +219,65 @@ public class VisionService : IVisionService
                 ErrorMessage = $"Failed to extract bean label: {ex.Message}",
                 RawResponse = rawResponse
             };
+        }
+    }
+
+    public async Task<PhotoWorkflowAnalysis> ClassifyPhotoAsync(
+        Stream imageStream,
+        CancellationToken cancellationToken = default)
+    {
+        string? rawResponse = null;
+        try
+        {
+            var client = GetOrCreateVisionClient();
+            if (client is null)
+            {
+                return PhotoWorkflowAnalysis.Error("Vision service is not configured.");
+            }
+
+            using var memoryStream = new MemoryStream();
+            await imageStream.CopyToAsync(memoryStream, cancellationToken);
+            var imageBytes = memoryStream.ToArray();
+
+            var messages = new List<ChatMessage>
+            {
+                new(ChatRole.System, PhotoWorkflowSystemPrompt),
+                new(ChatRole.User, new AIContent[]
+                {
+                    new TextContent("Choose the obvious next workflow for this photo."),
+                    new DataContent(imageBytes, "image/jpeg")
+                })
+            };
+
+            var options = new ChatOptions { ResponseFormat = ChatResponseFormat.Json };
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(TimeoutSeconds));
+
+            var response = await client.GetResponseAsync(messages, options, cts.Token);
+            rawResponse = response.Text;
+            var result = PhotoWorkflowAnalysisParser.ParseResponse(rawResponse);
+
+            _logger.LogInformation(
+                "Photo workflow classified: Intent={Intent} IsObvious={IsObvious} Success={Success}",
+                result.Intent,
+                result.IsObvious,
+                result.Success);
+
+            return result;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Photo workflow classification timed out");
+            return PhotoWorkflowAnalysis.Error("Classification timed out.", rawResponse);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error classifying photo workflow");
+            return PhotoWorkflowAnalysis.Error($"Classification failed: {ex.Message}", rawResponse);
         }
     }
 

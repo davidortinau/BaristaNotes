@@ -593,7 +593,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                     .VEnd()
                     .GridRow(1)
             )
-            .Padding(16, 56, 16, 14)
+            .Padding(16, 14, 16, 14)
         )
         .BackgroundColor(SurfaceColor())
         .StrokeThickness(0)

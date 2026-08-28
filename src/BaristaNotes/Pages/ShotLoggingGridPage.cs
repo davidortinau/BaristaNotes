@@ -154,6 +154,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     [Inject] IRecipeService _recipeService;
     [Inject] IEquipmentService _equipmentService;
     [Inject] IUserProfileService _userProfileService;
+    [Inject] IImageProcessingService _imageProcessingService;
     [Inject] IPreferencesService _preferencesService;
     [Inject] IFeedbackService _feedbackService;
     [Inject] BaristaNotes.Core.Data.Repositories.IGrinderProfileRepository _grinderProfiles;
@@ -912,16 +913,17 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         var accent = isLight ? AppColors.Light.Primary : AppColors.Dark.Primary;
         var muted = isLight ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
         var radius = size / 2;
+        var resolvedImagePath = ResolveAvatarPath(imagePath);
 
         return Border(
-            string.IsNullOrEmpty(imagePath)
+            resolvedImagePath is null
                 ? Label(MaterialSymbolsFont.Person)
                     .FontFamily(MaterialSymbolsFont.FontFamily)
                     .FontSize(size * 0.55)
                     .TextColor(muted)
                     .HCenter().VCenter()
                 : (VisualNode)new MauiReactor.Image()
-                    .Source(ImageSource.FromStream(ct => Task.FromResult<Stream>(File.OpenRead(imagePath!))))
+                    .Source(ImageSource.FromStream(ct => Task.FromResult<Stream>(File.OpenRead(resolvedImagePath))))
                     .Aspect(Aspect.AspectFill)
                     .WidthRequest(size)
                     .HeightRequest(size)
@@ -934,6 +936,19 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         .BackgroundColor(muted.WithAlpha(0.12f))
         .Padding(0)
         .HCenter();
+    }
+
+    string? ResolveAvatarPath(string? imagePath)
+    {
+        if (string.IsNullOrWhiteSpace(imagePath))
+            return null;
+
+        if (System.IO.Path.IsPathRooted(imagePath))
+            return File.Exists(imagePath) ? imagePath : null;
+
+        return _imageProcessingService.ImageExists(imagePath)
+            ? _imageProcessingService.GetImagePath(imagePath)
+            : null;
     }
 
     VisualNode SaveTile()

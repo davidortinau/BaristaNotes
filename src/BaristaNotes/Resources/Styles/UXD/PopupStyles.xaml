@@ -364,17 +364,18 @@
                 <Grid
                     IgnoreSafeArea="True"
                     x:DataType="local:ActionModalPopup"
-                    VerticalOptions="{ OnIdiom Phone=End, Tablet=Center, Desktop=Center}"
+                    VerticalOptions="{ OnIdiom Phone=Fill, Tablet=Center, Desktop=Center}"
                     HorizontalOptions="Fill"
-                    RowDefinitions="Auto,Auto,Auto"
+                    RowDefinitions="Auto,*,Auto"
                     RowSpacing="{DynamicResource SpacingMedium}"
                     Padding="{DynamicResource PopupAirSpacing}">
                     <!-- Popup Background -->
-                    <BoxView
-                        Grid.RowSpan="4"
+                    <Border
+                        Grid.RowSpan="3"
                         BackgroundColor="{DynamicResource BackgroundColor}"
                         Margin="-24"
-                        CornerRadius="{DynamicResource CornerRadiusXBig}"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 24"
                         HorizontalOptions="Fill"/>
                     <!-- Title -->
                     <Label

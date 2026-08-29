@@ -412,69 +412,46 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
         var statusLabel = State.IsComplete ? "COMPLETE" : "ACTIVE";
         var actionLabel = State.IsComplete ? "REACTIVATE" : "MARK COMPLETE";
 
-        return Border(
-            Grid(rows: "Auto,Auto", columns: "*,Auto",
-                Label("STATUS")
-                    .FontSize(10)
-                    .CharacterSpacing(2)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextSecondary())
-                    .GridRow(0).GridColumn(0).GridColumnSpan(2),
-                Label(statusLabel)
-                    .FontSize(22)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextPrimary())
-                    .VCenter()
-                    .GridRow(1).GridColumn(0),
-                Border(
-                    Label(actionLabel)
-                        .FontSize(11)
-                        .CharacterSpacing(1.5)
-                        .FontAttributes(MauiControls.FontAttributes.Bold)
-                        .TextColor(SurfaceColor())
-                        .HCenter()
-                        .VCenter()
-                )
-                .BackgroundColor(TextPrimary())
-                .StrokeThickness(0)
-                .StrokeShape(new Rectangle())
-                .Padding(14, 10)
-                .MinimumHeightRequest(40)
-                .OnTapped(async () => await ToggleBagStatus())
-                .VCenter()
-                .GridRow(1).GridColumn(1)
-            )
-            .RowSpacing(8)
-            .Padding(16, 14, 16, 14)
-        )
+        return new AdaptiveTwoLineTile(
+            Label("STATUS")
+                .FontSize(10)
+                .CharacterSpacing(2)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextSecondary()),
+            Label(statusLabel)
+                .FontSize(22)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextPrimary()))
+        .Trailing(
+            Button(actionLabel)
+            .FontSize(11)
+            .CharacterSpacing(1.5)
+            .FontAttributes(MauiControls.FontAttributes.Bold)
+            .TextColor(SurfaceColor())
+            .BackgroundColor(TextPrimary())
+            .BorderWidth(0)
+            .CornerRadius(0)
+            .Padding(14, 10)
+            .MinimumHeightRequest(44)
+            .OnClicked(async () => await ToggleBagStatus()))
         .BackgroundColor(SurfaceColor())
-        .StrokeThickness(0)
-        .StrokeShape(new Rectangle())
-        .MinimumHeightRequest(100);
+        .MinimumHeight(100);
     }
 
     VisualNode StatsTile()
     {
-        return Border(
-            Grid(rows: "Auto,Auto", columns: "*",
-                Label("SHOTS LOGGED")
-                    .FontSize(10)
-                    .CharacterSpacing(2)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextSecondary())
-                    .GridRow(0),
-                Label(State.ShotCount.ToString())
-                    .FontSize(28)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextPrimary())
-                    .GridRow(1)
-            )
-            .Padding(16, 14, 16, 14)
-        )
+        return new AdaptiveTwoLineTile(
+            Label("SHOTS LOGGED")
+                .FontSize(10)
+                .CharacterSpacing(2)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextSecondary()),
+            Label(State.ShotCount.ToString())
+                .FontSize(28)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextPrimary()))
         .BackgroundColor(SurfaceColor())
-        .StrokeThickness(0)
-        .StrokeShape(new Rectangle())
-        .MinimumHeightRequest(100);
+        .MinimumHeight(100);
     }
 
     VisualNode RatingsTile()

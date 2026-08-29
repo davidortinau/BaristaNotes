@@ -216,35 +216,29 @@ partial class EquipmentManagementPage : Component<EquipmentManagementState>
 
     VisualNode RenderEquipmentRow(EquipmentDto equipment)
     {
-        return Border(
-            Grid(rows: "Auto,Auto", columns: "*,Auto",
-                Label(equipment.Type.ToString().ToUpperInvariant())
-                    .FontSize(10)
-                    .CharacterSpacing(2)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextSecondary())
-                    .GridRow(0).GridColumn(0),
-                Label(equipment.Name)
-                    .FontSize(20)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextPrimary())
-                    .LineBreakMode(LineBreakMode.TailTruncation)
-                    .GridRow(1).GridColumn(0),
-                Label("→")
-                    .FontSize(22)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextPrimary())
-                    .VCenter()
-                    .GridRow(0).GridRowSpan(2).GridColumn(1)
-            )
-            .Padding(16, 14, 16, 14)
-        )
+        return new AdaptiveTwoLineTile(
+            Label(equipment.Type.ToString().ToUpperInvariant())
+                .FontSize(10)
+                .CharacterSpacing(2)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextSecondary())
+                .LineBreakMode(LineBreakMode.TailTruncation)
+                .MaxLines(1),
+            Label(equipment.Name)
+                .FontSize(20)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextPrimary())
+                .LineBreakMode(LineBreakMode.TailTruncation)
+                .MaxLines(1))
+        .Trailing(
+            AdaptiveTwoLineTile.DecorativeGlyph(
+                MaterialSymbolsFont.Chevron_right,
+                TextPrimary()))
         .BackgroundColor(SurfaceColor())
-        .StrokeThickness(0)
-        .StrokeShape(new Rectangle())
-        .MinimumHeightRequest(80)
-        .Margin(0, 0, 0, 1)
-        .OnTapped(() => NavigateToEditEquipment(equipment));
+        .Margin(new Thickness(0, 0, 0, 1))
+        .OnTapped(
+            $"{equipment.Type}: {equipment.Name}",
+            () => NavigateToEditEquipment(equipment));
     }
 
     // ------------------------------------------------------------

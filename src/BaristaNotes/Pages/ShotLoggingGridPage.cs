@@ -1,6 +1,7 @@
 ﻿using MauiReactor;
 using MauiReactor.Animations;
 using MauiReactor.Shapes;
+using BaristaNotes.Core.Models;
 using BaristaNotes.Core.Services.Exceptions;
 using BaristaNotes.Integrations.Popups;
 using UXDivers.Popups.Services;
@@ -105,6 +106,10 @@ class ShotLoggingGridState
 
     // Picker overlay state
     public GridPickerKind ActivePicker { get; set; } = GridPickerKind.None;
+    public decimal? PickerValue { get; set; }
+    public bool PickerValueChanged { get; set; }
+    public bool PickerShowsFullRange { get; set; }
+    public int RangeSettingsRevision { get; set; }
 
     // Grind picker overlay-only state. Populated when the µm picker opens.
     /// <summary>Currently highlighted (but not yet committed) micron value.</summary>
@@ -156,6 +161,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     [Inject] IUserProfileService _userProfileService;
     [Inject] IImageProcessingService _imageProcessingService;
     [Inject] IPreferencesService _preferencesService;
+    [Inject] IDrinkValueRangeService _rangeService;
     [Inject] IFeedbackService _feedbackService;
     [Inject] BaristaNotes.Core.Data.Repositories.IGrinderProfileRepository _grinderProfiles;
     [Inject] BaristaNotes.Core.Data.Repositories.IShotRecordRepository _shotRecords;
@@ -467,15 +473,15 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     Tile("RATING", RatingDisplayValue(),
                             () => Open(GridPickerKind.Rating)).GridRow(1).GridColumn(2).GridColumnSpan(2),
 
-                    Tile("DOSE IN", $"{State.DoseIn:0.#}", () => Open(GridPickerKind.DoseIn), unit: "g")
+                    Tile("DOSE IN", $"{State.DoseIn:0.#}", () => Open(GridPickerKind.DoseIn), unit: "g", automationId: "ShotTile_DoseIn")
                             .GridRow(2).GridColumn(0).GridColumnSpan(2),
-                    Tile("YIELD", $"{State.ExpectedOutput:0.#}", () => Open(GridPickerKind.YieldOut), unit: "g")
+                    Tile("YIELD", $"{State.ExpectedOutput:0.#}", () => Open(GridPickerKind.YieldOut), unit: "g", automationId: "ShotTile_Yield")
                             .GridRow(2).GridColumn(2).GridColumnSpan(2),
 
-                    Tile("TIME", FormatTimeDisplay(State.ActualTime ?? State.ExpectedTime), () => Open(GridPickerKind.ActualTime), unit: TimeDisplayUnit(State.ActualTime ?? State.ExpectedTime))
+                    Tile("TIME", FormatTimeDisplay(State.ActualTime ?? State.ExpectedTime), () => Open(GridPickerKind.ActualTime), unit: TimeDisplayUnit(State.ActualTime ?? State.ExpectedTime), automationId: "ShotTile_Time")
                             .GridRow(3).GridColumn(0).GridColumnSpan(2),
                     Tile("GRIND", State.GrindMicrons.HasValue ? $"{State.GrindMicrons}" : "—",
-                            () => Open(GridPickerKind.GrindMicrons), unit: State.GrindMicrons.HasValue ? "µm" : null).GridRow(3).GridColumn(2).GridColumnSpan(2),
+                            () => Open(GridPickerKind.GrindMicrons), unit: State.GrindMicrons.HasValue ? "µm" : null, automationId: "ShotTile_Grind").GridRow(3).GridColumn(2).GridColumnSpan(2),
 
                     Tile("WATER TEMP", WaterTempMain(),
                             () => Open(GridPickerKind.WaterTemp), unit: WaterTempUnit())
@@ -580,6 +586,9 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             SetState(s => s.TempUnit = pref);
         }
 
+        // Shell retains this page while range settings are edited.
+        SetState(s => s.RangeSettingsRevision++);
+
         // Cross-page voice trigger: ActivityFeedPage's voice tile sets this
         // flag and navigates here. Fire after the page is visible so the
         // overlay attaches to the right window.
@@ -611,7 +620,24 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         if (TryNavigateForEmptyPicker(kind))
             return;
 
-        SetState(s => s.ActivePicker = kind);
+        SetState(s =>
+        {
+            s.ActivePicker = kind;
+            s.PickerShowsFullRange = false;
+            s.PickerValueChanged = false;
+            s.PickerValue = kind switch
+            {
+                GridPickerKind.DoseIn => s.DoseIn,
+                GridPickerKind.YieldOut => s.ExpectedOutput,
+                GridPickerKind.ActualTime => s.ActualTime ?? s.ExpectedTime,
+                GridPickerKind.WaterTemp when s.WaterTempC.HasValue
+                    => PrefersFahrenheit
+                        ? (decimal)CelsiusToFahrenheit(s.WaterTempC.Value)
+                        : s.WaterTempC.Value,
+                GridPickerKind.WaterTemp => PrefersFahrenheit ? 200 : 93,
+                _ => null,
+            };
+        });
     }
 
     bool TryNavigateForEmptyPicker(GridPickerKind kind)
@@ -655,6 +681,9 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     void ClosePicker() => SetState(s =>
     {
         s.ActivePicker = GridPickerKind.None;
+        s.PickerValue = null;
+        s.PickerValueChanged = false;
+        s.PickerShowsFullRange = false;
         s.PickerGrindMicrons = null;
         s.PickerGrindAnchors = null;
         s.PickerGrinderName = null;
@@ -676,8 +705,8 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     micron = await _shotRecords.GetMostRecentMicronsByBeanAsync(bag.BeanId, State.BrewMethod);
                 }
             }
-            var range = State.BrewMethod.GrindMicronRange();
-            if (micron == null) micron = range.Default;
+            var range = _rangeService.Resolve(DrinkValueMetric.GrindMicrons, State.BrewMethod);
+            if (micron == null) micron = (int)range.Default;
 
             // 2) Anchors for the live badge. No grinder selected → no badge.
             IReadOnlyList<BaristaNotes.Core.Services.Grind.GrindAnchor>? anchors = null;
@@ -710,6 +739,8 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 s.PickerGrindAnchors = anchors;
                 s.PickerGrinderName = grinderName;
                 s.PickerGrinderUncalibrated = uncalibrated;
+                s.PickerValueChanged = false;
+                s.PickerShowsFullRange = false;
                 s.ActivePicker = GridPickerKind.GrindMicrons;
             });
         }
@@ -724,7 +755,17 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     // Tile factory
     // ------------------------------------------------------------
 
-    VisualNode Tile(string label, string value, Action onTap, string? unit = null, bool inverted = false, double topInsetPadding = 0, double bottomInsetPadding = 0, string? subtitle = null, Action? onLongPress = null)
+    VisualNode Tile(
+        string label,
+        string value,
+        Action onTap,
+        string? unit = null,
+        bool inverted = false,
+        double topInsetPadding = 0,
+        double bottomInsetPadding = 0,
+        string? subtitle = null,
+        Action? onLongPress = null,
+        string? automationId = null)
     {
         var isLight = Application.Current?.RequestedTheme != AppTheme.Dark;
         var bg = inverted
@@ -752,7 +793,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             _ => 16
         };
 
-        return Border(
+        var tile = Border(
             Grid(rows: "Auto,*", columns: "*",
                 Label(label.ToUpperInvariant())
                     .FontSize(10)
@@ -795,6 +836,8 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         .MinimumHeightRequest(120)
         .OnTapped(onTap)
         .OnLoaded((sender, _) => AttachLongPress(sender, onLongPress));
+
+        return automationId is null ? tile : tile.AutomationId(automationId);
     }
 
     // MauiReactor 4.0.17 has no fluent wrapper for the .NET 11
@@ -1040,15 +1083,21 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     var newMethod = (BrewMethod)o;
                     if (newMethod != s.BrewMethod)
                     {
-                        var newProfile = newMethod.Profile();
-                        // Re-anchor expected dose/output/time to the new method's defaults
-                        // so ranges like espresso (28s) don't bleed into pour-over (3-5 min).
-                        s.DoseIn = newProfile.DoseDefault;
-                        s.ExpectedOutput = newProfile.OutputDefault;
-                        s.ExpectedTime = newProfile.TimeDefault;
-                        // Clear actuals captured under the previous method.
-                        s.ActualTime = null;
-                        s.ActualOutput = null;
+                        if (!Props.ShotId.HasValue)
+                        {
+                            s.DoseIn = _rangeService
+                                .Resolve(DrinkValueMetric.DoseIn, newMethod)
+                                .Default;
+                            s.ExpectedOutput = _rangeService
+                                .Resolve(DrinkValueMetric.Yield, newMethod)
+                                .Default;
+                            s.ExpectedTime = _rangeService
+                                .Resolve(DrinkValueMetric.Time, newMethod)
+                                .Default;
+                            s.ActualTime = null;
+                            s.ActualOutput = null;
+                        }
+
                         // Snap drink type to a valid option for the new method.
                         var validDrinks = newMethod.DrinkTypesFor();
                         if (!validDrinks.Contains(s.DrinkType))
@@ -1114,37 +1163,46 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 isSelected: o => State.Rating == (int)o,
                 onSelect: o => SetState(s => { s.Rating = (int)o; s.ActivePicker = GridPickerKind.None; })),
 
-            GridPickerKind.DoseIn => NumericScroller(
+            GridPickerKind.DoseIn => MassScroller(
                 title: "Dose In",
-                unit: "g",
-                spec: NumericSpecFor(GridPickerKind.DoseIn),
-                current: (double)State.DoseIn,
-                onSelect: v => SetState(s => { s.DoseIn = (decimal)v; s.ActivePicker = GridPickerKind.None; })),
+                effectiveRange: _rangeService.Resolve(DrinkValueMetric.DoseIn, State.BrewMethod),
+                original: State.DoseIn,
+                onDone: value => SetState(s =>
+                {
+                    s.DoseIn = value;
+                    s.ActivePicker = GridPickerKind.None;
+                    s.PickerValue = null;
+                })),
 
-            GridPickerKind.YieldOut => NumericScroller(
+            GridPickerKind.YieldOut => MassScroller(
                 title: "Yield",
-                unit: "g",
-                spec: NumericSpecFor(GridPickerKind.YieldOut),
-                current: (double)State.ExpectedOutput,
-                onSelect: v => SetState(s => { s.ExpectedOutput = (decimal)v; s.ActivePicker = GridPickerKind.None; })),
+                effectiveRange: _rangeService.Resolve(DrinkValueMetric.Yield, State.BrewMethod),
+                original: State.ExpectedOutput,
+                onDone: value => SetState(s =>
+                {
+                    s.ExpectedOutput = value;
+                    s.ActivePicker = GridPickerKind.None;
+                    s.PickerValue = null;
+                })),
 
             GridPickerKind.ActualTime => NumericScroller(
                 title: "Time",
                 unit: "s",
-                spec: NumericSpecFor(GridPickerKind.ActualTime),
-                current: (double)(State.ActualTime ?? State.ExpectedTime),
-                onSelect: v => SetState(s =>
+                effectiveRange: _rangeService.Resolve(DrinkValueMetric.Time, State.BrewMethod),
+                original: State.ActualTime ?? State.ExpectedTime,
+                onDone: value => SetState(s =>
                 {
-                    // The TIME tile is the only UI for brew duration, so we
-                    // mirror to ExpectedTime as well. Otherwise ExpectedTime
-                    // carries over from the previous shot's brew method and
-                    // can land outside the new method's validation range
-                    // (e.g. 28s espresso → V60 which requires ≥ 60s).
-                    var time = (decimal)v;
-                    s.ActualTime = time;
-                    s.ExpectedTime = time;
+                    s.ActualTime = value;
+                    s.ExpectedTime = value;
                     s.ActivePicker = GridPickerKind.None;
-                })),
+                    s.PickerValue = null;
+                }),
+                formatter: value =>
+                {
+                    var display = FormatTimeDisplay(value);
+                    var displayUnit = TimeDisplayUnit(value);
+                    return displayUnit is null ? display : $"{display}{displayUnit}";
+                }),
 
             GridPickerKind.GrindMicrons => GrindMicronsPicker(),
 
@@ -1256,14 +1314,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             {
                 if (sender is MauiControls.CollectionView cv)
                 {
-                    try
-                    {
-                        cv.ScrollTo(selectedIndex, position: MauiControls.ScrollToPosition.Center, animate: false);
-                    }
-                    catch
-                    {
-                        // Best-effort centering; ignore if items aren't laid out yet.
-                    }
+                    CenterCollectionViewItemAfterLayout(cv, selectedIndex);
                 }
             });
     }
@@ -1285,6 +1336,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         var textPrimary = isLight ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
         var textSecondary = isLight ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
         var accent = isLight ? AppColors.Light.Primary : AppColors.Dark.Primary;
+        var selectedIndex = items.FindIndex(item => isSelected(item.Key));
 
         return Grid(rows: "Auto,*,Auto", columns: "*",
             // Header
@@ -1311,11 +1363,18 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     Label(emptyMessage ?? "Nothing to choose from")
                         .TextColor(textSecondary).HCenter()
                   ).VCenter().HCenter().GridRow(1)
-                : ScrollView(
-                    VStack(spacing: 0,
-                        items.Select(item => RenderPickerRow(item.Display, isSelected(item.Key), () => onSelect(item.Key), textPrimary, accent)).ToArray()
-                    )
-                ).GridRow(1))
+                : CollectionView()
+                    .ItemsSource(items, item =>
+                        RenderPickerRow(item.Display, isSelected(item.Key), () => onSelect(item.Key), textPrimary, accent))
+                    .SelectionMode(MauiControls.SelectionMode.None)
+                    .OnLoaded((sender, _) =>
+                    {
+                        if (sender is MauiControls.CollectionView cv)
+                        {
+                            CenterCollectionViewItemAfterLayout(cv, selectedIndex);
+                        }
+                    })
+                    .GridRow(1))
         ).BackgroundColor(isLight ? AppColors.Light.Surface : AppColors.Dark.Surface);
     }
 
@@ -1352,6 +1411,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         var textPrimary = isLight ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
         var textSecondary = isLight ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
         var accent = isLight ? AppColors.Light.Primary : AppColors.Dark.Primary;
+        var selectedIndex = items.FindIndex(item => isSelected(item.Id));
 
         return Grid(rows: "Auto,*,Auto", columns: "*",
             Grid(rows: "*", columns: "Auto,*,Auto,Auto",
@@ -1374,11 +1434,18 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             (items.Count == 0
                 ? VStack(Label("No accessories available").TextColor(textSecondary).HCenter())
                     .VCenter().HCenter().GridRow(1)
-                : ScrollView(
-                    VStack(spacing: 0,
-                        items.Select(item => RenderMultiRow(item.Display, isSelected(item.Id), () => onToggle(item.Id), textPrimary, accent)).ToArray()
-                    )
-                ).GridRow(1))
+                : CollectionView()
+                    .ItemsSource(items, item =>
+                        RenderMultiRow(item.Display, isSelected(item.Id), () => onToggle(item.Id), textPrimary, accent))
+                    .SelectionMode(MauiControls.SelectionMode.None)
+                    .OnLoaded((sender, _) =>
+                    {
+                        if (sender is MauiControls.CollectionView cv)
+                        {
+                            CenterCollectionViewItemAfterLayout(cv, selectedIndex);
+                        }
+                    })
+                    .GridRow(1))
         ).BackgroundColor(isLight ? AppColors.Light.Surface : AppColors.Dark.Surface);
     }
 
@@ -1427,79 +1494,274 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         return s < 60 ? "s" : null;
     }
 
-    record NumericFieldSpec(double Min, double Max, double Step, string Format);
-
-    NumericFieldSpec NumericSpecFor(GridPickerKind kind)
-    {
-        var profile = State.BrewMethod.Profile();
-        return kind switch
-        {
-            GridPickerKind.DoseIn => new((double)profile.DoseMin, (double)profile.DoseMax, (double)profile.DoseStep, profile.DoseStep < 1 ? "0.#" : "0"),
-            GridPickerKind.YieldOut => new((double)profile.OutputMin, (double)profile.OutputMax, (double)profile.OutputStep, profile.OutputStep < 1 ? "0.#" : "0"),
-            GridPickerKind.ActualTime => new((double)profile.TimeMin, (double)profile.TimeMax, (double)profile.TimeStep, "0"),
-            _ => new(0, 100, 1, "0")
-        };
-    }
-
-    VisualNode NumericScroller(string title, string? unit, NumericFieldSpec spec, double current, Action<double> onSelect)
+    VisualNode MassScroller(
+        string title,
+        EffectiveDrinkValueRange effectiveRange,
+        decimal original,
+        Action<decimal> onDone)
     {
         var isLight = Application.Current?.RequestedTheme != AppTheme.Dark;
         var textPrimary = isLight ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
         var textSecondary = isLight ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
         var accent = isLight ? AppColors.Light.Primary : AppColors.Dark.Primary;
+        var activeRange = State.PickerShowsFullRange
+            ? effectiveRange.HardRange
+            : effectiveRange.Range;
+        var current = State.PickerValue ?? original;
+        var clamped = ClampMassValue(current, activeRange.Minimum, activeRange.Maximum);
+        var wholeValue = decimal.Truncate(clamped);
+        var selectedWhole = (int)wholeValue;
+        var selectedTenth = (int)((clamped - wholeValue) * 10m);
+        var firstWhole = (int)Math.Floor(activeRange.Minimum);
+        var lastWhole = (int)Math.Floor(activeRange.Maximum);
+        var wholeValues = Enumerable.Range(firstWhole, lastWhole - firstWhole + 1).ToList();
+        var tenthValues = Enumerable.Range(0, 10).ToList();
 
-        // Build list of values
-        var values = new List<double>();
-        for (var v = spec.Min; v <= spec.Max + 1e-9; v += spec.Step)
-            values.Add(Math.Round(v / spec.Step) * spec.Step);
-
-        // Snap current to nearest step.
-        var clamped = Math.Clamp(current, spec.Min, spec.Max);
-        var snappedIndex = (int)Math.Round((clamped - spec.Min) / spec.Step);
-        snappedIndex = Math.Clamp(snappedIndex, 0, values.Count - 1);
-
-        return Grid(rows: "Auto,*,Auto", columns: "*",
+        return Grid(rows: "Auto,Auto,*", columns: "*",
             Grid(rows: "*", columns: "Auto,*,Auto",
                 Button("Close").OnClicked(ClosePicker)
                     .BackgroundColor(Colors.Transparent).TextColor(textSecondary).GridColumn(0),
                 Label(title.ToUpperInvariant())
                     .FontSize(12).CharacterSpacing(3)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(textSecondary).HCenter().VCenter().GridColumn(0).GridColumnSpan(3)
+                    .TextColor(textSecondary).HCenter().VCenter().GridColumn(0).GridColumnSpan(3),
+                Button("Done").OnClicked(() => onDone(
+                    State.PickerValueChanged ? clamped : original))
+                    .BackgroundColor(Colors.Transparent).TextColor(accent)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .GridColumn(2)
             ).GridRow(0).Padding(12, 8),
+
+            RangeScopeBar(
+                effectiveRange,
+                original,
+                textPrimary,
+                textSecondary,
+                accent).GridRow(1),
+
+            Grid(rows: "*", columns: "*,Auto,*,Auto",
+                MassScrollerColumn(
+                    wholeValues,
+                    selectedWhole,
+                    value => value.ToString(),
+                    value => SetState(s =>
+                    {
+                        s.PickerValue = ClampMassValue(
+                            value + (clamped - wholeValue),
+                            activeRange.Minimum,
+                            activeRange.Maximum);
+                        s.PickerValueChanged = true;
+                    }),
+                    textPrimary,
+                    accent,
+                    "MassWhole").GridColumn(0),
+                Label(".").FontSize(48).TextColor(textSecondary).VCenter().GridColumn(1),
+                MassScrollerColumn(
+                    tenthValues,
+                    selectedTenth,
+                    value => value.ToString(),
+                    value => SetState(s =>
+                    {
+                        s.PickerValue = ClampMassValue(
+                            wholeValue + value / 10m,
+                            activeRange.Minimum,
+                            activeRange.Maximum);
+                        s.PickerValueChanged = true;
+                    }),
+                    textPrimary,
+                    accent,
+                    "MassTenth").GridColumn(2),
+                Label("g").FontSize(20).TextColor(textSecondary).VCenter().GridColumn(3)
+            ).GridRow(2)
+        ).BackgroundColor(isLight ? AppColors.Light.Surface : AppColors.Dark.Surface);
+    }
+
+    VisualNode MassScrollerColumn(
+        IReadOnlyList<int> values,
+        int selectedValue,
+        Func<int, string> display,
+        Action<int> onSelect,
+        Color textPrimary,
+        Color accent,
+        string automationPrefix)
+    {
+        var selectedIndex = values
+            .Select((value, index) => (value, index))
+            .FirstOrDefault(candidate => candidate.value == selectedValue)
+            .index;
+
+        return CollectionView()
+            .ItemsSource(values, value =>
+            {
+                var selected = value == selectedValue;
+                return Button(display(value))
+                .FontSize(selected ? 56 : 32)
+                .FontAttributes(selected ? MauiControls.FontAttributes.Bold : MauiControls.FontAttributes.None)
+                .TextColor(selected ? accent : textPrimary)
+                .BackgroundColor(Colors.Transparent)
+                .BorderWidth(0)
+                .CornerRadius(0)
+                .Padding(0)
+                .HeightRequest(selected ? 96 : 72)
+                .AutomationId($"{automationPrefix}_{value}")
+                .OnClicked(() => onSelect(value));
+            })
+            .SelectionMode(MauiControls.SelectionMode.None)
+            .OnLoaded((sender, _) =>
+            {
+                if (sender is MauiControls.CollectionView collectionView)
+                {
+                    CenterCollectionViewItemAfterLayout(collectionView, selectedIndex);
+                }
+            });
+    }
+
+    static decimal ClampMassValue(decimal value, decimal min, decimal max)
+        => Math.Round(Math.Clamp(value, min, max), 1, MidpointRounding.AwayFromZero);
+
+    VisualNode NumericScroller(
+        string title,
+        string? unit,
+        EffectiveDrinkValueRange effectiveRange,
+        decimal original,
+        Action<decimal> onDone,
+        Func<decimal, string>? formatter = null)
+    {
+        var isLight = Application.Current?.RequestedTheme != AppTheme.Dark;
+        var textPrimary = isLight ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
+        var textSecondary = isLight ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
+        var accent = isLight ? AppColors.Light.Primary : AppColors.Dark.Primary;
+        var activeRange = State.PickerShowsFullRange
+            ? effectiveRange.HardRange
+            : effectiveRange.Range;
+        var step = effectiveRange.Step;
+
+        var values = new List<decimal>();
+        for (var value = activeRange.Minimum; value <= activeRange.Maximum; value += step)
+        {
+            values.Add(value);
+        }
+        if (values.Count == 0 || values[^1] != activeRange.Maximum)
+        {
+            values.Add(activeRange.Maximum);
+        }
+
+        var current = State.PickerValue ?? original;
+        if (activeRange.Contains(current) && !values.Contains(current))
+        {
+            values.Add(current);
+            values.Sort();
+        }
+        var clamped = activeRange.Clamp(current);
+        var snappedIndex = values
+            .Select((value, index) => (value, index, delta: Math.Abs(value - clamped)))
+            .OrderBy(candidate => candidate.delta)
+            .First()
+            .index;
+        var snappedValue = values[snappedIndex];
+
+        return Grid(rows: "Auto,Auto,*", columns: "*",
+            Grid(rows: "*", columns: "Auto,*,Auto",
+                Button("Close").OnClicked(ClosePicker)
+                    .BackgroundColor(Colors.Transparent).TextColor(textSecondary).GridColumn(0),
+                Label(title.ToUpperInvariant())
+                    .FontSize(12).CharacterSpacing(3)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(textSecondary).HCenter().VCenter().GridColumn(0).GridColumnSpan(3),
+                Button("Done").OnClicked(() => onDone(
+                    State.PickerValueChanged ? snappedValue : original))
+                    .BackgroundColor(Colors.Transparent).TextColor(accent)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .GridColumn(2)
+            ).GridRow(0).Padding(12, 8),
+
+            RangeScopeBar(
+                effectiveRange,
+                original,
+                textPrimary,
+                textSecondary,
+                accent).GridRow(1),
 
             CollectionView()
                 .ItemsSource(values, v =>
                 {
-                    var selected = Math.Abs(v - values[snappedIndex]) < 1e-9;
-                    var text = unit != null ? $"{v.ToString(spec.Format)}{unit}" : v.ToString(spec.Format);
-                    return Grid(rows: "*", columns: "*",
-                        Label(text)
-                            .FontSize(selected ? 56 : 32)
-                            .FontAttributes(selected ? MauiControls.FontAttributes.Bold : MauiControls.FontAttributes.None)
-                            .TextColor(selected ? accent : textPrimary)
-                            .HCenter().VCenter()
-                    )
+                    var selected = v == values[snappedIndex];
+                    var format = step < 1 ? "0.#" : "0";
+                    var text = formatter?.Invoke(v)
+                        ?? (unit != null ? $"{v.ToString(format)}{unit}" : v.ToString(format));
+                    return Button(text)
+                    .FontSize(selected ? 56 : 32)
+                    .FontAttributes(selected ? MauiControls.FontAttributes.Bold : MauiControls.FontAttributes.None)
+                    .TextColor(selected ? accent : textPrimary)
+                    .BackgroundColor(Colors.Transparent)
+                    .BorderWidth(0)
+                    .CornerRadius(0)
+                    .Padding(0)
                     .HeightRequest(selected ? 96 : 72)
-                    .OnTapped(() => onSelect(v));
+                    .AutomationId($"NumericValue_{v:0.##}")
+                    .OnClicked(() => SetState(s =>
+                    {
+                        s.PickerValue = v;
+                        s.PickerValueChanged = true;
+                    }));
                 })
                 .SelectionMode(MauiControls.SelectionMode.None)
                 .OnLoaded((sender, _) =>
                 {
                     if (sender is MauiControls.CollectionView cv)
                     {
-                        try
-                        {
-                            cv.ScrollTo(snappedIndex, position: MauiControls.ScrollToPosition.Center, animate: false);
-                        }
-                        catch
-                        {
-                            // Best-effort centering; ignore if items aren't laid out yet.
-                        }
+                        CenterCollectionViewItemAfterLayout(cv, snappedIndex);
                     }
                 })
-                .GridRow(1)
+                .GridRow(2)
         ).BackgroundColor(isLight ? AppColors.Light.Surface : AppColors.Dark.Surface);
+    }
+
+    VisualNode RangeScopeBar(
+        EffectiveDrinkValueRange effectiveRange,
+        decimal original,
+        Color textPrimary,
+        Color textSecondary,
+        Color accent)
+    {
+        var outsidePreferred = !effectiveRange.Range.Contains(original);
+        var description = outsidePreferred
+            ? "Current value is outside your preferred range."
+            : State.PickerShowsFullRange
+                ? "Showing the full allowed range."
+                : "Showing your preferred range.";
+
+        return Grid(rows: "Auto", columns: "*,Auto",
+            Label(description)
+                .FontSize(12)
+                .TextColor(outsidePreferred ? AppColors.Warning : textSecondary)
+                .Set(MauiControls.AutomationProperties.ExcludedWithChildrenProperty, true)
+                .VCenter()
+                .GridColumn(0),
+            Label(State.PickerShowsFullRange ? "PREFERRED" : "FULL RANGE")
+                .FontSize(11)
+                .CharacterSpacing(1)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(accent)
+                .Set(MauiControls.AutomationProperties.ExcludedWithChildrenProperty, true)
+                .VCenter()
+                .GridColumn(1),
+            Button("")
+                .Padding(0)
+                .BorderWidth(0)
+                .CornerRadius(0)
+                .BackgroundColor(Colors.Transparent)
+                .Set(
+                    MauiControls.SemanticProperties.DescriptionProperty,
+                    $"{description} {(State.PickerShowsFullRange ? "Show preferred range." : "Show full allowed range.")}")
+                .AutomationId("RangeScopeToggle")
+                .OnClicked(() => SetState(s => s.PickerShowsFullRange = !s.PickerShowsFullRange))
+                .GridColumn(0)
+                .GridColumnSpan(2)
+        )
+        .Padding(16, 10)
+        .BackgroundColor(textPrimary.WithAlpha(0.05f))
+        .MinimumHeightRequest(44);
     }
 
     // ------------------------------------------------------------
@@ -1514,21 +1776,37 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         var accent = isLight ? AppColors.Light.Primary : AppColors.Dark.Primary;
         var surface = isLight ? AppColors.Light.Surface : AppColors.Dark.Surface;
 
-        var range = State.BrewMethod.GrindMicronRange();
-
-        // Full µm domain always rendered. Variable density: brew-method's
-        // native Step inside [Min,Max], 50µm step outside. This lets users
-        // dial into atypical grinds for a given method without hiding the
-        // wider field of possibility.
-        const int domainMin = 40;
-        const int domainMax = 1500;
+        var effectiveRange = _rangeService.Resolve(
+            DrinkValueMetric.GrindMicrons,
+            State.BrewMethod);
+        var rangeMin = (int)effectiveRange.Range.Minimum;
+        var rangeMax = (int)effectiveRange.Range.Maximum;
+        var rangeStep = (int)effectiveRange.Step;
+        var domainMin = (int)effectiveRange.HardRange.Minimum;
+        var domainMax = (int)effectiveRange.HardRange.Maximum;
         const int outsideStep = 50;
         var values = new List<int>();
-        for (var v = domainMin; v < range.Min; v += outsideStep) values.Add(v);
-        for (var v = range.Min; v <= range.Max; v += range.Step) values.Add(v);
-        for (var v = range.Max + outsideStep; v <= domainMax; v += outsideStep) values.Add(v);
+        if (State.PickerShowsFullRange)
+        {
+            for (var v = domainMin; v < rangeMin; v += outsideStep) values.Add(v);
+        }
+        for (var v = rangeMin; v <= rangeMax; v += rangeStep) values.Add(v);
+        if (values.Count == 0 || values[^1] != rangeMax) values.Add(rangeMax);
+        if (State.PickerShowsFullRange)
+        {
+            for (var v = rangeMax + outsideStep; v <= domainMax; v += outsideStep) values.Add(v);
+        }
 
-        var current = State.PickerGrindMicrons ?? State.GrindMicrons ?? range.Default;
+        var current = State.PickerGrindMicrons
+            ?? State.GrindMicrons
+            ?? (int)effectiveRange.Default;
+        values.Add(current);
+        if (State.PickerShowsFullRange)
+        {
+            values.Add(domainMin);
+            values.Add(domainMax);
+        }
+        values = values.Distinct().OrderBy(value => value).ToList();
         // Snap to nearest value present in the variable-step list.
         var snappedIndex = 0;
         var bestDelta = int.MaxValue;
@@ -1539,7 +1817,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         }
         var snappedValue = values[snappedIndex];
 
-        return Grid(rows: "Auto,*,Auto", columns: "*",
+        return Grid(rows: "Auto,Auto,*,Auto", columns: "*",
             // Header
             Grid(rows: "*", columns: "Auto,*,Auto",
                 Button("Close").OnClicked(ClosePicker)
@@ -1549,11 +1827,21 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .TextColor(textSecondary).HCenter().VCenter().GridColumn(0).GridColumnSpan(3),
                 Button("Done")
-                    .OnClicked(() => CommitGrindMicrons(snappedValue))
+                    .OnClicked(() => CommitGrindMicrons(
+                        !State.PickerValueChanged && State.GrindMicrons.HasValue
+                            ? State.GrindMicrons.Value
+                            : snappedValue))
                     .BackgroundColor(Colors.Transparent).TextColor(accent)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .GridColumn(2)
             ).GridRow(0).Padding(12, 8),
+
+            RangeScopeBar(
+                effectiveRange,
+                State.GrindMicrons ?? effectiveRange.Default,
+                textPrimary,
+                textSecondary,
+                accent).GridRow(1),
 
             // Scrollable µm list. CollectionView so we can ScrollTo(index)
             // on load to center the user's brew-method range without
@@ -1561,7 +1849,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             CollectionView()
                 .ItemsSource(values, v =>
                 {
-                    var inRange = v >= range.Min && v <= range.Max;
+                    var inRange = v >= rangeMin && v <= rangeMax;
                     var selected = v == snappedValue;
                     var rowHeight = selected ? 96 : (inRange ? 72 : 48);
                     var fontSize = selected ? 56 : (inRange ? 32 : 20);
@@ -1569,41 +1857,83 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                         : inRange ? textPrimary
                         : textSecondary.WithAlpha(0.5f);
 
-                    return Grid(rows: "*", columns: "*",
-                        Label($"{v} µm")
-                            .FontSize(fontSize)
-                            .FontAttributes(selected ? MauiControls.FontAttributes.Bold : MauiControls.FontAttributes.None)
-                            .TextColor(color)
-                            .HCenter().VCenter()
-                    )
+                    return Button($"{v} µm")
+                    .FontSize(fontSize)
+                    .FontAttributes(selected ? MauiControls.FontAttributes.Bold : MauiControls.FontAttributes.None)
+                    .TextColor(color)
+                    .BackgroundColor(Colors.Transparent)
+                    .BorderWidth(0)
+                    .CornerRadius(0)
+                    .Padding(0)
                     .HeightRequest(rowHeight)
-                    .OnTapped(() =>
+                    .AutomationId($"GrindValue_{v}")
+                    .OnClicked(() => SetState(s =>
                     {
-                        if (selected) CommitGrindMicrons(v);
-                        else SetState(s => s.PickerGrindMicrons = v);
-                    });
+                        s.PickerGrindMicrons = v;
+                        s.PickerValueChanged = true;
+                    }));
                 })
                 .SelectionMode(MauiControls.SelectionMode.None)
                 .OnLoaded((sender, _) =>
                 {
                     if (sender is MauiControls.CollectionView cv)
                     {
-                        try
-                        {
-                            cv.ScrollTo(snappedIndex, position: MauiControls.ScrollToPosition.Center, animate: false);
-                        }
-                        catch
-                        {
-                            // Best-effort centering; ignore if the items aren't laid out yet.
-                        }
+                        CenterCollectionViewItemAfterLayout(cv, snappedIndex);
                     }
                 })
-                .GridRow(1),
+                .GridRow(2),
 
             // Sticky bottom translation badge.
             GrindTranslationBadge(snappedValue, textPrimary, textSecondary, accent)
-                .GridRow(2)
+                .GridRow(3)
         ).BackgroundColor(surface);
+    }
+
+    private static void CenterCollectionViewItemAfterLayout(
+        MauiControls.CollectionView collectionView,
+        int selectedIndex)
+    {
+        if (selectedIndex < 0)
+        {
+            return;
+        }
+
+        EventHandler? onSizeChanged = null;
+        onSizeChanged = (_, _) =>
+        {
+            if (collectionView.Height <= 0)
+            {
+                return;
+            }
+
+            collectionView.SizeChanged -= onSizeChanged;
+
+            // Spacers let the first and last rows scroll far enough to reach the viewport center.
+            var spacerHeight = collectionView.Height / 2;
+            collectionView.Header = new MauiControls.BoxView
+            {
+                HeightRequest = spacerHeight,
+                InputTransparent = true
+            };
+            collectionView.Footer = new MauiControls.BoxView
+            {
+                HeightRequest = spacerHeight,
+                InputTransparent = true
+            };
+
+            collectionView.Dispatcher.Dispatch(() =>
+                collectionView.ScrollTo(
+                    selectedIndex,
+                    position: MauiControls.ScrollToPosition.Center,
+                    animate: false));
+        };
+
+        collectionView.SizeChanged += onSizeChanged;
+
+        if (collectionView.Height > 0)
+        {
+            onSizeChanged(collectionView, EventArgs.Empty);
+        }
     }
 
     VisualNode GrindTranslationBadge(int microns, Color textPrimary, Color textSecondary, Color accent)
@@ -1673,6 +2003,8 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             s.PendingGrindHint = null;
             s.ActivePicker = GridPickerKind.None;
             s.PickerGrindMicrons = null;
+            s.PickerValueChanged = false;
+            s.PickerShowsFullRange = false;
             s.PickerGrindAnchors = null;
             s.PickerGrinderName = null;
             s.PickerGrinderUncalibrated = false;
@@ -1717,22 +2049,31 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     VisualNode WaterTempPicker()
     {
         var f = PrefersFahrenheit;
-        var spec = f
-            ? new NumericFieldSpec(150, 212, 1, "0")
-            : new NumericFieldSpec(65, 100, 0.5, "0.#");
-        double current = State.WaterTempC.HasValue
-            ? (f ? CelsiusToFahrenheit(State.WaterTempC.Value) : (double)State.WaterTempC.Value)
-            : (f ? 200 : 93);
+        var range = f
+            ? new DrinkValueRange(150, 212)
+            : new DrinkValueRange(65, 100);
+        var step = f ? 1m : 0.5m;
+        var current = State.PickerValue ?? (State.WaterTempC.HasValue
+            ? (f ? (decimal)CelsiusToFahrenheit(State.WaterTempC.Value) : State.WaterTempC.Value)
+            : (f ? 200 : 93));
+        var effective = new EffectiveDrinkValueRange(
+            range,
+            range,
+            f ? 200 : 93,
+            step,
+            f ? "F" : "C",
+            ValueRangeSource.Auto);
 
         return NumericScroller(
             title: "Water Temp",
             unit: f ? "°F" : "°C",
-            spec: spec,
-            current: current,
-            onSelect: v => SetState(s =>
+            effectiveRange: effective,
+            original: current,
+            onDone: value => SetState(s =>
             {
-                s.WaterTempC = f ? FahrenheitToCelsius(v) : (decimal)v;
+                s.WaterTempC = f ? FahrenheitToCelsius((double)value) : value;
                 s.ActivePicker = GridPickerKind.None;
+                s.PickerValue = null;
             }));
     }
 

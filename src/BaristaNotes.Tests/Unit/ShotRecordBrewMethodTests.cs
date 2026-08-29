@@ -130,4 +130,23 @@ public class ShotRecordBrewMethodTests : IDisposable
             }
         }
     }
+
+    [Theory]
+    [InlineData(BrewMethod.Espresso, 10, 100)]
+    [InlineData(BrewMethod.PourOver, 100, 800)]
+    [InlineData(BrewMethod.V60, 100, 600)]
+    [InlineData(BrewMethod.Drip, 100, 1500)]
+    [InlineData(BrewMethod.FrenchPress, 100, 1200)]
+    [InlineData(BrewMethod.ColdBrew, 500, 3000)]
+    public void BrewMethodProfile_UsesMethodAppropriateYieldRange(
+        BrewMethod method,
+        int expectedMin,
+        int expectedMax)
+    {
+        var profile = method.Profile();
+
+        Assert.Equal((decimal)expectedMin, profile.OutputMin);
+        Assert.Equal((decimal)expectedMax, profile.OutputMax);
+        Assert.Equal(0.1m, profile.OutputStep);
+    }
 }

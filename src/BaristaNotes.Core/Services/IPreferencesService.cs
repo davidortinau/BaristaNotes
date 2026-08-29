@@ -44,6 +44,9 @@ public interface IPreferencesService
     Models.Enums.TemperatureUnit GetTemperatureUnit();
     void SetTemperatureUnit(Models.Enums.TemperatureUnit unit);
 
+    string? GetDrinkValueRangeSettingsJson();
+    void SetDrinkValueRangeSettingsJson(string json);
+
     void ClearAll();
 }
 

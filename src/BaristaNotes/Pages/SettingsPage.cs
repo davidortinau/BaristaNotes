@@ -9,6 +9,8 @@ class SettingsPageState
     public ThemeMode CurrentThemeMode { get; set; } = ThemeMode.System;
     public BaristaNotes.Core.Models.Enums.TemperatureUnit TemperatureUnit { get; set; }
         = BaristaNotes.Core.Models.Enums.TemperatureUnit.Fahrenheit;
+    public Dictionary<DrinkValueMetric, ValueRangeMode> RangeModes { get; set; } = [];
+    public Dictionary<DrinkValueMetric, int> RangeOverrideCounts { get; set; } = [];
 }
 
 partial class SettingsPage : Component<SettingsPageState>
@@ -19,11 +21,31 @@ partial class SettingsPage : Component<SettingsPageState>
     [Inject]
     BaristaNotes.Core.Services.IPreferencesService _preferencesService;
 
+    [Inject]
+    IDrinkValueRangeService _rangeService;
+
     protected override void OnMounted()
     {
         base.OnMounted();
+        LoadPreferences();
+    }
+
+    void LoadPreferences()
+    {
         _ = LoadCurrentTheme();
-        SetState(s => s.TemperatureUnit = _preferencesService.GetTemperatureUnit());
+        var snapshot = _rangeService.GetSettings();
+        SetState(s =>
+        {
+            s.TemperatureUnit = _preferencesService.GetTemperatureUnit();
+            s.RangeModes = Enum.GetValues<DrinkValueMetric>()
+                .ToDictionary(
+                    metric => metric,
+                    metric => snapshot.Modes.GetValueOrDefault(metric, ValueRangeMode.Auto));
+            s.RangeOverrideCounts = Enum.GetValues<DrinkValueMetric>()
+                .ToDictionary(
+                    metric => metric,
+                    metric => snapshot.Overrides.Count(item => item.Metric == metric));
+        });
     }
 
     async Task LoadCurrentTheme()
@@ -50,6 +72,13 @@ partial class SettingsPage : Component<SettingsPageState>
         await Microsoft.Maui.Controls.Shell.Current.GoToAsync("//shots");
     }
 
+    async Task OpenValueRangesAsync(DrinkValueMetric metric)
+    {
+        await MauiControls.Shell.Current.GoToAsync<ValueRangeSettingsPageProps>(
+            "value-ranges",
+            props => props.Metric = metric);
+    }
+
     // ============================================================
     // Rendering
     // ============================================================
@@ -70,7 +99,7 @@ partial class SettingsPage : Component<SettingsPageState>
         .Set(MauiControls.Shell.NavBarIsVisibleProperty, false)
         .Set(MauiControls.Shell.TabBarIsVisibleProperty, false)
         .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
-        .OnAppearing(() => _ = LoadCurrentTheme());
+        .OnAppearing(LoadPreferences);
     }
 
     // ------------------------------------------------------------
@@ -130,28 +159,33 @@ partial class SettingsPage : Component<SettingsPageState>
         return Grid("*", "*",
             ScrollView(
                 Grid(
-                    rows: "Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*",
+                    rows: "Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*",
                     columns: "*",
                     SectionLabel("APPEARANCE").GridRow(0),
                     ThemePickerRow().GridRow(1),
-                    SectionLabel("UNITS").GridRow(2),
-                    TempUnitPickerRow().GridRow(3),
-                    SectionLabel("MANAGE").GridRow(4),
+                    SectionLabel("MANAGE").GridRow(2),
                     ManageTile("EQUIPMENT", "Machines, grinders, accessories",
-                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("equipment")).GridRow(5),
+                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("equipment")).GridRow(3),
                     ManageTile("BEANS", "Coffee beans and roasters",
-                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("beans")).GridRow(6),
+                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("beans")).GridRow(4),
                     ManageTile("PROFILES", "Coffee lovers",
-                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("profiles")).GridRow(7),
-                    SectionLabel("ABOUT").GridRow(8),
-                    AboutTile().GridRow(9),
+                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("profiles")).GridRow(5),
+                    SectionLabel("UNITS").GridRow(6),
+                    TempUnitPickerRow().GridRow(7),
+                    SectionLabel("VALUE RANGES").GridRow(8),
+                    ValueRangeTile(DrinkValueMetric.DoseIn).GridRow(9),
+                    ValueRangeTile(DrinkValueMetric.Yield).GridRow(10),
+                    ValueRangeTile(DrinkValueMetric.GrindMicrons).GridRow(11),
+                    ValueRangeTile(DrinkValueMetric.Time).GridRow(12),
+                    SectionLabel("ABOUT").GridRow(13),
+                    AboutTile().GridRow(14),
                     Border()
                         .BackgroundColor(SurfaceColor())
                         .StrokeThickness(0)
                         .StrokeShape(new Rectangle())
                         .MinimumHeightRequest(16)
                         .VerticalOptions(LayoutOptions.Fill)
-                        .GridRow(10)
+                        .GridRow(15)
                 )
                 .RowSpacing(1)
                 .BackgroundColor(DividerColor())
@@ -259,34 +293,62 @@ partial class SettingsPage : Component<SettingsPageState>
 
     VisualNode ManageTile(string label, string subtitle, Action onTapped)
     {
-        return Border(
-            Grid(rows: "Auto,Auto", columns: "*,Auto",
-                Label(label)
-                    .FontSize(10)
-                    .CharacterSpacing(2)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextSecondary())
-                    .GridRow(0).GridColumn(0),
-                Label(subtitle)
-                    .FontSize(20)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextPrimary())
-                    .LineBreakMode(LineBreakMode.TailTruncation)
-                    .GridRow(1).GridColumn(0),
-                Label("→")
-                    .FontSize(24)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextPrimary())
-                    .VCenter()
-                    .GridRow(0).GridRowSpan(2).GridColumn(1)
-            )
-            .Padding(16, 14, 16, 14)
-        )
+        return new AdaptiveTwoLineTile(
+            Label(label)
+                .FontSize(10)
+                .CharacterSpacing(2)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextSecondary())
+                .LineBreakMode(LineBreakMode.TailTruncation)
+                .MaxLines(1),
+            Label(subtitle)
+                .FontSize(20)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextPrimary())
+                .LineBreakMode(LineBreakMode.TailTruncation)
+                .MaxLines(1))
+        .Trailing(
+            AdaptiveTwoLineTile.DecorativeGlyph(
+                MaterialSymbolsFont.Chevron_right,
+                TextPrimary()))
         .BackgroundColor(SurfaceColor())
-        .StrokeThickness(0)
-        .StrokeShape(new Rectangle())
-        .MinimumHeightRequest(80)
-        .OnTapped(onTapped);
+        .OnTapped($"{label}: {subtitle}", onTapped);
+    }
+
+    VisualNode ValueRangeTile(DrinkValueMetric metric)
+    {
+        var mode = State.RangeModes.GetValueOrDefault(metric, ValueRangeMode.Auto);
+        var overrideCount = State.RangeOverrideCounts.GetValueOrDefault(metric);
+        var subtitle = mode == ValueRangeMode.Auto
+            ? "Automatic by drink method"
+            : overrideCount == 1
+                ? "Custom - 1 drink method"
+                : $"Custom - {overrideCount} drink methods";
+
+        return new AdaptiveTwoLineTile(
+            Label(DrinkValueRangeFormatting.MetricTitle(metric).ToUpperInvariant())
+                .FontSize(10)
+                .CharacterSpacing(2)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextSecondary())
+                .LineBreakMode(LineBreakMode.TailTruncation)
+                .MaxLines(1),
+            Label(subtitle)
+                .FontSize(AppFontSizes.BodyLarge)
+                .FontFamily("ManropeSemibold")
+                .TextColor(TextPrimary())
+                .LineBreakMode(LineBreakMode.TailTruncation)
+                .MaxLines(1))
+        .Trailing(
+            AdaptiveTwoLineTile.StatusWithChevron(
+                mode == ValueRangeMode.Auto ? "AUTO" : "CUSTOM",
+                mode == ValueRangeMode.Custom ? AccentColor() : TextSecondary(),
+                TextPrimary()))
+        .BackgroundColor(SurfaceColor())
+        .AutomationId($"ValueRange_{metric}")
+        .OnTapped(
+            $"{DrinkValueRangeFormatting.MetricTitle(metric)}. {subtitle}. {mode}.",
+            async () => await OpenValueRangesAsync(metric));
     }
 
     VisualNode AboutTile()

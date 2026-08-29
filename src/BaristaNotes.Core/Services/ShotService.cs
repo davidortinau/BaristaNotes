@@ -125,11 +125,13 @@ public class ShotService : IShotService
 
     public async Task<ShotRecordDto> UpdateShotAsync(int id, UpdateShotDto dto)
     {
-        ValidateUpdateShot(dto);
+        ValidateUpdateShotInput(dto);
 
         var shot = await _shotRepository.GetByIdAsync(id);
         if (shot == null || shot.IsDeleted)
             throw new EntityNotFoundException(nameof(ShotRecord), id);
+
+        ValidateUpdateShotRanges(dto, shot);
 
         // Update bag if provided
         if (dto.BagId.HasValue)
@@ -618,43 +620,30 @@ public class ShotService : IShotService
     {
         var errors = new Dictionary<string, List<string>>();
 
-        // Ranges are brew-method-aware so non-espresso drinks (pour over, moka,
-        // french press, etc.) can log larger doses, longer times, and larger
-        // output volumes without tripping espresso-tuned validation.
-        var (doseMin, doseMax, timeMin, timeMax, outputMin, outputMax) =
-            dto.BrewMethod switch
-            {
-                Models.Enums.BrewMethod.Espresso       => (5m, 30m,  10m,  60m,  10m, 100m),
-                Models.Enums.BrewMethod.Turkish        => (3m, 20m,  60m, 300m,  25m, 200m),
-                Models.Enums.BrewMethod.Moka           => (5m, 50m,  30m, 600m,  20m, 400m),
-                Models.Enums.BrewMethod.Aeropress      => (5m, 40m,  30m, 600m,  50m, 400m),
-                Models.Enums.BrewMethod.Siphon         => (10m, 60m, 60m, 600m, 150m, 1000m),
-                Models.Enums.BrewMethod.V60            => (10m, 40m, 60m, 600m, 100m, 600m),
-                Models.Enums.BrewMethod.PourOver       => (10m, 60m, 60m, 900m, 100m, 800m),
-                Models.Enums.BrewMethod.Drip           => (10m, 120m, 60m, 1200m, 100m, 1500m),
-                Models.Enums.BrewMethod.Cupping        => (5m, 20m, 120m, 600m, 100m, 400m),
-                Models.Enums.BrewMethod.SteepAndRelease=> (10m, 60m, 60m, 900m, 100m, 1000m),
-                Models.Enums.BrewMethod.FrenchPress    => (10m, 100m, 60m, 900m,  100m, 1200m),
-                // Cold methods measured in seconds; ranges allow 1h to 24h.
-                Models.Enums.BrewMethod.ColdBrew       => (30m, 500m, 3600m, 86400m, 250m, 4000m),
-                Models.Enums.BrewMethod.ColdDrip       => (20m, 200m, 1800m, 43200m, 150m, 2000m),
-                _                                      => (5m, 30m,  10m,  60m,  10m, 100m),
-            };
+        var doseRange = BrewMethodValueRangeCatalog
+            .GetDefinition(dto.BrewMethod, DrinkValueMetric.DoseIn)
+            .HardRange;
+        var timeRange = BrewMethodValueRangeCatalog
+            .GetDefinition(dto.BrewMethod, DrinkValueMetric.Time)
+            .HardRange;
+        var outputRange = BrewMethodValueRangeCatalog
+            .GetDefinition(dto.BrewMethod, DrinkValueMetric.Yield)
+            .HardRange;
+        var grindRange = BrewMethodValueRangeCatalog
+            .GetDefinition(dto.BrewMethod, DrinkValueMetric.GrindMicrons)
+            .HardRange;
 
-        if (dto.DoseIn < doseMin || dto.DoseIn > doseMax)
-            errors.Add(nameof(dto.DoseIn), new List<string> { $"Dose must be between {doseMin} and {doseMax} grams for {dto.BrewMethod}" });
+        if (!doseRange.Contains(dto.DoseIn))
+            errors.Add(nameof(dto.DoseIn), new List<string> { $"Dose must be between {doseRange.Minimum} and {doseRange.Maximum} grams for {dto.BrewMethod}" });
 
-        if (dto.ExpectedTime < timeMin || dto.ExpectedTime > timeMax)
-            errors.Add(nameof(dto.ExpectedTime), new List<string> { $"Expected time must be between {timeMin} and {timeMax} seconds for {dto.BrewMethod}" });
+        if (!timeRange.Contains(dto.ExpectedTime))
+            errors.Add(nameof(dto.ExpectedTime), new List<string> { $"Expected time must be between {timeRange.Minimum} and {timeRange.Maximum} seconds for {dto.BrewMethod}" });
 
-        if (dto.ExpectedOutput < outputMin || dto.ExpectedOutput > outputMax)
-            errors.Add(nameof(dto.ExpectedOutput), new List<string> { $"Expected output must be between {outputMin} and {outputMax} grams for {dto.BrewMethod}" });
+        if (!outputRange.Contains(dto.ExpectedOutput))
+            errors.Add(nameof(dto.ExpectedOutput), new List<string> { $"Expected output must be between {outputRange.Minimum} and {outputRange.Maximum} grams for {dto.BrewMethod}" });
 
-        // GrindMicrons is optional. Null means "not recorded" — that's a
-        // valid state (e.g. quick logging without setting grind). Allowed
-        // range 40–1500 µm. Out-of-range values are rejected.
-        if (dto.GrindMicrons.HasValue && (dto.GrindMicrons.Value < 40 || dto.GrindMicrons.Value > 1500))
-            errors.Add(nameof(dto.GrindMicrons), new List<string> { "Grind microns must be between 40 and 1500" });
+        if (dto.GrindMicrons.HasValue && !grindRange.Contains(dto.GrindMicrons.Value))
+            errors.Add(nameof(dto.GrindMicrons), new List<string> { $"Grind microns must be between {grindRange.Minimum} and {grindRange.Maximum}" });
 
         if (string.IsNullOrWhiteSpace(dto.DrinkType))
             errors.Add(nameof(dto.DrinkType), new List<string> { "Drink type is required" });
@@ -666,29 +655,61 @@ public class ShotService : IShotService
             throw new ValidationException(errors);
     }
 
-    private void ValidateUpdateShot(UpdateShotDto dto)
+    private static void ValidateUpdateShotInput(UpdateShotDto dto)
     {
         var errors = new Dictionary<string, List<string>>();
-
-        // When BrewMethod is supplied on the update, use its profile as the upper bound;
-        // otherwise fall back to the most permissive profile (Drip: 1500g / 1200s) so we
-        // don't reject large-batch brews (pour over, drip, french press) whose actuals
-        // legitimately exceed the old espresso-centric 200g / 999s ceilings.
-        var profile = dto.BrewMethod.HasValue
-            ? dto.BrewMethod.Value.Profile()
-            : BrewMethod.Drip.Profile();
-
-        if (dto.ActualTime.HasValue && (dto.ActualTime <= 0 || (decimal)dto.ActualTime.Value > (decimal)profile.TimeMax))
-            errors.Add(nameof(dto.ActualTime), new List<string> { $"Shot time must be between 0 and {profile.TimeMax} seconds" });
-
-        if (dto.ActualOutput.HasValue && (dto.ActualOutput <= 0 || (decimal)dto.ActualOutput.Value > (decimal)profile.OutputMax))
-            errors.Add(nameof(dto.ActualOutput), new List<string> { $"Output weight must be between 0 and {profile.OutputMax} grams" });
 
         if (dto.Rating.HasValue && (dto.Rating < 0 || dto.Rating > 4))
             errors.Add(nameof(dto.Rating), new List<string> { "Rating must be between 0 and 4 (0=Terrible, 4=Excellent)" });
 
         if (string.IsNullOrWhiteSpace(dto.DrinkType))
             errors.Add(nameof(dto.DrinkType), new List<string> { "Drink type is required" });
+
+        if (errors.Any())
+            throw new ValidationException(errors);
+    }
+
+    private static void ValidateUpdateShotRanges(UpdateShotDto dto, ShotRecord existing)
+    {
+        var errors = new Dictionary<string, List<string>>();
+        var method = dto.BrewMethod ?? existing.BrewMethod;
+        var methodChanged = dto.BrewMethod.HasValue && dto.BrewMethod.Value != existing.BrewMethod;
+        var doseRange = BrewMethodValueRangeCatalog
+            .GetDefinition(method, DrinkValueMetric.DoseIn)
+            .HardRange;
+        var timeRange = BrewMethodValueRangeCatalog
+            .GetDefinition(method, DrinkValueMetric.Time)
+            .HardRange;
+        var outputRange = BrewMethodValueRangeCatalog
+            .GetDefinition(method, DrinkValueMetric.Yield)
+            .HardRange;
+        var grindRange = BrewMethodValueRangeCatalog
+            .GetDefinition(method, DrinkValueMetric.GrindMicrons)
+            .HardRange;
+        var dose = dto.DoseIn ?? (methodChanged ? existing.DoseIn : null);
+        var expectedTime = dto.ExpectedTime ?? (methodChanged ? existing.ExpectedTime : null);
+        var expectedOutput = dto.ExpectedOutput ?? (methodChanged ? existing.ExpectedOutput : null);
+        var grindMicrons = dto.GrindMicrons ?? (methodChanged ? existing.GrindMicrons : null);
+        var actualTime = dto.ActualTime ?? (methodChanged ? existing.ActualTime : null);
+        var actualOutput = dto.ActualOutput ?? (methodChanged ? existing.ActualOutput : null);
+
+        if (dose.HasValue && !doseRange.Contains(dose.Value))
+            errors.Add(nameof(dto.DoseIn), new List<string> { $"Dose must be between {doseRange.Minimum} and {doseRange.Maximum} grams for {method}" });
+
+        if (expectedTime.HasValue && !timeRange.Contains(expectedTime.Value))
+            errors.Add(nameof(dto.ExpectedTime), new List<string> { $"Expected time must be between {timeRange.Minimum} and {timeRange.Maximum} seconds for {method}" });
+
+        if (expectedOutput.HasValue && !outputRange.Contains(expectedOutput.Value))
+            errors.Add(nameof(dto.ExpectedOutput), new List<string> { $"Expected output must be between {outputRange.Minimum} and {outputRange.Maximum} grams for {method}" });
+
+        if (grindMicrons.HasValue && !grindRange.Contains(grindMicrons.Value))
+            errors.Add(nameof(dto.GrindMicrons), new List<string> { $"Grind microns must be between {grindRange.Minimum} and {grindRange.Maximum}" });
+
+        if (actualTime.HasValue && (actualTime <= 0 || actualTime > timeRange.Maximum))
+            errors.Add(nameof(dto.ActualTime), new List<string> { $"Shot time must be between 0 and {timeRange.Maximum} seconds" });
+
+        if (actualOutput.HasValue && (actualOutput <= 0 || actualOutput > outputRange.Maximum))
+            errors.Add(nameof(dto.ActualOutput), new List<string> { $"Output weight must be between 0 and {outputRange.Maximum} grams" });
 
         if (errors.Any())
             throw new ValidationException(errors);

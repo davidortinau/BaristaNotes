@@ -312,31 +312,23 @@ partial class EquipmentDetailPage : Component<EquipmentDetailPageState, Equipmen
 
     VisualNode NameFieldTile()
     {
-        return Border(
-            Grid(rows: "Auto,Auto", columns: "*",
-                Label("NAME")
-                    .FontSize(10)
-                    .CharacterSpacing(2)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextSecondary())
-                    .GridRow(0),
-                Entry()
-                    .Text(State.Name)
-                    .Placeholder("Equipment name")
-                    .PlaceholderColor(TextSecondary().WithAlpha(0.5f))
-                    .TextColor(TextPrimary())
-                    .FontSize(22)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .BackgroundColor(Colors.Transparent)
-                    .OnTextChanged(text => SetState(s => s.Name = text))
-                    .GridRow(1)
-            )
-            .Padding(16, 14, 16, 10)
-        )
+        return new AdaptiveTwoLineTile(
+            Label("NAME")
+                .FontSize(10)
+                .CharacterSpacing(2)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextSecondary()),
+            Entry()
+                .Text(State.Name)
+                .Placeholder("Equipment name")
+                .PlaceholderColor(TextSecondary().WithAlpha(0.5f))
+                .TextColor(TextPrimary())
+                .FontSize(22)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .BackgroundColor(Colors.Transparent)
+                .OnTextChanged(text => SetState(s => s.Name = text)))
         .BackgroundColor(SurfaceColor())
-        .StrokeThickness(0)
-        .StrokeShape(new Rectangle())
-        .MinimumHeightRequest(100);
+        .MinimumHeight(100);
     }
 
     VisualNode TypePickerTile()

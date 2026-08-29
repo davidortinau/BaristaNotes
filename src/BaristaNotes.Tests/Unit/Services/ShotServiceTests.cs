@@ -328,6 +328,7 @@ public class ShotServiceTests
     public async Task UpdateShotAsync_InvalidActualTime_ThrowsValidationException(decimal actualTime, string expectedError)
     {
         // Arrange
+        _mockShotRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(CreateEspressoShot());
         var dto = new UpdateShotDto
         {
             ActualTime = actualTime,
@@ -346,6 +347,7 @@ public class ShotServiceTests
     public async Task UpdateShotAsync_InvalidActualOutput_ThrowsValidationException(decimal actualOutput, string expectedError)
     {
         // Arrange
+        _mockShotRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(CreateEspressoShot());
         var dto = new UpdateShotDto
         {
             ActualOutput = actualOutput,
@@ -356,6 +358,55 @@ public class ShotServiceTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(() => _service.UpdateShotAsync(1, dto));
         Assert.Contains(expectedError, exception.Errors[nameof(dto.ActualOutput)][0]);
+    }
+
+    [Fact]
+    public async Task UpdateShotAsync_InvalidRangeControlledFields_ThrowsValidationException()
+    {
+        _mockShotRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(CreateEspressoShot());
+        var invalidUpdates = new[]
+        {
+            (Dto: new UpdateShotDto { DoseIn = 31, DrinkType = "Espresso" }, Field: nameof(UpdateShotDto.DoseIn)),
+            (Dto: new UpdateShotDto { ExpectedTime = 61, DrinkType = "Espresso" }, Field: nameof(UpdateShotDto.ExpectedTime)),
+            (Dto: new UpdateShotDto { ExpectedOutput = 101, DrinkType = "Espresso" }, Field: nameof(UpdateShotDto.ExpectedOutput)),
+            (Dto: new UpdateShotDto { GrindMicrons = 1501, DrinkType = "Espresso" }, Field: nameof(UpdateShotDto.GrindMicrons)),
+        };
+
+        foreach (var update in invalidUpdates)
+        {
+            var exception = await Assert.ThrowsAsync<ValidationException>(
+                () => _service.UpdateShotAsync(1, update.Dto));
+            Assert.Contains(update.Field, exception.Errors.Keys);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateShotAsync_MethodChangeValidatesExistingRangeValues()
+    {
+        var existing = CreateEspressoShot();
+        existing.BrewMethod = BaristaNotes.Core.Models.Enums.BrewMethod.ColdBrew;
+        existing.DoseIn = 100;
+        existing.ExpectedTime = 43200;
+        existing.ExpectedOutput = 1000;
+        existing.ActualTime = 43200;
+        existing.ActualOutput = 1000;
+        existing.GrindMicrons = 1100;
+        _mockShotRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+
+        var dto = new UpdateShotDto
+        {
+            BrewMethod = BaristaNotes.Core.Models.Enums.BrewMethod.Espresso,
+            DrinkType = "Espresso",
+        };
+
+        var exception = await Assert.ThrowsAsync<ValidationException>(
+            () => _service.UpdateShotAsync(1, dto));
+
+        Assert.Contains(nameof(dto.DoseIn), exception.Errors.Keys);
+        Assert.Contains(nameof(dto.ExpectedTime), exception.Errors.Keys);
+        Assert.Contains(nameof(dto.ExpectedOutput), exception.Errors.Keys);
+        Assert.Contains(nameof(dto.ActualTime), exception.Errors.Keys);
+        Assert.Contains(nameof(dto.ActualOutput), exception.Errors.Keys);
     }
     
     [Theory]
@@ -964,6 +1015,25 @@ public class ShotServiceTests
         // Assert
         Assert.Null(result);
     }
+
+    private static BaristaNotes.Core.Models.ShotRecord CreateEspressoShot() => new()
+    {
+        Id = 1,
+        BrewMethod = BaristaNotes.Core.Models.Enums.BrewMethod.Espresso,
+        DrinkType = "Espresso",
+        DoseIn = 18,
+        GrindMicrons = 270,
+        ExpectedTime = 30,
+        ExpectedOutput = 40,
+        ActualTime = 28,
+        ActualOutput = 40,
+        Rating = 3,
+        Timestamp = DateTime.Now.AddHours(-1),
+        IsDeleted = false,
+        SyncId = Guid.NewGuid(),
+        LastModifiedAt = DateTime.Now.AddHours(-1),
+        ShotEquipments = new List<BaristaNotes.Core.Models.ShotEquipment>(),
+    };
 
     #endregion
 }

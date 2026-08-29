@@ -20,6 +20,7 @@ public class PreferencesService : IPreferencesService
     private const string KeyLastExpectedOutput = "last_expected_output";
     private const string KeyLastPreinfusionTime = "last_preinfusion_time";
     private const string KeyTemperatureUnit = "temperature_unit";
+    private const string KeyDrinkValueRangeSettings = "drink_value_range_settings";
     
     public PreferencesService(IPreferencesStore store)
     {
@@ -153,6 +154,12 @@ public class PreferencesService : IPreferencesService
 
     public void SetTemperatureUnit(Models.Enums.TemperatureUnit unit)
         => _store.Set(KeyTemperatureUnit, (int)unit);
+
+    public string? GetDrinkValueRangeSettingsJson()
+        => _store.Get(KeyDrinkValueRangeSettings, null);
+
+    public void SetDrinkValueRangeSettingsJson(string json)
+        => _store.Set(KeyDrinkValueRangeSettings, json);
     
     public void ClearAll()
     {
@@ -170,5 +177,6 @@ public class PreferencesService : IPreferencesService
         _store.Remove(KeyLastExpectedOutput);
         _store.Remove(KeyLastPreinfusionTime);
         _store.Remove(KeyTemperatureUnit);
+        _store.Remove(KeyDrinkValueRangeSettings);
     }
 }

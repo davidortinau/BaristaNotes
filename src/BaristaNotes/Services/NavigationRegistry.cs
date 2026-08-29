@@ -81,6 +81,12 @@ public class NavigationRegistry : INavigationRegistry
             "Add or edit a user profile.",
             ["add profile", "edit profile", "new profile"],
             ["add", "edit", "new", "profile", "create"]
+        ),
+        ["value-ranges"] = new PageDescription(
+            "Value Ranges",
+            "Set automatic or custom logging ranges for dose, yield, grind size, and time.",
+            ["value ranges", "dose range", "yield range", "grind range", "time range"],
+            ["range", "dose", "yield", "grind", "time", "units"]
         )
     };
 

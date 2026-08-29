@@ -12,5 +12,7 @@ internal static class RouteRegistration
         MauiReactor.Routing.RegisterRoute<Pages.UserProfileManagementPage>("profiles");
         MauiReactor.Routing.RegisterRoute<Pages.ProfileFormPage>("profile-form");
         MauiReactor.Routing.RegisterRoute<Pages.ShotLoggingGridPage>("shot-logging");
+        MauiReactor.Routing.RegisterRoute<Pages.ValueRangeSettingsPage>("value-ranges");
+        MauiReactor.Routing.RegisterRoute<Pages.ValueRangeEditorPage>("value-range-editor");
     }
 }

@@ -217,38 +217,31 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
             avatarFullPath = _imageProcessingService.GetImagePath(profile.AvatarPath);
         }
 
-        return Border(
-            Grid(rows: "Auto,Auto", columns: "Auto,*,Auto",
-                new CircularAvatar(avatarFullPath, 48)
-                    .GridRow(0).GridRowSpan(2).GridColumn(0),
-                Label("MEMBER")
-                    .FontSize(10)
-                    .CharacterSpacing(2)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextSecondary())
-                    .GridRow(0).GridColumn(1),
-                Label(profile.Name)
-                    .FontSize(20)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextPrimary())
-                    .LineBreakMode(LineBreakMode.TailTruncation)
-                    .GridRow(1).GridColumn(1),
-                Label("→")
-                    .FontSize(22)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextPrimary())
-                    .VCenter()
-                    .GridRow(0).GridRowSpan(2).GridColumn(2)
-            )
-            .ColumnSpacing(12)
-            .Padding(16, 14, 16, 14)
-        )
+        return new AdaptiveTwoLineTile(
+            Label("MEMBER")
+                .FontSize(10)
+                .CharacterSpacing(2)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextSecondary())
+                .LineBreakMode(LineBreakMode.TailTruncation)
+                .MaxLines(1),
+            Label(profile.Name)
+                .FontSize(20)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextPrimary())
+                .LineBreakMode(LineBreakMode.TailTruncation)
+                .MaxLines(1))
+        .Leading(new CircularAvatar(avatarFullPath, 48))
+        .Trailing(
+            AdaptiveTwoLineTile.DecorativeGlyph(
+                MaterialSymbolsFont.Chevron_right,
+                TextPrimary()))
+        .ColumnSpacing(12)
         .BackgroundColor(SurfaceColor())
-        .StrokeThickness(0)
-        .StrokeShape(new Rectangle())
-        .MinimumHeightRequest(80)
-        .Margin(0, 0, 0, 1)
-        .OnTapped(() => NavigateToEditProfile(profile));
+        .Margin(new Thickness(0, 0, 0, 1))
+        .OnTapped(
+            $"Member: {profile.Name}",
+            () => NavigateToEditProfile(profile));
     }
 
     // ------------------------------------------------------------

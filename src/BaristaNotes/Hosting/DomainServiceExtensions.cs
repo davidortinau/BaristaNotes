@@ -15,6 +15,7 @@ internal static class DomainServiceExtensions
 
         builder.Services
             .AddSingleton<IPreferencesService, PreferencesService>()
+            .AddSingleton<IDrinkValueRangeService, DrinkValueRangeService>()
             .AddSingleton<IFeedbackService, FeedbackService>()
             .AddSingleton<IThemeService, ThemeService>();
 

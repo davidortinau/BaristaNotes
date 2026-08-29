@@ -681,31 +681,23 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
 
     VisualNode EntryTile(string label, string value, string placeholder, Action<string> onChanged, bool bigFont = false)
     {
-        return Border(
-            Grid(rows: "Auto,Auto", columns: "*",
-                Label(label)
-                    .FontSize(10)
-                    .CharacterSpacing(2)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextSecondary())
-                    .GridRow(0),
-                Entry()
-                    .Text(value)
-                    .Placeholder(placeholder)
-                    .PlaceholderColor(TextSecondary().WithAlpha(0.5f))
-                    .TextColor(TextPrimary())
-                    .FontSize(bigFont ? 22 : 18)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .BackgroundColor(Colors.Transparent)
-                    .OnTextChanged(text => onChanged(text))
-                    .GridRow(1)
-            )
-            .Padding(16, 14, 16, 10)
-        )
+        return new AdaptiveTwoLineTile(
+            Label(label)
+                .FontSize(10)
+                .CharacterSpacing(2)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextSecondary()),
+            Entry()
+                .Text(value)
+                .Placeholder(placeholder)
+                .PlaceholderColor(TextSecondary().WithAlpha(0.5f))
+                .TextColor(TextPrimary())
+                .FontSize(bigFont ? 22 : 18)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .BackgroundColor(Colors.Transparent)
+                .OnTextChanged(text => onChanged(text)))
         .BackgroundColor(SurfaceColor())
-        .StrokeThickness(0)
-        .StrokeShape(new Rectangle())
-        .MinimumHeightRequest(bigFont ? 100 : 90);
+        .MinimumHeight(bigFont ? 100 : 90);
     }
 
     VisualNode EditorTile(string label, string value, string placeholder, Action<string> onChanged)

@@ -217,36 +217,29 @@ partial class BeanManagementPage : Component<BeanManagementState>
             ? bean.Roaster!.ToUpperInvariant()
             : (!string.IsNullOrWhiteSpace(bean.Origin) ? bean.Origin!.ToUpperInvariant() : "BEAN");
 
-        return Border(
-            Grid(rows: "Auto,Auto", columns: "*,Auto",
-                Label(subtitle)
-                    .FontSize(10)
-                    .CharacterSpacing(2)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextSecondary())
-                    .LineBreakMode(LineBreakMode.TailTruncation)
-                    .GridRow(0).GridColumn(0),
-                Label(bean.Name)
-                    .FontSize(20)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextPrimary())
-                    .LineBreakMode(LineBreakMode.TailTruncation)
-                    .GridRow(1).GridColumn(0),
-                Label("→")
-                    .FontSize(22)
-                    .FontAttributes(MauiControls.FontAttributes.Bold)
-                    .TextColor(TextPrimary())
-                    .VCenter()
-                    .GridRow(0).GridRowSpan(2).GridColumn(1)
-            )
-            .Padding(16, 14, 16, 14)
-        )
+        return new AdaptiveTwoLineTile(
+            Label(subtitle)
+                .FontSize(10)
+                .CharacterSpacing(2)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextSecondary())
+                .LineBreakMode(LineBreakMode.TailTruncation)
+                .MaxLines(1),
+            Label(bean.Name)
+                .FontSize(20)
+                .FontAttributes(MauiControls.FontAttributes.Bold)
+                .TextColor(TextPrimary())
+                .LineBreakMode(LineBreakMode.TailTruncation)
+                .MaxLines(1))
+        .Trailing(
+            AdaptiveTwoLineTile.DecorativeGlyph(
+                MaterialSymbolsFont.Chevron_right,
+                TextPrimary()))
         .BackgroundColor(SurfaceColor())
-        .StrokeThickness(0)
-        .StrokeShape(new Rectangle())
-        .MinimumHeightRequest(80)
-        .Margin(0, 0, 0, 1)
-        .OnTapped(() => NavigateToEditBean(bean));
+        .Margin(new Thickness(0, 0, 0, 1))
+        .OnTapped(
+            $"{subtitle}: {bean.Name}",
+            () => NavigateToEditBean(bean));
     }
 
     // ------------------------------------------------------------

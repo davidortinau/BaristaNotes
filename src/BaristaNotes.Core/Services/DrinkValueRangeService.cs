@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using BaristaNotes.Core.Models;
 using BaristaNotes.Core.Models.Enums;
 using Microsoft.Extensions.Logging;
@@ -8,11 +7,6 @@ namespace BaristaNotes.Core.Services;
 
 public sealed class DrinkValueRangeService : IDrinkValueRangeService
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        Converters = { new JsonStringEnumConverter(allowIntegerValues: false) },
-    };
-
     private readonly IPreferencesService _preferences;
     private readonly ILogger<DrinkValueRangeService> _logger;
     private readonly object _sync = new();
@@ -143,7 +137,9 @@ public sealed class DrinkValueRangeService : IDrinkValueRangeService
 
         try
         {
-            var settings = JsonSerializer.Deserialize<DrinkValueRangeSettings>(json, SerializerOptions)
+            var settings = JsonSerializer.Deserialize(
+                    json,
+                    DrinkValueRangeJsonContext.Default.DrinkValueRangeSettings)
                 ?? throw new JsonException("The range settings document was empty.");
 
             if (settings.SchemaVersion != DrinkValueRangeSettings.CurrentSchemaVersion)
@@ -192,7 +188,9 @@ public sealed class DrinkValueRangeService : IDrinkValueRangeService
 
     private void Save(DrinkValueRangeSettings settings)
     {
-        var json = JsonSerializer.Serialize(settings, SerializerOptions);
+        var json = JsonSerializer.Serialize(
+            settings,
+            DrinkValueRangeJsonContext.Default.DrinkValueRangeSettings);
         _preferences.SetDrinkValueRangeSettingsJson(json);
         _settings = settings;
         _loadWarning = null;

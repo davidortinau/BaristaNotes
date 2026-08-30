@@ -85,7 +85,7 @@ public class BagServiceTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Contains("future", result.ErrorMessage.ToLower());
+        Assert.Contains("future", Assert.IsType<string>(result.ErrorMessage).ToLowerInvariant());
         _mockBagRepo.Verify(x => x.CreateAsync(It.IsAny<Bag>()), Times.Never);
     }
 
@@ -332,7 +332,7 @@ public class BagServiceTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Contains("future", result.ErrorMessage.ToLower());
+        Assert.Contains("future", Assert.IsType<string>(result.ErrorMessage).ToLowerInvariant());
         _mockBagRepo.Verify(x => x.CreateAsync(It.IsAny<Bag>()), Times.Never);
     }
 

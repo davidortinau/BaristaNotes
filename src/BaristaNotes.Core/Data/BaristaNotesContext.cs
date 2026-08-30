@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using BaristaNotes.Core.Models;
 using BaristaNotes.Core.Models.Enums;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BaristaNotes.Core.Data;
 
@@ -16,9 +17,25 @@ public class BaristaNotesContext : DbContext
     public DbSet<GrinderProfile> GrinderProfiles { get; set; } = null!;
     public DbSet<GrindTranslationCache> GrindTranslationCache { get; set; } = null!;
     
-    public BaristaNotesContext(DbContextOptions<BaristaNotesContext> options) 
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026",
+        Justification = "The app supplies the generated EF compiled model and applies schema changes with static SQL.")]
+    [UnconditionalSuppressMessage(
+        "AOT",
+        "IL3050",
+        Justification = "The app supplies the generated EF compiled model and applies schema changes with static SQL.")]
+    public BaristaNotesContext(DbContextOptions<BaristaNotesContext> options)
         : base(options) { }
     
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026",
+        Justification = "NativeAOT builds supply the generated EF compiled model, so this dynamic model-building path is not used.")]
+    [UnconditionalSuppressMessage(
+        "AOT",
+        "IL3050",
+        Justification = "NativeAOT builds supply the generated EF compiled model, so this dynamic model-building path is not used.")]
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -122,6 +139,7 @@ public class BaristaNotesContext : DbContext
             entity.Property(e => e.BrewMethod)
                 .IsRequired()
                 .HasConversion<int>()
+                .HasSentinel((BaristaNotes.Core.Models.Enums.BrewMethod)0)
                 .HasDefaultValue(BaristaNotes.Core.Models.Enums.BrewMethod.Espresso);
             entity.Property(e => e.ParametersJson);
             entity.Property(e => e.ActualTime).HasPrecision(5, 2);

@@ -430,6 +430,16 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                     return;
                 }
 
+                if (result.Data is null)
+                {
+                    SetState(s =>
+                    {
+                        s.IsSaving = false;
+                        s.ErrorMessage = "Bean creation did not return the new bean";
+                    });
+                    return;
+                }
+
                 _dataChangeNotifier.NotifyDataChanged(DataChangeType.BeanCreated, result.Data);
 
                 var bagResult = await _bagService.CreateNewBagForBeanAsync(result.Data.Id, DateTime.Today);

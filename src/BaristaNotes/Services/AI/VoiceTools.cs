@@ -4,10 +4,9 @@ using Microsoft.Maui.AI.Attributes;
 namespace BaristaNotes.Services.AI;
 
 /// <summary>
-/// Source-generated AI tool context aggregating tool methods from
-/// VoiceCommandService and NavigationTools. The generator emits a
-/// static <c>Default</c> singleton and a <c>Tools</c> collection at
-/// compile time — no reflection on the invocation path.
+/// AI tool context aggregating tool methods from VoiceCommandService and
+/// NavigationTools. Its checked-in generated implementation avoids runtime
+/// reflection and keeps tool schema creation compatible with NativeAOT.
 /// </summary>
 [AIToolSource(typeof(VoiceCommandService))]
 [AIToolSource(typeof(NavigationTools))]

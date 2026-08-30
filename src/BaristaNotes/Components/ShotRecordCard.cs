@@ -85,7 +85,7 @@ partial class ShotRecordCard : Component
         .Margin(6, 0, 0, 0);
     }
 
-    MauiReactor.Label RenderUserProfilesAndTimestamp()
+    VisualNode? RenderUserProfilesAndTimestamp()
     {
         var parts = new List<string>();
         if (_shot?.MadeBy != null)
@@ -97,7 +97,7 @@ partial class ShotRecordCard : Component
             return null;
 
         return Label()
-            .Text($"{FormatTimestamp(_shot.Timestamp)} • {string.Join(" • ", parts)}")
+            .Text($"{FormatTimestamp(_shot!.Timestamp)} • {string.Join(" • ", parts)}")
             .FontSize(12)
             .TextColor(Colors.Gray);
     }

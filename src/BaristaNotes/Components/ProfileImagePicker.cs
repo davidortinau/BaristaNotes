@@ -7,15 +7,18 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
     private readonly int _profileId;
     private readonly IImagePickerService _imagePickerService;
     private readonly IUserProfileService _userProfileService;
+    private readonly ILogger<ProfileImagePicker> _logger;
 
     public ProfileImagePicker(
         int profileId,
         IImagePickerService imagePickerService,
-        IUserProfileService userProfileService)
+        IUserProfileService userProfileService,
+        ILogger<ProfileImagePicker> logger)
     {
         _profileId = profileId;
         _imagePickerService = imagePickerService;
         _userProfileService = userProfileService;
+        _logger = logger;
     }
 
     protected override void OnMounted()
@@ -119,6 +122,7 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to update profile image for profile {ProfileId}", _profileId);
             SetState(s =>
             {
                 s.ErrorMessage = "Failed to update image";
@@ -153,6 +157,7 @@ public class ProfileImagePicker : Component<ProfileImagePickerState>
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to remove profile image for profile {ProfileId}", _profileId);
             SetState(s =>
             {
                 s.ErrorMessage = "Failed to remove image";

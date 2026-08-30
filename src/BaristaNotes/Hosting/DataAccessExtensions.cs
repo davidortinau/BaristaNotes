@@ -12,7 +12,9 @@ internal static class DataAccessExtensions
         Console.WriteLine($"Database path: {dbPath}");
 
         builder.Services.AddDbContext<BaristaNotesContext>(options =>
-            options.UseSqlite($"Data Source={dbPath}"));
+            options
+                .UseModel(BaristaNotes.Core.Data.CompiledModels.BaristaNotesContextModel.Instance)
+                .UseSqlite($"Data Source={dbPath}"));
 
         builder.Services
             .AddScoped<DatabaseInitializer>()

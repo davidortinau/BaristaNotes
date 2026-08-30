@@ -72,7 +72,8 @@ public class AIAdviceServiceTests
 
         // Assert
         Assert.False(response.Success);
-        Assert.Null(response.Advice);
+        Assert.Empty(response.Adjustments);
+        Assert.Null(response.Reasoning);
         Assert.Equal("Test error", response.ErrorMessage);
     }
 
@@ -83,12 +84,22 @@ public class AIAdviceServiceTests
         var response = new AIAdviceResponseDto
         {
             Success = true,
-            Advice = "Try grinding finer"
+            Adjustments =
+            [
+                new ShotAdjustment
+                {
+                    Parameter = "Grind",
+                    Direction = "Finer",
+                    Amount = "1 click"
+                }
+            ],
+            Reasoning = "Try grinding finer"
         };
 
         // Assert
         Assert.True(response.Success);
-        Assert.Equal("Try grinding finer", response.Advice);
+        Assert.Single(response.Adjustments);
+        Assert.Equal("Try grinding finer", response.Reasoning);
         Assert.Null(response.ErrorMessage);
     }
 

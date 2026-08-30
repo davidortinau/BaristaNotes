@@ -20,7 +20,9 @@ global using BaristaNotes.Services;
 global using Fonts;
 global using BaristaNotes.Styles;
 global using Microsoft.Maui.Handlers;
+#if !NATIVEAOT
 global using Microsoft.Maui.Essentials.AI;
+#endif
 global using Microsoft.Extensions.AI;
 global using MauiReactor.Shapes;
 global using BaristaNotes.Core.Services.DTOs;

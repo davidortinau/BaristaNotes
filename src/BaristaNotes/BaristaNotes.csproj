@@ -49,6 +49,7 @@
 		<PublishAot>true</PublishAot>
 		<MtouchInterpreter></MtouchInterpreter>
 		<MtouchLink>Full</MtouchLink>
+		<DefineConstants>$(DefineConstants);NATIVEAOT</DefineConstants>
 	</PropertyGroup>
 
 	<!-- Disable the managed linker so the dotnet watch startup hook
@@ -57,7 +58,7 @@
 	     references. Without this, `dotnet watch run` aborts at startup with
 	     MissingMethodException on iOS / Mac Catalyst under .NET 11 Preview 4.
 	     Per the .NET 11 P4 release notes for dotnet watch on mobile. -->
-	<PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
 		<MtouchLink>None</MtouchLink>
 	</PropertyGroup>
 
@@ -91,7 +92,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-		<PackageReference Include="Microsoft.Maui.Essentials.AI" Version="11.0.0-preview.6.26360.8" />
+		<PackageReference Include="Microsoft.Maui.Essentials.AI" Version="11.0.0-preview.6.26360.8" Condition="'$(EnableNativeAot)' != 'true'" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="11.0.0-preview.7.26381.103" />
 		<PackageReference Include="Microsoft.Recognizers.Text.Number" Version="1.8.13" />
 		<PackageReference Include="NuGet.CommandLine" Version="7.9.0" PrivateAssets="all" />
@@ -122,10 +123,16 @@
 		<!-- AI Advice Service -->
 		<PackageReference Include="Microsoft.Extensions.AI" Version="10.9.0" />
 		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.9.0" />
-		<PackageReference Include="Microsoft.Maui.AI.Attributes" Version="0.1.0-preview.12.26421.1" />
-		<PackageReference Include="Azure.AI.OpenAI" Version="2.1.0" />
+		<PackageReference Include="Microsoft.Maui.AI.Attributes" Version="0.1.0-preview.12.26421.1" ExcludeAssets="analyzers" GeneratePathProperty="true" />
+		<PackageReference Include="Azure.AI.OpenAI" Version="2.9.0-beta.1" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="11.0.0-preview.7.26381.103" />
 	</ItemGroup>
+
+	<Target Name="RemoveMauiAiAttributesGenerator" BeforeTargets="CoreCompile">
+		<ItemGroup>
+			<Analyzer Remove="$(PkgMicrosoft_Maui_AI_Attributes)/analyzers/dotnet/cs/Microsoft.Maui.AI.Attributes.Generators.dll" />
+		</ItemGroup>
+	</Target>
 
 	<!-- MAUI DevFlow (DEBUG only): in-process agent for UI inspection, logs, network, preferences. -->
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">

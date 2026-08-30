@@ -1,4 +1,4 @@
-#if IOS
+#if IOS && !NATIVEAOT
 using BaristaNotes.Platforms.iOS;
 #endif
 
@@ -8,7 +8,7 @@ internal static class AIChatClientExtensions
 {
     public static MauiAppBuilder AddAIChatClients(this MauiAppBuilder builder)
     {
-#if IOS
+#if IOS && !NATIVEAOT
 #pragma warning disable CA1416 // Validate platform compatibility
 #pragma warning disable MAUIAI0001 // Microsoft.Maui.Essentials.AI is experimental
         // Apple Intelligence requires iOS 26.0+. VoiceCommandService falls back

@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace BaristaNotes.Hosting;
 
 internal static class RecipeSourcingExtensions
@@ -25,7 +27,9 @@ internal static class RecipeSourcingExtensions
     /// expects <c>(HttpClient, ILogger&lt;TAdapter&gt;)</c> via the named
     /// <c>"recipes"</c> HttpClient.
     /// </summary>
-    private static IServiceCollection AddRoasterAdapter<TAdapter>(this IServiceCollection services)
+    private static IServiceCollection AddRoasterAdapter<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
+        TAdapter>(this IServiceCollection services)
         where TAdapter : class, IRoasterRecipeAdapter
         => services.AddSingleton<IRoasterRecipeAdapter>(sp =>
             ActivatorUtilities.CreateInstance<TAdapter>(

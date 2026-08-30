@@ -217,7 +217,6 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         // Voice command service can request the recognizer pause/resume
         // (e.g. while the camera flow is active).
         _voiceCommandService.PauseSpeechRequested += OnPauseSpeechRequested;
-        _voiceCommandService.ResumeSpeechRequested += OnResumeSpeechRequested;
     }
 
     protected override void OnWillUnmount()
@@ -236,7 +235,6 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         _overlayService.MicPressStarted -= OnMicPressStarted;
         _overlayService.MicPressEnded -= OnMicPressEnded;
         _voiceCommandService.PauseSpeechRequested -= OnPauseSpeechRequested;
-        _voiceCommandService.ResumeSpeechRequested -= OnResumeSpeechRequested;
 
         base.OnWillUnmount();
     }
@@ -2130,12 +2128,6 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         }
     }
 
-    private void OnResumeSpeechRequested(object? sender, EventArgs e)
-    {
-        _logger.LogDebug("Resume speech requested via event");
-        _speechPaused = false;
-    }
-
     /// <summary>
     /// Refresh picker reference lists when voice commands create new
     /// beans/bags/equipment/profiles in the background.
@@ -2441,7 +2433,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     {
         var page = ContainerPage;
         if (page == null) return;
-        var openSettings = await page.DisplayAlert(
+        var openSettings = await page.DisplayAlertAsync(
             "Permission Required",
             "Speech recognition requires microphone and speech permissions. Please enable them in Settings.",
             "Open Settings",
@@ -2536,7 +2528,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             if (!MediaPicker.Default.IsCaptureSupported)
             {
                 if (ContainerPage != null)
-                    await ContainerPage.DisplayAlert("Camera Unavailable",
+                    await ContainerPage.DisplayAlertAsync("Camera Unavailable",
                         "Camera is not available on this device.", "OK");
                 return;
             }
@@ -2602,7 +2594,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             _logger.LogError(ex, "Error capturing and analyzing photo");
             SetPhotoProcessing(false);
             if (ContainerPage != null)
-                await ContainerPage.DisplayAlert("Error",
+                await ContainerPage.DisplayAlertAsync("Error",
                     $"Failed to capture or analyze photo: {ex.Message}", "OK");
         }
         finally
@@ -2755,12 +2747,12 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
 
             if (ContainerPage != null)
             {
-                await ContainerPage.DisplayAlert("Analysis Complete", message, "OK");
+                await ContainerPage.DisplayAlertAsync("Analysis Complete", message, "OK");
             }
         }
         else if (ContainerPage != null)
         {
-            await ContainerPage.DisplayAlert(
+            await ContainerPage.DisplayAlertAsync(
                 "Analysis Failed",
                 result.ErrorMessage ?? "Could not analyze the photo.",
                 "OK");

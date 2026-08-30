@@ -1,8 +1,19 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BaristaNotes.Core.Data.Repositories;
 
-public abstract class Repository<T> : IRepository<T> where T : class
+public abstract class Repository<
+    [DynamicallyAccessedMembers(
+        DynamicallyAccessedMemberTypes.PublicConstructors
+        | DynamicallyAccessedMemberTypes.NonPublicConstructors
+        | DynamicallyAccessedMemberTypes.PublicFields
+        | DynamicallyAccessedMemberTypes.NonPublicFields
+        | DynamicallyAccessedMemberTypes.PublicProperties
+        | DynamicallyAccessedMemberTypes.NonPublicProperties
+        | DynamicallyAccessedMemberTypes.Interfaces)]
+    T> : IRepository<T>
+    where T : class
 {
     protected readonly BaristaNotesContext _context;
     protected readonly DbSet<T> _dbSet;

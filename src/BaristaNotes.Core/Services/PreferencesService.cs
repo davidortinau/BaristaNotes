@@ -72,12 +72,16 @@ public class PreferencesService : IPreferencesService
     public List<int> GetLastAccessoryIds()
     {
         var json = _store.Get(KeyLastAccessoryIds, "[]");
-        return json == null ? new List<int>() : JsonSerializer.Deserialize<List<int>>(json) ?? new List<int>();
+        return json == null
+            ? []
+            : JsonSerializer.Deserialize(json, CoreJsonContext.Default.ListInt32) ?? [];
     }
     
     public void SetLastAccessoryIds(List<int> accessoryIds)
     {
-        var json = JsonSerializer.Serialize(accessoryIds);
+        var json = JsonSerializer.Serialize(
+            accessoryIds,
+            CoreJsonContext.Default.ListInt32);
         _store.Set(KeyLastAccessoryIds, json);
     }
     

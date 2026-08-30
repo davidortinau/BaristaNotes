@@ -46,7 +46,6 @@ public partial class VoiceCommandService : IVoiceCommandService
 
     // Events for speech coordination
     public event EventHandler? PauseSpeechRequested;
-    public event EventHandler? ResumeSpeechRequested;
 
     private const string ModelId = "gpt-4.1-mini";
     private const int LocalTimeoutSeconds = 15;

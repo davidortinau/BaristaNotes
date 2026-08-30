@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using BaristaNotes.Core.Services;
 
 namespace BaristaNotes.Core.Services.Grind;
 
@@ -22,12 +23,6 @@ public sealed record GrindAnchor(
 /// </summary>
 public static class DeterministicGrindInterpolator
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
-
     /// <summary>
     /// Anchor curve for the Turin DF64 family (Gen 1, Gen 2, DF64v, DF64E,
     /// MiiCoffee, G-IOTA — all share the 0–90 stepless dial). Derived from the
@@ -54,7 +49,9 @@ public static class DeterministicGrindInterpolator
         if (string.IsNullOrWhiteSpace(anchorsJson)) return Array.Empty<GrindAnchor>();
         try
         {
-            var anchors = JsonSerializer.Deserialize<List<GrindAnchor>>(anchorsJson, JsonOptions);
+            var anchors = JsonSerializer.Deserialize(
+                anchorsJson,
+                CoreJsonContext.Default.ListGrindAnchor);
             return anchors ?? (IReadOnlyList<GrindAnchor>)Array.Empty<GrindAnchor>();
         }
         catch (JsonException)
@@ -64,7 +61,9 @@ public static class DeterministicGrindInterpolator
     }
 
     public static string SerializeAnchors(IEnumerable<GrindAnchor> anchors) =>
-        JsonSerializer.Serialize(anchors, JsonOptions);
+        JsonSerializer.Serialize(
+            anchors.ToList(),
+            CoreJsonContext.Default.ListGrindAnchor);
 
     /// <summary>
     /// Interpolate a target micron value against a set of anchors. Returns null

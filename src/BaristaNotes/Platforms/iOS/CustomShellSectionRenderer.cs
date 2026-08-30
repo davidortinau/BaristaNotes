@@ -41,11 +41,14 @@ public class CustomShellSectionRenderer : ShellSectionRenderer
         base.PushViewController(viewController, animated);
     }
 
-    public override void SetViewControllers(UIViewController[] viewControllers, bool animated)
+    public override void SetViewControllers(UIViewController[]? viewControllers, bool animated)
     {
-        foreach (var vc in viewControllers)
+        if (viewControllers is not null)
         {
-            ConfigureViewControllerForLargeTitles(vc);
+            foreach (var vc in viewControllers)
+            {
+                ConfigureViewControllerForLargeTitles(vc);
+            }
         }
         base.SetViewControllers(viewControllers, animated);
     }

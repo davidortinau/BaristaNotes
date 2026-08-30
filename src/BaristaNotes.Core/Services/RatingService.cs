@@ -27,10 +27,10 @@ public class RatingService : IRatingService
             .AsNoTracking()
             .Include(s => s.Bag)
             .Where(s => !s.IsDeleted && s.Bag.BeanId == targetBeanId)
-            .Select(s => new { s.Rating })
+            .Select(s => s.Rating)
             .ToListAsync();
 
-        return CalculateAggregate(shots.Select(s => s.Rating).ToList());
+        return CalculateAggregate(shots);
     }
 
     /// <inheritdoc />
@@ -42,10 +42,10 @@ public class RatingService : IRatingService
         var shots = await _context.ShotRecords
             .AsNoTracking()
             .Where(s => !s.IsDeleted && s.BagId == targetBagId)
-            .Select(s => new { s.Rating })
+            .Select(s => s.Rating)
             .ToListAsync();
 
-        return CalculateAggregate(shots.Select(s => s.Rating).ToList());
+        return CalculateAggregate(shots);
     }
 
     /// <inheritdoc />

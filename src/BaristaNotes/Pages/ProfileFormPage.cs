@@ -26,6 +26,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
     [Inject] IImagePickerService _imagePickerService;
     [Inject] IFeedbackService _feedbackService;
     [Inject] IDataChangeNotifier _dataChangeNotifier;
+    [Inject] ILoggerFactory _loggerFactory;
 
     protected override void OnMounted()
     {
@@ -54,6 +55,15 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
         try
         {
             var profile = await _profileService.GetProfileByIdAsync(State.ProfileId.Value);
+            if (profile is null)
+            {
+                SetState(s =>
+                {
+                    s.IsLoading = false;
+                    s.ErrorMessage = "Profile not found";
+                });
+                return;
+            }
 
             SetState(s =>
             {
@@ -334,7 +344,8 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
                     ? (VisualNode)new ProfileImagePicker(
                             State.ProfileId.Value,
                             _imagePickerService,
-                            _profileService)
+                            _profileService,
+                            _loggerFactory.CreateLogger<ProfileImagePicker>())
                     : Label("Save the profile first to add a photo")
                         .FontSize(14)
                         .TextColor(TextSecondary())
@@ -380,7 +391,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
                     .FontSize(12)
                     .TextColor(TextSecondary()),
                 Editor()
-                    .Text(State.Context)
+                    .Text(State.Context ?? "")
                     .Placeholder("e.g. Likes single-origin pour overs in the morning. Sensitive to bitter notes.")
                     .PlaceholderColor(TextSecondary().WithAlpha(0.5f))
                     .TextColor(TextPrimary())

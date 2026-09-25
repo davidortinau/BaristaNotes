@@ -1,634 +1,224 @@
-# Data Layer Architecture
+# Data Layer
 
-This document describes the data persistence layer in BaristaNotes, including Entity Framework Core configuration, database schema, and data access patterns.
+BaristaNotes uses Entity Framework Core with SQLite. The application keeps all
+current user data on the device.
 
-## Table of Contents
+## Data Flow
 
-- [Overview](#overview)
-- [Database Schema](#database-schema)
-- [Entity Models](#entity-models)
-- [DbContext Configuration](#dbcontext-configuration)
-- [Service Layer](#service-layer)
-- [Migrations](#migrations)
-- [Best Practices](#best-practices)
-
-## Overview
-
-BaristaNotes uses Entity Framework Core with SQLite for local data persistence. The architecture follows a layered approach:
-
-```
-┌──────────────────┐
-│   UI Layer       │
-│  (Pages)         │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│  Service Layer   │
-│  (Business Logic)│
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│   Data Layer     │
-│  (EF Core)       │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│   SQLite DB      │
-└──────────────────┘
+```text
+MauiReactor page
+    |
+    v
+Domain service
+    |
+    v
+Repository or BaristaNotesContext
+    |
+    v
+SQLite: barista_notes.db
 ```
 
-### Key Principles
+Pages use injected services. They do not create database connections or change
+SQLite tables directly.
 
-- **Separation of Concerns**: UI doesn't directly access DbContext
-- **DTOs**: Services return Data Transfer Objects, not entities
-- **Async Operations**: All database operations are asynchronous
-- **Single DbContext**: One context instance per application lifetime (singleton)
+## Database Location
 
-## Database Schema
-
-### Entity Relationship Diagram
-
-```
-┌─────────────┐       ┌─────────────┐
-│ UserProfile │       │    Bean     │
-└──────┬──────┘       └──────┬──────┘
-       │                     │
-       │ Made By             │
-       │                     │
-┌──────▼──────────────────────▼────┐
-│           ShotRecord             │
-│  ─────────────────────────────  │
-│  + Id                            │
-│  + BeanId (FK)                   │
-│  + MadeById (FK)                 │
-│  + MadeForId (FK)                │
-│  + Dose                          │
-│  + GrindSetting                  │
-│  + OutputWeight                  │
-│  + ExtractionTime                │
-│  + WaterTemperature              │
-│  + Rating                        │
-│  + Notes                         │
-│  + LoggedAt                      │
-└──────┬───────────────┬───────────┘
-       │               │
-       │               │ Made For
-       │               │
-       ▼               ▼
-┌─────────────┐  ┌─────────────┐
-│   Machine   │  │   Grinder   │
-└─────────────┘  └─────────────┘
-```
-
-### Tables
-
-#### ShotRecord
-Primary entity for espresso shot tracking.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| Id | INTEGER | Primary key |
-| BeanId | INTEGER | Foreign key to Bean |
-| MadeById | INTEGER | Foreign key to UserProfile (maker) |
-| MadeForId | INTEGER | Foreign key to UserProfile (recipient) |
-| MachineId | INTEGER | Foreign key to Equipment (machine) |
-| GrinderId | INTEGER | Foreign key to Equipment (grinder) |
-| Dose | REAL | Coffee dose in grams |
-| GrindSetting | REAL | Grinder setting |
-| OutputWeight | REAL | Output weight in grams |
-| ExtractionTime | INTEGER | Extraction time in seconds |
-| WaterTemperature | REAL | Water temperature in Celsius |
-| Rating | INTEGER | Rating 1-5 |
-| Notes | TEXT | User notes |
-| LoggedAt | TEXT | Timestamp (ISO 8601) |
-
-#### Bean
-Coffee bean information.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| Id | INTEGER | Primary key |
-| Name | TEXT | Bean name/label |
-| Roaster | TEXT | Roaster name |
-| Origin | TEXT | Coffee origin country |
-| RoastDate | TEXT | Roast date (ISO 8601) |
-| RoastLevel | INTEGER | Enum: Light, Medium, Dark |
-| Notes | TEXT | Tasting notes, description |
-| PurchaseDate | TEXT | Purchase date |
-| PurchaseLocation | TEXT | Where purchased |
-| CurrentStock | REAL | Current stock in grams |
-
-#### Equipment
-Espresso machines and grinders.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| Id | INTEGER | Primary key |
-| Name | TEXT | Equipment name |
-| Type | INTEGER | Enum: Machine, Grinder, Accessory |
-| Manufacturer | TEXT | Manufacturer name |
-| Model | TEXT | Model number |
-| PurchaseDate | TEXT | Purchase date |
-| Notes | TEXT | Equipment notes |
-
-#### UserProfile
-User profiles for maker/recipient tracking.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| Id | INTEGER | Primary key |
-| Name | TEXT | Display name |
-| AvatarPath | TEXT | Path to avatar image |
-| IsActive | BOOLEAN | Active status |
-| CreatedAt | TEXT | Creation timestamp |
-
-## Entity Models
-
-### ShotRecord Entity
+`Hosting/DataAccessExtensions.cs` creates the database path:
 
 ```csharp
-public class ShotRecord
-{
-    public int Id { get; set; }
-    
-    // Foreign Keys
-    public int? BeanId { get; set; }
-    public int? MadeById { get; set; }
-    public int? MadeForId { get; set; }
-    public int? MachineId { get; set; }
-    public int? GrinderId { get; set; }
-    
-    // Shot Parameters
-    public double Dose { get; set; }
-    public double GrindSetting { get; set; }
-    public double OutputWeight { get; set; }
-    public int ExtractionTime { get; set; }
-    public double? WaterTemperature { get; set; }
-    
-    // Evaluation
-    public int Rating { get; set; }
-    public string? Notes { get; set; }
-    
-    // Metadata
-    public DateTime LoggedAt { get; set; }
-    
-    // Navigation Properties
-    public Bean? Bean { get; set; }
-    public UserProfile? MadeBy { get; set; }
-    public UserProfile? MadeFor { get; set; }
-    public Equipment? Machine { get; set; }
-    public Equipment? Grinder { get; set; }
-}
+var dbPath = Path.Combine(
+    FileSystem.AppDataDirectory,
+    "barista_notes.db");
 ```
 
-### Bean Entity
+The full platform path can change when an application is installed again. Code
+must use `FileSystem.AppDataDirectory`; it must not depend on a copied absolute
+path.
+
+## EF Context and Lifetime
+
+The context type is `BaristaNotesContext`.
 
 ```csharp
-public class Bean
-{
-    public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string? Roaster { get; set; }
-    public string? Origin { get; set; }
-    public DateTime? RoastDate { get; set; }
-    public RoastLevel RoastLevel { get; set; }
-    public string? Notes { get; set; }
-    public DateTime? PurchaseDate { get; set; }
-    public string? PurchaseLocation { get; set; }
-    public double CurrentStock { get; set; }
-    
-    // Navigation
-    public ICollection<ShotRecord> ShotRecords { get; set; } = new List<ShotRecord>();
-}
-
-public enum RoastLevel
-{
-    Light,
-    Medium,
-    Dark
-}
+builder.Services.AddDbContext<BaristaNotesContext>(options =>
+    options
+        .UseModel(BaristaNotesContextModel.Instance)
+        .UseSqlite($"Data Source={dbPath}"));
 ```
 
-### UserProfile Entity
+`AddDbContext` registers a scoped context. Repositories and domain services that
+use it are also scoped. Do not register the context as a singleton.
 
-```csharp
-public class UserProfile
-{
-    public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string? AvatarPath { get; set; }
-    public bool IsActive { get; set; } = true;
-    public DateTime CreatedAt { get; set; }
-    
-    // Navigation
-    public ICollection<ShotRecord> ShotsMadeBy { get; set; } = new List<ShotRecord>();
-    public ICollection<ShotRecord> ShotsMadeFor { get; set; } = new List<ShotRecord>();
-}
-```
+## Current Model
 
-## DbContext Configuration
+| Entity | Purpose |
+|---|---|
+| `Bean` | Bean identity, roaster, origin, notes, and roaster URL |
+| `Bag` | A physical bag with a bean, roast date, notes, and completion state |
+| `Equipment` | Machines, grinders, and accessories |
+| `UserProfile` | People, avatars, and optional AI context |
+| `ShotRecord` | Logged drink inputs, outputs, rating, method, and tasting notes |
+| `ShotEquipment` | Additional equipment linked to a shot |
+| `Recipe` | A recipe for a bean and brew method |
+| `GrinderProfile` | Grinder adjustment profile |
+| `GrindTranslationCache` | Cached translations from grinder settings to microns |
 
-### BaristasDbContext
+Important relationships:
 
-```csharp
-public class BaristasDbContext : DbContext
-{
-    public DbSet<ShotRecord> ShotRecords { get; set; }
-    public DbSet<Bean> Beans { get; set; }
-    public DbSet<Equipment> Equipment { get; set; }
-    public DbSet<UserProfile> UserProfiles { get; set; }
-    
-    public BaristasDbContext()
-    {
-        // Ensure database is created
-        Database.EnsureCreated();
-    }
-    
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        if (!optionsBuilder.IsConfigured)
-        {
-            var dbPath = Path.Combine(
-                FileSystem.AppDataDirectory, 
-                "baristas.db"
-            );
-            optionsBuilder.UseSqlite($"Data Source={dbPath}");
-        }
-    }
-    
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
-        
-        // Configure relationships
-        modelBuilder.Entity<ShotRecord>()
-            .HasOne(s => s.Bean)
-            .WithMany(b => b.ShotRecords)
-            .HasForeignKey(s => s.BeanId)
-            .OnDelete(DeleteBehavior.SetNull);
-            
-        modelBuilder.Entity<ShotRecord>()
-            .HasOne(s => s.MadeBy)
-            .WithMany(u => u.ShotsMadeBy)
-            .HasForeignKey(s => s.MadeById)
-            .OnDelete(DeleteBehavior.SetNull);
-            
-        modelBuilder.Entity<ShotRecord>()
-            .HasOne(s => s.MadeFor)
-            .WithMany(u => u.ShotsMadeFor)
-            .HasForeignKey(s => s.MadeForId)
-            .OnDelete(DeleteBehavior.SetNull);
-    }
-}
-```
+- A bean has many bags.
+- A bag has many shot records.
+- A shot has one required bag.
+- A shot can reference a machine, grinder, maker, and recipient.
+- A shot can have additional equipment through `ShotEquipment`.
+- A bean can have recipes for different brew methods.
 
-### Database Location
+Most user-managed records use soft-delete and synchronization metadata such as
+`SyncId`, `LastModifiedAt`, and `IsDeleted`.
 
-The SQLite database file is stored in the application's data directory:
+## Drink Values
 
-- **iOS**: `/var/mobile/Containers/Data/Application/{GUID}/Library/baristas.db`
-- **Android**: `/data/data/com.yourcompany.baristanotes/files/baristas.db`
+`ShotRecord` stores canonical values:
 
-## Service Layer
+- `DoseIn`
+- `ActualOutput`
+- `GrindMicrons`
+- `ActualTime`
+- `WaterTempC`
+- `BrewMethod`
+- `DrinkType`
+- `Rating`
+- `TastingNotes`
 
-Services provide a clean API for data operations and return DTOs instead of entities.
+Expected values and method-specific parameters are stored separately on the
+record when applicable.
 
-### Service Interface Example
+The custom input-range feature does not add database columns.
+`DrinkValueRangeService` stores its versioned, sparse override document through
+the MAUI Preferences API. Auto values and hard limits come from
+`BrewMethodValueRangeCatalog`.
 
-```csharp
-public interface IShotService
-{
-    Task<ShotDto?> GetShotByIdAsync(int id);
-    Task<List<ShotDto>> GetAllShotsAsync();
-    Task<List<ShotDto>> GetShotsByBeanIdAsync(int beanId);
-    Task<ShotDto> CreateShotAsync(CreateShotRequest request);
-    Task<ShotDto> UpdateShotAsync(int id, UpdateShotRequest request);
-    Task DeleteShotAsync(int id);
-}
-```
+## Schema Initialization and Upgrades
 
-### Service Implementation
+The app does not call `Database.EnsureCreated()` or `Database.Migrate()` during
+normal startup.
 
-```csharp
-public class ShotService : IShotService
-{
-    private readonly BaristasDbContext _context;
-    
-    public ShotService(BaristasDbContext context)
-    {
-        _context = context;
-    }
-    
-    public async Task<ShotDto?> GetShotByIdAsync(int id)
-    {
-        var shot = await _context.ShotRecords
-            .Include(s => s.Bean)
-            .Include(s => s.MadeBy)
-            .Include(s => s.MadeFor)
-            .Include(s => s.Machine)
-            .Include(s => s.Grinder)
-            .FirstOrDefaultAsync(s => s.Id == id);
-            
-        return shot == null ? null : MapToDto(shot);
-    }
-    
-    public async Task<ShotDto> CreateShotAsync(CreateShotRequest request)
-    {
-        var shot = new ShotRecord
-        {
-            BeanId = request.BeanId,
-            MadeById = request.MadeById,
-            MadeForId = request.MadeForId,
-            Dose = request.Dose,
-            GrindSetting = request.GrindSetting,
-            OutputWeight = request.OutputWeight,
-            ExtractionTime = request.ExtractionTime,
-            Rating = request.Rating,
-            Notes = request.Notes,
-            LoggedAt = DateTime.UtcNow
-        };
-        
-        _context.ShotRecords.Add(shot);
-        await _context.SaveChangesAsync();
-        
-        return MapToDto(shot);
-    }
-    
-    private static ShotDto MapToDto(ShotRecord shot)
-    {
-        return new ShotDto
-        {
-            Id = shot.Id,
-            BeanId = shot.BeanId,
-            BeanName = shot.Bean?.Name,
-            MadeById = shot.MadeById,
-            MadeByName = shot.MadeBy?.Name,
-            MadeForId = shot.MadeForId,
-            MadeForName = shot.MadeFor?.Name,
-            Dose = shot.Dose,
-            GrindSetting = shot.GrindSetting,
-            OutputWeight = shot.OutputWeight,
-            ExtractionTime = shot.ExtractionTime,
-            Rating = shot.Rating,
-            Notes = shot.Notes,
-            LoggedAt = shot.LoggedAt
-        };
-    }
-}
-```
+`DatabaseInitializationService` runs `DatabaseInitializer` once. The
+initializer:
 
-### DTOs
+1. opens the configured EF connection;
+2. creates `__EFMigrationsHistory` when needed;
+3. creates the initial application schema only when no application tables
+   exist;
+4. checks and applies each known schema step;
+5. records the associated migration identifier;
+6. repairs supported legacy relationships; and
+7. validates the final schema.
 
-DTOs decouple the database schema from the API surface:
+The checked-in EF migration files remain the schema history and design-time
+model source. The initializer contains equivalent static SQL for app startup.
+This explicit startup path is used because NativeAOT cannot safely use all
+dynamic EF migration paths.
 
-```csharp
-public record ShotDto
-{
-    public int Id { get; init; }
-    public int? BeanId { get; init; }
-    public string? BeanName { get; init; }
-    public int? MadeById { get; init; }
-    public string? MadeByName { get; init; }
-    public int? MadeForId { get; init; }
-    public string? MadeForName { get; init; }
-    public double Dose { get; init; }
-    public double GrindSetting { get; init; }
-    public double OutputWeight { get; init; }
-    public int ExtractionTime { get; init; }
-    public int Rating { get; init; }
-    public string? Notes { get; init; }
-    public DateTime LoggedAt { get; init; }
-    
-    // Computed properties
-    public double Ratio => Dose > 0 ? OutputWeight / Dose : 0;
-}
-```
+An unknown partial schema causes a visible initialization error. The app does
+not replace it with an empty database.
 
-## Migrations
+## NativeAOT Data Access
 
-Entity Framework Core migrations track database schema changes over time.
+`BaristaNotes.Core/Data/CompiledModels/` contains:
 
-### Creating a Migration
+- the compiled EF model;
+- generated entity metadata;
+- unsafe accessors; and
+- precompiled query interceptors.
 
-When you modify entity models:
+`DataAccessExtensions` supplies `BaristaNotesContextModel.Instance` through
+`UseModel`. The checked-in model, interceptors, EF packages, and entity model
+must remain synchronized.
+
+After an EF model or query change:
+
+1. use an EF tool version that matches the project packages;
+2. update the EF migration history;
+3. update the equivalent `DatabaseInitializer` schema step;
+4. regenerate the NativeAOT compiled model and precompiled queries;
+5. review all generated changes;
+6. run database integration tests; and
+7. publish the iOS NativeAOT app and review all trim and AOT warnings.
+
+Do not hand-edit generated EF logic except for a documented tool-output
+compatibility correction that cannot be generated correctly.
+
+## Adding a Schema Change
+
+Create a normal EF migration from the repository root:
 
 ```bash
-cd BaristaNotes.Core
-dotnet ef migrations add MigrationName
+dotnet ef migrations add <MigrationName> \
+  --project src/BaristaNotes.Core \
+  --startup-project src/BaristaNotes.Core \
+  --context BaristaNotesContext
 ```
 
-This generates migration files in `Migrations/`:
-- `{timestamp}_MigrationName.cs` - Migration code
-- `{timestamp}_MigrationName.Designer.cs` - Metadata
-- `BaristasDbContextModelSnapshot.cs` - Current schema snapshot
+Then:
 
-### Applying Migrations
+- inspect `Up`, `Down`, and the model snapshot;
+- preserve all existing rows during transforms;
+- add the corresponding idempotent startup step to `DatabaseInitializer`;
+- update compiled NativeAOT artifacts; and
+- add tests for a new database and each supported older schema.
 
-Migrations are applied automatically on app startup via `Database.EnsureCreated()` or explicitly:
+Never modify an applied migration to change history silently.
+
+## Data Preservation
+
+Do not use any of these actions as a repair:
+
+- delete `barista_notes.db`;
+- clear application data;
+- uninstall the application;
+- drop user tables; or
+- replace an unknown database with a new empty database.
+
+Before a manual database diagnostic:
+
+1. stop writes;
+2. make a database backup, including WAL data when present;
+3. reproduce the issue against the backup;
+4. make the repair idempotent; and
+5. add an integration test.
+
+Physical devices contain user data and must be treated as production
+environments.
+
+## Query and Repository Rules
+
+- Use async EF operations for database I/O.
+- Use `AsNoTracking` for read-only queries.
+- Project only the values that a caller needs.
+- Apply pagination to long history queries.
+- Keep write transactions short.
+- Use the existing repositories before adding direct context access.
+- Use parameterized values for SQL that must exist in
+  `DatabaseInitializer`.
+- Log failures with `ILogger<T>` and rethrow or return the established
+  `OperationResult<T>` error.
+
+## Tests
+
+Data tests use SQLite in-memory connections so they exercise the SQLite
+provider rather than the EF in-memory provider.
+
+Run:
 
 ```bash
-dotnet ef database update
+dotnet test src/BaristaNotes.Tests \
+  --filter "FullyQualifiedName~DatabaseInitializer"
 ```
 
-### Example Migration
+Tests for a schema change must cover:
 
-```csharp
-public partial class AddUserProfiles : Migration
-{
-    protected override void Up(MigrationBuilder migrationBuilder)
-    {
-        migrationBuilder.CreateTable(
-            name: "UserProfiles",
-            columns: table => new
-            {
-                Id = table.Column<int>(nullable: false)
-                    .Annotation("Sqlite:Autoincrement", true),
-                Name = table.Column<string>(nullable: false),
-                AvatarPath = table.Column<string>(nullable: true),
-                IsActive = table.Column<bool>(nullable: false),
-                CreatedAt = table.Column<DateTime>(nullable: false)
-            },
-            constraints: table =>
-            {
-                table.PrimaryKey("PK_UserProfiles", x => x.Id);
-            });
-    }
-    
-    protected override void Down(MigrationBuilder migrationBuilder)
-    {
-        migrationBuilder.DropTable(name: "UserProfiles");
-    }
-}
-```
-
-## Best Practices
-
-### 1. Always Use Async
-
-```csharp
-// Good
-var shot = await _context.ShotRecords.FirstOrDefaultAsync(s => s.Id == id);
-
-// Avoid
-var shot = _context.ShotRecords.FirstOrDefault(s => s.Id == id);
-```
-
-### 2. Include Related Data
-
-Use `Include()` to load navigation properties:
-
-```csharp
-var shot = await _context.ShotRecords
-    .Include(s => s.Bean)
-    .Include(s => s.MadeBy)
-    .FirstOrDefaultAsync(s => s.Id == id);
-```
-
-### 3. Project to DTOs
-
-Don't expose entities to the UI layer:
-
-```csharp
-// Good
-public async Task<ShotDto> GetShotAsync(int id)
-{
-    var shot = await _context.ShotRecords.FindAsync(id);
-    return MapToDto(shot);
-}
-
-// Avoid
-public async Task<ShotRecord> GetShotAsync(int id)
-{
-    return await _context.ShotRecords.FindAsync(id);
-}
-```
-
-### 4. Handle Nulls
-
-Always check for null when querying by ID:
-
-```csharp
-var shot = await _context.ShotRecords.FindAsync(id);
-if (shot == null)
-    throw new NotFoundException($"Shot {id} not found");
-```
-
-### 5. Use Transactions for Complex Operations
-
-```csharp
-using var transaction = await _context.Database.BeginTransactionAsync();
-try
-{
-    // Multiple operations
-    _context.Beans.Add(bean);
-    await _context.SaveChangesAsync();
-    
-    var shot = new ShotRecord { BeanId = bean.Id };
-    _context.ShotRecords.Add(shot);
-    await _context.SaveChangesAsync();
-    
-    await transaction.CommitAsync();
-}
-catch
-{
-    await transaction.RollbackAsync();
-    throw;
-}
-```
-
-### 6. Optimize Queries
-
-```csharp
-// Good: Single query with projection
-var shots = await _context.ShotRecords
-    .Where(s => s.BeanId == beanId)
-    .Select(s => new ShotDto 
-    { 
-        Id = s.Id, 
-        BeanName = s.Bean.Name,
-        // ...
-    })
-    .ToListAsync();
-
-// Avoid: N+1 queries
-var shots = await _context.ShotRecords
-    .Where(s => s.BeanId == beanId)
-    .ToListAsync();
-foreach (var shot in shots)
-{
-    var bean = await _context.Beans.FindAsync(shot.BeanId); // N+1!
-}
-```
-
-### 7. Separate Read and Write Models
-
-Consider using different DTOs for create, update, and read operations:
-
-```csharp
-public record CreateShotRequest(
-    int? BeanId,
-    double Dose,
-    double GrindSetting,
-    // ...
-);
-
-public record UpdateShotRequest(
-    double? Dose,
-    int? Rating,
-    string? Notes
-    // Partial updates
-);
-
-public record ShotDto
-{
-    // Full read model with computed properties
-}
-```
-
-## Troubleshooting
-
-### Database Locked
-
-SQLite doesn't support concurrent writes well. Use a singleton DbContext and ensure all operations are async:
-
-```csharp
-builder.Services.AddSingleton<BaristasDbContext>();
-```
-
-### Migration Not Applied
-
-Delete the database file and restart the app to recreate from scratch:
-
-```bash
-# iOS Simulator
-rm ~/Library/Developer/CoreSimulator/Devices/*/data/Containers/Data/Application/*/Library/baristas.db
-
-# Android Emulator
-adb shell
-cd /data/data/com.yourcompany.baristanotes/files
-rm baristas.db
-```
-
-### Slow Queries
-
-Add indexes to frequently queried columns:
-
-```csharp
-protected override void OnModelCreating(ModelBuilder modelBuilder)
-{
-    modelBuilder.Entity<ShotRecord>()
-        .HasIndex(s => s.BeanId);
-        
-    modelBuilder.Entity<ShotRecord>()
-        .HasIndex(s => s.LoggedAt);
-}
-```
-
-## Additional Resources
-
-- [Entity Framework Core Documentation](https://learn.microsoft.com/ef/core/)
-- [SQLite Provider](https://learn.microsoft.com/ef/core/providers/sqlite/)
-- [EF Core Performance Tips](https://learn.microsoft.com/ef/core/performance/)
+- a new empty database;
+- each affected legacy schema;
+- row preservation;
+- repeated initialization; and
+- the expected failure for an unsupported partial schema.

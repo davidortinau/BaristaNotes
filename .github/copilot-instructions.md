@@ -71,6 +71,26 @@ maui devflow wait
 maui devflow MAUI logs --follow
 ```
 
+### NativeAOT iOS Release
+
+Use `dotnet publish`, not `dotnet build -t:Publish`, for an iOS NativeAOT release. For the current .NET 11 Preview 7 SDK:
+
+```bash
+dotnet publish src/BaristaNotes/BaristaNotes.csproj \
+  -f net11.0-ios -c Release -r ios-arm64 \
+  -p:EnableNativeAot=true \
+  -p:PublishAot=true \
+  -p:PublishAotUsingRuntimePack=true \
+  -p:MicrosoftNETCoreAppRefPackageVersion=11.0.0-preview.7.26381.103 \
+  -p:MtouchLink=Full
+```
+
+- `PublishAotUsingRuntimePack=true` is required because `BaristaNotes.Core` targets plain `net11.0`.
+- Do not pass `TargetFrameworks=net11.0-ios` on the command line. Global properties flow into `BaristaNotes.Core` and remove its required `net11.0` restore target.
+- The Android Preview 7 workload pins an older `MicrosoftNETCoreAppRefPackageVersion`. Keep the explicit override aligned with the installed .NET SDK until the workload and SDK use the same runtime-pack build.
+- Review all `IL2xxx` and `IL3xxx` warnings before installation. Stop when app or dependency warnings remain, especially `will always throw` diagnostics. Install only after the warnings are fixed or the user explicitly accepts the affected runtime behavior.
+- Install with `xcrun devicectl device install app` over the existing app. Never uninstall first; uninstalling deletes the DX24 app sandbox.
+
 ## Code Style
 
 C# / .NET 11.0: Follow standard conventions. File-scoped namespaces; nullable reference types enabled; `record` for DTOs where appropriate; MauiReactor `Component<TState>` for UI.
@@ -159,6 +179,14 @@ Repeated failure mode: agent boots a stale simulator while the user already has 
 
 **While waiting**: if `maui devflow wait` exceeds ~30s but you have other signals the app is up (logs streaming, process running, screenshot succeeds), **stop waiting and screenshot/inspect to verify state**. Treat >60s on any single debug step as a signal to pivot, not to wait longer.
 
+### Target, Data, and Interaction Order
+
+Use this order for every UI verification:
+
+1. Select the device or simulator that already contains the state required for the scenario. If the user names DX24 or another target, do not substitute a simulator.
+2. If the selected target lacks required data, create it through the app with DevFlow before testing. Do not insert test data through SQLite or EF Core.
+3. Use DevFlow for all app UI inspection and interaction. Do not use `cliclick`, AppleScript, coordinate shell tools, `adb shell`, or other desktop automation as a substitute.
+
 ## Visual Tree Inspection Before Tap Attribution (MANDATORY)
 
 Trust-breaking failure mode: agent describes a tap-induced behavior ("the + button is launching the camera through a hidden layer") that the user can plainly see is wrong, because the agent inferred instead of inspected.
@@ -170,6 +198,16 @@ Trust-breaking failure mode: agent describes a tap-induced behavior ("the + butt
 3. Only then describe the result
 
 Never explain an unexpected behavior with a phantom "hidden control behind another control" or a "pre-existing layered handler" without visual-tree evidence. If the user says "that's not what I see," they're right — go re-inspect, don't re-argue.
+
+### Verify Every Changed UI State
+
+Before reporting that a UI change works:
+
+1. List every state and transition changed by the implementation, including expand/collapse, show/hide, loading/content, open/close, retake, success, error, and cancellation paths.
+2. Exercise every listed transition with DevFlow. Do not verify only the initial visible state.
+3. Capture or inspect the full screen before and after each transition. Check the top and bottom safe areas, fixed controls, sheet height, internal scrolling, focus, and blocked input.
+4. For new overlays, wrappers, bottom sheets, or root grids, compare the edge layout with the screen before the change. Confirm the inner layout that touches each screen edge has the intended `SafeAreaEdges` value.
+5. Do not claim success when any changed transition was not exercised.
 
 ## Sample / Test Data: Exercise the App, Don't Touch the DB (MANDATORY)
 

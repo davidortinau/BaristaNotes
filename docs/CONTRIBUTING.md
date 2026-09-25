@@ -1,484 +1,269 @@
 # Contributing to BaristaNotes
 
-Thank you for your interest in contributing to BaristaNotes! This document provides guidelines and best practices for contributing to the project.
+BaristaNotes is an educational .NET MAUI project. Contributions must keep the
+application reliable, accessible, and useful as a current reference.
 
-## Table of Contents
-
-- [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [Development Workflow](#development-workflow)
-- [Coding Standards](#coding-standards)
-- [Testing Guidelines](#testing-guidelines)
-- [Pull Request Process](#pull-request-process)
-- [Educational Focus](#educational-focus)
-
-## Code of Conduct
-
-This project is intended as an educational resource. Contributors should:
-
-- Be respectful and constructive in discussions
-- Focus on educational value and code clarity
-- Help newcomers understand .NET MAUI and MauiReactor patterns
-- Provide clear explanations for technical decisions
-
-## Getting Started
-
-### Fork and Clone
-
-1. Fork the repository on GitHub
-2. Clone your fork:
-   ```bash
-   git clone https://github.com/yourusername/BaristaNotes.git
-   cd BaristaNotes
-   ```
-3. Add upstream remote:
-   ```bash
-   git remote add upstream https://github.com/originalowner/BaristaNotes.git
-   ```
-
-### Set Up Development Environment
-
-Follow the [Getting Started Guide](GETTING_STARTED.md) to:
-- Install required software (.NET 10 SDK, IDE)
-- Install platform-specific tools (Xcode, Android SDK)
-- Build and run the application
-
-### Create a Branch
-
-Create a feature branch for your work:
+## Set Up the Repository
 
 ```bash
-git checkout -b feature/your-feature-name
+git clone https://github.com/davidortinau/BaristaNotes.git
+cd BaristaNotes
+
+dotnet workload restore src/BaristaNotes/BaristaNotes.csproj
+dotnet restore src/BaristaNotes.sln
+dotnet test src/BaristaNotes.Tests
 ```
 
-Branch naming conventions:
-- `feature/` - New features
-- `fix/` - Bug fixes
-- `docs/` - Documentation improvements
-- `refactor/` - Code refactoring
-- `test/` - Test additions or improvements
+See [Getting Started](GETTING_STARTED.md) for platform setup and run commands.
 
-## Development Workflow
-
-### 1. Sync with Upstream
-
-Before starting work, sync with the upstream repository:
+If you contribute through a fork, configure the main repository as `upstream`:
 
 ```bash
-git fetch upstream
-git checkout main
-git merge upstream/main
-git push origin main
+git remote add upstream \
+  https://github.com/davidortinau/BaristaNotes.git
 ```
 
-### 2. Make Changes
+## Before You Change Code
 
-- Follow the [Coding Standards](#coding-standards)
-- Write tests for new functionality
-- Update documentation as needed
-- Test your changes on at least one platform
+1. Read `.specify/memory/constitution.md`.
+2. Read `.specify/ARCHITECTURE_CONSTRAINTS.md`.
+3. Search the current source for an existing service, component, style, or
+   helper that owns the behavior.
+4. Check the relevant feature record under `specs/` when one exists.
+5. Preserve unrelated local changes in a dirty worktree.
 
-### 3. Commit Changes
+Do not create a second implementation of an existing pattern.
 
-Write clear, descriptive commit messages:
+## Branches and Commits
+
+Use a short branch name that describes the change:
+
+```text
+feature/custom-ranges
+fix/ios-startup
+docs/current-onboarding
+```
+
+Use Conventional Commits:
+
+```text
+feat(settings): add custom drink ranges
+fix(ios): harden NativeAOT release
+docs: update developer setup
+```
+
+Stage explicit paths. Do not use `git add .` when the worktree contains
+unrelated changes.
+
+Do not commit generated build output, logs, databases, local configuration, or
+secrets.
+
+## Code Standards
+
+- Target the frameworks declared in the project files. The current projects
+  target .NET 11.
+- Enable nullable reference types.
+- Use file-scoped namespaces.
+- Use records for immutable DTOs when appropriate.
+- Add XML documentation to public contracts where it adds useful behavior or
+  constraint information.
+- Use async database and network APIs.
+- Do not use `.Result` or `.Wait()`.
+- Keep errors visible. Do not convert failures into successful empty results.
+
+### Logging
+
+Services and components use `Microsoft.Extensions.Logging`.
+
+```csharp
+_logger.LogInformation(
+    "Saved shot {ShotId} for bag {BagId}",
+    shotId,
+    bagId);
+```
+
+Use named message-template values. Do not use interpolated log strings,
+`Debug.WriteLine`, or `Console.WriteLine` in services.
+
+## MauiReactor UI
+
+- Build screens with MauiReactor C# components.
+- Reuse `ThemeKeys`, `AppColors`, `AppFontSizes`, `AppSpacing`, and `AppIcons`.
+- Use `AdaptiveTwoLineTile` for the shared two-line row pattern.
+- Use shared form components before adding a page-specific control.
+- Use Material Symbols or image assets, not emoji icons.
+- Use `Border`, not `Frame`.
+- Use `CollectionView`, not `ListView` or `TableView`.
+- Keep touch targets at least 44 by 44 units.
+- Support large text, narrow screens, tablets, landscape, keyboard focus, and
+  screen readers.
+
+See [MauiReactor Patterns](MAUIREACTOR_PATTERNS.md).
+
+## Data Preservation
+
+User data must survive development, upgrades, and deployment.
+
+Do not:
+
+- delete `barista_notes.db`;
+- clear application data;
+- uninstall the application as a reset;
+- remove or rewrite applied migration history;
+- drop a user table without an approved data-preserving transform; or
+- create sample data through direct SQLite inserts.
+
+Treat a physical device as a production environment. Back up data before any
+manual database diagnostic.
+
+For a schema change:
+
+1. update the model and EF migration;
+2. preserve existing rows in `Up` and provide a valid `Down`;
+3. update the idempotent step in `DatabaseInitializer`;
+4. regenerate the EF NativeAOT artifacts;
+5. add database initialization tests; and
+6. publish and run the NativeAOT app.
+
+See [Data Layer](DATA_LAYER.md).
+
+## Secrets and AI Configuration
+
+Local AI configuration belongs in an ignored
+`appsettings.Development.json` file.
+
+```json
+{
+  "AzureOpenAI": {
+    "Endpoint": "https://YOUR-RESOURCE.openai.azure.com/",
+    "ApiKey": "YOUR-LOCAL-DEVELOPMENT-KEY"
+  }
+}
+```
+
+Before a commit:
 
 ```bash
-git add .
-git commit -m "Add profile image picker functionality"
+git status --short
+git diff --cached
+git check-ignore src/BaristaNotes/appsettings.Development.json
 ```
 
-Commit message guidelines:
-- Use present tense ("Add feature" not "Added feature")
-- Use imperative mood ("Move cursor to..." not "Moves cursor to...")
-- Limit first line to 72 characters
-- Reference issues and pull requests where appropriate
+Never commit a real endpoint credential, token, certificate, connection
+string, or private user data.
 
-### 4. Push Changes
+If a credential enters Git history:
+
+1. revoke it immediately;
+2. create a replacement;
+3. remove the exposed value from the working tree; and
+4. coordinate any required history cleanup.
+
+A production mobile app must call an authenticated backend. It must not contain
+or download the provider API key.
+
+Tests must use mocked configuration and clients. They must not call a paid AI
+endpoint unless the test is explicitly an authorized integration test.
+
+## Tests
+
+The project uses xUnit, Moq, and SQLite in-memory connections.
 
 ```bash
-git push origin feature/your-feature-name
+# Full test project
+dotnet test src/BaristaNotes.Tests
+
+# Targeted tests
+dotnet test src/BaristaNotes.Tests \
+  --filter "FullyQualifiedName~DrinkValueRange"
 ```
 
-### 5. Create Pull Request
+Add tests for:
 
-Open a pull request on GitHub with:
-- Clear title describing the change
-- Detailed description of what and why
-- Reference to any related issues
-- Screenshots/videos for UI changes
-- Test results
+- normal behavior;
+- invalid input;
+- boundary values;
+- cancellation;
+- service failures;
+- repeated operations; and
+- data preservation when a schema changes.
 
-## Coding Standards
+Do not use the EF in-memory provider as a substitute for SQLite behavior.
 
-### C# Style Guide
+## Validation
 
-Follow Microsoft's C# coding conventions with these specifics:
+Run the smallest checks that cover the change, then run the required
+end-to-end path.
 
-#### Naming Conventions
-
-```csharp
-// Pascal case for classes, methods, properties
-public class ShotService { }
-public void CreateShot() { }
-public string BeanName { get; set; }
-
-// Camel case for local variables, parameters
-int shotId = 1;
-public void UpdateShot(int shotId) { }
-
-// Prefix interfaces with 'I'
-public interface IShotService { }
-
-// Suffix async methods with 'Async'
-public async Task<ShotDto> GetShotAsync(int id) { }
-
-// Private fields with underscore prefix
-private readonly IShotService _shotService;
-```
-
-#### File Organization
-
-```csharp
-// 1. Usings
-using System;
-using Microsoft.Maui.Controls;
-
-// 2. Namespace
-namespace BaristaNotes.Pages;
-
-// 3. Class with members in this order:
-public class ShotLoggingPage : Component
-{
-    // Constants
-    private const int MaxRating = 5;
-    
-    // Fields
-    private readonly IShotService _shotService;
-    
-    // Constructors
-    public ShotLoggingPage() { }
-    
-    // Properties
-    public int ShotId { get; set; }
-    
-    // Public methods
-    public override VisualNode Render() { }
-    
-    // Protected methods
-    protected override void OnMounted() { }
-    
-    // Private methods
-    private async Task SaveShot() { }
-}
-```
-
-#### Code Formatting
-
-- Use 4 spaces for indentation (no tabs)
-- Place opening braces on new line
-- One statement per line
-- Always use braces for if/else blocks
-
-```csharp
-// Good
-if (condition)
-{
-    DoSomething();
-}
-
-// Avoid
-if (condition) DoSomething();
-```
-
-### MauiReactor Patterns
-
-Follow established patterns in the codebase:
-
-#### Component Structure
-
-```csharp
-// State class
-class MyPageState
-{
-    public string Text { get; set; } = "";
-    public bool IsLoading { get; set; }
-}
-
-// Props class (if needed)
-class MyPageProps
-{
-    public int ItemId { get; set; }
-}
-
-// Component
-partial class MyPage : Component<MyPageState, MyPageProps>
-{
-    [Inject]
-    IMyService _myService;
-    
-    public override VisualNode Render()
-    {
-        return ContentPage(
-            VStack(
-                Label(State.Text)
-            )
-        );
-    }
-    
-    protected override async void OnMounted()
-    {
-        base.OnMounted();
-        await LoadData();
-    }
-}
-```
-
-#### State Updates
-
-```csharp
-// Good: Single SetState call
-SetState(s => 
-{
-    s.IsLoading = false;
-    s.Data = result;
-    s.Error = null;
-});
-
-// Avoid: Multiple SetState calls
-SetState(s => s.IsLoading = false);
-SetState(s => s.Data = result);
-SetState(s => s.Error = null);
-```
-
-#### Navigation
-
-```csharp
-// Use typed props navigation
-await Shell.Current.GoToAsync<ShotLoggingPageProps>(
-    "shot-logging",
-    props => props.ShotId = shotId
-);
-
-// Avoid query parameters
-await Shell.Current.GoToAsync($"shot-logging?id={shotId}");
-```
-
-### Service Layer
-
-#### Service Interfaces
-
-```csharp
-public interface IShotService
-{
-    // Async methods with Async suffix
-    Task<ShotDto?> GetShotByIdAsync(int id);
-    Task<List<ShotDto>> GetAllShotsAsync();
-    Task<ShotDto> CreateShotAsync(CreateShotRequest request);
-    
-    // Sync properties without Async
-    int TotalShots { get; }
-}
-```
-
-#### DTOs and Requests
-
-```csharp
-// Use records for DTOs (immutable)
-public record ShotDto
-{
-    public int Id { get; init; }
-    public string? BeanName { get; init; }
-    public double Dose { get; init; }
-}
-
-// Use records for requests
-public record CreateShotRequest
-{
-    public int? BeanId { get; init; }
-    public double Dose { get; init; }
-    public int Rating { get; init; }
-}
-```
-
-### Comments and Documentation
-
-#### When to Comment
-
-```csharp
-// Good: Explain WHY, not WHAT
-// Calculate ratio to ensure we're in the 1:2 to 1:3 range for espresso
-var ratio = outputWeight / dose;
-
-// Avoid: Stating the obvious
-// Set the dose to 18
-var dose = 18;
-```
-
-#### XML Documentation
-
-Add XML docs for public APIs:
-
-```csharp
-/// <summary>
-/// Creates a new espresso shot record with the provided parameters.
-/// </summary>
-/// <param name="request">Shot creation parameters</param>
-/// <returns>The created shot DTO with generated ID</returns>
-/// <exception cref="ValidationException">Thrown when parameters are invalid</exception>
-public async Task<ShotDto> CreateShotAsync(CreateShotRequest request)
-{
-    // ...
-}
-```
-
-## Testing Guidelines
-
-### Test Structure
-
-```csharp
-public class ShotServiceTests
-{
-    [Fact]
-    public async Task CreateShotAsync_ValidData_CreatesShot()
-    {
-        // Arrange
-        var service = CreateService();
-        var request = new CreateShotRequest { Dose = 18.0 };
-        
-        // Act
-        var result = await service.CreateShotAsync(request);
-        
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(18.0, result.Dose);
-    }
-    
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public async Task CreateShotAsync_InvalidDose_ThrowsException(double dose)
-    {
-        // Arrange
-        var service = CreateService();
-        var request = new CreateShotRequest { Dose = dose };
-        
-        // Act & Assert
-        await Assert.ThrowsAsync<ValidationException>(
-            () => service.CreateShotAsync(request)
-        );
-    }
-}
-```
-
-### Test Coverage
-
-- Write tests for all service layer methods
-- Test both success and failure scenarios
-- Use theory tests for multiple input scenarios
-- Aim for high coverage but prioritize critical paths
-
-### Running Tests
+### Core or Service Change
 
 ```bash
-# All tests
-dotnet test
-
-# With coverage
-dotnet test --collect:"XPlat Code Coverage"
-
-# Specific test
-dotnet test --filter "FullyQualifiedName~ShotServiceTests"
+dotnet test src/BaristaNotes.Tests \
+  --filter "FullyQualifiedName~RelevantType"
+dotnet test src/BaristaNotes.Tests
 ```
 
-## Pull Request Process
+### MAUI UI Change
 
-### Before Submitting
-
-- [ ] Code follows style guidelines
-- [ ] Tests added/updated and passing
-- [ ] Documentation updated if needed
-- [ ] Commit messages are clear
-- [ ] Branch is up to date with main
-- [ ] Build succeeds on at least one platform
-
-### PR Description
-
-Include in your PR description:
-
-1. **Summary**: What does this PR do?
-2. **Motivation**: Why is this change needed?
-3. **Changes**: What changed? (code, docs, tests)
-4. **Testing**: How was this tested?
-5. **Screenshots**: For UI changes
-6. **Breaking Changes**: Any breaking changes?
-
-Example:
-
-```markdown
-## Summary
-Adds profile image picker functionality allowing users to select and save profile photos.
-
-## Motivation
-Users requested the ability to add profile pictures to distinguish between multiple users.
-
-## Changes
-- Added IImagePickerService and implementation
-- Added IImageProcessingService for image resizing
-- Created ProfileImagePicker component
-- Updated UserProfileService with image methods
-- Added unit tests for services
-
-## Testing
-- Tested on iOS Simulator (iPhone 15)
-- Tested on Android Emulator (Pixel 6)
-- Unit tests pass locally
-- Verified image persistence across app restarts
-
-## Screenshots
-[Include before/after screenshots]
-
-## Breaking Changes
-None
+```bash
+dotnet build src/BaristaNotes -f net11.0-ios
+dotnet build src/BaristaNotes -t:Run -f net11.0-ios
+maui devflow wait
 ```
 
-### Review Process
+Use DevFlow to inspect and exercise every changed UI state. A build and unit
+tests are prerequisites, not UI verification.
 
-1. Automated checks run (build, tests)
-2. Maintainers review code
-3. Address feedback by pushing new commits
-4. Once approved, PR will be merged
+### NativeAOT Change
 
-## Educational Focus
+Use the command in the
+[README NativeAOT section](../README.md#ios-nativeaot-release).
+Review all direct and dependency trim or AOT warnings before installation.
 
-Since this is an educational project, contributions should enhance learning value:
+## Generated Files
 
-### Good Contributions
+The repository intentionally commits:
 
-- Clear, well-commented code examples
-- Documentation improvements
-- Additional tests demonstrating patterns
-- Simplified implementations that are easier to understand
-- Performance improvements with explanations
+- EF compiled models and query interceptors under
+  `BaristaNotes.Core/Data/CompiledModels`; and
+- NativeAOT-safe AI tool code under `BaristaNotes/Services/AI/Generated`.
 
-### Avoid
+When source changes require regeneration:
 
-- Over-engineered solutions
-- Magic/clever code without explanation
-- Breaking changes without clear benefit
-- Removing educational comments
-- Complex patterns without justification
+- use tool versions that match the project;
+- remove stale generated inputs when the generator requires it;
+- review the complete generated diff; and
+- rerun tests and NativeAOT publishing.
 
-## Questions?
+Do not hide generator warnings globally to make a release appear clean.
 
-If you have questions:
+## Pull Requests
 
-1. Check existing [documentation](README.md)
-2. Search [GitHub Issues](https://github.com/yourusername/BaristaNotes/issues)
-3. Open a new issue with "Question" label
+A pull request must include:
 
-## Additional Resources
+- a clear summary and reason;
+- the meaningful implementation choices;
+- tests and end-to-end checks that ran;
+- screenshots or recordings for UI changes;
+- data migration details when applicable;
+- accepted warnings or known limitations; and
+- a statement that no secrets or user data are included.
 
-- [C# Coding Conventions](https://learn.microsoft.com/dotnet/csharp/fundamentals/coding-style/coding-conventions)
-- [.NET MAUI Docs](https://learn.microsoft.com/dotnet/maui/)
-- [MauiReactor Patterns](MAUIREACTOR_PATTERNS.md)
-- [Entity Framework Best Practices](https://learn.microsoft.com/ef/core/miscellaneous/nullable-reference-types)
+Before push:
+
+1. inspect the staged diff;
+2. run a high-signal code review of the staged change set;
+3. fix all confirmed findings;
+4. confirm unrelated files are not staged; and
+5. push without rewriting shared history.
+
+## Documentation
+
+Update current documentation when behavior, setup, architecture, or developer
+workflow changes.
+
+- Update files under `docs/` for current behavior.
+- Do not rewrite historical records under `specs/` or `docs/archive/` to make
+  them look current.
+- Mark a historical document as superseded when its status is unclear.
+- Test commands and links before submission.

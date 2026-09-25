@@ -1,37 +1,15 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version Change: 1.2.0 → 1.3.0
-Constitution Type: Minor Amendment (Enforcement Strengthening)
+Version Change: 1.3.0 -> 1.4.0
+Constitution Type: Minor Amendment (Current Architecture Alignment)
 
-Principle III (User Experience Consistency) - STRENGTHENED:
-  - "Icon Usage" rule elevated to "🚫 NO EMOJIS (NON-NEGOTIABLE HARD RULE)"
-  - Added explicit prohibition language: "ABSOLUTELY PROHIBITED", "NO EXCEPTIONS"
-  - Added examples of banned emoji characters
-  - Added "Font Icons Required" as separate enforcement point
-  - Rationale expanded to explain professional/accessibility concerns
-
-Principle V (Rating Scale Standard) - CORRECTED:
-  - Removed contradictory emoji reference (☕) from "Coffee Cup Icon Standard"
-  - Changed to explicitly require MaterialSymbolsFont.Coffee
-  - Added specific MaterialSymbolsFont icon names for all rating levels
-  - Cross-referenced AppIcons.RatingGlyphs for implementation
-
-Templates Status:
-  ✅ plan-template.md - No emoji references, UX consistency check intact
-  ✅ spec-template.md - No emoji references, accessibility requirements intact
-  ✅ tasks-template.md - No emoji references
-  ✅ ARCHITECTURE_CONSTRAINTS.md - Will add explicit emoji prohibition rule
-  
-Code Fixes Applied:
-  ✅ ShotLoggingPage.cs - Replaced ☕ emoji with MaterialSymbolsFont.Coffee
-  ✅ specs/001-inline-bean-creation/quickstart.md - Replaced emoji in diagram
-
-Rationale for Version 1.3.0 (MINOR bump):
-  - Strengthened existing principle (not adding new principle)
-  - Fixed internal contradiction in Rating Scale Standard
-  - Clarified enforcement language for emoji prohibition
-  - No breaking changes to governance structure
+- Aligns data rules with the EF migration history and the versioned,
+  NativeAOT-safe DatabaseInitializer deployment path.
+- Aligns testing rules with the installed xUnit, Moq, and SQLite stack.
+- Replaces web performance concepts with mobile application checks.
+- Clarifies that semantic theme tokens and component-specific geometry can
+  coexist.
 -->
 
 # BaristaNotes Constitution
@@ -71,7 +49,7 @@ User-facing functionality MUST provide a consistent, high-quality experience:
 
 - **Design System Adherence**: All UI components MUST follow the established design system. Custom components require design review.
 - **🚫 NO EMOJIS (NON-NEGOTIABLE HARD RULE)**: Emojis are **ABSOLUTELY PROHIBITED** in all user interface code. This includes but is not limited to: ☕, ⭐, ⚠️, ✓, ✕, ℹ️, and ANY Unicode emoji character. ALWAYS use `MaterialSymbolsFont` icons or explicit PNG/SVG assets. NO EXCEPTIONS. Emojis render inconsistently across platforms, break accessibility, and violate professional UI standards.
-- **Font Icons Required**: All iconography MUST use `MaterialSymbolsFont.FontFamily` with the appropriate glyph constant (e.g., `MaterialSymbolsFont.Coffee`, `MaterialSymbolsFont.Warning`). See `Resources/Fonts/MaterialSymbolsFont.cs` for available icons.
+- **Font Icons Required**: All iconography MUST use `MaterialSymbolsFont.FontFamily` with the appropriate glyph constant (e.g., `MaterialSymbolsFont.Coffee`, `MaterialSymbolsFont.Warning`). See `src/BaristaNotes/Components/MaterialSymbolsFont.cs` for available icons.
 - **Accessibility Standards**: WCAG 2.1 Level AA compliance is mandatory. All interactive elements must be keyboard navigable and screen-reader compatible.
 - **Error Handling**: User-facing errors MUST be clear, actionable, and never expose technical details. Provide recovery steps when possible.
 - **Responsive Design**: All interfaces MUST function on mobile, tablet, and desktop form factors. Touch targets minimum 44x44px.
@@ -127,7 +105,7 @@ All technical implementation MUST adhere to the established architectural constr
   - **Feedback/Popups**: UXDivers.Popups.Maui via IFeedbackService
   - **Navigation**: Shell-based with MauiReactor extensions
   - **Data Layer**: Entity Framework Core with migrations
-  - **Testing**: xUnit with FluentAssertions
+  - **Testing**: xUnit with Moq and SQLite in-memory test databases
   - **Dependency Injection**: Microsoft.Extensions.DependencyInjection
 - **Pattern Consistency**: Follow established patterns for state management, async/await, and navigation as defined in architecture constraints.
 - **No Pattern Deviation**: Do not introduce alternative libraries, frameworks, or patterns without documented justification and approval.
@@ -139,31 +117,31 @@ All technical implementation MUST adhere to the established architectural constr
 
 ### Measurement & Monitoring
 
-- **Continuous Monitoring**: Production performance metrics collected via APM (Application Performance Monitoring) tooling.
-- **Synthetic Monitoring**: Automated performance tests run on every deployment to catch regressions.
-- **Real User Monitoring**: Track actual user experience metrics (First Contentful Paint, Time to Interactive, Cumulative Layout Shift).
-- **Performance Budgets**: Each page/feature has a defined performance budget. Exceeding budget requires architectural review.
+- **Runtime Diagnostics**: Use structured `ILogger<T>` events and DevFlow logs during development.
+- **Device Validation**: Verify UI-bearing changes on a supported simulator or device and use a physical device for hardware-specific behavior.
+- **Performance Budgets**: Define a measurable budget before performance work. A regression greater than 20% requires review.
 
 ### Optimization Requirements
 
 - **Database Queries**: All queries MUST use appropriate indexes. N+1 queries are prohibited.
 - **Caching Strategy**: Frequently accessed, infrequently changing data MUST be cached with appropriate invalidation.
-- **Asset Optimization**: All static assets minified, compressed, and served via CDN.
-- **Background Processing**: Long-running operations (>3s) MUST be async with progress indication.
+- **Asset Optimization**: Bundled images and fonts MUST be sized and compressed for mobile delivery.
+- **Background Processing**: Long-running operations (>3s) MUST be async, cancellable when possible, and show progress.
 
 ### Database Schema Management (NON-NEGOTIABLE)
 
-- **EF Core Migrations Only**: ALL database schema changes MUST be made through Entity Framework Core migrations. Manual schema modifications are PROHIBITED.
-- **Data Preservation First**: Migrations MUST preserve existing user data. Use data-preserving SQL for complex transformations.
-- **Migration Discipline**: See `.specify/ARCHITECTURE_CONSTRAINTS.md` for detailed EF Core migration workflow and implementation patterns.
+- **Versioned Schema Changes**: Every schema change MUST update the EF migration history and model snapshot.
+- **NativeAOT Deployment Path**: The equivalent idempotent schema step MUST be implemented in `DatabaseInitializer`, because app startup uses static SQL instead of the dynamic EF migration runner.
+- **Data Preservation First**: Both representations MUST preserve existing data and have integration tests.
+- **Compiled Model Alignment**: Regenerate the checked-in EF compiled model and query interceptors after model or affected query changes.
 
-**Rationale**: Database migrations provide versioned, testable, rollback-able schema changes with full audit trail. Manual changes bypass change tracking and create deployment risks.
+**Rationale**: EF migrations keep the design-time history. The versioned initializer provides an explicit, testable, NativeAOT-safe application path.
 
 ### Data Preservation (NON-NEGOTIABLE)
 
 - **NEVER DELETE THE DATABASE**: Under NO circumstances is it acceptable to delete the database, regardless of migration issues, schema conflicts, or development challenges.
 - **User Data is Sacred**: All user data MUST be preserved during schema changes, feature development, debugging, or any other development activity.
-- **Migration-Based Solutions Only**: Any database issues MUST be resolved through proper EF Core migrations that preserve existing data.
+- **Versioned Repairs Only**: Database repairs MUST use a reviewed EF migration and, when the app must apply the change, an equivalent idempotent `DatabaseInitializer` step.
 - **Data-Preserving Migration Strategy**:
   1. When renaming columns/tables: Use `RenameColumn()` and `RenameTable()` operations
   2. When restructuring data: Include SQL in migration to copy/transform existing data to new schema
@@ -250,7 +228,7 @@ Exception to constitutional principles require:
 
 All MauiReactor UI code MUST follow these standards:
 
-- **ThemeKey System (MANDATORY)**: Never use inline styling methods (`.FontSize()`, `.TextColor()`, `.BackgroundColor()`, etc.). All styling MUST use the ThemeKey system.
+- **Theme System (MANDATORY)**: Use `ThemeKey` and shared design constants for semantic styles. Direct values are allowed for component-specific geometry when no shared semantic token applies.
 - **Theme File References**: Before creating new theme keys, reference existing theme files:
   - `ThemeKeys.cs` - Theme key constants
   - `AppColors.cs` - Color definitions  
@@ -264,22 +242,25 @@ All MauiReactor UI code MUST follow these standards:
 
 ### Build Verification Standard
 
-**ALWAYS build the application before reporting completion**:
+**ALWAYS run the checks that prove the changed behavior before reporting completion**:
 
-1. Run `dotnet build` after ALL code changes
-2. Verify zero compilation errors before marking tasks complete
-3. Never report "no errors" without actually building
-4. Fix all compilation errors as part of the task (not deferred)
+1. Run the targeted build and tests after code changes.
+2. For UI changes, run the app and verify all changed states with MAUI DevFlow.
+3. For data changes, exercise the real SQLite initialization or operation.
+4. For NativeAOT changes, publish and launch the Release application.
+5. Never report successful checks that did not run.
 
 **Rationale**: Unbuildable code breaks the development pipeline and wastes team time. Build verification is a basic quality gate that must never be skipped.
 
-### EF Core Migration Standards
+### EF Core Schema Standards
 
 Entity Framework Core migration discipline:
 
 - **Migration File Preservation**: Never delete existing migration files. They are the historical record of schema evolution.
 - **Restore Before Adding**: If migrations are accidentally deleted, restore from git history before creating new ones.
-- **Data-Preserving SQL**: Include custom SQL in migrations for complex schema changes affecting existing data.
+- **Data-Preserving SQL**: Include reviewed SQL for complex transformations in the migration and equivalent initializer step.
+- **Initializer Alignment**: Keep `DatabaseInitializer` migration identifiers, schema checks, and SQL synchronized with the EF migration history.
+- **NativeAOT Artifacts**: Regenerate and review the compiled model and query interceptors after affected changes.
 - **Production Testing**: Test migrations on production-like data before deployment.
 - **Rollback Procedures**: Document rollback plans for complex migrations.
 
@@ -296,4 +277,4 @@ For **technical implementation rules** (the "HOW"), see:
 
 Both documents are mandatory. Constitution violations require amendment process; Architecture Constraint violations require stakeholder approval.
 
-**Version**: 1.3.0 | **Ratified**: 2025-12-02 | **Last Amended**: 2025-12-09
+**Version**: 1.4.0 | **Ratified**: 2025-12-02 | **Last Amended**: 2026-08-30

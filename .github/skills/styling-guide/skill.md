@@ -28,7 +28,9 @@ When implementing new UI features:
 
 ## Color Palette
 
-All colors are defined in `AppColors.cs`. Use theme-aware colors via `AppColors.Light.*` or `AppColors.Dark.*`.
+All colors are defined in `AppColors.cs`. Prefer a reusable `ThemeKey`. When a
+control cannot consume a theme key, select the correct `AppColors.Light.*` or
+`AppColors.Dark.*` token for the surface that the control actually renders.
 
 ### Semantic Colors (Same in Both Themes)
 
@@ -72,12 +74,13 @@ All colors are defined in `AppColors.cs`. Use theme-aware colors via `AppColors.
 ### Using Colors in Code
 
 ```csharp
-// ✅ CORRECT: Theme-aware colors
-.BackgroundColor(AppColors.Light.Surface)  // or AppColors.Dark.Surface
-.TextColor(AppColors.Dark.TextPrimary)
+// ✅ CORRECT: Theme-aware reusable component
+Border().ThemeKey(ThemeKeys.Card)
 
-// ✅ CORRECT: With theme check
-var bgColor = ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface;
+// ✅ CORRECT: Token-based fallback when the control cannot consume ThemeKey
+var bgColor = ApplicationTheme.IsLightTheme
+    ? AppColors.Light.Surface
+    : AppColors.Dark.Surface;
 
 // ❌ WRONG: Hardcoded hex values
 .BackgroundColor(Color.FromArgb("#48362E"))  // Use AppColors instead
@@ -202,6 +205,22 @@ Entry()
     .ThemeKey(ThemeKeys.Entry)
 ```
 
+### Fixed-theme and third-party chrome
+
+Style the host chrome and the MauiReactor content as separate surfaces. A
+third-party popup can render fixed dark chrome even when the app theme is
+light. Theme-aware content tokens can then have the wrong contrast.
+
+- First inspect the actual chrome or backdrop color.
+- If the chrome is fixed dark, use `AppColors.Dark.*` tokens for content placed
+  directly on that chrome in both app themes.
+- If the chrome follows the app theme, use a `ThemeKey` or select the matching
+  light/dark tokens.
+- Configure the third-party host background as well as the inner content. Do
+  not style only the inner `Border` and assume the popup shell inherits it.
+- Verify light and dark app themes. Exercise show/hide and short/long content,
+  then inspect the sheet bounds and internal scrolling with DevFlow.
+
 ## Icons
 
 ### Icon Fonts
@@ -272,18 +291,25 @@ Label()
 
 ### ThemeKey System (MANDATORY)
 
-**Never use inline styling methods**. All styling MUST use the ThemeKey system for consistency and theme support.
+Use `ThemeKey` for reusable component styles. Inline styling is permitted when
+the value is instance-specific or a third-party control cannot consume a theme
+key. Inline colors must still use `AppColors` tokens; never use hardcoded color
+values. Add a theme key when the same style is used by more than one component.
 
 ```csharp
-// ❌ WRONG: Inline styling is PROHIBITED
+// ❌ WRONG: Hardcoded reusable style
 Label("Title")
     .FontSize(24)
     .TextColor(Colors.Brown)
     .FontAttributes(FontAttributes.Bold)
 
-// ✅ CORRECT: Always use ThemeKeys
+// ✅ CORRECT: Reusable style uses ThemeKeys
 Label("Title")
     .ThemeKey(ThemeKeys.Headline)
+
+// ✅ CORRECT: Fixed-dark third-party chrome uses palette tokens
+Label("Popup message")
+    .TextColor(AppColors.Dark.TextPrimary)
 ```
 
 Before creating new theme keys, check existing keys in:

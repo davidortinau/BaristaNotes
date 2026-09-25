@@ -38,7 +38,7 @@ Label("✓")   // BANNED
 Label("❌")  // BANNED
 ```
 
-**Available Icons**: See `Resources/Fonts/MaterialSymbolsFont.cs` for the full list of available icons.
+**Available Icons**: See `src/BaristaNotes/Components/MaterialSymbolsFont.cs` for the full list of available icons.
 
 **Common Icon Mappings**:
 | Intent | Correct | WRONG |
@@ -65,15 +65,20 @@ Label("❌")  // BANNED
 - ✅ `Button("Click Me").OnClicked(async () => ...)`
 - ✅ `Entry().Text(state.Name).OnTextChanged(t => ...)`
 - ❌ `new Button { Text = "Click Me" }`
-- ❌ XAML files
+- ❌ XAML application screens
+
+XAML resource dictionaries required by MAUI or a dependency are allowed.
 
 ---
 
-## 🚫 Popups, Toasts, Alerts: UXDivers.Popups.Maui
+## 🚫 Feedback and Toasts: UXDivers.Popups.Maui
 
-**RULE**: ALL popups, toasts, modals, and alert-style UI **MUST** use **UXDivers.Popups.Maui** library.
+**RULE**: User feedback and toast-style messages **MUST** use
+`IFeedbackService`. UXDivers popups are used for custom modal workflows.
+Blocking confirmation questions and platform workflow messages can use
+`ContainerPage.DisplayAlertAsync`.
 
-**Package**: `UXDivers.Grial`
+**Package**: `UXDivers.Popups.Maui`
 
 **Why**: This provides:
 - Consistent styled popups across the app
@@ -81,35 +86,46 @@ Label("❌")  // BANNED
 - Custom animations and positioning
 - Full control over appearance
 
-**Service**: `IFeedbackService` wraps UXDivers and provides:
-- `ShowSuccess(message)` - Green toast with ✓
-- `ShowError(message, recoveryAction?)` - Red toast with ✕
-- `ShowInfo(message)` - Blue toast with ℹ
-- `ShowWarning(message)` - Yellow toast with ⚠
-- `ShowLoading(message)` / `HideLoading()` - Loading spinner overlay
+**Service**: `IFeedbackService` wraps application feedback and provides:
+- `ShowSuccessAsync(message)`
+- `ShowErrorAsync(message, recoveryAction?)`
+- `ShowInfoAsync(message)`
+- `ShowWarningAsync(message)`
+- `ShowActionToastAsync(message, actionText, onAction)`
+- observable feedback and loading-state streams
 
 **❌ DO NOT USE**:
 - ❌ `CommunityToolkit.Maui.Alerts.Toast` - Wrong library!
-- ❌ `Application.Current.MainPage.DisplayAlert()` - Blocking, inconsistent styling
+- ❌ `Application.Current.MainPage.DisplayAlert()` - Bypasses the component page
 - ❌ Custom popup implementations - Reinventing the wheel
 - ❌ Platform-specific toasts - No control over styling
 
 **Examples**:
 ```csharp
 // ✅ CORRECT
-_feedbackService.ShowSuccess("Shot saved successfully");
-_feedbackService.ShowError("Failed to save", "Please try again");
+await _feedbackService.ShowSuccessAsync("Shot saved successfully");
+await _feedbackService.ShowErrorAsync("Failed to save", "Please try again");
 
 // ❌ WRONG
 var toast = Toast.Make("Shot saved"); // CommunityToolkit
 await Application.Current.MainPage.DisplayAlert("Success", "Shot saved", "OK");
 ```
 
+For a required confirmation:
+
+```csharp
+var confirmed = await ContainerPage.DisplayAlertAsync(
+    "Delete bag?",
+    "This action cannot be undone.",
+    "Delete",
+    "Cancel");
+```
+
 **Implementation Details**:
-- UXDivers toasts are `async void` (fire-and-forget)
+- Feedback methods return `Task` and callers await them
 - Default durations: Success=2000ms, Error=5000ms, Info=3000ms, Warning=3000ms
 - Toasts display at top of screen with slide-in animation
-- **If navigating after showing toast**: Add `await Task.Delay(2000)` to allow toast to display
+- Do not add arbitrary delays to coordinate navigation and feedback
 
 ---
 
@@ -168,15 +184,15 @@ var shotService = ServiceLocator.Get<IShotService>(); // Service locator pattern
 
 **Why**: Centralized schema management, migrations, change tracking, LINQ queries.
 
-**❌ DO NOT USE**:
-- ❌ Raw SQL strings
-- ❌ SQLite.Net direct queries
-- ❌ Manual ADO.NET connections
+**DO NOT USE**:
+- SQLite.Net direct queries
+- page-level ADO.NET connections
+- direct database writes to create test or sample data
 
-**Exception**: Raw SQL is allowed ONLY for:
-- Complex reporting queries that EF can't optimize
-- Bulk operations where performance is critical
-- Must use `dbContext.Database.ExecuteSqlRaw()` with parameterized queries
+**Versioned startup exception**: `DatabaseInitializer` uses reviewed static SQL
+for idempotent, NativeAOT-safe schema creation and upgrades. Data values must
+remain parameterized. Normal application data access still uses EF and the
+existing repositories.
 
 ### EF Core Migration Workflow (MANDATORY)
 
@@ -206,8 +222,10 @@ var shotService = ServiceLocator.Get<IShotService>(); // Service locator pattern
 
 3. **Generate Migration**:
    ```bash
-   cd BaristaNotes.Core
-   dotnet ef migrations add AddRatingToShotRecord
+   dotnet ef migrations add AddRatingToShotRecord \
+     --project src/BaristaNotes.Core \
+     --startup-project src/BaristaNotes.Core \
+     --context BaristaNotesContext
    ```
 
 4. **Review Generated Migration**:
@@ -229,22 +247,22 @@ var shotService = ServiceLocator.Get<IShotService>(); // Service locator pattern
      }
      ```
 
-5. **Test Migration Locally**:
-   ```bash
-   dotnet ef database update
-   ```
+5. **Update the Startup Path**:
+   - Add the same idempotent schema step and migration identifier to
+     `DatabaseInitializer`.
+   - Add integration tests for a new database, the affected legacy schema, and
+     repeated initialization.
 
-6. **Test Rollback** (verify Down() works):
-   ```bash
-   dotnet ef database update [PreviousMigrationName]
-   dotnet ef database update  # Re-apply
-   ```
+6. **Regenerate NativeAOT Artifacts**:
+   - Use an EF tool version that matches the project packages.
+   - Regenerate the compiled model and precompiled query interceptors.
 
-7. **Production Deployment**: Application startup automatically applies migrations:
-   ```csharp
-   // In App.xaml.cs or Startup
-   await dbContext.Database.MigrateAsync();
-   ```
+7. **Test Migration and Rollback**:
+   - Verify `Up()` and `Down()` against a backup.
+   - Verify application startup through `DatabaseInitializer`.
+
+8. **Production Deployment**: Application startup runs the versioned
+   `DatabaseInitializer` path. It does not call `Database.MigrateAsync()`.
 
 ### Data-Preserving Migration Patterns
 
@@ -306,8 +324,9 @@ protected override void Up(MigrationBuilder migrationBuilder)
 ### Migration Troubleshooting
 
 **Problem**: "Table already exists" error
-- **DO**: Create migration to add `DropTable()` or use `migrationBuilder.Sql("DROP TABLE IF EXISTS...")` in Up()
-- **DON'T**: Delete database or manually drop table
+- **DO**: Inspect the schema and migration history on a backup, then add an
+  idempotent corrective migration and initializer check.
+- **DON'T**: Delete the database or drop the table as a general repair.
 
 **Problem**: Migration and database out of sync
 - **DO**: Check `__EFMigrationsHistory` table, create corrective migration
@@ -335,9 +354,10 @@ protected override void Up(MigrationBuilder migrationBuilder)
 
 ---
 
-## 🚫 Testing Framework: xUnit + FluentAssertions
+## 🚫 Testing Framework: xUnit + Moq
 
-**RULE**: All tests use xUnit syntax with FluentAssertions for assertions.
+**RULE**: All tests use xUnit syntax. Use Moq for suitable dependency test
+doubles and SQLite in-memory connections for EF tests.
 
 **Examples**:
 ```csharp
@@ -346,7 +366,7 @@ protected override void Up(MigrationBuilder migrationBuilder)
 public void Should_Calculate_Correctly()
 {
     var result = calculator.Add(2, 3);
-    result.Should().Be(5);
+    Assert.Equal(5, result);
 }
 
 // ❌ WRONG
@@ -362,22 +382,13 @@ public void TestCalculation()
 ## 🚫 Async/Await Patterns
 
 **RULE**: 
-1. Methods returning `Task` or `Task<T>` **MUST** be `async`
-2. `async void` is **ONLY** allowed for event handlers
-3. Always `await` async operations - don't use `.Result` or `.Wait()`
-
-**Navigation Timing with Toasts**:
-When showing a toast before navigation:
-```csharp
-// ✅ CORRECT - Wait for toast to display
-_feedbackService.ShowSuccess("Operation complete");
-await Task.Delay(2000); // Match toast duration
-await Navigation.PopAsync();
-
-// ❌ WRONG - Toast gets interrupted
-_feedbackService.ShowSuccess("Operation complete");
-await Navigation.PopAsync(); // Immediate navigation kills toast
-```
+1. Await asynchronous I/O.
+2. A method can return an existing `Task` without the `async` keyword when no
+   local await is required.
+3. `async void` is allowed only for event handlers and framework lifecycle
+   overrides that require it.
+4. Do not use `.Result` or `.Wait()`.
+5. Propagate `CancellationToken` for work that can outlive its caller.
 
 ---
 
@@ -416,4 +427,3 @@ class MyPage : Component<MyState>
 3. **Document your reasoning** if you think a constraint should be changed
 
 **Remember**: These constraints exist for **consistency**, **maintainability**, and **team productivity**. Violating them creates technical debt.
-

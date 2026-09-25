@@ -1,612 +1,200 @@
 # Service Architecture
 
-This document describes the service layer in BaristaNotes, including dependency injection configuration, service interfaces, and implementation patterns.
+BaristaNotes separates UI, domain behavior, persistence, and platform
+integration through dependency injection.
 
-## Table of Contents
+## Registration
 
-- [Overview](#overview)
-- [Dependency Injection](#dependency-injection)
-- [Core Services](#core-services)
-- [Platform Services](#platform-services)
-- [Service Patterns](#service-patterns)
+`MauiProgram.CreateMauiApp()` calls focused registration extensions instead of
+putting all registrations in one method.
 
-## Overview
+| Extension | Services |
+|---|---|
+| `AddDataAccess` | EF context, database initializer, repositories, and preferences store |
+| `AddDomainServices` | Shots, beans, bags, equipment, profiles, ratings, recipes, value ranges, feedback, and themes |
+| `AddRecipeSourcing` | Roaster adapters, adapter registry, and recipe sourcing |
+| `AddImageServices` | Media picker, image processing, and image analysis |
+| `AddVoiceServices` | Speech recognition, data notifications, navigation tools, voice tools, and overlay |
+| `AddAIChatClients` | AI advice, grind translation, and optional local chat client |
 
-The service layer encapsulates business logic and coordinates between the UI and data layers. Services are registered in the dependency injection container and injected into components as needed.
+Registration files are under `src/BaristaNotes/Hosting/`.
 
-### Architecture Layers
+## Lifetimes
 
-```
-┌──────────────────────────────┐
-│        UI Layer              │
-│  (MauiReactor Components)    │
-└──────────┬───────────────────┘
-           │ Inject Services
-           ▼
-┌──────────────────────────────┐
-│      Service Layer           │
-│  (Business Logic)            │
-└──────────┬───────────────────┘
-           │ Use Repositories
-           ▼
-┌──────────────────────────────┐
-│       Data Layer             │
-│  (Entity Framework Core)     │
-└──────────────────────────────┘
-```
+| Lifetime | Current use |
+|---|---|
+| Scoped | EF context, repositories, data-backed domain services, voice command tools, recipe sourcing |
+| Singleton | Preferences, value ranges, feedback, theme, image services, AI advice, speech recognition, navigation registry |
+| Transient | Popup instances |
 
-## Dependency Injection
+The EF context is scoped. It must not be changed to a singleton.
 
-Services are registered in `MauiProgram.cs` during app startup.
+## Domain Services
 
-### Service Registration
+Domain interfaces and most implementations are under
+`src/BaristaNotes.Core/Services/`.
 
-```csharp
-public static class MauiProgram
-{
-    public static MauiApp CreateMauiApp()
-    {
-        var builder = MauiApp.CreateBuilder();
-        
-        // Core Services (Singleton - app lifetime)
-        builder.Services.AddSingleton<BaristasDbContext>();
-        builder.Services.AddSingleton<IPreferencesService, PreferencesService>();
-        
-        // Business Services (Transient - per use)
-        builder.Services.AddTransient<IShotService, ShotService>();
-        builder.Services.AddTransient<IBeanService, BeanService>();
-        builder.Services.AddTransient<IEquipmentService, EquipmentService>();
-        builder.Services.AddTransient<IUserProfileService, UserProfileService>();
-        
-        // Platform Services (Transient)
-        builder.Services.AddTransient<IImagePickerService, ImagePickerService>();
-        builder.Services.AddTransient<IImageProcessingService, ImageProcessingService>();
-        builder.Services.AddSingleton<IFeedbackService, FeedbackService>();
-        
-        // MAUI Platform Services
-        builder.Services.AddSingleton(MediaPicker.Default);
-        
-        return builder.Build();
-    }
-}
-```
+| Interface | Responsibility |
+|---|---|
+| `IShotService` | Create, update, query, filter, and enrich logged drinks |
+| `IBeanService` | Manage beans, search names, list roasters and origins, and refresh recipes |
+| `IBagService` | Manage physical bags and completion state |
+| `IEquipmentService` | Manage machines, grinders, and accessories |
+| `IUserProfileService` | Manage profiles and profile images |
+| `IRatingService` | Calculate bean and bag rating aggregates |
+| `IRecipeService` | Query, create, update, and import recipes |
+| `IDrinkValueRangeService` | Resolve and persist Auto or Custom value ranges |
+| `IPreferencesService` | Store application preferences |
 
-### Service Lifetimes
+Data-backed services are scoped because they use scoped repositories or
+`BaristaNotesContext`.
 
-| Lifetime | Description | Use Cases |
-|----------|-------------|-----------|
-| **Singleton** | One instance for app lifetime | DbContext, preferences, app state |
-| **Transient** | New instance each time | Stateless services, data operations |
-| **Scoped** | One instance per scope | Not typically used in MAUI apps |
+## Value Range Service
 
-## Core Services
+`IDrinkValueRangeService` supports four metrics:
 
-Core services handle business logic and data operations.
+- dose;
+- yield;
+- grind size in microns; and
+- time.
 
-### IShotService
+Each metric has an app-wide mode:
 
-Manages espresso shot records.
+- `Auto` resolves the recommended range from
+  `BrewMethodValueRangeCatalog`.
+- `Custom` uses a saved range for the selected brew method.
+- A method with no custom override uses the Auto fallback.
 
-```csharp
-public interface IShotService
-{
-    // Query
-    Task<ShotDto?> GetShotByIdAsync(int id);
-    Task<List<ShotDto>> GetAllShotsAsync();
-    Task<List<ShotDto>> GetShotsByBeanIdAsync(int beanId);
-    Task<List<ShotDto>> GetShotsByDateRangeAsync(DateTime start, DateTime end);
-    Task<List<ShotDto>> GetRecentShotsAsync(int count = 10);
-    
-    // Command
-    Task<ShotDto> CreateShotAsync(CreateShotRequest request);
-    Task<ShotDto> UpdateShotAsync(int id, UpdateShotRequest request);
-    Task DeleteShotAsync(int id);
-    
-    // Statistics
-    Task<ShotStatistics> GetStatisticsAsync(int? beanId = null);
-}
-```
+The service stores only user overrides. It does not copy the full default
+catalog into Preferences. `SettingsChanged` lets active UI update after a
+setting changes.
 
-**Implementation Example**:
+The drink logging page uses the effective range for controls and preserves an
+existing historical value even when it is outside the preferred range.
+
+## Data Access Services
+
+Repositories are under `BaristaNotes.Core/Data/Repositories/`.
+
+Current repositories cover:
+
+- equipment;
+- beans;
+- bags;
+- user profiles;
+- shots;
+- recipes;
+- grinder profiles; and
+- grind translation cache entries.
+
+`DatabaseInitializer` is scoped because it uses the scoped EF context.
+`DatabaseInitializationService` is a singleton coordinator that creates a
+scope, runs initialization once, and shares the result with application
+startup.
+
+See [Data Layer](DATA_LAYER.md) for schema rules.
+
+## Feedback and Theme Services
+
+`IFeedbackService` wraps the application feedback system:
 
 ```csharp
-public class ShotService : IShotService
-{
-    private readonly BaristasDbContext _context;
-    
-    public ShotService(BaristasDbContext context)
-    {
-        _context = context;
-    }
-    
-    public async Task<ShotDto?> GetShotByIdAsync(int id)
-    {
-        var shot = await _context.ShotRecords
-            .Include(s => s.Bean)
-            .Include(s => s.MadeBy)
-            .Include(s => s.MadeFor)
-            .Include(s => s.Machine)
-            .Include(s => s.Grinder)
-            .FirstOrDefaultAsync(s => s.Id == id);
-            
-        return shot == null ? null : ShotMapper.ToDto(shot);
-    }
-    
-    public async Task<ShotDto> CreateShotAsync(CreateShotRequest request)
-    {
-        var shot = new ShotRecord
-        {
-            BeanId = request.BeanId,
-            MadeById = request.MadeById,
-            MadeForId = request.MadeForId,
-            MachineId = request.MachineId,
-            GrinderId = request.GrinderId,
-            Dose = request.Dose,
-            GrindSetting = request.GrindSetting,
-            OutputWeight = request.OutputWeight,
-            ExtractionTime = request.ExtractionTime,
-            WaterTemperature = request.WaterTemperature,
-            Rating = request.Rating,
-            Notes = request.Notes,
-            LoggedAt = DateTime.UtcNow
-        };
-        
-        _context.ShotRecords.Add(shot);
-        await _context.SaveChangesAsync();
-        
-        // Reload with navigation properties
-        return (await GetShotByIdAsync(shot.Id))!;
-    }
-    
-    public async Task<ShotStatistics> GetStatisticsAsync(int? beanId = null)
-    {
-        var query = _context.ShotRecords.AsQueryable();
-        
-        if (beanId.HasValue)
-            query = query.Where(s => s.BeanId == beanId.Value);
-        
-        var shots = await query.ToListAsync();
-        
-        return new ShotStatistics
-        {
-            TotalShots = shots.Count,
-            AverageDose = shots.Average(s => s.Dose),
-            AverageOutputWeight = shots.Average(s => s.OutputWeight),
-            AverageExtractionTime = shots.Average(s => s.ExtractionTime),
-            AverageRating = shots.Average(s => s.Rating)
-        };
-    }
-}
+await _feedbackService.ShowSuccessAsync("Shot saved");
+await _feedbackService.ShowErrorAsync(
+    "The shot could not be saved",
+    "Check the values and try again");
 ```
 
-### IBeanService
+It also exposes feedback and loading-state observables and supports haptic
+feedback.
 
-Manages coffee bean inventory.
+`IThemeService` stores and applies light, dark, or system theme mode. UI code
+uses the shared theme keys and design constants.
+
+## Image Services
+
+| Interface | Responsibility |
+|---|---|
+| `IImagePickerService` | Select or capture images through MAUI media APIs |
+| `IImageProcessingService` | Validate, downsample, save, and delete app images |
+| `IVisionService` | Classify photos and extract bean or person information |
+
+Library photo picks can contain full-resolution HEIC or JPEG data. The
+processing service downsamples before size validation. UI code loads saved
+absolute paths through streams and uses cache-busting when a file path is
+reused.
+
+## Voice and AI Services
+
+The voice pipeline combines:
+
+- MAUI speech-to-text;
+- `VoiceCommandService`;
+- source-defined navigation and data tools;
+- `Microsoft.Extensions.AI` function invocation; and
+- a window-level voice overlay.
+
+`VoiceTools.g.cs` is checked in because its NativeAOT-safe schema and invocation
+code must not depend on runtime reflection.
+
+AI provider behavior:
+
+1. Supported non-NativeAOT iOS builds register Apple Intelligence.
+2. Services try the local client when it is available.
+3. Services can fall back to Azure OpenAI.
+4. NativeAOT builds exclude the Apple Intelligence package and local client.
+
+Azure OpenAI configuration uses:
+
+```text
+AzureOpenAI:Endpoint
+AzureOpenAI:ApiKey
+```
+
+Main model assignments:
+
+- advice, voice commands, and grind translation: `gpt-4.1-mini`;
+- image analysis: `gpt-4o`; and
+- image field extraction: `gpt-4o-mini`.
+
+`Microsoft.Extensions.AI` abstractions keep service code separate from the
+provider client and make tests possible without a network request.
+
+## Error Handling
+
+Use the error contract already established by the service:
+
+- `OperationResult<T>` for expected domain failures in services that use it;
+- specific exceptions for unexpected or invalid operations;
+- `IFeedbackService` for clear user-facing messages; and
+- `ILogger<T>` for technical details.
+
+Do not catch `Exception` only to return a successful result or an empty
+collection. Log the failure and preserve the error signal.
+
+## Logging
+
+Services use constructor-injected `ILogger<T>` with structured templates:
 
 ```csharp
-public interface IBeanService
-{
-    Task<BeanDto?> GetBeanByIdAsync(int id);
-    Task<List<BeanDto>> GetAllBeansAsync();
-    Task<List<BeanDto>> GetActiveBeansAsync();
-    Task<BeanDto> CreateBeanAsync(CreateBeanRequest request);
-    Task<BeanDto> UpdateBeanAsync(int id, UpdateBeanRequest request);
-    Task DeleteBeanAsync(int id);
-    Task UpdateStockAsync(int id, double amount);
-}
+_logger.LogInformation(
+    "Updated bag {BagId} with {ShotCount} shots",
+    bagId,
+    shotCount);
 ```
 
-### IEquipmentService
+Do not use interpolated log messages, `Debug.WriteLine`, or
+`Console.WriteLine` in services.
 
-Manages espresso equipment.
+## Adding a Service
 
-```csharp
-public interface IEquipmentService
-{
-    Task<EquipmentDto?> GetEquipmentByIdAsync(int id);
-    Task<List<EquipmentDto>> GetAllEquipmentAsync();
-    Task<List<EquipmentDto>> GetEquipmentByTypeAsync(EquipmentType type);
-    Task<EquipmentDto> CreateEquipmentAsync(CreateEquipmentRequest request);
-    Task<EquipmentDto> UpdateEquipmentAsync(int id, UpdateEquipmentRequest request);
-    Task DeleteEquipmentAsync(int id);
-}
-```
+1. Search for an existing service or helper that owns the behavior.
+2. Add or extend an interface in `BaristaNotes.Core` when the behavior is
+   platform-independent.
+3. Inject repositories or other interfaces through the constructor.
+4. Register the service in the matching `Hosting/*Extensions.cs` file.
+5. Choose a lifetime that is compatible with every dependency.
+6. Add success, failure, and cancellation tests.
+7. Use `ILogger<T>` and the established feedback or result contracts.
 
-### IUserProfileService
-
-Manages user profiles.
-
-```csharp
-public interface IUserProfileService
-{
-    Task<UserProfileDto?> GetProfileByIdAsync(int id);
-    Task<List<UserProfileDto>> GetAllProfilesAsync();
-    Task<List<UserProfileDto>> GetActiveProfilesAsync();
-    Task<UserProfileDto> CreateProfileAsync(CreateUserProfileRequest request);
-    Task<UserProfileDto> UpdateProfileAsync(int id, UpdateUserProfileRequest request);
-    Task DeleteProfileAsync(int id);
-    Task<string?> GetProfileAvatarPathAsync(int id);
-}
-```
-
-### IPreferencesService
-
-Manages app preferences and settings.
-
-```csharp
-public interface IPreferencesService
-{
-    // Theme
-    AppTheme Theme { get; set; }
-    
-    // Default Values
-    int? DefaultMachineId { get; set; }
-    int? DefaultGrinderId { get; set; }
-    int? DefaultMakerId { get; set; }
-    
-    // Units
-    TemperatureUnit TemperatureUnit { get; set; }
-    
-    // App State
-    bool IsFirstLaunch { get; set; }
-    DateTime? LastSyncTime { get; set; }
-}
-```
-
-**Implementation Example**:
-
-```csharp
-public class PreferencesService : IPreferencesService
-{
-    public AppTheme Theme
-    {
-        get => Enum.Parse<AppTheme>(
-            Preferences.Get(nameof(Theme), AppTheme.System.ToString())
-        );
-        set => Preferences.Set(nameof(Theme), value.ToString());
-    }
-    
-    public int? DefaultMachineId
-    {
-        get
-        {
-            var value = Preferences.Get(nameof(DefaultMachineId), -1);
-            return value == -1 ? null : value;
-        }
-        set => Preferences.Set(nameof(DefaultMachineId), value ?? -1);
-    }
-    
-    // ... other properties
-}
-```
-
-## Platform Services
-
-Platform services abstract platform-specific functionality.
-
-### IImagePickerService
-
-Wraps MAUI's `IMediaPicker` for photo selection.
-
-```csharp
-public interface IImagePickerService
-{
-    Task<Stream?> PickImageAsync();
-    Task<bool> HasPermissionAsync();
-}
-```
-
-**Implementation**:
-
-```csharp
-public class ImagePickerService : IImagePickerService
-{
-    private readonly IMediaPicker _mediaPicker;
-    
-    public ImagePickerService(IMediaPicker mediaPicker)
-    {
-        _mediaPicker = mediaPicker;
-    }
-    
-    public async Task<Stream?> PickImageAsync()
-    {
-        try
-        {
-            var result = await _mediaPicker.PickPhotoAsync(new MediaPickerOptions
-            {
-                Title = "Select a photo"
-            });
-            
-            if (result == null)
-                return null;
-                
-            return await result.OpenReadAsync();
-        }
-        catch (PermissionException)
-        {
-            return null;
-        }
-    }
-    
-    public async Task<bool> HasPermissionAsync()
-    {
-        var status = await Permissions.CheckStatusAsync<Permissions.Photos>();
-        
-        if (status == PermissionStatus.Granted)
-            return true;
-            
-        status = await Permissions.RequestAsync<Permissions.Photos>();
-        return status == PermissionStatus.Granted;
-    }
-}
-```
-
-### IImageProcessingService
-
-Handles image resizing and optimization.
-
-```csharp
-public interface IImageProcessingService
-{
-    Task<ImageValidationResult> ValidateImageAsync(Stream imageStream);
-    Task<Stream> ProcessProfileImageAsync(Stream imageStream);
-    Task<string> SaveProfileImageAsync(Stream imageStream, int profileId);
-}
-```
-
-### IFeedbackService
-
-Provides user feedback (toasts, alerts, etc.).
-
-```csharp
-public interface IFeedbackService
-{
-    Task ShowToastAsync(string message);
-    Task ShowAlertAsync(string title, string message);
-    Task<bool> ShowConfirmAsync(string title, string message, string accept = "Yes", string cancel = "No");
-}
-```
-
-**Implementation** (using Community Toolkit):
-
-```csharp
-public class FeedbackService : IFeedbackService
-{
-    public async Task ShowToastAsync(string message)
-    {
-        var toast = Toast.Make(message, ToastDuration.Short);
-        await toast.Show();
-    }
-    
-    public async Task ShowAlertAsync(string title, string message)
-    {
-        await Shell.Current.DisplayAlert(title, message, "OK");
-    }
-    
-    public async Task<bool> ShowConfirmAsync(string title, string message, string accept, string cancel)
-    {
-        return await Shell.Current.DisplayAlert(title, message, accept, cancel);
-    }
-}
-```
-
-## Service Patterns
-
-### 1. Request/Response Pattern
-
-Use dedicated request and response objects for service methods:
-
-```csharp
-// Request
-public record CreateShotRequest
-{
-    public int? BeanId { get; init; }
-    public int? MadeById { get; init; }
-    public double Dose { get; init; }
-    public double GrindSetting { get; init; }
-    public double OutputWeight { get; init; }
-    public int ExtractionTime { get; init; }
-    public int Rating { get; init; }
-    public string? Notes { get; init; }
-}
-
-// Response (DTO)
-public record ShotDto
-{
-    public int Id { get; init; }
-    public string? BeanName { get; init; }
-    public string? MadeByName { get; init; }
-    public double Dose { get; init; }
-    // ...
-}
-
-// Usage
-var request = new CreateShotRequest 
-{ 
-    Dose = 18.0, 
-    Rating = 4 
-};
-var result = await _shotService.CreateShotAsync(request);
-```
-
-### 2. Validation in Services
-
-Validate business rules in the service layer:
-
-```csharp
-public async Task<BeanDto> CreateBeanAsync(CreateBeanRequest request)
-{
-    // Validation
-    if (string.IsNullOrWhiteSpace(request.Name))
-        throw new ValidationException("Bean name is required");
-        
-    if (request.CurrentStock < 0)
-        throw new ValidationException("Stock cannot be negative");
-        
-    // Business logic
-    var bean = new Bean
-    {
-        Name = request.Name,
-        CurrentStock = request.CurrentStock,
-        // ...
-    };
-    
-    _context.Beans.Add(bean);
-    await _context.SaveChangesAsync();
-    
-    return BeanMapper.ToDto(bean);
-}
-```
-
-### 3. Error Handling
-
-Use custom exceptions for different error scenarios:
-
-```csharp
-// Custom exceptions
-public class NotFoundException : Exception
-{
-    public NotFoundException(string message) : base(message) { }
-}
-
-public class ValidationException : Exception
-{
-    public ValidationException(string message) : base(message) { }
-}
-
-// Service usage
-public async Task<ShotDto> UpdateShotAsync(int id, UpdateShotRequest request)
-{
-    var shot = await _context.ShotRecords.FindAsync(id);
-    if (shot == null)
-        throw new NotFoundException($"Shot {id} not found");
-        
-    // Update logic
-    shot.Rating = request.Rating ?? shot.Rating;
-    shot.Notes = request.Notes ?? shot.Notes;
-    
-    await _context.SaveChangesAsync();
-    return ShotMapper.ToDto(shot);
-}
-
-// UI error handling
-try
-{
-    await _shotService.UpdateShotAsync(id, request);
-    await _feedbackService.ShowToastAsync("Shot updated successfully");
-}
-catch (NotFoundException ex)
-{
-    await _feedbackService.ShowAlertAsync("Error", ex.Message);
-}
-catch (Exception ex)
-{
-    await _feedbackService.ShowAlertAsync("Error", "An unexpected error occurred");
-}
-```
-
-### 4. Async/Await Best Practices
-
-Always use async/await for I/O operations:
-
-```csharp
-// Good
-public async Task<List<ShotDto>> GetAllShotsAsync()
-{
-    var shots = await _context.ShotRecords
-        .Include(s => s.Bean)
-        .ToListAsync();
-        
-    return shots.Select(ShotMapper.ToDto).ToList();
-}
-
-// Avoid - blocks thread
-public List<ShotDto> GetAllShots()
-{
-    var shots = _context.ShotRecords
-        .Include(s => s.Bean)
-        .ToList();
-        
-    return shots.Select(ShotMapper.ToDto).ToList();
-}
-```
-
-### 5. Mapper Pattern
-
-Use static mapper classes to convert between entities and DTOs:
-
-```csharp
-public static class ShotMapper
-{
-    public static ShotDto ToDto(ShotRecord shot)
-    {
-        return new ShotDto
-        {
-            Id = shot.Id,
-            BeanId = shot.BeanId,
-            BeanName = shot.Bean?.Name,
-            MadeById = shot.MadeById,
-            MadeByName = shot.MadeBy?.Name,
-            MadeForId = shot.MadeForId,
-            MadeForName = shot.MadeFor?.Name,
-            Dose = shot.Dose,
-            GrindSetting = shot.GrindSetting,
-            OutputWeight = shot.OutputWeight,
-            ExtractionTime = shot.ExtractionTime,
-            Rating = shot.Rating,
-            Notes = shot.Notes,
-            LoggedAt = shot.LoggedAt,
-            Ratio = shot.Dose > 0 ? shot.OutputWeight / shot.Dose : 0
-        };
-    }
-}
-```
-
-## Testing Services
-
-Services should be unit tested with mock dependencies:
-
-```csharp
-public class ShotServiceTests
-{
-    private readonly DbContextOptions<BaristasDbContext> _options;
-    
-    public ShotServiceTests()
-    {
-        _options = new DbContextOptionsBuilder<BaristasDbContext>()
-            .UseInMemoryDatabase(databaseName: "TestDb")
-            .Options;
-    }
-    
-    [Fact]
-    public async Task CreateShotAsync_ValidData_CreatesShot()
-    {
-        // Arrange
-        using var context = new BaristasDbContext(_options);
-        var service = new ShotService(context);
-        
-        var request = new CreateShotRequest
-        {
-            Dose = 18.0,
-            GrindSetting = 3.5,
-            OutputWeight = 36.0,
-            ExtractionTime = 28,
-            Rating = 4
-        };
-        
-        // Act
-        var result = await service.CreateShotAsync(request);
-        
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(18.0, result.Dose);
-        Assert.Equal(4, result.Rating);
-    }
-}
-```
-
-## Additional Resources
-
-- [Dependency Injection in .NET](https://learn.microsoft.com/dotnet/core/extensions/dependency-injection)
-- [Service Lifetimes](https://learn.microsoft.com/dotnet/core/extensions/dependency-injection#service-lifetimes)
-- [Testing with EF Core](https://learn.microsoft.com/ef/core/testing/)
+Do not resolve application services through a global service locator.

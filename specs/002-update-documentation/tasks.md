@@ -1,5 +1,8 @@
 # Implementation Tasks: Update Documentation for AI Features and Configuration
 
+> Historical record: the current documentation replaced this 2025 task plan on
+> 2026-08-30. Keep the unchecked tasks as a record of the original scope.
+
 **Feature**: Update Documentation for AI Features and Configuration  
 **Branch**: `002-update-documentation`  
 **Spec**: [spec.md](spec.md) | **Plan**: [plan.md](plan.md) | **Research**: [research.md](research.md)

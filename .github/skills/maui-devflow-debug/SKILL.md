@@ -48,7 +48,12 @@ packages and `builder.AddMauiDevFlowAgent()` registered.
    grep -i "TargetFramework" *.csproj Directory.Build.props 2>/dev/null
    ```
 
-3. Start or select the device/emulator. For Android and iOS, avoid reusing a simulator/emulator that is already running another app under investigation.
+3. Select the target before launch.
+
+   - Honor a device or simulator named by the user.
+   - Check `maui devflow broker status` and the platform device list before starting another simulator or emulator.
+   - Prefer an already connected target that has the required app state. If several targets match, stop and ask which one to use.
+   - Use Apple and Android platform tools only for target management, deployment, and launch. Use DevFlow for app UI inspection and interaction.
 
 4. Launch the app and keep the launch process alive when required.
 
@@ -65,7 +70,16 @@ packages and `builder.AddMauiDevFlowAgent()` registered.
 
    If `wait`, `list`, or `ui tree` cannot connect after the app is running, load `references/connectivity.md` and recover the broker/agent connection before continuing.
 
-6. Inspect, interact, capture evidence, then edit the app and repeat from launch.
+6. Verify the changed behavior before editing again or reporting success.
+
+   1. List every changed state and transition, including loading/content, show/hide, open/close, success, error, and cancellation paths.
+   2. Capture the initial full-screen state and inspect the relevant visual-tree nodes.
+   3. Use DevFlow interaction to exercise each transition. Capture or inspect both sides of every transition.
+   4. Check the top and bottom edges, fixed controls, sheet or overlay bounds, focus, and internal scrolling after layout changes.
+   5. For a blocking overlay, attempt an underlying action while the overlay is visible and confirm that the action does not occur. A screenshot cannot prove input blocking.
+   6. Confirm that dismissed or completed UI is removed and that normal interaction resumes.
+
+   Repeat from launch after each code change.
 
 ## Critical Anti-patterns
 
@@ -73,6 +87,8 @@ packages and `builder.AddMauiDevFlowAgent()` registered.
 - Do not use arbitrary sleeps after launch. Use `maui devflow wait` to gate on the actual agent connection.
 - Do not kill an async `dotnet build -t:Run` or `dotnet run` shell while you still need the app; that often kills the app.
 - Do not reuse a busy simulator/emulator when multiple MAUI apps or agents may be running.
+- Do not substitute a simulator when the user named a physical device.
+- Do not use AppleScript, coordinate shell tools, `adb shell`, or other desktop automation to inspect or operate app UI when DevFlow can perform the action.
 - Do not debug Blazor WebView DOM issues through the native visual tree alone; use the WebView/CDP commands.
 - Do not treat `ui status` / `ui tree` / `screenshot` failures as connectivity issues without first running `curl http://localhost:<port>/api/status`. The CLI's "Cannot connect" error masks JSON serialization errors and CLI↔agent route-version skew. See `references/connectivity.md` for the 8-rung troubleshooting ladder.
 - Do not declare a DevFlow CLI or agent bug "blocked." The source lives at `~/work/maui-labs` (origin `dotnet/maui-labs`). Reproduce against source, fix locally (`dotnet pack` into `~/work/LocalNuGets/`), and open a draft PR upstream before falling back to manual smoke tests.
@@ -83,6 +99,7 @@ packages and `builder.AddMauiDevFlowAgent()` registered.
 - Stop and ask which project, device, or agent to target when multiple candidates match.
 - Stop rebuilding after two identical failures until you inspect the first meaningful build/runtime error.
 - Stop using screenshots for exact property values; query the visual tree or properties instead.
+- Stop before reporting success when any changed state or transition has not been exercised.
 
 ## Reference Map
 

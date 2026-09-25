@@ -1,495 +1,237 @@
 # MauiReactor Patterns
 
-This document explains the MauiReactor MVU (Model-View-Update) architecture and component patterns used in BaristaNotes.
+BaristaNotes builds its UI with MauiReactor components. XAML is used only where
+a dependency or platform resource requires it; application screens are C#.
 
-## Table of Contents
+## Component Shape
 
-- [MVU Architecture Overview](#mvu-architecture-overview)
-- [Component Anatomy](#component-anatomy)
-- [State Management](#state-management)
-- [Props and Data Flow](#props-and-data-flow)
-- [Navigation](#navigation)
-- [Service Injection](#service-injection)
-- [Common Patterns](#common-patterns)
-
-## MVU Architecture Overview
-
-MauiReactor implements the MVU (Model-View-Update) pattern, inspired by Elm and similar to React's component model. This architecture promotes:
-
-- **Immutable State**: State changes create new state objects rather than mutating existing ones
-- **Unidirectional Data Flow**: Data flows down through props, events flow up through callbacks
-- **Declarative UI**: UI is declared as a function of state
-- **Predictable Updates**: All state changes go through a single update mechanism
-
-### MVU Flow
-
-```
-┌─────────────┐
-│    State    │
-│  (Model)    │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│    View     │ ──────> User Interaction
-│   (Render)  │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Update    │
-│  (SetState) │
-└──────┬──────┘
-       │
-       └─────> New State ──> Re-render
-```
-
-## Component Anatomy
-
-A MauiReactor component consists of three main parts:
-
-### 1. State Class
-
-Holds the component's local data. All fields should be mutable for the SetState mechanism to work.
+A page can have state, navigation props, or both:
 
 ```csharp
-class ShotLoggingState
+class ExamplePageProps
 {
-    public double Dose { get; set; } = 18.0;
-    public double GrindSetting { get; set; } = 3.0;
-    public double OutputWeight { get; set; } = 36.0;
-    public int ExtractionTime { get; set; } = 28;
-    public int Rating { get; set; } = 3;
+    public int ItemId { get; set; }
+}
+
+class ExamplePageState
+{
     public bool IsLoading { get; set; }
-    public string ErrorMessage { get; set; } = string.Empty;
+    public string? ErrorMessage { get; set; }
 }
-```
 
-### 2. Props Class
-
-Receives data from the parent component. Props are immutable from the component's perspective.
-
-```csharp
-class ShotLoggingPageProps
+partial class ExamplePage
+    : Component<ExamplePageState, ExamplePageProps>
 {
-    public int? ShotId { get; set; }  // null = create mode, value = edit mode
+    [Inject] IShotService _shotService;
+
+    public override VisualNode Render() =>
+        ContentPage(
+            State.IsLoading
+                ? ActivityIndicator().IsRunning(true)
+                : Label($"Item {Props.ItemId}"));
 }
 ```
 
-### 3. Component Class
+Use a `partial` component when MauiReactor source generation supplies injected
+members or other generated behavior.
 
-Extends `Component<TState>` or `Component<TState, TProps>` and implements the `Render()` method.
+## State
 
-```csharp
-partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps>
-{
-    [Inject]
-    IShotService _shotService;
-    
-    public override VisualNode Render()
-    {
-        return ContentPage(
-            VStack(spacing: 16,
-                Label("Dose (g)"),
-                Entry($"{State.Dose:F1}")
-                    .OnTextChanged(text => 
-                    {
-                        if (double.TryParse(text, out var value))
-                            SetState(s => s.Dose = value);
-                    }),
-                
-                Button("Save")
-                    .IsEnabled(!State.IsLoading)
-                    .OnClicked(SaveShot)
-            )
-        );
-    }
-    
-    async Task SaveShot()
-    {
-        SetState(s => s.IsLoading = true);
-        
-        try
-        {
-            await _shotService.CreateShotAsync(/* ... */);
-            await Navigation.GoBackAsync();
-        }
-        catch (Exception ex)
-        {
-            SetState(s => 
-            {
-                s.IsLoading = false;
-                s.ErrorMessage = ex.Message;
-            });
-        }
-    }
-}
-```
-
-## State Management
-
-### Updating State
-
-Use `SetState()` to update component state. This triggers a re-render with the new state.
+State contains values that change the rendered output.
 
 ```csharp
-// Single property update
-SetState(s => s.Count = 5);
-
-// Multiple property updates
-SetState(s => 
+SetState(s =>
 {
     s.IsLoading = false;
-    s.Data = result;
-    s.ErrorMessage = string.Empty;
+    s.ErrorMessage = null;
 });
 ```
 
-### State Initialization
+Rules:
 
-Override `OnMounted()` to initialize state when the component first mounts:
+- Keep state local and small.
+- Derive simple display values during rendering.
+- Update related fields in one `SetState` call.
+- Do not change state directly without `SetState`.
+- Do not use `INotifyPropertyChanged` for component-local state.
+
+Subscribe to events in `OnMounted` and unsubscribe in `OnWillUnmount`:
 
 ```csharp
-protected override async void OnMounted()
+protected override void OnMounted()
 {
     base.OnMounted();
-    
-    // Load initial data
-    if (Props.ShotId.HasValue)
-    {
-        SetState(s => s.IsLoading = true);
-        var shot = await _shotService.GetShotByIdAsync(Props.ShotId.Value);
-        SetState(s => 
-        {
-            s.Dose = shot.Dose;
-            s.GrindSetting = shot.GrindSetting;
-            s.IsLoading = false;
-        });
-    }
-}
-```
-
-### State Best Practices
-
-1. **Keep state minimal**: Only store what's needed for rendering
-2. **Derive computed values**: Calculate derived data in Render() rather than storing it
-3. **Avoid nested objects**: Flattened state is easier to update
-4. **Use nullable types**: For optional data or loading states
-
-```csharp
-// Good: Flat, minimal state
-class MyState
-{
-    public string SearchText { get; set; } = "";
-    public List<int> ResultIds { get; set; } = new();
-    public bool IsSearching { get; set; }
-}
-
-// Avoid: Nested, redundant state
-class MyState
-{
-    public SearchRequest Request { get; set; }  // Nested object
-    public SearchResult Result { get; set; }    // Contains full objects
-    public int ResultCount { get; set; }        // Redundant (can be derived)
-}
-```
-
-## Props and Data Flow
-
-### Passing Props
-
-Pass data to child components through props during navigation or when rendering:
-
-```csharp
-// Navigation with props
-await Shell.Current.GoToAsync<ShotLoggingPageProps>(
-    "shot-logging",
-    props => props.ShotId = shotId
-);
-
-// Rendering child components with props (if you create reusable components)
-new MyChildComponent()
-{
-    ItemId = State.SelectedId,
-    OnItemSelected = HandleSelection
-}
-```
-
-### Props Validation
-
-Check props in `OnMounted()` or early in `Render()`:
-
-```csharp
-protected override async void OnMounted()
-{
-    base.OnMounted();
-    
-    if (Props.ShotId == null)
-    {
-        // Invalid props, navigate away
-        await Navigation.GoBackAsync();
-        return;
-    }
-    
-    // Load data with valid props
-    await LoadShot(Props.ShotId.Value);
-}
-```
-
-### Props vs State
-
-| Aspect | Props | State |
-|--------|-------|-------|
-| Source | Parent component / navigation | Component itself |
-| Mutability | Read-only | Mutable via SetState |
-| Lifetime | Fixed for component instance | Can change during lifetime |
-| Purpose | Input/configuration | Local UI state |
-
-## Navigation
-
-### Shell Navigation
-
-BaristaNotes uses .NET MAUI Shell for navigation. Register routes in `AppShell.cs`:
-
-```csharp
-Routing.RegisterRoute("shot-logging", typeof(ShotLoggingPage));
-Routing.RegisterRoute("bean-detail", typeof(BeanDetailPage));
-```
-
-### Type-Safe Navigation with Props
-
-Navigate using generic GoToAsync with props initialization:
-
-```csharp
-// Navigate with props
-await Shell.Current.GoToAsync<ShotLoggingPageProps>(
-    "shot-logging",
-    props => props.ShotId = shotId
-);
-
-// Navigate without props (create mode)
-await Shell.Current.GoToAsync("shot-logging");
-
-// Go back
-await Shell.Current.GoToAsync("..");
-```
-
-### Navigation Parameters
-
-Props are the preferred method for passing data. Avoid query parameters:
-
-```csharp
-// Good: Type-safe props
-await Shell.Current.GoToAsync<BeanDetailPageProps>(
-    "bean-detail",
-    props => props.BeanId = beanId
-);
-
-// Avoid: String-based query parameters (error-prone)
-await Shell.Current.GoToAsync($"bean-detail?id={beanId}");
-```
-
-## Service Injection
-
-### Declaring Injected Services
-
-Use the `[Inject]` attribute to inject services registered in the DI container:
-
-```csharp
-partial class ShotLoggingPage : Component<ShotLoggingState, ShotLoggingPageProps>
-{
-    [Inject]
-    IShotService _shotService;
-    
-    [Inject]
-    IBeanService _beanService;
-    
-    [Inject]
-    IFeedbackService _feedbackService;
-}
-```
-
-Note: The component class must be `partial` for injection to work.
-
-### Service Lifetimes
-
-Services are registered in `MauiProgram.cs` with appropriate lifetimes:
-
-```csharp
-// Singleton: One instance for app lifetime (DbContext, preferences)
-builder.Services.AddSingleton<BaristasDbContext>();
-builder.Services.AddSingleton<IPreferencesService, PreferencesService>();
-
-// Transient: New instance each time (services with no state)
-builder.Services.AddTransient<IShotService, ShotService>();
-builder.Services.AddTransient<IBeanService, BeanService>();
-```
-
-## Common Patterns
-
-### Loading States
-
-Handle async data loading with loading indicators:
-
-```csharp
-class MyPageState
-{
-    public bool IsLoading { get; set; }
-    public List<ShotDto> Shots { get; set; } = new();
-    public string ErrorMessage { get; set; } = string.Empty;
-}
-
-public override VisualNode Render()
-{
-    return ContentPage(
-        State.IsLoading
-            ? ActivityIndicator().IsRunning(true)
-            : State.ErrorMessage != string.Empty
-                ? Label(State.ErrorMessage).TextColor(Colors.Red)
-                : VStack(
-                    // Render loaded data
-                    State.Shots.Select(shot => 
-                        new ShotRecordCard { Shot = shot }
-                    ).ToArray()
-                )
-    );
-}
-```
-
-### Form Validation
-
-Validate form inputs before submission:
-
-```csharp
-class FormState
-{
-    public string Name { get; set; } = "";
-    public string Email { get; set; } = "";
-    public bool IsValid => 
-        !string.IsNullOrWhiteSpace(Name) && 
-        Email.Contains('@');
-}
-
-public override VisualNode Render()
-{
-    return VStack(
-        Entry(State.Name)
-            .OnTextChanged(text => SetState(s => s.Name = text)),
-        Entry(State.Email)
-            .OnTextChanged(text => SetState(s => s.Email = text)),
-        Button("Submit")
-            .IsEnabled(State.IsValid)
-            .OnClicked(SubmitForm)
-    );
-}
-```
-
-### Conditional Rendering
-
-Show/hide UI elements based on state:
-
-```csharp
-public override VisualNode Render()
-{
-    return VStack(
-        Label("Options"),
-        
-        // Conditional single element
-        State.ShowAdvanced
-            ? VStack(
-                Label("Advanced Settings"),
-                Slider()
-            )
-            : null,
-        
-        // Conditional with alternative
-        State.IsEditMode
-            ? Button("Save").OnClicked(Save)
-            : Button("Edit").OnClicked(EnableEdit)
-    );
-}
-```
-
-### List Rendering
-
-Render lists with Select and ToArray:
-
-```csharp
-public override VisualNode Render()
-{
-    return ScrollView(
-        VStack(spacing: 8,
-            State.Items
-                .Select(item => 
-                    HStack(
-                        Label(item.Name),
-                        Button("Delete")
-                            .OnClicked(() => DeleteItem(item.Id))
-                    )
-                )
-                .ToArray()
-        )
-    );
-}
-```
-
-### Bottom Sheets
-
-Use bottom sheets for forms and confirmations:
-
-```csharp
-BottomSheet()
-    .IsPresented(State.ShowForm)
-    .OnDismissing(() => SetState(s => s.ShowForm = false))
-    .Content(
-        VStack(
-            Label("Enter Details"),
-            Entry()
-                .Placeholder("Name"),
-            Button("Confirm")
-                .OnClicked(ConfirmAction)
-        )
-    )
-```
-
-### Component Lifecycle
-
-Override lifecycle methods for initialization and cleanup:
-
-```csharp
-protected override async void OnMounted()
-{
-    base.OnMounted();
-    // Called once when component first mounts
-    await LoadInitialData();
-}
-
-protected override void OnPropsChanged()
-{
-    base.OnPropsChanged();
-    // Called when props change (e.g., navigation to same route with different params)
-    if (Props.ShotId.HasValue)
-        await LoadShot(Props.ShotId.Value);
+    _rangeService.SettingsChanged += OnSettingsChanged;
 }
 
 protected override void OnWillUnmount()
 {
+    _rangeService.SettingsChanged -= OnSettingsChanged;
     base.OnWillUnmount();
-    // Called before component unmounts
-    // Clean up subscriptions, timers, etc.
 }
 ```
 
-## Performance Tips
+Event callbacks that can run off the UI thread must dispatch UI state changes
+through `MainThread.BeginInvokeOnMainThread`.
 
-1. **Minimize Render() complexity**: Extract helper methods for complex UI sections
-2. **Avoid expensive operations in Render()**: Cache computed values in state
-3. **Use SetState efficiently**: Batch multiple state changes in one SetState call
-4. **Lazy load data**: Load data only when needed, not all upfront
-5. **Optimize lists**: Consider virtualization for long lists (use CollectionView)
+## Dependency Injection
 
-## Additional Resources
+Register services in the matching file under `Hosting/`. Inject them with
+`[Inject]`:
 
-- [MauiReactor Official Documentation](https://github.com/adospace/reactorui-maui)
-- [MVU Pattern Explained](https://guide.elm-lang.org/architecture/)
-- [React Docs (similar concepts)](https://react.dev/learn)
+```csharp
+[Inject] IDrinkValueRangeService _rangeService;
+[Inject] IFeedbackService _feedbackService;
+```
+
+Do not create domain services in a page and do not use a global service
+locator.
+
+## Navigation
+
+Register routes in `Hosting/RouteRegistration.cs`:
+
+```csharp
+MauiReactor.Routing.RegisterRoute<ValueRangeEditorPage>(
+    "value-range-editor");
+```
+
+Use typed props for route data:
+
+```csharp
+await Shell.Current.GoToAsync<ValueRangeEditorPageProps>(
+    "value-range-editor",
+    props =>
+    {
+        props.Metric = metric;
+        props.Method = method;
+    });
+```
+
+Use absolute Shell routes only for the three root destinations:
+
+```text
+//shots
+//history
+//settings
+```
+
+Do not add string query parameters or `QueryProperty` attributes when typed
+props can carry the value.
+
+## Application Shell
+
+`AppShell` renders a `TabBar` with three `ShellContent` nodes. The wrapper is
+required for correct route resolution in published iOS builds. Individual
+pages hide the visual tab bar when the design requires a custom bottom
+navigation row.
+
+Database initialization is an explicit UI state:
+
+- loading shows "Preparing your data";
+- success renders the main Shell; and
+- failure shows the error and a retry action.
+
+Do not create a second application window to represent startup state.
+
+## Styling
+
+Use the shared style system:
+
+- `ThemeKeys`
+- `AppColors`
+- `AppFontSizes`
+- `AppSpacing`
+- `AppIcons`
+- `MaterialSymbolsFont`
+
+```csharp
+Label("Dose")
+    .ThemeKey(ThemeKeys.FormLabel);
+
+VStack(content)
+    .Spacing(AppSpacing.S)
+    .Padding(AppSpacing.M);
+```
+
+Prefer a theme key when a semantic style already exists. Direct values are
+acceptable for component-specific geometry, such as a measured column width or
+a small icon size, when no shared semantic token applies.
+
+Use Material Symbols or an image asset for icons. Do not use emoji as UI icons.
+
+## Shared Rows and Forms
+
+Use `AdaptiveTwoLineTile` for a two-line row that can have:
+
+- a leading icon;
+- a primary label;
+- supporting text;
+- trailing status; and
+- a chevron or other action.
+
+The component keeps the leading and trailing content vertically centered and
+uses flexible middle space. Do not copy its grid and padding into each page.
+
+Use components under `Components/FormFields/` for repeated form controls.
+Keep validation, labels, focus behavior, and accessibility consistent.
+
+## Adaptive Layout
+
+- Use `Grid` star columns for content that must adapt to width.
+- Use `Auto` only for content with an intrinsic size.
+- Use a minimum height rather than a fixed row height when text can wrap.
+- Keep touch targets at least 44 by 44 device-independent units.
+- Check long text, large font scaling, narrow phones, tablets, and landscape.
+- Set safe-area behavior on the layout that reaches the screen edge. Do not
+  assume that a page-level setting applies to nested edge layouts.
+
+Use `Border` with a `RoundRectangle` for rounded containers. Do not use
+deprecated `Frame`, `ListView`, or `TableView` controls.
+
+## Async Work
+
+Do not perform database or network work in `Render()`.
+
+Start loading from lifecycle or user actions and expose loading, success, and
+error states. Catch only errors that the component can handle. Log technical
+details and show a clear recovery action through the feedback service.
+
+Use `CancellationToken` for operations that can outlive the page.
+
+## Lists
+
+Use `CollectionView` for long or virtualized lists. A `ScrollView` with a
+generated stack is acceptable only for a small bounded set, such as the fixed
+list of brew methods.
+
+Use stable item identifiers and avoid loading related rows in a loop.
+
+## Accessibility
+
+- Give interactive elements a clear accessible name.
+- Exclude decorative glyphs from the accessibility tree.
+- Keep keyboard focus visible.
+- Do not encode status only by color.
+- Make the complete tile actionable when the complete tile appears actionable.
+- Add automation IDs to controls used by DevFlow scenarios.
+
+## UI Verification
+
+For a UI change:
+
+1. run a Debug build;
+2. wait for MAUI DevFlow;
+3. inspect the visual tree;
+4. capture the initial screen;
+5. exercise every changed state and transition;
+6. inspect the screen after each transition; and
+7. check top and bottom edges, focus, scrolling, and blocked input.
+
+```bash
+dotnet build src/BaristaNotes -t:Run -f net11.0-ios
+maui devflow wait
+maui devflow ui tree --depth 4
+```
+
+A successful build alone does not verify a UI change.

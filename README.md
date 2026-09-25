@@ -1,473 +1,173 @@
 # BaristaNotes
 
-A modern espresso shot tracking application built with .NET MAUI and MauiReactor, demonstrating declarative UI patterns and offline-first architecture for mobile development.
+BaristaNotes is a .NET MAUI application for recording coffee drinks across
+espresso and manual brewing methods. It uses MauiReactor for declarative UI,
+Entity Framework Core with SQLite for local data, and optional AI services for
+advice, voice commands, image analysis, and grind translation.
 
-![screenshots of the mobile app](docs/screenshots/Dribbble.png)
+![BaristaNotes mobile screens](docs/screenshots/Dribbble.png)
 
-## Overview
+## Features
 
-BaristaNotes helps coffee enthusiasts track and analyze their espresso shots. Built as an educational project, it showcases modern .NET MAUI development patterns, reactive UI architecture, and offline-first data persistence strategies.
+- Log drinks for espresso, pour over, V60, moka, drip, Aeropress, French press,
+  Turkish, siphon, cupping, cold brew, cold drip, and steep-and-release methods.
+- Set Auto or Custom input ranges for dose, yield, grind size, and time.
+  Auto ranges adapt to the selected brew method. Custom ranges are stored per
+  metric and brew method.
+- Manage beans, physical bags, equipment, grinder profiles, and user profiles.
+- Track ratings on the project-wide 0-4 sentiment scale.
+- Review and filter drink history.
+- Store recipes and translate grind settings to a grinder-independent micron
+  value.
+- Request optional AI advice and use voice or photo workflows.
+- Use light, dark, or system themes.
+- Keep data locally in SQLite with data-preserving schema upgrades.
 
-### What You Can Do
+## Technology
 
-- **Track Espresso Shots**: Log detailed parameters including dose, grind setting, extraction time, output weight, and taste ratings (0-4 scale using sentiment icons)
-- **Get AI-Powered Espresso Advice**: Receive personalized improvement suggestions based on your shot parameters, equipment, and historical data using Microsoft.Extensions.AI integration with OpenAI
-- **Manage Coffee Beans**: Store information about different coffee beans with roaster and origin details
-- **Track Coffee Bags**: Manage multiple physical bags of the same bean variety, each with its own roast date and inventory status
-- **View Rating Aggregates**: See bean-level and bag-level rating statistics with distribution charts to identify your best beans and roasting batches
-- **Bag Completion Workflow**: Mark bags as complete when finished to keep shot logging interface clean and focused
-- **Equipment Tracking**: Keep records of your espresso machines, grinders, and accessories
-- **User Profiles**: Support multiple users (maker and recipient) with custom avatars
-- **Activity Feed**: Review shot history with filtering and sorting capabilities
-- **Dark Mode**: Full theme support with coffee-inspired color palettes
+The project files are the source of truth for exact package versions.
 
-## AI Features
+| Area | Current technology |
+|---|---|
+| Runtime | .NET 11 Preview 7 |
+| App framework | .NET MAUI 11 |
+| UI | MauiReactor 4.0.18 |
+| Data | Entity Framework Core 11 Preview 7 and SQLite |
+| UI support | CommunityToolkit.Maui 15.0.0 and UXDivers.Popups.Maui 0.9.4 |
+| AI | Microsoft.Extensions.AI 10.9.0 and Azure.AI.OpenAI 2.9.0-beta.1 |
+| Configuration | Shiny.Extensions.Configuration 5.4.0 |
+| Tests | xUnit 2.9.3, Moq, and SQLite in-memory databases |
 
-BaristaNotes includes AI-powered espresso advice to help you improve your shots. Using Microsoft.Extensions.AI with OpenAI's GPT-4o-mini model, the app analyzes your shot parameters, equipment, bean characteristics, and historical data to provide personalized suggestions.
+CoreSync packages are present for future synchronization work. The current app
+stores its data locally and does not perform cloud synchronization.
 
-### How It Works
+## Repository Layout
 
-1. **Log Your Shot**: Record your espresso parameters as usual (dose, grind, time, output, taste rating, and optional tasting notes)
-2. **Get Advice**: Tap on any shot in your Activity Feed to view details, then tap "Get Advice"
-3. **Receive Suggestions**: The AI analyzes your shot against your historical data and provides context-aware recommendations for improvement
-
-### AI Service Architecture
-
-The AI advice feature is built on a clean, testable architecture:
-
-- **AIAdviceService**: Implements `IAIAdviceService` using Microsoft.Extensions.AI abstractions, making it easy to swap AI providers (OpenAI, Azure OpenAI, local models) without changing application code
-- **AIPromptBuilder**: Generates context-rich prompts from your shot data, including:
-  - Current shot parameters (dose, grind, extraction time, output)
-  - Bean information (origin, roast date, flavor notes)
-  - Equipment details (machine, grinder settings)
-  - Historical shot data (your past successes and experiments)
-  - Tasting notes for flavor context
-- **Context Generation**: Creates `ShotContextDto`, `BeanContextDto`, and `EquipmentContextDto` objects that provide the AI with relevant information for accurate advice
-
-### AI Model
-
-The app uses **OpenAI's GPT-4o-mini** model, which provides fast, cost-effective responses while maintaining high-quality espresso expertise. The model is prompted with detailed context about your specific setup and preferences.
-
-### Configuration
-
-AI features are optional and require an OpenAI API key for development. See the [Getting Started](#getting-started) section below for configuration instructions. For production apps, API keys should be retrieved from a secure backend rather than embedded in the app binary.
-
-## Educational Purpose
-
-This project serves as a learning resource for:
-
-- **MauiReactor Patterns**: Declarative, component-based UI development
-- **Offline-First Architecture**: Local data persistence with Entity Framework Core
-- **MVVM Alternative**: State-driven UI updates without traditional MVVM boilerplate
-- **Cross-Platform Development**: Single codebase targeting iOS, Android, macOS, and Windows
-- **Modern C# Features**: Leveraging C# 12 and .NET 10 capabilities
-
-## Technology Stack
-
-### Core Frameworks
-
-- **.NET 10.0**: Latest .NET platform for cross-platform development
-- **.NET MAUI 10.0**: Multi-platform App UI framework
-- **C# 12**: Modern language features including primary constructors and collection expressions
-
-### UI Framework
-
-- **MauiReactor 4.0.3-beta**: Declarative UI framework inspired by React
-  - Component-based architecture with Props and State
-  - Functional composition of UI elements
-  - Hot-reload support for rapid development
-
-### Data Layer
-
-- **Entity Framework Core 10.0**: ORM for data access
-- **SQLite**: Lightweight, embedded database for local storage
-- **CoreSync**: Prepared for future offline-first synchronization capabilities
-
-### Additional Libraries
-
-- **CommunityToolkit.Maui 13.0.0**: MAUI community extensions and behaviors
-- **UXDivers.Popups.Maui 0.9.0**: Modal dialogs and user feedback
-- **The49.Maui.BottomSheet 8.0.3**: Bottom sheet UI pattern
-- **Shiny.Extensions.Configuration 3.3.4**: Platform-aware configuration loading for cross-platform apps
-- **Microsoft.Extensions.AI 9.5.0-preview**: AI service abstractions for provider-agnostic integration
-- **Microsoft.Extensions.AI.OpenAI 9.5.0-preview**: OpenAI implementation for AI advice features
-
-## Architecture
-
-BaristaNotes follows a layered architecture designed for testability and maintainability:
-
-```
-BaristaNotes/              # MAUI application project
-  ├── Pages/               # MauiReactor page components
-  ├── Components/          # Reusable UI components
-  ├── Services/            # Platform-specific services
-  └── Resources/           # Images, fonts, styles
-
-BaristaNotes.Core/         # Business logic and data layer
-  ├── Models/              # Entity models and enums
-  ├── Services/            # Business services and interfaces
-  ├── Data/                # DbContext and data access
-  └── Migrations/          # EF Core database migrations
-
-BaristaNotes.Tests/        # Unit and integration tests
-  └── Unit/
-      └── Services/        # Service layer tests
+```text
+src/
+  BaristaNotes/          # MAUI application
+  BaristaNotes.Core/     # Models, data access, and domain services
+  BaristaNotes.Tests/    # Unit and integration tests
+  BaristaNotes.sln
+docs/                    # Current developer documentation
+specs/                   # Historical feature specifications and plans
 ```
 
-For detailed architecture documentation, see:
+See [Project Structure](docs/PROJECT_STRUCTURE.md) for more detail.
 
-- [MauiReactor Patterns](docs/MAUIREACTOR_PATTERNS.md) - Component architecture and state management
-- [Data Layer Design](docs/DATA_LAYER.md) - Entity Framework Core and repository patterns
-- [Service Architecture](docs/SERVICES.md) - Business logic and dependency injection
+## Build and Test
 
-## Getting Started
-
-### Prerequisites
-
-- **.NET 10 SDK** or later
-- **Visual Studio 2022** (Windows/Mac) or **Visual Studio Code** with C# DevKit
-- Platform-specific requirements:
-  - **iOS/macOS**: Xcode 15+
-  - **Android**: Android SDK 21+ (Android 5.0 Lollipop)
-  - **Windows**: Windows 10.0.19041.0+
-
-### Build and Run
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/BaristaNotes.git
-   cd BaristaNotes
-   ```
-
-2. **Restore dependencies**
-   ```bash
-   dotnet restore
-   ```
-
-3. **Run the application**
-   
-   For iOS Simulator:
-   ```bash
-   dotnet build -t:Run -f net10.0-ios
-   ```
-   
-   For Android:
-   ```bash
-   dotnet build -t:Run -f net10.0-android
-   ```
-   
-   For Windows:
-   ```bash
-   dotnet build -t:Run -f net10.0-windows10.0.19041.0
-   ```
-
-4. **Using Visual Studio**
-   - Open `BaristaNotes.sln`
-   - Select your target platform from the dropdown
-   - Press F5 to build and run
-
-### Running Tests
+Install the .NET 11 Preview 7 SDK and the MAUI workloads that match it.
 
 ```bash
-dotnet test BaristaNotes.Tests/BaristaNotes.Tests.csproj
+dotnet workload restore src/BaristaNotes/BaristaNotes.csproj
+dotnet restore src/BaristaNotes.sln
+
+dotnet build src/BaristaNotes -f net11.0-ios
+dotnet build src/BaristaNotes -f net11.0-android
+dotnet build src/BaristaNotes -f net11.0-maccatalyst
+
+dotnet test src/BaristaNotes.Tests
 ```
 
-### Configure AI Features (Optional)
+On Windows, the app also targets `net11.0-windows10.0.19041.0`.
 
-To use the AI-powered espresso advice feature, you'll need to configure an OpenAI API key:
+For the full setup and run workflow, see
+[Getting Started](docs/GETTING_STARTED.md).
 
-1. **Get an OpenAI API Key**:
-   - Sign up at [OpenAI Platform](https://platform.openai.com/)
-   - Navigate to API Keys section and create a new key
-   - Copy the key (starts with `sk-proj-...`)
+## Local AI Configuration
 
-2. **Create Platform-Specific Configuration File**:
+AI features are optional. Most cloud AI paths use these configuration keys:
 
-   **For iOS/Mac**:
-   - Create a file named `appsettings.Development.json` in the `BaristaNotes/` directory (project root)
-   - Add the following content:
-     ```json
-     {
-         "OpenAI": {
-             "ApiKey": "sk-proj-YOUR_KEY_HERE"
-         }
-     }
-     ```
-
-   **For Android**:
-   - Create a file named `appsettings.Development.json` in `BaristaNotes/Platforms/Android/Assets/`
-   - Add the same JSON content as above
-
-3. **Verify File is Gitignored**:
-   - Run `git status` to confirm the Development file is not listed
-   - The `.gitignore` file includes `**/appsettings.Development.json` to prevent accidentally committing secrets
-
-4. **Build and Run**:
-   - The app automatically loads the Development configuration in DEBUG mode
-   - Run the app, log a shot, then tap "Get Advice" to test the AI feature
-
-⚠️ **Security Note**: Never commit API keys to source control. The Development configuration files are gitignored specifically to prevent this. For production apps, retrieve API keys from a secure backend API instead of embedding them in the app binary.
-
-## Key Concepts Demonstrated
-
-### 1. MauiReactor Component Model
-
-MauiReactor uses a React-like declarative pattern. Components consist of:
-
-```csharp
-// State: Local component data
-class MyPageState
+```json
 {
-    public string UserInput { get; set; }
-    public bool IsLoading { get; set; }
-}
-
-// Props: Data passed from parent
-class MyPageProps
-{
-    public int ItemId { get; set; }
-}
-
-// Component: Renders UI based on Props and State
-class MyPage : Component<MyPageState, MyPageProps>
-{
-    public override VisualNode Render()
-    {
-        return ContentPage(
-            VStack(
-                Label($"Item: {Props.ItemId}"),
-                Entry(State.UserInput)
-                    .OnTextChanged(text => SetState(s => s.UserInput = text))
-            )
-        );
-    }
+  "AzureOpenAI": {
+    "Endpoint": "https://YOUR-RESOURCE.openai.azure.com/",
+    "ApiKey": "YOUR-LOCAL-DEVELOPMENT-KEY"
+  }
 }
 ```
 
-See [MAUIREACTOR_PATTERNS.md](docs/MAUIREACTOR_PATTERNS.md) for comprehensive examples.
+For iOS and Mac Catalyst, save this content in:
 
-### 2. Dependency Injection
-
-Services are registered in `MauiProgram.cs` and injected into components using the `[Inject]` attribute:
-
-```csharp
-partial class ShotLoggingPage : Component<ShotLoggingState>
-{
-    [Inject]
-    IShotService _shotService;
-    
-    async Task SaveShot()
-    {
-        await _shotService.CreateShotAsync(/* ... */);
-    }
-}
+```text
+src/BaristaNotes/appsettings.Development.json
 ```
 
-### 3. Entity Framework Core Patterns
+For Android, save it in:
 
-The application uses:
-- **Code-First Migrations**: Database schema defined in C# models
-- **DTOs**: Separating database entities from API/UI contracts
-- **Service Layer**: Business logic encapsulated in service classes
-
-See [DATA_LAYER.md](docs/DATA_LAYER.md) for database design and migration strategies.
-
-### 4. Navigation with Props
-
-MauiReactor supports type-safe navigation with strongly-typed props:
-
-```csharp
-// Navigate to shot logging page in edit mode
-await Shell.Current.GoToAsync<ShotLoggingPageProps>(
-    "shot-logging", 
-    props => props.ShotId = shotId
-);
+```text
+src/BaristaNotes/Platforms/Android/Assets/appsettings.Development.json
 ```
 
-### 5. Platform Services
+Both files are ignored by Git. Debug builds load the development file over
+`appsettings.json`. Do not commit API keys.
 
-Platform-specific functionality (photo picker, image processing) is abstracted behind interfaces:
+Older local files can contain an `OpenAI` section. That section is no longer
+read. Rename it to `AzureOpenAI` and add the resource endpoint.
 
-```csharp
-public interface IImagePickerService
-{
-    Task<Stream?> PickImageAsync();
-}
+Supported non-NativeAOT iOS builds try Apple Intelligence first and can fall
+back to Azure OpenAI. NativeAOT releases exclude the Apple Intelligence
+integration and use Azure OpenAI when it is configured.
 
-// Implemented using MAUI's IMediaPicker
-```
+The app currently uses `gpt-4.1-mini` for advice, voice commands, and grind
+translation. Image workflows use `gpt-4o` and `gpt-4o-mini`.
 
-## Project Structure Deep Dive
+An API key embedded in a mobile application can be extracted. A production
+application should send authenticated requests to a backend that calls Azure
+OpenAI. The backend must keep the key and must not return it to the app.
 
-### Pages
+## Data and Schema Updates
 
-Each page is a MauiReactor component with optional Props and State classes:
+The SQLite file is named `barista_notes.db` and is stored under
+`FileSystem.AppDataDirectory`.
 
-- **ShotLoggingPage**: Create and edit espresso shot records with bag selection
-- **ActivityFeedPage**: Browse shot history with filters
-- **BeanManagementPage**: List and manage coffee beans
-- **BeanDetailPage**: View/edit bean details with rating aggregates and bag history
-- **BagFormPage**: Add new bags for existing beans
-- **BagDetailPage**: View bag details with bag-level rating statistics
-- **EquipmentManagementPage**: Manage espresso equipment
-- **EquipmentDetailPage**: View/edit equipment details
-- **UserProfileManagementPage**: Manage user profiles
-- **ProfileFormPage**: Create/edit user profiles with avatars
-- **SettingsPage**: Application settings and theme selection
+The app initializes and upgrades the database through
+`DatabaseInitializer`. It preserves existing records, validates the resulting
+schema, and records migration identifiers in `__EFMigrationsHistory`.
+NativeAOT builds use the checked-in EF compiled model and query interceptors.
 
-### Components
+Do not delete the app, its data directory, or the database to fix a schema
+problem. See [Data Layer](docs/DATA_LAYER.md) for the supported process.
 
-Reusable UI components following the composition pattern:
+## iOS NativeAOT Release
 
-- **FormFields**: Reusable form input components (Entry, Picker, Slider, Editor)
-- **RatingDisplayComponent**: Shows aggregate rating statistics with sentiment icon distribution bars
-- **ShotRecordCard**: Displays shot summary in lists
-- **CircularAvatar**: User profile image with circular crop
-- **ProfileImagePicker**: Image selection with validation and processing
-- **BottomSheet Components**: Modal bottom sheets for forms and confirmations
-
-### Services
-
-#### Core Services (BaristaNotes.Core)
-
-- **ShotService**: CRUD operations for shot records
-- **BeanService**: Coffee bean management
-- **BagService**: Physical coffee bag inventory management with completion tracking
-- **RatingService**: On-demand calculation of rating aggregates (bean-level and bag-level)
-- **EquipmentService**: Equipment tracking
-- **UserProfileService**: User profile management
-- **PreferencesService**: App preferences and settings
-
-#### Platform Services (BaristaNotes)
-
-- **ImagePickerService**: Photo selection abstraction
-- **ImageProcessingService**: Image resizing and optimization
-- **FeedbackService**: User notifications and popups
-
-## Database Schema
-
-BaristaNotes uses SQLite with Entity Framework Core. Key entities:
-
-- **ShotRecord**: Espresso shot data (dose, time, output, rating 0-4, timestamp, tastingNotes for AI context)
-- **Bean**: Coffee bean variety information (name, roaster, origin)
-- **Bag**: Physical bag of a bean with specific roast date and completion status
-- **Equipment**: Machines, grinders, and accessories
-- **UserProfile**: User information with avatar support
-
-Relationships:
-- Shot → Bag (many-to-one) - Each shot is logged to a specific bag
-- Bag → Bean (many-to-one) - Multiple bags can exist for the same bean variety
-- Shot → Equipment (many-to-many via junction tables)
-- Shot → UserProfile (maker and recipient, many-to-one each)
-
-**Bean-Bag-Shot Hierarchy**: This three-level structure allows tracking rating aggregates at both the bean level (across all bags) and individual bag level (per roasting batch), helping users identify which beans to reorder and which roast dates produced the best results.
-
-**TastingNotes Field**: The ShotRecord includes a `TastingNotes` string field that captures flavor observations (e.g., "bright, fruity, slightly sour"). This field provides valuable context for the AI advice feature, allowing the system to understand the flavor profile and suggest improvements tailored to taste preferences.
-
-For complete schema documentation, see [DATA_LAYER.md](docs/DATA_LAYER.md).
-
-## Testing Strategy
-
-The project includes comprehensive unit tests for the service layer:
-
-- **Service Tests**: Business logic validation
-- **Mock DbContext**: In-memory database for isolated tests
-- **Integration Tests**: End-to-end data flow verification
-
-Example test structure:
-
-```csharp
-public class ShotServiceTests
-{
-    private readonly DbContextOptions<BaristasDbContext> _options;
-    
-    [Fact]
-    public async Task CreateShotAsync_ValidData_CreatesShotSuccessfully()
-    {
-        // Arrange
-        using var context = new BaristasDbContext(_options);
-        var service = new ShotService(context);
-        
-        // Act
-        var result = await service.CreateShotAsync(/* ... */);
-        
-        // Assert
-        Assert.NotNull(result);
-    }
-}
-```
-
-## Development Workflow
-
-### Hot Reload
-
-MauiReactor supports hot reload for rapid UI development:
-
-1. Make UI changes in your component's Render method
-2. Save the file
-3. UI updates automatically in the running app (no rebuild required)
-
-### Database Migrations
-
-When modifying entity models:
+Use `dotnet publish`, not `dotnet build -t:Publish`:
 
 ```bash
-# Add a new migration
-dotnet ef migrations add MigrationName --project BaristaNotes.Core
-
-# Update the database
-dotnet ef database update --project BaristaNotes.Core
+dotnet publish src/BaristaNotes/BaristaNotes.csproj \
+  -f net11.0-ios -c Release -r ios-arm64 \
+  -p:EnableNativeAot=true \
+  -p:PublishAot=true \
+  -p:PublishAotUsingRuntimePack=true \
+  -p:MicrosoftNETCoreAppRefPackageVersion=11.0.0-preview.7.26381.103 \
+  -p:MtouchLink=Full
 ```
 
-### Adding New Features
+Important constraints:
 
-1. Create/update entity models in `BaristaNotes.Core/Models`
-2. Run EF migrations if database changes are needed
-3. Add service interface and implementation in `BaristaNotes.Core/Services`
-4. Create UI components in `BaristaNotes/Pages` or `BaristaNotes/Components`
-5. Register services in `MauiProgram.cs`
-6. Add unit tests in `BaristaNotes.Tests`
+- Do not pass `TargetFrameworks=net11.0-ios`. That global property also reaches
+  `BaristaNotes.Core` and removes its required `net11.0` restore target.
+- Keep `MicrosoftNETCoreAppRefPackageVersion` aligned with the installed SDK
+  until the iOS and Android workloads use the same runtime pack.
+- Review all `IL2xxx` and `IL3xxx` warnings before installation.
+- Install over the existing app. Do not uninstall first because uninstalling
+  deletes the app data.
 
-## Contributing
+## Development Documentation
 
-This is an educational project. Contributions that enhance its learning value are welcome:
+- [Getting Started](docs/GETTING_STARTED.md)
+- [Project Structure](docs/PROJECT_STRUCTURE.md)
+- [Data Layer](docs/DATA_LAYER.md)
+- [Service Architecture](docs/SERVICES.md)
+- [MauiReactor Patterns](docs/MAUIREACTOR_PATTERNS.md)
+- [Contributing](docs/CONTRIBUTING.md)
+- [Project Constitution](.specify/memory/constitution.md)
+- [Architecture Constraints](.specify/ARCHITECTURE_CONSTRAINTS.md)
 
-- Additional documentation and code comments
-- More comprehensive examples of MAUI/MauiReactor patterns
-- Unit test coverage improvements
-- Accessibility enhancements
-- Performance optimizations with explanations
-
-Please ensure:
-- Code follows existing patterns and conventions
-- New features include tests
-- Documentation is updated to reflect changes
-- Educational value is maintained or enhanced
-
-## Resources
-
-### Official Documentation
-
-- [.NET MAUI Documentation](https://learn.microsoft.com/en-us/dotnet/maui/)
-- [MauiReactor Documentation](https://github.com/adospace/reactorui-maui)
-- [Entity Framework Core Documentation](https://learn.microsoft.com/en-us/ef/core/)
-
-### Learning Materials
-
-- [MAUI Community Toolkit](https://github.com/CommunityToolkit/Maui)
-- [C# 12 Language Features](https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/csharp-12)
-- [.NET 10 Release Notes](https://github.com/dotnet/core/tree/main/release-notes/10.0)
+Documents under `docs/archive/` and feature records under `specs/` are
+historical. They can describe older target frameworks and designs.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- MauiReactor team for the excellent declarative UI framework
-- .NET MAUI team for the cross-platform framework
-- Coffee community for inspiration and domain knowledge
-
----
-
-**Note**: This project is under active development and serves primarily as an educational resource. APIs and patterns may evolve as best practices emerge in the MAUI ecosystem.
+BaristaNotes is licensed under the [MIT License](LICENSE).

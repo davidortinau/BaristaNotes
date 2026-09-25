@@ -24,12 +24,6 @@ public sealed class DatabaseInitializer(
 
     public void Initialize()
     {
-        if (context.Database.EnsureCreated())
-        {
-            logger.LogInformation("Created the BaristaNotes database");
-            return;
-        }
-
         var connection = context.Database.GetDbConnection();
         var closeConnection = connection.State != ConnectionState.Open;
 
@@ -41,6 +35,7 @@ public sealed class DatabaseInitializer(
             }
 
             EnsureMigrationHistoryTable(connection);
+            CreateInitialSchemaIfNeeded(connection);
             EnsureInitialMigrationRecord(connection);
             ApplyMigration(connection, BagMigrationId, HasBagSchema, AddBagSql, disableForeignKeys: true);
             ApplyMigration(
@@ -118,6 +113,26 @@ public sealed class DatabaseInitializer(
         }
     }
 
+    private void CreateInitialSchemaIfNeeded(DbConnection connection)
+    {
+        if (TableExists(connection, "Beans"))
+        {
+            return;
+        }
+
+        if (HasApplicationTables(connection))
+        {
+            throw new InvalidOperationException(
+                "The existing database has an unsupported partial schema. The 'Beans' table is missing.");
+        }
+
+        using var transaction = connection.BeginTransaction();
+        ExecuteSql(connection, transaction, InitialSchemaSql);
+        RecordMigration(connection, InitialMigrationId, transaction);
+        transaction.Commit();
+        logger.LogInformation("Created the BaristaNotes database");
+    }
+
     private void EnsureInitialMigrationRecord(DbConnection connection)
     {
         if (MigrationExists(connection, InitialMigrationId))
@@ -135,6 +150,24 @@ public sealed class DatabaseInitializer(
         }
 
         RecordMigration(connection, InitialMigrationId);
+    }
+
+    private static bool HasApplicationTables(DbConnection connection)
+    {
+        var applicationTables = new[]
+        {
+            "Equipment",
+            "UserProfiles",
+            "ShotRecords",
+            "ShotEquipments",
+            "Bags",
+            "Recipes",
+            "GrinderProfiles",
+            "GrindTranslationCache",
+            "LegacyShotGrindSettings"
+        };
+
+        return applicationTables.Any(table => TableExists(connection, table));
     }
 
     private void ApplyMigration(
@@ -522,6 +555,97 @@ public sealed class DatabaseInitializer(
         CREATE INDEX "IX_Bags_BeanId_IsComplete_RoastDate" ON "Bags" ("BeanId", "IsComplete", "RoastDate" DESC);
         CREATE INDEX "IX_Bags_BeanId_RoastDate" ON "Bags" ("BeanId", "RoastDate" DESC);
         CREATE UNIQUE INDEX "IX_Bags_SyncId" ON "Bags" ("SyncId");
+        """;
+
+    // Generated from the initial migration so NativeAOT does not need EF Core's design-time model.
+    private const string InitialSchemaSql = """
+        CREATE TABLE "Beans" (
+            "Id" INTEGER NOT NULL CONSTRAINT "PK_Beans" PRIMARY KEY AUTOINCREMENT,
+            "Name" TEXT NOT NULL,
+            "Roaster" TEXT NULL,
+            "RoastDate" TEXT NULL,
+            "Origin" TEXT NULL,
+            "Notes" TEXT NULL,
+            "IsActive" INTEGER NOT NULL DEFAULT 1,
+            "CreatedAt" TEXT NOT NULL,
+            "SyncId" TEXT NOT NULL,
+            "LastModifiedAt" TEXT NOT NULL,
+            "IsDeleted" INTEGER NOT NULL DEFAULT 0
+        );
+
+        CREATE TABLE "Equipment" (
+            "Id" INTEGER NOT NULL CONSTRAINT "PK_Equipment" PRIMARY KEY AUTOINCREMENT,
+            "Name" TEXT NOT NULL,
+            "Type" INTEGER NOT NULL,
+            "Notes" TEXT NULL,
+            "IsActive" INTEGER NOT NULL DEFAULT 1,
+            "CreatedAt" TEXT NOT NULL,
+            "SyncId" TEXT NOT NULL,
+            "LastModifiedAt" TEXT NOT NULL,
+            "IsDeleted" INTEGER NOT NULL DEFAULT 0
+        );
+
+        CREATE TABLE "UserProfiles" (
+            "Id" INTEGER NOT NULL CONSTRAINT "PK_UserProfiles" PRIMARY KEY AUTOINCREMENT,
+            "Name" TEXT NOT NULL,
+            "AvatarPath" TEXT NULL,
+            "CreatedAt" TEXT NOT NULL,
+            "SyncId" TEXT NOT NULL,
+            "LastModifiedAt" TEXT NOT NULL,
+            "IsDeleted" INTEGER NOT NULL DEFAULT 0
+        );
+
+        CREATE TABLE "ShotRecords" (
+            "Id" INTEGER NOT NULL CONSTRAINT "PK_ShotRecords" PRIMARY KEY AUTOINCREMENT,
+            "Timestamp" TEXT NOT NULL,
+            "BeanId" INTEGER NULL,
+            "MachineId" INTEGER NULL,
+            "GrinderId" INTEGER NULL,
+            "MadeById" INTEGER NULL,
+            "MadeForId" INTEGER NULL,
+            "DoseIn" TEXT NOT NULL,
+            "GrindSetting" TEXT NOT NULL,
+            "ExpectedTime" TEXT NOT NULL,
+            "ExpectedOutput" TEXT NOT NULL,
+            "DrinkType" TEXT NOT NULL,
+            "ActualTime" TEXT NULL,
+            "ActualOutput" TEXT NULL,
+            "PreinfusionTime" TEXT NULL,
+            "Rating" INTEGER NULL,
+            "SyncId" TEXT NOT NULL,
+            "LastModifiedAt" TEXT NOT NULL,
+            "IsDeleted" INTEGER NOT NULL DEFAULT 0,
+            CONSTRAINT "FK_ShotRecords_Beans_BeanId" FOREIGN KEY ("BeanId") REFERENCES "Beans" ("Id") ON DELETE SET NULL,
+            CONSTRAINT "FK_ShotRecords_Equipment_GrinderId" FOREIGN KEY ("GrinderId") REFERENCES "Equipment" ("Id") ON DELETE SET NULL,
+            CONSTRAINT "FK_ShotRecords_Equipment_MachineId" FOREIGN KEY ("MachineId") REFERENCES "Equipment" ("Id") ON DELETE SET NULL,
+            CONSTRAINT "FK_ShotRecords_UserProfiles_MadeById" FOREIGN KEY ("MadeById") REFERENCES "UserProfiles" ("Id") ON DELETE SET NULL,
+            CONSTRAINT "FK_ShotRecords_UserProfiles_MadeForId" FOREIGN KEY ("MadeForId") REFERENCES "UserProfiles" ("Id") ON DELETE SET NULL
+        );
+
+        CREATE TABLE "ShotEquipments" (
+            "ShotRecordId" INTEGER NOT NULL,
+            "EquipmentId" INTEGER NOT NULL,
+            CONSTRAINT "PK_ShotEquipments" PRIMARY KEY ("ShotRecordId", "EquipmentId"),
+            CONSTRAINT "FK_ShotEquipments_Equipment_EquipmentId" FOREIGN KEY ("EquipmentId") REFERENCES "Equipment" ("Id") ON DELETE CASCADE,
+            CONSTRAINT "FK_ShotEquipments_ShotRecords_ShotRecordId" FOREIGN KEY ("ShotRecordId") REFERENCES "ShotRecords" ("Id") ON DELETE CASCADE
+        );
+
+        CREATE INDEX "IX_Beans_IsActive" ON "Beans" ("IsActive");
+        CREATE INDEX "IX_Beans_Name_Roaster" ON "Beans" ("Name", "Roaster");
+        CREATE UNIQUE INDEX "IX_Beans_SyncId" ON "Beans" ("SyncId");
+        CREATE INDEX "IX_Equipment_IsActive" ON "Equipment" ("IsActive");
+        CREATE INDEX "IX_Equipment_Name_Type" ON "Equipment" ("Name", "Type");
+        CREATE UNIQUE INDEX "IX_Equipment_SyncId" ON "Equipment" ("SyncId");
+        CREATE INDEX "IX_ShotEquipments_EquipmentId" ON "ShotEquipments" ("EquipmentId");
+        CREATE INDEX "IX_ShotRecords_BeanId" ON "ShotRecords" ("BeanId");
+        CREATE INDEX "IX_ShotRecords_GrinderId" ON "ShotRecords" ("GrinderId");
+        CREATE INDEX "IX_ShotRecords_MachineId" ON "ShotRecords" ("MachineId");
+        CREATE INDEX "IX_ShotRecords_MadeById" ON "ShotRecords" ("MadeById");
+        CREATE INDEX "IX_ShotRecords_MadeForId" ON "ShotRecords" ("MadeForId");
+        CREATE UNIQUE INDEX "IX_ShotRecords_SyncId" ON "ShotRecords" ("SyncId");
+        CREATE INDEX "IX_ShotRecords_Timestamp" ON "ShotRecords" ("Timestamp" DESC);
+        CREATE INDEX "IX_UserProfiles_Name" ON "UserProfiles" ("Name");
+        CREATE UNIQUE INDEX "IX_UserProfiles_SyncId" ON "UserProfiles" ("SyncId");
         """;
 
     private const string AddRecipeSql = """

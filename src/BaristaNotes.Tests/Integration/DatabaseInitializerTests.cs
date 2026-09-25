@@ -23,6 +23,13 @@ public sealed class DatabaseInitializerTests
         initializer.Initialize();
 
         Assert.True(ColumnExists(connection, "ShotRecords", "WaterTempC"));
+        Assert.Equal(1L, ExecuteScalar(
+            connection,
+            """
+            SELECT COUNT(*)
+            FROM "__EFMigrationsHistory"
+            WHERE "MigrationId" = '20251206024345_InitialCreate';
+            """));
     }
 
     [Fact]

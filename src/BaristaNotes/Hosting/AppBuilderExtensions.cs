@@ -10,7 +10,10 @@ internal static class AppBuilderExtensions
                 app.UseTheme<ApplicationTheme>();
                 app.SetWindowsSpecificAssetsDirectory("Assets");
                 app.Resources.MergedDictionaries.Add(new UXDivers.Popups.Maui.Controls.DarkTheme());
-                app.Resources.MergedDictionaries.Add(new UXDivers.Popups.Maui.Controls.PopupStyles());
+                var popupStyles = new UXDivers.Popups.Maui.Controls.PopupStyles();
+                app.Resources.MergedDictionaries.Add(popupStyles);
+                // Keep this after the package styles so long modal content gets a bounded scroll row.
+                app.Resources.MergedDictionaries.Add(new Resources.Styles.ActionModalPopupStyles(popupStyles));
                 app.Resources.MergedDictionaries.Add(BuildCustomResources());
             })
             .UseUXDiversPopups()

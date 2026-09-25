@@ -188,6 +188,9 @@ class ApplicationTheme : Theme
         ContentPageStyles.Default = _ => _
             .BackgroundColor(IsLightTheme ? AppColors.Light.Background : AppColors.Dark.Background);
 
+        ContentPageStyles.Themes[ThemeKeys.SurfacePage] = _ => _
+            .Background(IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface);
+
         PickerStyles.Default = _ => _
             .TextColor(IsLightTheme ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary)
             .TitleColor(IsLightTheme ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary)

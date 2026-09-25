@@ -125,6 +125,20 @@ partial class MyNewPage : Component<MyNewPageState>
 2. Change device theme in OS settings (iOS: Settings > Display & Brightness, Android: Settings > Display > Dark theme)
 3. Verify app theme updates automatically
 
+**Android startup and status bar**:
+- The native splash and window use `barista_background` in Android's `values`
+  and `values-night` resources. Keep these aligned with `AppColors.Light.Surface`
+  (`#FCEFE1`) and `AppColors.Dark.Surface` (`#48362E`).
+- `MainActivity` applies the saved mode before MAUI creates its window and keeps
+  the status bar background and icon contrast in sync with theme changes.
+- On Android 12+, `ThemeService` persists the native application night mode so
+  the next system splash respects Light, Dark, or Auto.
+- The initialization Shell and shot page's loading, picker, and content states
+  use the same surface palette. Do not make the startup Shell transparent.
+- Native resource changes require a rebuild. Record a cold launch in Light,
+  Dark, and Auto; check splash, loading, the Shell handoff, and the first shot
+  grid for white frames or color changes, then check live theme switching.
+
 ### Common Patterns
 
 **Pattern 1: Theme-aware helper method**

@@ -6,6 +6,8 @@
 /// </summary>
 public static class ThemeKeys
 {
+    public const string SurfacePage = nameof(SurfacePage);
+
     // Label theme keys
     public const string Headline = nameof(Headline);
     public const string SubHeadline = nameof(SubHeadline);

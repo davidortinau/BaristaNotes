@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Barista.MainTheme" parent="Maui.MainTheme.NoActionBar">
+        <item name="android:windowBackground">@color/barista_background</item>
+        <item name="android:colorBackground">@color/barista_background</item>
+        <item name="android:statusBarColor">@color/barista_background</item>
+        <item name="android:windowLightStatusBar">@bool/barista_light_status_bar</item>
+    </style>
+    <style name="Barista.SplashTheme" parent="Maui.SplashTheme">
+        <item name="android:windowBackground">@drawable/barista_splash</item>
+        <item name="android:windowSplashScreenBackground">@color/barista_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/maui_splash_image</item>
+        <item name="android:statusBarColor">@color/barista_background</item>
+        <item name="android:windowLightStatusBar">@bool/barista_light_status_bar</item>
+    </style>
+</resources>

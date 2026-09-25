@@ -1,6 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#512BD4</color>
-    <color name="colorPrimaryDark">#2B0B98</color>
-    <color name="colorAccent">#2B0B98</color>
+    <color name="colorPrimary">#86543F</color>
+    <color name="colorPrimaryDark">@color/barista_background</color>
+    <color name="colorAccent">#86543F</color>
+    <!-- Keep aligned with AppColors.Light.Surface; Android draws before MAUI starts. -->
+    <color name="barista_background">#FCEFE1</color>
+    <bool name="barista_light_status_bar">true</bool>
 </resources>

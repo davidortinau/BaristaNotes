@@ -67,6 +67,7 @@ public partial class AppShell : Component<AppShellState>
             )
         )
         .BackgroundColor(Colors.Transparent)
+        .OnAndroid(_ => _.BackgroundColor(ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface))
         .FlyoutBehavior(FlyoutBehavior.Disabled);
     }
 
@@ -93,9 +94,14 @@ public partial class AppShell : Component<AppShellState>
         return Shell(
                 ShellContent("Starting")
                     .Route("starting")
-                    .RenderContent(() => ContentPage(content))
+                    .RenderContent(() => ContentPage(content)
+                        .OnAndroid(_ => _
+                            .ThemeKey(ThemeKeys.SurfacePage)
+                            .Set(MauiControls.Shell.NavBarIsVisibleProperty, false)
+                            .Set(MauiControls.Shell.TabBarIsVisibleProperty, false)))
             )
             .BackgroundColor(Colors.Transparent)
+            .OnAndroid(_ => _.BackgroundColor(ApplicationTheme.IsLightTheme ? AppColors.Light.Surface : AppColors.Dark.Surface))
             .FlyoutBehavior(FlyoutBehavior.Disabled);
     }
 }

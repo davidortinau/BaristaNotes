@@ -93,6 +93,30 @@ public partial class ThemeService : IThemeService
         _logger.LogDebug("ApplyTheme: CurrentMode={CurrentMode}, TargetTheme={TargetTheme}, SystemTheme={SystemTheme}", 
             _currentMode, targetTheme, Application.Current.RequestedTheme);
         Application.Current.UserAppTheme = targetTheme;
+#if ANDROID
+        if (OperatingSystem.IsAndroidVersionAtLeast(31))
+        {
+            var manager = (Android.App.UiModeManager?)Android.App.Application.Context
+                .GetSystemService(Android.Content.Context.UiModeService)
+                ?? throw new InvalidOperationException("Android UI mode service is unavailable.");
+            // Android persists this per-app mode so the next system splash matches too.
+            manager.SetApplicationNightMode((int)(_currentMode switch
+            {
+                ThemeMode.Light => Android.App.UiNightMode.No,
+                ThemeMode.Dark => Android.App.UiNightMode.Yes,
+                _ => Android.App.UiNightMode.Auto
+            }));
+        }
+        else
+        {
+            AndroidX.AppCompat.App.AppCompatDelegate.DefaultNightMode = _currentMode switch
+            {
+                ThemeMode.Light => AndroidX.AppCompat.App.AppCompatDelegate.ModeNightNo,
+                ThemeMode.Dark => AndroidX.AppCompat.App.AppCompatDelegate.ModeNightYes,
+                _ => AndroidX.AppCompat.App.AppCompatDelegate.ModeNightFollowSystem
+            };
+        }
+#endif
     }
 
     private void OnSystemThemeChanged(object? sender, AppThemeChangedEventArgs e)

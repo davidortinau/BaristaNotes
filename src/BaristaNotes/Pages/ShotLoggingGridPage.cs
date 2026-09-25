@@ -439,6 +439,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         if (pickerActive)
         {
             return ContentPage(title, RenderActivePicker())
+                .OnAndroid(_ => _.ThemeKey(ThemeKeys.SurfacePage))
                 .Set(MauiControls.Shell.NavBarIsVisibleProperty, false)
                 .Set(MauiControls.Shell.TabBarIsVisibleProperty, false)
                 .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never));
@@ -452,6 +453,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     Label("Loading…").Margin(0, 8).HCenter()
                 ).VCenter().HCenter()
             )
+            .OnAndroid(_ => _.ThemeKey(ThemeKeys.SurfacePage))
             .Set(MauiControls.Shell.NavBarIsVisibleProperty, false)
             .Set(MauiControls.Shell.TabBarIsVisibleProperty, false)
             .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never));
@@ -539,6 +541,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         // // Extend under the status bar / notch — tiles compensate with topInsetPadding.
         // .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
         ) // ContentPage
+        .OnAndroid(_ => _.ThemeKey(ThemeKeys.SurfacePage))
         .Set(MauiControls.Shell.NavBarIsVisibleProperty, false)
         .Set(MauiControls.Shell.TabBarIsVisibleProperty, false)
         .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))

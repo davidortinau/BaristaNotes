@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Keep aligned with AppColors.Dark.Surface. -->
+    <color name="barista_background">#48362E</color>
+    <bool name="barista_light_status_bar">false</bool>
+</resources>

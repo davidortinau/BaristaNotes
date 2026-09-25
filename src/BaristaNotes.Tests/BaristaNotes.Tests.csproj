@@ -22,6 +22,11 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="Microsoft.Maui.Graphics" />
+    <Compile Include="..\BaristaNotes\Resources\Styles\AppColors.cs" Link="Styles\AppColors.cs" />
+    <None Include="..\BaristaNotes\Platforms\Android\Resources\**\*.xml"
+          Link="AndroidResources\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

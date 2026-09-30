@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
+    <IsBindingProject>true</IsBindingProject>
+    <RootNamespace>BaristaNotes.AndroidAiloha</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Xamarin.Kotlin.StdLib" Version="2.2.20" />
+    <AndroidLibrary Include="$(AilohaArtifactsDirectory)/ailoha-android-agent-0.1.13.aar" />
+    <AndroidLibrary Include="$(AilohaArtifactsDirectory)/nanohttpd-2.3.1.jar" Bind="false" />
+  </ItemGroup>
+
+  <Target Name="ValidateOfficialAilohaInputs" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(Configuration)' != 'Debug'"
+           Text="The native Ailoha binding is Debug-only. Release must not reference this project." />
+    <Error Condition="'$(AilohaArtifactsDirectory)' == ''"
+           Text="Set AilohaArtifactsDirectory to the directory containing the official pinned artifacts in native-inputs.json. Never pass credentials to MSBuild." />
+    <GetFileHash Files="@(AndroidLibrary)" Algorithm="SHA256">
+      <Output TaskParameter="Items" ItemName="_AilohaHashedInput" />
+    </GetFileHash>
+    <Error Condition="'%(_AilohaHashedInput.Filename)' == 'ailoha-android-agent-0.1.13' And '%(_AilohaHashedInput.FileHash)' != 'DA70BFE4ED82038AA19F887DFB4B7B9F653E42C42689C409E41B3C54A15FEA9D'"
+           Text="The official Ailoha 0.1.13 AAR hash does not match native-inputs.json." />
+    <Error Condition="'%(_AilohaHashedInput.Filename)' == 'nanohttpd-2.3.1' And '%(_AilohaHashedInput.FileHash)' != 'DE864C47818157141A24C9ACB36DF0C47D7BF15B7FF48C90610F3EB4E5DF0E58'"
+           Text="The NanoHTTPD 2.3.1 JAR hash does not match native-inputs.json." />
+  </Target>
+</Project>

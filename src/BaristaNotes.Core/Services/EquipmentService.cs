@@ -62,8 +62,8 @@ public class EquipmentService : IEquipmentService
             equipment.Name = dto.Name;
         if (dto.Type.HasValue)
             equipment.Type = dto.Type.Value;
-        if (dto.Notes != null)
-            equipment.Notes = dto.Notes;
+        if (dto.Notes.IsSpecified)
+            equipment.Notes = dto.Notes.Value;
         if (dto.IsActive.HasValue)
             equipment.IsActive = dto.IsActive.Value;
         

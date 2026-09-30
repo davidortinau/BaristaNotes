@@ -117,6 +117,12 @@ public class BagService : IBagService
         return await _bagRepository.GetByIdAsync(id);
     }
 
+    public Task<int> GetShotCountAsync(int bagId)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(bagId);
+        return _bagRepository.GetShotCountAsync(bagId);
+    }
+
     public async Task<List<Bag>> GetBagsForBeanAsync(int beanId, bool includeCompleted = true)
     {
         return await _bagRepository.GetBagsForBeanAsync(beanId, includeCompleted);

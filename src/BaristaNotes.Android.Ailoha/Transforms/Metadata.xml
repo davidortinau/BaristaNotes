@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<metadata>
+  <!-- Limit managed exposure to startup. The official Java payload is unchanged. -->
+  <attr path="/api/package[@name='com.ailoha.android.agent']" name="managedName">BaristaNotes.AndroidAiloha</attr>
+  <remove-node path="/api/package[@name='com.ailoha.android.agent']/*[not(@name='AilohaAndroidAgent') and not(@name='AilohaAgentOptions')]" />
+  <remove-node path="/api/package[@name='com.ailoha.android.agent']/class[@name='AilohaAndroidAgent']/method[not(@name='start') and not(@name='stop')]" />
+  <remove-node path="/api/package[@name='com.ailoha.android.agent']/class[@name='AilohaAndroidAgent']/field" />
+  <remove-node path="/api/package[@name='com.ailoha.android.agent']/class[@name='AilohaAgentOptions']/method" />
+  <remove-node path="/api/package[@name='com.ailoha.android.agent']/class[@name='AilohaAgentOptions']/field" />
+</metadata>

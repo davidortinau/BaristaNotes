@@ -14,6 +14,7 @@ global using BaristaNotes.Core.Data.Repositories;
 global using BaristaNotes.Core.Services;
 global using BaristaNotes.Core.Services.Grind;
 global using BaristaNotes.Core.Services.Recipes;
+global using BaristaNotes.Core.Services.Workflows;
 global using BaristaNotes.Hosting;
 global using BaristaNotes.Infrastructure;
 global using BaristaNotes.Services;

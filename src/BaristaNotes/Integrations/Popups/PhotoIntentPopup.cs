@@ -2,15 +2,6 @@ using Controls = Microsoft.Maui.Controls;
 
 namespace BaristaNotes.Integrations.Popups;
 
-public enum PhotoIntentChoice
-{
-    Cancel,
-    Coffee,
-    Profile,
-    Room,
-    Retake
-}
-
 public sealed class PhotoIntentPopup : ActionModalPopup
 {
     private readonly TaskCompletionSource<PhotoIntentChoice> _completion =

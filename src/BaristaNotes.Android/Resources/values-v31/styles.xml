@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <style name="Barista.SplashTheme" parent="Barista.MainTheme">
+    <item name="android:windowBackground">@drawable/barista_splash</item>
+    <item name="android:windowSplashScreenBackground">@color/barista_surface</item>
+    <item name="android:windowSplashScreenAnimatedIcon">@drawable/beans</item>
+  </style>
+</resources>

@@ -138,10 +138,10 @@ public class ShotService : IShotService
             shot.BagId = dto.BagId.Value;
 
         // Update equipment if provided
-        if (dto.MachineId.HasValue)
+        if (dto.MachineId.IsSpecified)
             shot.MachineId = dto.MachineId.Value;
 
-        if (dto.GrinderId.HasValue)
+        if (dto.GrinderId.IsSpecified)
             shot.GrinderId = dto.GrinderId.Value;
 
         // Update accessories if provided
@@ -188,9 +188,11 @@ public class ShotService : IShotService
         if (dto.ActualOutput.HasValue)
             shot.ActualOutput = dto.ActualOutput.Value;
 
-        shot.Rating = dto.Rating; // Can be null
+        if (dto.Rating.IsSpecified)
+            shot.Rating = dto.Rating.Value;
         shot.DrinkType = dto.DrinkType;
-        shot.TastingNotes = dto.TastingNotes; // Can be null
+        if (dto.TastingNotes.IsSpecified)
+            shot.TastingNotes = dto.TastingNotes.Value;
         if (dto.BrewMethod.HasValue)
             shot.BrewMethod = dto.BrewMethod.Value;
         if (dto.ParametersJson != null)
@@ -453,8 +455,8 @@ public class ShotService : IShotService
     /// <inheritdoc />
     public async Task<BeanRecommendationContextDto?> GetBeanRecommendationContextAsync(int beanId)
     {
-        // Get bean from any bag with this bean ID
-        var allShots = await _shotRepository.GetAllAsync();
+        // Load navigations in this scope; rank all matching shots before taking the best ten.
+        var allShots = await _shotRepository.GetByBeanAsync(beanId, 0, int.MaxValue);
         var shotsForBean = allShots
             .Where(s => s.Bag?.BeanId == beanId && !s.IsDeleted)
             .ToList();
@@ -659,7 +661,7 @@ public class ShotService : IShotService
     {
         var errors = new Dictionary<string, List<string>>();
 
-        if (dto.Rating.HasValue && (dto.Rating < 0 || dto.Rating > 4))
+        if (dto.Rating.IsSpecified && dto.Rating.Value is int rating && (rating < 0 || rating > 4))
             errors.Add(nameof(dto.Rating), new List<string> { "Rating must be between 0 and 4 (0=Terrible, 4=Excellent)" });
 
         if (string.IsNullOrWhiteSpace(dto.DrinkType))

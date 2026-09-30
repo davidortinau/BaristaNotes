@@ -32,7 +32,7 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
     private const int EdgeToEdgeBleed = 20;
 
     private readonly IBeanService _beanService;
-    private readonly IBagService _bagService;
+    private readonly AddCoffeeWorkflow _workflow;
     private readonly IFeedbackService _feedbackService;
     private readonly IVisionService _visionService;
     private readonly ILogger<AddCoffeePopup> _logger;
@@ -72,13 +72,13 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
 
     public AddCoffeePopup(
         IBeanService beanService,
-        IBagService bagService,
+        AddCoffeeWorkflow workflow,
         IFeedbackService feedbackService,
         IVisionService visionService,
         ILogger<AddCoffeePopup> logger)
     {
         _beanService = beanService;
-        _bagService = bagService;
+        _workflow = workflow;
         _feedbackService = feedbackService;
         _visionService = visionService;
         _logger = logger;
@@ -308,7 +308,7 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
 
         try
         {
-            var result = await _bagService.CreateNewBagForBeanAsync(bean.Id, DateTime.Today);
+            var result = await _workflow.AddBagForExistingBeanAsync(bean.Id);
 
             if (!result.Success || result.Data == null)
             {
@@ -827,15 +827,17 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
 
     private async Task SaveTypeModeAsync()
     {
-        var name = _nameEntry?.Text?.Trim();
-        if (string.IsNullOrWhiteSpace(name))
+        var draft = new AddCoffeeDraft
         {
-            ShowError("Bean name is required");
-            return;
-        }
-        if (_roastDate.Date > DateTime.Today)
+            Name = _nameEntry?.Text ?? "",
+            Roaster = _roasterEntry?.Text ?? "",
+            Origin = _originEntry?.Text ?? "",
+            Notes = _notesEditor?.Text ?? "",
+            RoastDate = _roastDate
+        };
+        if (draft.GetValidationError(DateTime.Today) is { } error)
         {
-            ShowError("Roast date cannot be in the future");
+            ShowError(error);
             return;
         }
 
@@ -844,15 +846,8 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
 
         try
         {
-            var createBeanDto = new CreateBeanDto
-            {
-                Name = name!,
-                Roaster = string.IsNullOrWhiteSpace(_roasterEntry?.Text) ? null : _roasterEntry!.Text.Trim(),
-                Origin = string.IsNullOrWhiteSpace(_originEntry?.Text) ? null : _originEntry!.Text.Trim(),
-                Notes = null
-            };
-
-            var beanResult = await _beanService.CreateBeanAsync(createBeanDto);
+            var creation = await _workflow.CreateAsync(draft);
+            var beanResult = creation.Bean;
             if (!beanResult.Success || beanResult.Data == null)
             {
                 _logger.LogError("CreateBeanAsync failed: {Error}", beanResult.ErrorMessage);
@@ -861,20 +856,20 @@ public class AddCoffeePopup : ActionModalPopup, IDisposable
                 return;
             }
 
-            var notes = string.IsNullOrWhiteSpace(_notesEditor?.Text) ? null : _notesEditor!.Text.Trim();
-            var bagResult = await _bagService.CreateNewBagForBeanAsync(beanResult.Data.Id, _roastDate, notes);
-            if (!bagResult.Success || bagResult.Data == null)
+            var bagResult = creation.InitialBag;
+            var createdBag = bagResult?.Data;
+            if (bagResult?.Success != true || createdBag is null)
             {
-                _logger.LogError("CreateNewBagForBeanAsync failed for bean {BeanId}: {Error}", beanResult.Data.Id, bagResult.ErrorMessage);
-                ShowError(bagResult.ErrorMessage ?? "Failed to create bag");
+                _logger.LogError("CreateNewBagForBeanAsync failed for bean {BeanId}: {Error}", beanResult.Data.Id, bagResult?.ErrorMessage);
+                ShowError(bagResult?.ErrorMessage ?? "Failed to create bag");
                 SetSaving(false);
                 return;
             }
 
-            _logger.LogDebug("Created bean {BeanId} and bag {BagId}", beanResult.Data.Id, bagResult.Data.Id);
+            _logger.LogDebug("Created bean {BeanId} and bag {BagId}", beanResult.Data.Id, createdBag.Id);
             _feedbackService.TriggerSuccessHaptic();
             await IPopupService.Current.PopAsync();
-            OnCreated?.Invoke(bagResult.Data);
+            OnCreated?.Invoke(createdBag);
             Dispose();
         }
         catch (Exception ex)

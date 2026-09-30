@@ -549,6 +549,7 @@ public partial class BagEntityType
         runtimeEntityType.AddAnnotation("Relational:TableName", "Bags");
         runtimeEntityType.AddAnnotation("Relational:ViewName", null);
         runtimeEntityType.AddAnnotation("Relational:ViewSchema", null);
+        runtimeEntityType.AddAnnotation("Sqlite:UseSqlReturningClause", false);
 
         Customize(runtimeEntityType);
     }

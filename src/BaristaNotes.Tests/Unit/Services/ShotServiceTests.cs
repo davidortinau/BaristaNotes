@@ -864,7 +864,8 @@ public class ShotServiceTests
             IsDeleted = false
         };
         
-        _mockShotRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<BaristaNotes.Core.Models.ShotRecord>());
+        _mockShotRepository.Setup(r => r.GetByBeanAsync(beanId, 0, int.MaxValue))
+            .ReturnsAsync(new List<BaristaNotes.Core.Models.ShotRecord>());
         _mockBagRepository.Setup(r => r.GetBagsForBeanAsync(beanId, true)).ReturnsAsync(new List<BaristaNotes.Core.Models.Bag> { bag });
 
         // Act
@@ -901,7 +902,7 @@ public class ShotServiceTests
             new() { Id = 3, BagId = 1, Bag = bag, Rating = 2, DoseIn = 18, GrindMicrons = 270, ActualOutput = 34, ActualTime = 26, DrinkType = "Espresso", IsDeleted = false, Timestamp = DateTime.Now.AddDays(-3), SyncId = Guid.NewGuid() }
         };
         
-        _mockShotRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(shots);
+        _mockShotRepository.Setup(r => r.GetByBeanAsync(beanId, 0, int.MaxValue)).ReturnsAsync(shots);
         _mockBagRepository.Setup(r => r.GetBagsForBeanAsync(beanId, true)).ReturnsAsync(new List<BaristaNotes.Core.Models.Bag> { bag });
 
         // Act
@@ -942,7 +943,7 @@ public class ShotServiceTests
             new() { Id = 2, BagId = 1, Bag = bag, BrewMethod = BaristaNotes.Core.Models.Enums.BrewMethod.FrenchPress, Rating = 3, DoseIn = 30, ActualOutput = 500, ActualTime = 240, DrinkType = "French Press", IsDeleted = false, Timestamp = DateTime.Now.AddDays(-2), SyncId = Guid.NewGuid() },
         };
 
-        _mockShotRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(shots);
+        _mockShotRepository.Setup(r => r.GetByBeanAsync(beanId, 0, int.MaxValue)).ReturnsAsync(shots);
         _mockBagRepository.Setup(r => r.GetBagsForBeanAsync(beanId, true)).ReturnsAsync(new List<BaristaNotes.Core.Models.Bag> { bag });
 
         var result = await _service.GetBeanRecommendationContextAsync(beanId);
@@ -988,7 +989,7 @@ public class ShotServiceTests
             })
             .ToList();
         
-        _mockShotRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(shots);
+        _mockShotRepository.Setup(r => r.GetByBeanAsync(beanId, 0, int.MaxValue)).ReturnsAsync(shots);
         _mockBagRepository.Setup(r => r.GetBagsForBeanAsync(beanId, true)).ReturnsAsync(new List<BaristaNotes.Core.Models.Bag> { bag });
 
         // Act
@@ -1006,7 +1007,8 @@ public class ShotServiceTests
     {
         // Arrange
         var beanId = 999;
-        _mockShotRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<BaristaNotes.Core.Models.ShotRecord>());
+        _mockShotRepository.Setup(r => r.GetByBeanAsync(beanId, 0, int.MaxValue))
+            .ReturnsAsync(new List<BaristaNotes.Core.Models.ShotRecord>());
         _mockBagRepository.Setup(r => r.GetBagsForBeanAsync(beanId, true)).ReturnsAsync(new List<BaristaNotes.Core.Models.Bag>());
 
         // Act

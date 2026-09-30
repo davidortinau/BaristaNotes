@@ -9,7 +9,6 @@ public partial class ThemeService : IThemeService
 {
     private readonly IPreferencesStore _preferencesStore;
     private readonly ILogger<ThemeService> _logger;
-    private const string ThemeModeKey = "AppThemeMode";
 
     private ThemeMode _currentMode = ThemeMode.System;
 
@@ -42,8 +41,7 @@ public partial class ThemeService : IThemeService
 #endif
 
         // Initialize _currentMode from stored preferences
-        var saved = _preferencesStore.Get(ThemeModeKey, string.Empty);
-        if (!string.IsNullOrEmpty(saved) && Enum.TryParse<ThemeMode>(saved, out var mode))
+        if (ThemePreference.TryRead(_preferencesStore, out var mode))
         {
             _currentMode = mode;
             _logger.LogDebug("Loaded saved theme mode: {ThemeMode}", _currentMode);
@@ -59,19 +57,14 @@ public partial class ThemeService : IThemeService
 
     public Task<ThemeMode> GetThemeModeAsync()
     {
-        var saved = _preferencesStore.Get(ThemeModeKey, string.Empty);
-        if (string.IsNullOrEmpty(saved) || !Enum.TryParse<ThemeMode>(saved, out var mode))
-        {
-            return Task.FromResult(ThemeMode.System);
-        }
-        return Task.FromResult(mode);
+        return Task.FromResult(ThemePreference.Read(_preferencesStore));
     }
 
     public Task SetThemeModeAsync(ThemeMode mode)
     {
         _logger.LogDebug("SetThemeModeAsync called with mode: {Mode}", mode);
         _currentMode = mode;
-        _preferencesStore.Set(ThemeModeKey, mode.ToString());
+        ThemePreference.Write(_preferencesStore, mode);
         ApplyTheme();
         return Task.CompletedTask;
     }

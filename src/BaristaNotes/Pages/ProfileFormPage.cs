@@ -3,15 +3,11 @@ using Application = Microsoft.Maui.Controls.Application;
 
 namespace BaristaNotes.Pages;
 
-class ProfileFormPageState
+class ProfileFormPageState : ProfileDraft
 {
-    public int? ProfileId { get; set; }
-    public string Name { get; set; } = "";
-    public string Context { get; set; } = "";
     public bool IsSaving { get; set; }
     public bool IsLoading { get; set; }
     public string? ErrorMessage { get; set; }
-    public byte[]? StagedAvatarBytes { get; set; }
 }
 
 class ProfileFormPageProps
@@ -23,9 +19,9 @@ class ProfileFormPageProps
 partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageProps>
 {
     [Inject] IUserProfileService _profileService;
+    [Inject] ProfileWorkflow _profileWorkflow;
     [Inject] IImagePickerService _imagePickerService;
     [Inject] IFeedbackService _feedbackService;
-    [Inject] IDataChangeNotifier _dataChangeNotifier;
     [Inject] ILoggerFactory _loggerFactory;
 
     protected override void OnMounted()
@@ -67,9 +63,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
 
             SetState(s =>
             {
-                s.ProfileId = profile.Id;
-                s.Name = profile.Name;
-                s.Context = profile.Context ?? "";
+                s.ApplyLoadedData(profile);
                 s.IsLoading = false;
             });
         }
@@ -85,9 +79,9 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
 
     async Task SaveProfileAsync()
     {
-        if (string.IsNullOrWhiteSpace(State.Name))
+        if (State.ValidationError is { } error)
         {
-            SetState(s => s.ErrorMessage = "Profile name is required");
+            SetState(s => s.ErrorMessage = error);
             return;
         }
 
@@ -99,32 +93,13 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
 
         try
         {
-            int profileId;
-            if (State.ProfileId.HasValue && State.ProfileId.Value > 0)
-            {
-                profileId = State.ProfileId.Value;
-                await _profileService.UpdateProfileAsync(
-                    profileId,
-                    new UpdateUserProfileDto { Name = State.Name, Context = State.Context });
+            var saved = await _profileWorkflow.SaveDetailsAsync(State);
+            SetState(s => s.ProfileId = saved.Id);
 
-                _dataChangeNotifier.NotifyDataChanged(DataChangeType.ProfileUpdated, profileId);
-            }
-            else
+            if (State.StagedAvatarBytes is { Length: > 0 })
             {
-                var created = await _profileService.CreateProfileAsync(
-                    new CreateUserProfileDto { Name = State.Name, Context = string.IsNullOrWhiteSpace(State.Context) ? null : State.Context });
-
-                profileId = created.Id;
-                SetState(s => s.ProfileId = profileId);
-                _dataChangeNotifier.NotifyDataChanged(DataChangeType.ProfileCreated, created);
-            }
-
-            if (State.StagedAvatarBytes is { Length: > 0 } avatarBytes
-                && profileId > 0)
-            {
-                using var avatarStream = new MemoryStream(avatarBytes, writable: false);
-                var imageResult = await _profileService.UpdateProfileImageAsync(profileId, avatarStream);
-                if (!imageResult.Success)
+                var imageResult = await _profileWorkflow.SaveStagedAvatarAsync(State);
+                if (imageResult is { Success: false })
                 {
                     SetState(s =>
                     {
@@ -135,7 +110,6 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
                 }
 
                 SetState(s => s.StagedAvatarBytes = null);
-                _dataChangeNotifier.NotifyDataChanged(DataChangeType.ProfileUpdated, profileId);
             }
 
             await _feedbackService.ShowSuccessAsync($"Profile '{State.Name}' saved");
@@ -163,8 +137,7 @@ partial class ProfileFormPage : Component<ProfileFormPageState, ProfileFormPageP
             SecondaryActionButtonText = "Cancel",
             ActionButtonCommand = new Command(async () =>
             {
-                await _profileService.DeleteProfileAsync(State.ProfileId!.Value);
-                _dataChangeNotifier.NotifyDataChanged(DataChangeType.ProfileUpdated, State.ProfileId!.Value);
+                await _profileWorkflow.DeleteAsync(State.ProfileId!.Value);
                 await _feedbackService.ShowSuccessAsync($"Profile '{State.Name}' deleted");
                 await IPopupService.Current.PopAsync();
                 await MauiControls.Shell.Current.GoToAsync("..");

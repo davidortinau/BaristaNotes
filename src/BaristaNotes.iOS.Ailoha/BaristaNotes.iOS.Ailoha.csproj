@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0-ios</TargetFramework>
+    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+    <IsBindingProject>true</IsBindingProject>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <LinkWithSwiftSystemLibraries>true</LinkWithSwiftSystemLibraries>
+  </PropertyGroup>
+  <ItemGroup>
+    <ObjcBindingApiDefinition Include="$(MSBuildThisFileDirectory)ApiDefinition.cs" />
+  </ItemGroup>
+  <Target Name="BuildNativeAgentBridge" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(Configuration)' != 'Debug'" Text="The native inspection binding is Debug-only. Release heads must not reference this project." />
+    <Error Condition="'$(AilohaPackageRoot)' == ''" Text="Set AilohaPackageRoot to the absolute external directory containing the verified official v0.1.13 package; see README.md." />
+    <PropertyGroup>
+      <_BridgeOutput>$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)native/$(AilohaBridgeRuntimeIdentifier)'))</_BridgeOutput>
+    </PropertyGroup>
+    <Exec Command="python3 &quot;$(MSBuildThisFileDirectory)build_bridge.py&quot; &quot;$(AilohaPackageRoot)&quot; &quot;$(_BridgeOutput)&quot; &quot;$(AilohaBridgeRuntimeIdentifier)&quot;" />
+    <ItemGroup>
+      <NativeReference Include="$(_BridgeOutput)/libBaristaNotesAilohaBridge.a" Kind="Static" ForceLoad="true" SmartLink="false" LinkWithSwiftSystemLibraries="true" />
+      <NativeReference Include="$(AilohaPackageRoot)/ailoha-v0.1.13/AilohaAgent.xcframework" Kind="Framework" SmartLink="false" LinkWithSwiftSystemLibraries="true" />
+    </ItemGroup>
+  </Target>
+</Project>

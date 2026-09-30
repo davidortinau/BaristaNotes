@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
+  <queries>
+    <intent>
+      <action android:name="android.speech.RecognitionService" />
+    </intent>
+    <intent>
+      <action android:name="android.media.action.IMAGE_CAPTURE" />
+    </intent>
+    <intent>
+      <action android:name="androidx.activity.result.contract.action.PICK_IMAGES" />
+    </intent>
+  </queries>
+  <application
+      android:allowBackup="true"
+      android:icon="@drawable/beans"
+      android:label="@string/app_name"
+      android:enableOnBackInvokedCallback="false"
+      android:supportsRtl="true" />
+</manifest>

@@ -35,7 +35,7 @@ namespace Microsoft.EntityFrameworkCore.GeneratedInterceptors
     {
         #region Query1
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttXcEAABCYWdSZXBvc2l0b3J5LmNz")]
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m3cEAABCYWdSZXBvc2l0b3J5LmNz")]
         public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query1_Include1<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
         where TEntity : class
         {
@@ -43,14 +43,14 @@ namespace Microsoft.EntityFrameworkCore.GeneratedInterceptors
             return precompiledQueryContext.ToIncludable<TProperty>();
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttZkEAABCYWdSZXBvc2l0b3J5LmNz")]
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m5kEAABCYWdSZXBvc2l0b3J5LmNz")]
         public static global::System.Linq.IQueryable<TSource> Query1_Where2<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,global::System.Boolean>> predicate)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             return precompiledQueryContext;
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/Attb8EAABCYWdSZXBvc2l0b3J5LmNz")]
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m78EAABCYWdSZXBvc2l0b3J5LmNz")]
         public static global::System.Threading.Tasks.Task<TSource?> Query1_FirstOrDefaultAsync3<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,global::System.Boolean>> predicate, global::System.Threading.CancellationToken cancellationToken)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
@@ -196,16 +196,53 @@ namespace Microsoft.EntityFrameworkCore.GeneratedInterceptors
         #endregion Query1
         #region Query2
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttdcFAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query2_Include1<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m2wFAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Threading.Tasks.Task<global::System.Int32> Query2_CountAsync1<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,global::System.Boolean>> predicate, global::System.Threading.CancellationToken cancellationToken)
+        {
+            var precompiledQueryContext = new PrecompiledQueryContext<TSource>(((IInfrastructure<DbContext>)source).Instance);
+            var queryContext = precompiledQueryContext.QueryContext;
+            var binary1 = (BinaryExpression)predicate.Body;
+            queryContext.Parameters.Add(
+                "targetBagId",
+                Expression.Lambda<Func<object?>>(Expression.Convert(binary1.Right, typeof(object)))
+                .Compile(preferInterpretation: true)
+                .Invoke());
+            queryContext.CancellationToken = cancellationToken;
+            Query2_Executor ??= Query2_GenerateExecutor(precompiledQueryContext.DbContext, precompiledQueryContext.QueryContext);
+            return ((Func<QueryContext, global::System.Threading.Tasks.Task<int>>)(Query2_Executor))(queryContext);
+        }
+
+        private static object Query2_GenerateExecutor(DbContext dbContext, QueryContext queryContext)
+        {
+            var relationalModel = dbContext.Model.GetRelationalModel();
+            var relationalTypeMappingSource = dbContext.GetService<IRelationalTypeMappingSource>();
+            var materializerLiftableConstantContext = new RelationalMaterializerLiftableConstantContext(
+                dbContext.GetService<ShapedQueryCompilingExpressionVisitorDependencies>(),
+                dbContext.GetService<RelationalShapedQueryCompilingExpressionVisitorDependencies>(),
+                dbContext.GetService<RelationalCommandBuilderDependencies>());
+            var relationalCommandTemplate = ((IRelationalCommandTemplate)(new RelationalCommand(materializerLiftableConstantContext.CommandBuilderDependencies, "SELECT COUNT(*)\nFROM \"ShotRecords\" AS \"s\"\nWHERE \"s\".\"BagId\" = @targetBagId", "SELECT COUNT(*)\nFROM \"ShotRecords\" AS \"s\"\nWHERE \"s\".\"BagId\" = @targetBagId", new IRelationalParameter[] { new TypeMappedRelationalParameter("targetBagId", "@targetBagId", relationalTypeMappingSource.FindMapping(typeof(int), "INTEGER", false, false, (int? )(null), false, false, (int? )(null), (int? )(null)), false, ParameterDirection.Input) })));
+            return Task<int> (QueryContext queryContext) => ShapedQueryCompilingExpressionVisitor.SingleAsync(SingleQueryingEnumerable.Create(((RelationalQueryContext)queryContext), IRelationalCommandTemplate (Dictionary<string, object> parameters) => relationalCommandTemplate, (ReaderColumn[])(null), int (QueryContext queryContext, DbDataReader dataReader, ResultContext resultContext, SingleQueryResultCoordinator resultCoordinator) =>
+{
+    var value1 = (dataReader.IsDBNull(0) ? default(int? ) : ((int? )(dataReader.GetInt32(0))));
+    return ((int)value1);
+}, typeof(BaristaNotesContext), false, false, true), queryContext.CancellationToken);
+        }
+
+        private static object Query2_Executor;
+
+        #endregion Query2
+        #region Query3
+
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m4oGAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query3_Include1<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
         where TEntity : class
         {
             var precompiledQueryContext = new PrecompiledQueryContext<TEntity>(((IInfrastructure<DbContext>)source).Instance);
             return precompiledQueryContext.ToIncludable<TProperty>();
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/Attf0FAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Linq.IQueryable<TSource> Query2_Where2<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,global::System.Boolean>> predicate)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m7AGAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Linq.IQueryable<TSource> Query3_Where2<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,global::System.Boolean>> predicate)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             var queryContext = precompiledQueryContext.QueryContext;
@@ -219,26 +256,26 @@ namespace Microsoft.EntityFrameworkCore.GeneratedInterceptors
             return precompiledQueryContext;
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttUMGAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Linq.IOrderedQueryable<TSource> Query2_OrderByDescending3<TSource, TKey>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,TKey>> keySelector)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m/YGAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Linq.IOrderedQueryable<TSource> Query3_OrderByDescending3<TSource, TKey>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,TKey>> keySelector)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             return precompiledQueryContext;
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttXgGAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<TSource>> Query2_ToListAsync4<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Threading.CancellationToken cancellationToken)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2mysHAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<TSource>> Query3_ToListAsync4<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Threading.CancellationToken cancellationToken)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             var queryContext = precompiledQueryContext.QueryContext;
             queryContext.CancellationToken = cancellationToken;
-            Query2_Executor ??= Query2_GenerateExecutor(precompiledQueryContext.DbContext, precompiledQueryContext.QueryContext);
-            var queryingEnumerable = ((Func<QueryContext, IAsyncEnumerable<TSource>>)(Query2_Executor))(queryContext);
+            Query3_Executor ??= Query3_GenerateExecutor(precompiledQueryContext.DbContext, precompiledQueryContext.QueryContext);
+            var queryingEnumerable = ((Func<QueryContext, IAsyncEnumerable<TSource>>)(Query3_Executor))(queryContext);
             var asyncQueryingEnumerable = new PrecompiledQueryableAsyncEnumerableAdapter<TSource>(queryingEnumerable);
             return asyncQueryingEnumerable.ToListAsync(cancellationToken);
         }
 
-        private static object Query2_GenerateExecutor(DbContext dbContext, QueryContext queryContext)
+        private static object Query3_GenerateExecutor(DbContext dbContext, QueryContext queryContext)
         {
             var relationalModel = dbContext.Model.GetRelationalModel();
             var relationalTypeMappingSource = dbContext.GetService<IRelationalTypeMappingSource>();
@@ -363,21 +400,21 @@ namespace Microsoft.EntityFrameworkCore.GeneratedInterceptors
 }, typeof(BaristaNotesContext), false, false, true);
         }
 
-        private static object Query2_Executor;
+        private static object Query3_Executor;
 
-        #endregion Query2
-        #region Query3
+        #endregion Query3
+        #region Query4
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttcIGAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query3_Include1<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m3UHAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query4_Include1<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
         where TEntity : class
         {
             var precompiledQueryContext = new PrecompiledQueryContext<TEntity>(((IInfrastructure<DbContext>)source).Instance);
             return precompiledQueryContext.ToIncludable<TProperty>();
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AtteQGAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Linq.IQueryable<TSource> Query3_Where2<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,global::System.Boolean>> predicate)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m5cHAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Linq.IQueryable<TSource> Query4_Where2<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,global::System.Boolean>> predicate)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             var queryContext = precompiledQueryContext.QueryContext;
@@ -392,26 +429,26 @@ namespace Microsoft.EntityFrameworkCore.GeneratedInterceptors
             return precompiledQueryContext;
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttTcHAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Linq.IOrderedQueryable<TSource> Query3_OrderByDescending3<TSource, TKey>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,TKey>> keySelector)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m+oHAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Linq.IOrderedQueryable<TSource> Query4_OrderByDescending3<TSource, TKey>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,TKey>> keySelector)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             return precompiledQueryContext;
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttWgHAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<TSource>> Query3_ToListAsync4<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Threading.CancellationToken cancellationToken)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2mxsIAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<TSource>> Query4_ToListAsync4<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Threading.CancellationToken cancellationToken)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             var queryContext = precompiledQueryContext.QueryContext;
             queryContext.CancellationToken = cancellationToken;
-            Query3_Executor ??= Query3_GenerateExecutor(precompiledQueryContext.DbContext, precompiledQueryContext.QueryContext);
-            var queryingEnumerable = ((Func<QueryContext, IAsyncEnumerable<TSource>>)(Query3_Executor))(queryContext);
+            Query4_Executor ??= Query4_GenerateExecutor(precompiledQueryContext.DbContext, precompiledQueryContext.QueryContext);
+            var queryingEnumerable = ((Func<QueryContext, IAsyncEnumerable<TSource>>)(Query4_Executor))(queryContext);
             var asyncQueryingEnumerable = new PrecompiledQueryableAsyncEnumerableAdapter<TSource>(queryingEnumerable);
             return asyncQueryingEnumerable.ToListAsync(cancellationToken);
         }
 
-        private static object Query3_GenerateExecutor(DbContext dbContext, QueryContext queryContext)
+        private static object Query4_GenerateExecutor(DbContext dbContext, QueryContext queryContext)
         {
             var relationalModel = dbContext.Model.GetRelationalModel();
             var relationalTypeMappingSource = dbContext.GetService<IRelationalTypeMappingSource>();
@@ -536,29 +573,29 @@ namespace Microsoft.EntityFrameworkCore.GeneratedInterceptors
 }, typeof(BaristaNotesContext), false, false, true);
         }
 
-        private static object Query3_Executor;
+        private static object Query4_Executor;
 
-        #endregion Query3
-        #region Query4
+        #endregion Query4
+        #region Query5
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttZAIAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query4_Include1<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m0MJAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query5_Include1<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
         where TEntity : class
         {
             var precompiledQueryContext = new PrecompiledQueryContext<TEntity>(((IInfrastructure<DbContext>)source).Instance);
             return precompiledQueryContext.ToIncludable<TProperty>();
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttbYIAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query4_Include2<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m2kJAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query5_Include2<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
         where TEntity : class
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TEntity>)source;
             return precompiledQueryContext.ToIncludable<TProperty>();
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AtteMIAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Linq.IQueryable<TSource> Query4_Where3<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,global::System.Boolean>> predicate)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m5YJAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Linq.IQueryable<TSource> Query5_Where3<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,global::System.Boolean>> predicate)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             var queryContext = precompiledQueryContext.QueryContext;
@@ -572,26 +609,26 @@ namespace Microsoft.EntityFrameworkCore.GeneratedInterceptors
             return precompiledQueryContext;
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttSkJAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Linq.IOrderedQueryable<TSource> Query4_OrderByDescending4<TSource, TKey>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,TKey>> keySelector)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m9wJAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Linq.IOrderedQueryable<TSource> Query5_OrderByDescending4<TSource, TKey>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,TKey>> keySelector)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             return precompiledQueryContext;
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttV4JAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<TSource>> Query4_ToListAsync5<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Threading.CancellationToken cancellationToken)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2mxEKAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<TSource>> Query5_ToListAsync5<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Threading.CancellationToken cancellationToken)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             var queryContext = precompiledQueryContext.QueryContext;
             queryContext.CancellationToken = cancellationToken;
-            Query4_Executor ??= Query4_GenerateExecutor(precompiledQueryContext.DbContext, precompiledQueryContext.QueryContext);
-            var queryingEnumerable = ((Func<QueryContext, IAsyncEnumerable<TSource>>)(Query4_Executor))(queryContext);
+            Query5_Executor ??= Query5_GenerateExecutor(precompiledQueryContext.DbContext, precompiledQueryContext.QueryContext);
+            var queryingEnumerable = ((Func<QueryContext, IAsyncEnumerable<TSource>>)(Query5_Executor))(queryContext);
             var asyncQueryingEnumerable = new PrecompiledQueryableAsyncEnumerableAdapter<TSource>(queryingEnumerable);
             return asyncQueryingEnumerable.ToListAsync(cancellationToken);
         }
 
-        private static object Query4_GenerateExecutor(DbContext dbContext, QueryContext queryContext)
+        private static object Query5_GenerateExecutor(DbContext dbContext, QueryContext queryContext)
         {
             var relationalModel = dbContext.Model.GetRelationalModel();
             var relationalTypeMappingSource = dbContext.GetService<IRelationalTypeMappingSource>();
@@ -813,29 +850,29 @@ namespace Microsoft.EntityFrameworkCore.GeneratedInterceptors
 }, typeof(BaristaNotesContext), false, false, true);
         }
 
-        private static object Query4_Executor;
+        private static object Query5_Executor;
 
-        #endregion Query4
-        #region Query5
+        #endregion Query5
+        #region Query6
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttcYJAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query5_Include1<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m3kKAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query6_Include1<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
         where TEntity : class
         {
             var precompiledQueryContext = new PrecompiledQueryContext<TEntity>(((IInfrastructure<DbContext>)source).Instance);
             return precompiledQueryContext.ToIncludable<TProperty>();
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttewJAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query5_Include2<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m58KAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query6_Include2<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
         where TEntity : class
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TEntity>)source;
             return precompiledQueryContext.ToIncludable<TProperty>();
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttRkKAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Linq.IQueryable<TSource> Query5_Where3<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,global::System.Boolean>> predicate)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m8wKAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Linq.IQueryable<TSource> Query6_Where3<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,global::System.Boolean>> predicate)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             var queryContext = precompiledQueryContext.QueryContext;
@@ -850,26 +887,26 @@ namespace Microsoft.EntityFrameworkCore.GeneratedInterceptors
             return precompiledQueryContext;
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttXAKAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Linq.IOrderedQueryable<TSource> Query5_OrderByDescending4<TSource, TKey>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,TKey>> keySelector)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2myMLAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Linq.IOrderedQueryable<TSource> Query6_OrderByDescending4<TSource, TKey>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,TKey>> keySelector)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             return precompiledQueryContext;
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttaUKAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<TSource>> Query5_ToListAsync5<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Threading.CancellationToken cancellationToken)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m1gLAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<TSource>> Query6_ToListAsync5<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Threading.CancellationToken cancellationToken)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             var queryContext = precompiledQueryContext.QueryContext;
             queryContext.CancellationToken = cancellationToken;
-            Query5_Executor ??= Query5_GenerateExecutor(precompiledQueryContext.DbContext, precompiledQueryContext.QueryContext);
-            var queryingEnumerable = ((Func<QueryContext, IAsyncEnumerable<TSource>>)(Query5_Executor))(queryContext);
+            Query6_Executor ??= Query6_GenerateExecutor(precompiledQueryContext.DbContext, precompiledQueryContext.QueryContext);
+            var queryingEnumerable = ((Func<QueryContext, IAsyncEnumerable<TSource>>)(Query6_Executor))(queryContext);
             var asyncQueryingEnumerable = new PrecompiledQueryableAsyncEnumerableAdapter<TSource>(queryingEnumerable);
             return asyncQueryingEnumerable.ToListAsync(cancellationToken);
         }
 
-        private static object Query5_GenerateExecutor(DbContext dbContext, QueryContext queryContext)
+        private static object Query6_GenerateExecutor(DbContext dbContext, QueryContext queryContext)
         {
             var relationalModel = dbContext.Model.GetRelationalModel();
             var relationalTypeMappingSource = dbContext.GetService<IRelationalTypeMappingSource>();
@@ -1091,54 +1128,54 @@ namespace Microsoft.EntityFrameworkCore.GeneratedInterceptors
 }, typeof(BaristaNotesContext), false, false, true);
         }
 
-        private static object Query5_Executor;
+        private static object Query6_Executor;
 
-        #endregion Query5
-        #region Query6
+        #endregion Query6
+        #region Query7
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/Attc4NAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query6_Include1<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m4EOAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query7_Include1<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
         where TEntity : class
         {
             var precompiledQueryContext = new PrecompiledQueryContext<TEntity>(((IInfrastructure<DbContext>)source).Instance);
             return precompiledQueryContext.ToIncludable<TProperty>();
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttfANAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query6_Include2<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m6MOAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query7_Include2<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
         where TEntity : class
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TEntity>)source;
             return precompiledQueryContext.ToIncludable<TProperty>();
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttRkOAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Linq.IQueryable<TSource> Query6_Where3<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,global::System.Boolean>> predicate)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m8wOAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Linq.IQueryable<TSource> Query7_Where3<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,global::System.Boolean>> predicate)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             return precompiledQueryContext;
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttVAOAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Linq.IOrderedQueryable<TSource> Query6_OrderByDescending4<TSource, TKey>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,TKey>> keySelector)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2mwMPAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Linq.IOrderedQueryable<TSource> Query7_OrderByDescending4<TSource, TKey>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,TKey>> keySelector)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             return precompiledQueryContext;
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttYEOAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<TSource>> Query6_ToListAsync5<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Threading.CancellationToken cancellationToken)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2mzQPAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<TSource>> Query7_ToListAsync5<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Threading.CancellationToken cancellationToken)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             var queryContext = precompiledQueryContext.QueryContext;
             queryContext.CancellationToken = cancellationToken;
-            Query6_Executor ??= Query6_GenerateExecutor(precompiledQueryContext.DbContext, precompiledQueryContext.QueryContext);
-            var queryingEnumerable = ((Func<QueryContext, IAsyncEnumerable<TSource>>)(Query6_Executor))(queryContext);
+            Query7_Executor ??= Query7_GenerateExecutor(precompiledQueryContext.DbContext, precompiledQueryContext.QueryContext);
+            var queryingEnumerable = ((Func<QueryContext, IAsyncEnumerable<TSource>>)(Query7_Executor))(queryContext);
             var asyncQueryingEnumerable = new PrecompiledQueryableAsyncEnumerableAdapter<TSource>(queryingEnumerable);
             return asyncQueryingEnumerable.ToListAsync(cancellationToken);
         }
 
-        private static object Query6_GenerateExecutor(DbContext dbContext, QueryContext queryContext)
+        private static object Query7_GenerateExecutor(DbContext dbContext, QueryContext queryContext)
         {
             var relationalModel = dbContext.Model.GetRelationalModel();
             var relationalTypeMappingSource = dbContext.GetService<IRelationalTypeMappingSource>();
@@ -1360,21 +1397,21 @@ namespace Microsoft.EntityFrameworkCore.GeneratedInterceptors
 }, typeof(BaristaNotesContext), false, false, true);
         }
 
-        private static object Query6_Executor;
+        private static object Query7_Executor;
 
-        #endregion Query6
-        #region Query7
+        #endregion Query7
+        #region Query8
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttXcRAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query7_Include1<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2myoSAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<TEntity,TProperty> Query8_Include1<TEntity, TProperty>(this global::System.Linq.IQueryable<TEntity> source, global::System.Linq.Expressions.Expression<global::System.Func<TEntity,TProperty>> navigationPropertyPath)
         where TEntity : class
         {
             var precompiledQueryContext = new PrecompiledQueryContext<TEntity>(((IInfrastructure<DbContext>)source).Instance);
             return precompiledQueryContext.ToIncludable<TProperty>();
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttZkRAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Linq.IQueryable<TSource> Query7_Where2<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,global::System.Boolean>> predicate)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m0wSAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Linq.IQueryable<TSource> Query8_Where2<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,global::System.Boolean>> predicate)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             var queryContext = precompiledQueryContext.QueryContext;
@@ -1389,24 +1426,24 @@ namespace Microsoft.EntityFrameworkCore.GeneratedInterceptors
             return precompiledQueryContext;
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttewRAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Linq.IOrderedQueryable<TSource> Query7_OrderByDescending3<TSource, TKey>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,TKey>> keySelector)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m58SAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Linq.IOrderedQueryable<TSource> Query8_OrderByDescending3<TSource, TKey>(this global::System.Linq.IQueryable<TSource> source, global::System.Linq.Expressions.Expression<global::System.Func<TSource,TKey>> keySelector)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             return precompiledQueryContext;
         }
 
-        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "hPk/5WI9GNFArWDg0/AttR0SAABCYWdSZXBvc2l0b3J5LmNz")]
-        public static global::System.Threading.Tasks.Task<TSource?> Query7_FirstOrDefaultAsync4<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Threading.CancellationToken cancellationToken)
+        [global::System.Runtime.CompilerServices.InterceptsLocationAttribute(1, "i59h9kE938W27CmGe5l2m9ASAABCYWdSZXBvc2l0b3J5LmNz")]
+        public static global::System.Threading.Tasks.Task<TSource?> Query8_FirstOrDefaultAsync4<TSource>(this global::System.Linq.IQueryable<TSource> source, global::System.Threading.CancellationToken cancellationToken)
         {
             var precompiledQueryContext = (PrecompiledQueryContext<TSource>)source;
             var queryContext = precompiledQueryContext.QueryContext;
             queryContext.CancellationToken = cancellationToken;
-            Query7_Executor ??= Query7_GenerateExecutor(precompiledQueryContext.DbContext, precompiledQueryContext.QueryContext);
-            return ((Func<QueryContext, global::System.Threading.Tasks.Task<TSource>>)(Query7_Executor))(queryContext);
+            Query8_Executor ??= Query8_GenerateExecutor(precompiledQueryContext.DbContext, precompiledQueryContext.QueryContext);
+            return ((Func<QueryContext, global::System.Threading.Tasks.Task<TSource>>)(Query8_Executor))(queryContext);
         }
 
-        private static object Query7_GenerateExecutor(DbContext dbContext, QueryContext queryContext)
+        private static object Query8_GenerateExecutor(DbContext dbContext, QueryContext queryContext)
         {
             var relationalModel = dbContext.Model.GetRelationalModel();
             var relationalTypeMappingSource = dbContext.GetService<IRelationalTypeMappingSource>();
@@ -1531,9 +1568,9 @@ namespace Microsoft.EntityFrameworkCore.GeneratedInterceptors
 }, typeof(BaristaNotesContext), false, false, true), queryContext.CancellationToken);
         }
 
-        private static object Query7_Executor;
+        private static object Query8_Executor;
 
-        #endregion Query7
+        #endregion Query8
         #region Unsafe accessors
         [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "<Id>k__BackingField")]
 private static extern ref int UnsafeAccessor_BaristaNotes_Core_Models_Bag_Id_Set(Bag instance);

@@ -79,15 +79,15 @@ public record UpdateShotDto
 
     /// <summary>
     /// Machine used for the shot.
-    /// Optional - null means no change to existing value.
+    /// Omission leaves it unchanged; an explicit null clears it.
     /// </summary>
-    public int? MachineId { get; init; }
+    public FieldUpdate<int?> MachineId { get; init; }
 
     /// <summary>
     /// Grinder used for the shot.
-    /// Optional - null means no change to existing value.
+    /// Omission leaves it unchanged; an explicit null clears it.
     /// </summary>
-    public int? GrinderId { get; init; }
+    public FieldUpdate<int?> GrinderId { get; init; }
 
     /// <summary>
     /// Accessories used for the shot.
@@ -130,10 +130,10 @@ public record UpdateShotDto
 
     /// <summary>
     /// Taste rating on 0-4 scale (0=Terrible, 1=Bad, 2=Average, 3=Good, 4=Excellent).
-    /// Optional - null means no change to existing value.
+    /// Omission leaves it unchanged; an explicit null clears it.
     /// If provided, must be between 0 and 4 inclusive. See constitution §V.
     /// </summary>
-    public int? Rating { get; init; }
+    public FieldUpdate<int?> Rating { get; init; }
 
     /// <summary>
     /// Type of drink made (e.g., "Espresso", "Latte", "Americano").
@@ -172,9 +172,9 @@ public record UpdateShotDto
     public decimal? ExpectedOutput { get; init; }
 
     /// <summary>
-    /// Optional tasting notes (free text description of flavor, aroma, etc.)
+    /// Tasting notes. Omission leaves them unchanged; an explicit null clears them.
     /// </summary>
-    public string? TastingNotes { get; init; }
+    public FieldUpdate<string?> TastingNotes { get; init; }
 
     /// <summary>
     /// Brew method (Espresso, Pour Over, Moka, Drip, Aeropress, French Press).
@@ -210,7 +210,7 @@ public record UpdateEquipmentDto
 {
     public string? Name { get; init; }
     public Models.Enums.EquipmentType? Type { get; init; }
-    public string? Notes { get; init; }
+    public FieldUpdate<string?> Notes { get; init; }
     public bool? IsActive { get; init; }
 }
 
@@ -241,10 +241,10 @@ public record CreateBeanDto
 public record UpdateBeanDto
 {
     public string? Name { get; init; }
-    public string? Roaster { get; init; }
+    public FieldUpdate<string?> Roaster { get; init; }
     public DateTime? RoastDate { get; init; }
-    public string? Origin { get; init; }
-    public string? Notes { get; init; }
+    public FieldUpdate<string?> Origin { get; init; }
+    public FieldUpdate<string?> Notes { get; init; }
     public string? RoasterUrl { get; init; }
     public bool? IsActive { get; init; }
 }

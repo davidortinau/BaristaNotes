@@ -128,12 +128,12 @@ public class BeanService : IBeanService
 
         if (dto.Name != null)
             bean.Name = dto.Name;
-        if (dto.Roaster != null)
-            bean.Roaster = dto.Roaster;
-        if (dto.Origin != null)
-            bean.Origin = dto.Origin;
-        if (dto.Notes != null)
-            bean.Notes = dto.Notes;
+        if (dto.Roaster.IsSpecified)
+            bean.Roaster = dto.Roaster.Value;
+        if (dto.Origin.IsSpecified)
+            bean.Origin = dto.Origin.Value;
+        if (dto.Notes.IsSpecified)
+            bean.Notes = dto.Notes.Value;
         if (dto.RoasterUrl != null)
             bean.RoasterUrl = dto.RoasterUrl.Length == 0 ? null : dto.RoasterUrl;
         if (dto.IsActive.HasValue)

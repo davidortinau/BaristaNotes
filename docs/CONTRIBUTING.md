@@ -226,7 +226,7 @@ The repository intentionally commits:
 
 - EF compiled models and query interceptors under
   `BaristaNotes.Core/Data/CompiledModels`; and
-- NativeAOT-safe AI tool code under `BaristaNotes/Services/AI/Generated`.
+- Generated AI tool code under `BaristaNotes.Core/Services/Voice/Generated`.
 
 When source changes require regeneration:
 

@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0-ios</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>BaristaNotes.Native.iOS</RootNamespace>
+    <AssemblyName>BaristaNotes.Native.iOS</AssemblyName>
+    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+    <ApplicationId>com.simplyprofound.baristanotes.native</ApplicationId>
+    <ApplicationTitle>BaristaNotes Native</ApplicationTitle>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AppIcon>AppIcon</AppIcon>
+    <_SourceResources>$(MSBuildThisFileDirectory)../BaristaNotes/Resources</_SourceResources>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <ApplicationId>com.simplyprofound.baristanotes</ApplicationId>
+    <ApplicationTitle>BaristaNotes</ApplicationTitle>
+    <ApplicationDisplayVersion>2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>2</ApplicationVersion>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <TrimMode>partial</TrimMode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../BaristaNotes.Core/BaristaNotes.Core.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="11.0.0-rc.1.26425.128" />
+    <PackageReference Include="Microsoft.Maui.Graphics" Version="11.0.0-rc.1.26451.6" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="11.0.0-rc.1.26425.128" />
+    <PackageReference Include="Microsoft.Maui.Essentials.AI" Version="11.0.0-preview.6.26360.8" />
+    <BundleResource Include="appsettings.json" LogicalName="appsettings.json" />
+    <BundleResource Include="$(MSBuildThisFileDirectory)../BaristaNotes/appsettings.Development.json"
+                    LogicalName="appsettings.Development.json"
+                    Condition="Exists('$(MSBuildThisFileDirectory)../BaristaNotes/appsettings.Development.json')" />
+    <BundleResource Include="$(_SourceResources)/Fonts/Manrope-Regular.ttf" LogicalName="Fonts/Manrope-Regular.ttf" />
+    <BundleResource Include="$(_SourceResources)/Fonts/Manrope-SemiBold.ttf" LogicalName="Fonts/Manrope-SemiBold.ttf" />
+    <BundleResource Include="$(_SourceResources)/Fonts/MaterialSymbols.ttf" LogicalName="Fonts/MaterialSymbols.ttf" />
+    <BundleResource Include="$(_SourceResources)/Fonts/coffee-icons.ttf" LogicalName="Fonts/coffee-icons.ttf" />
+    <BundleResource Include="$(_SourceResources)/Fonts/Manrope-LICENSE_OFL.txt" LogicalName="Fonts/Manrope-LICENSE_OFL.txt" />
+    <BundleResource Include="$(_SourceResources)/AppIcon/beans.png" LogicalName="Images/beans.png" />
+    <ImageAsset Include="Assets.xcassets/AppIcon.appiconset/Contents.json" />
+    <ImageAsset Include="Assets.xcassets/AppIcon.appiconset/AppIcon.png" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../BaristaNotes.iOS.Ailoha/BaristaNotes.iOS.Ailoha.csproj"
+                      AdditionalProperties="AilohaBridgeRuntimeIdentifier=$(RuntimeIdentifier)" />
+    <PartialAppManifest Include="$(MSBuildThisFileDirectory)Info.Debug.plist" />
+    <BundleResource Include="$(AilohaPackageRoot)/ailoha-v0.1.13-LICENSE" LogicalName="Notices/Ailoha-LICENSE.txt" />
+    <BundleResource Include="$(AilohaPackageRoot)/ailoha-v0.1.13-DEPENDENCIES" LogicalName="Notices/Ailoha-DEPENDENCIES.txt" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
+    <Compile Remove="NativeInspection.cs" />
+  </ItemGroup>
+</Project>

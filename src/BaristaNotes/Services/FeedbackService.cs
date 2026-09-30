@@ -138,7 +138,7 @@ public class FeedbackService : IFeedbackService
             DisappearingAnimation = new UXDivers.Popups.Maui.FadeOutPopupAnimation() { Easing = EasingType.SpringOut }
         };
 
-        await IPopupService.Current.PushAsync(toast);
+        await IPopupService.Current.PushAsync(toast, waitUntilClosed: false);
         await Task.Delay(2000);
         await IPopupService.Current.PopAsync(toast);
     }

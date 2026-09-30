@@ -10,15 +10,8 @@ class BagDetailPageProps
     public string BeanName { get; set; } = "";
 }
 
-class BagDetailPageState
+class BagDetailPageState : BagDraft
 {
-    public int? BagId { get; set; }
-    public int BeanId { get; set; }
-    public string BeanName { get; set; } = "";
-    public DateTime RoastDate { get; set; } = DateTime.Now;
-    public string Notes { get; set; } = "";
-    public bool IsComplete { get; set; }
-
     public int ShotCount { get; set; }
     public RatingAggregateDto? RatingAggregate { get; set; }
 
@@ -30,6 +23,7 @@ class BagDetailPageState
 partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
 {
     [Inject] IBagService _bagService;
+    [Inject] BagWorkflow _bagWorkflow;
     [Inject] IRatingService _ratingService;
     [Inject] IFeedbackService _feedbackService;
     [Inject] IDataChangeNotifier _dataChangeNotifier;
@@ -76,11 +70,7 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
 
             SetState(s =>
             {
-                s.BeanId = bag.BeanId;
-                s.BeanName = bag.Bean?.Name ?? Props.BeanName;
-                s.RoastDate = bag.RoastDate;
-                s.Notes = bag.Notes ?? "";
-                s.IsComplete = bag.IsComplete;
+                s.ApplyLoadedData(bag, Props.BeanName);
                 s.ShotCount = bag.ShotRecords?.Count ?? 0;
                 s.RatingAggregate = rating;
                 s.IsLoading = false;
@@ -98,15 +88,9 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
 
     bool ValidateForm()
     {
-        if (State.RoastDate.Date > DateTime.Now.Date)
+        if (State.GetValidationError(DateTime.Now) is { } error)
         {
-            SetState(s => s.ErrorMessage = "Roast date cannot be in the future");
-            return false;
-        }
-
-        if (!string.IsNullOrEmpty(State.Notes) && State.Notes.Length > 500)
-        {
-            SetState(s => s.ErrorMessage = "Notes cannot exceed 500 characters");
+            SetState(s => s.ErrorMessage = error);
             return false;
         }
 
@@ -126,19 +110,8 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
 
         try
         {
-            var bag = new Core.Models.Bag
-            {
-                Id = State.BagId ?? 0,
-                BeanId = State.BeanId,
-                RoastDate = State.RoastDate,
-                Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes,
-                IsComplete = State.IsComplete
-            };
-
             var isEditMode = State.BagId.HasValue && State.BagId.Value > 0;
-            var result = isEditMode
-                ? await _bagService.UpdateBagAsync(bag)
-                : await _bagService.CreateBagAsync(bag);
+            var result = await _bagWorkflow.SaveAsync(State);
 
             if (!result.Success)
             {
@@ -150,9 +123,6 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
                 return;
             }
 
-            _dataChangeNotifier.NotifyDataChanged(
-                isEditMode ? DataChangeType.BagUpdated : DataChangeType.BagCreated,
-                result.Data);
             await _feedbackService.ShowSuccessAsync(isEditMode ? "Bag updated" : $"Bag added for {State.BeanName}");
             await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
         }
@@ -178,8 +148,7 @@ partial class BagDetailPage : Component<BagDetailPageState, BagDetailPageProps>
             SecondaryActionButtonText = "Cancel",
             ActionButtonCommand = new Command(async () =>
             {
-                await _bagService.DeleteBagAsync(State.BagId!.Value);
-                _dataChangeNotifier.NotifyDataChanged(DataChangeType.BagUpdated, State.BagId!.Value);
+                await _bagWorkflow.DeleteAsync(State.BagId!.Value);
                 await _feedbackService.ShowSuccessAsync("Bag deleted");
                 await IPopupService.Current.PopAsync();
                 await MauiControls.Shell.Current.GoToAsync("..");

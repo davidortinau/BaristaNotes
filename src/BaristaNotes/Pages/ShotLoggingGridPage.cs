@@ -8,6 +8,7 @@ using UXDivers.Popups.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.Controls.PlatformConfiguration;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
+using BaristaNotes.Core.Services.Workflows;
 using Application = Microsoft.Maui.Controls.Application;
 
 namespace BaristaNotes.Pages;
@@ -46,34 +47,8 @@ enum GridPickerKind
     WaterTemp,
 }
 
-class ShotLoggingGridState
+class ShotLoggingGridState : DrinkDraft
 {
-    // Shot values
-    public BrewMethod BrewMethod { get; set; } = BrewMethod.Espresso;
-    public string DrinkType { get; set; } = "Espresso";
-    public decimal DoseIn { get; set; } = 18.0m;
-    public decimal ExpectedOutput { get; set; } = 36.0m;
-    public decimal ExpectedTime { get; set; } = 28;
-    public decimal? ActualOutput { get; set; }
-    public decimal? ActualTime { get; set; }
-
-    /// <summary>
-    /// Grind size in microns (canonical, grinder-agnostic). Null = not
-    /// yet selected for this session. The picker shows the brew-method's
-    /// default if null when opened.
-    /// </summary>
-    public int? GrindMicrons { get; set; }
-
-    /// <summary>
-    /// Brew water temperature in canonical Celsius. Null = not recorded.
-    /// Displayed/entered in the user's preferred unit (<see cref="TempUnit"/>).
-    /// </summary>
-    public decimal? WaterTempC { get; set; }
-
-    /// <summary>User's preferred temperature display unit (loaded from prefs).</summary>
-    public BaristaNotes.Core.Models.Enums.TemperatureUnit TempUnit { get; set; }
-        = BaristaNotes.Core.Models.Enums.TemperatureUnit.Fahrenheit;
-
     /// <summary>
     /// Transient grind hint surfaced when a recipe was applied but didn't
     /// resolve to an explicit micron value (e.g. recipe says "medium-fine"
@@ -82,24 +57,6 @@ class ShotLoggingGridState
     /// and means "not recorded".
     /// </summary>
     public string? PendingGrindHint { get; set; }
-
-    public int Rating { get; set; } = 2; // 0-4 scale (constitution §V): 0=Terrible..4=Excellent
-    public string? TastingNotes { get; set; }
-
-    public int? SelectedBagId { get; set; }
-    public UserProfileDto? SelectedMaker { get; set; }
-    public UserProfileDto? SelectedRecipient { get; set; }
-    public int? SelectedMachineId { get; set; }
-    public int? SelectedGrinderId { get; set; }
-    public List<int> SelectedAccessoryIds { get; set; } = new();
-
-    // Reference lists
-    public List<BagSummaryDto> AvailableBags { get; set; } = new();
-    public List<UserProfileDto> AvailableUsers { get; set; } = new();
-    public List<EquipmentDto> AvailableEquipment { get; set; } = new();
-
-    // Edit mode display
-    public string? BeanName { get; set; }
 
     public bool IsLoading { get; set; }
     public string? ErrorMessage { get; set; }
@@ -154,7 +111,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     /// </summary>
     public static bool OpenVoiceOnNextMount { get; set; }
 
-    [Inject] IShotService _shotService;
+    [Inject] DrinkWorkflow _drinkWorkflow;
     [Inject] IBagService _bagService;
     [Inject] IRecipeService _recipeService;
     [Inject] IEquipmentService _equipmentService;
@@ -163,17 +120,14 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     [Inject] IPreferencesService _preferencesService;
     [Inject] IDrinkValueRangeService _rangeService;
     [Inject] IFeedbackService _feedbackService;
-    [Inject] BaristaNotes.Core.Data.Repositories.IGrinderProfileRepository _grinderProfiles;
-    [Inject] BaristaNotes.Core.Data.Repositories.IShotRecordRepository _shotRecords;
-    [Inject] BaristaNotes.Core.Data.Repositories.IBagRepository _bagRepo;
+    [Inject] GrindPickerWorkflow _grindPickerWorkflow;
     [Inject] ILogger<ShotLoggingGridPage> _logger;
     [Inject] ISpeechRecognitionService _speechRecognitionService;
     [Inject] IVoiceCommandService _voiceCommandService;
     [Inject] IOverlayService _overlayService;
     [Inject] IVisionService _visionService;
     [Inject] IDataChangeNotifier _dataChangeNotifier;
-    [Inject] BaristaNotes.Services.IAIAdviceService _aiAdviceService;
-    [Inject] DatabaseInitializationService _databaseInitialization;
+    [Inject] IAIAdviceService _aiAdviceService;
     [Inject] IServiceProvider _serviceProvider;
 
     // Cancellation token for voice commands.
@@ -243,94 +197,17 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     {
         try
         {
-            await _databaseInitialization.InitializeAsync();
-
-            var bags = await _bagService.GetActiveBagsForShotLoggingAsync();
-            var users = await _userProfileService.GetAllProfilesAsync();
-            var equipment = (await _equipmentService.GetAllActiveEquipmentAsync()).ToList();
-
-            if (Props.ShotId.HasValue)
+            var loaded = await _drinkWorkflow.LoadAsync(Props.ShotId);
+            SetState(s =>
             {
-                var shot = await _shotService.GetShotByIdAsync(Props.ShotId.Value);
-                if (shot == null)
-                {
-                    await _feedbackService.ShowErrorAsync("Drink not found");
-                    await MauiControls.Shell.Current.GoToAsync("..");
-                    return;
-                }
-
-                SetState(s =>
-                {
-                    s.AvailableBags = bags;
-                    s.AvailableUsers = users;
-                    s.AvailableEquipment = equipment;
-
-                    s.BeanName = shot.Bean?.Name;
-                    s.BrewMethod = shot.BrewMethod;
-                    s.DrinkType = shot.DrinkType;
-                    s.DoseIn = shot.DoseIn;
-                    s.GrindMicrons = shot.GrindMicrons;
-                    s.WaterTempC = shot.WaterTempC;
-                    s.TempUnit = _preferencesService.GetTemperatureUnit();
-                    s.ExpectedTime = shot.ExpectedTime;
-                    s.ExpectedOutput = shot.ExpectedOutput;
-                    s.ActualTime = shot.ActualTime;
-                    s.ActualOutput = shot.ActualOutput;
-                    s.Rating = shot.Rating ?? 2;
-                    s.SelectedBagId = shot.Bag?.Id;
-                    s.SelectedMaker = shot.MadeBy;
-                    s.SelectedRecipient = shot.MadeFor;
-                    s.SelectedMachineId = shot.Machine?.Id;
-                    s.SelectedGrinderId = shot.Grinder?.Id;
-                    s.SelectedAccessoryIds = shot.Accessories?.Select(a => a.Id).ToList() ?? new();
-                    s.TastingNotes = shot.TastingNotes;
-                    // Backfill: ensure drink type is valid for the loaded brew method
-                    // (older records may carry mismatched combinations).
-                    var validForLoaded = shot.BrewMethod.DrinkTypesFor();
-                    if (!validForLoaded.Contains(s.DrinkType))
-                        s.DrinkType = validForLoaded[0];
-                    s.IsLoading = false;
-                });
-            }
-            else
-            {
-                var lastShot = await _shotService.GetMostRecentShotAsync();
-                SetState(s =>
-                {
-                    s.AvailableBags = bags;
-                    s.AvailableUsers = users;
-                    s.AvailableEquipment = equipment;
-
-                    if (lastShot != null)
-                    {
-                        s.BrewMethod = lastShot.BrewMethod;
-                        s.DrinkType = lastShot.DrinkType;
-                        s.DoseIn = lastShot.DoseIn;
-                        s.GrindMicrons = lastShot.GrindMicrons;
-                        s.WaterTempC = lastShot.WaterTempC;
-                        s.ExpectedTime = lastShot.ExpectedTime;
-                        s.ExpectedOutput = lastShot.ExpectedOutput;
-                        s.Rating = lastShot.Rating ?? 2;
-                        s.SelectedBagId = lastShot.Bag?.Id;
-                        var validForLast = lastShot.BrewMethod.DrinkTypesFor();
-                        if (!validForLast.Contains(s.DrinkType))
-                            s.DrinkType = validForLast[0];
-                    }
-
-                    var lastMakerId = _preferencesService.GetLastMadeById();
-                    var lastRecipientId = _preferencesService.GetLastMadeForId();
-                    if (lastMakerId.HasValue)
-                        s.SelectedMaker = users.FirstOrDefault(u => u.Id == lastMakerId.Value);
-                    if (lastRecipientId.HasValue)
-                        s.SelectedRecipient = users.FirstOrDefault(u => u.Id == lastRecipientId.Value);
-
-                    s.SelectedMachineId = _preferencesService.GetLastMachineId();
-                    s.SelectedGrinderId = _preferencesService.GetLastGrinderId();
-                    s.SelectedAccessoryIds = _preferencesService.GetLastAccessoryIds();
-                    s.TempUnit = _preferencesService.GetTemperatureUnit();
-                    s.IsLoading = false;
-                });
-            }
+                _drinkWorkflow.ApplyLoadedData(s, loaded);
+                s.IsLoading = false;
+            });
+        }
+        catch (BaristaNotes.Core.Services.Exceptions.EntityNotFoundException) when (Props.ShotId.HasValue)
+        {
+            await _feedbackService.ShowErrorAsync("Drink not found");
+            await MauiControls.Shell.Current.GoToAsync("..");
         }
         catch (Exception ex)
         {
@@ -353,63 +230,13 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 return;
             }
 
+            await _drinkWorkflow.SaveAsync(State, Props.ShotId);
             if (Props.ShotId.HasValue)
             {
-                var dto = new UpdateShotDto
-                {
-                    BagId = State.SelectedBagId.Value,
-                    MachineId = State.SelectedMachineId,
-                    GrinderId = State.SelectedGrinderId,
-                    AccessoryIds = State.SelectedAccessoryIds,
-                    MadeById = State.SelectedMaker?.Id,
-                    MadeForId = State.SelectedRecipient?.Id,
-                    DoseIn = State.DoseIn,
-                    GrindMicrons = State.GrindMicrons,
-                    WaterTempC = State.WaterTempC,
-                    ExpectedTime = State.ExpectedTime,
-                    ExpectedOutput = State.ExpectedOutput,
-                    ActualTime = State.ActualTime,
-                    ActualOutput = State.ActualOutput,
-                    Rating = State.Rating,
-                    DrinkType = State.DrinkType,
-                    BrewMethod = State.BrewMethod,
-                    TastingNotes = State.TastingNotes
-                };
-                await _shotService.UpdateShotAsync(Props.ShotId.Value, dto);
                 await _feedbackService.ShowSuccessAsync("Drink updated");
             }
             else
             {
-                var dto = new CreateShotDto
-                {
-                    BagId = State.SelectedBagId.Value,
-                    MachineId = State.SelectedMachineId,
-                    GrinderId = State.SelectedGrinderId,
-                    AccessoryIds = State.SelectedAccessoryIds,
-                    MadeById = State.SelectedMaker?.Id,
-                    MadeForId = State.SelectedRecipient?.Id,
-                    DoseIn = State.DoseIn,
-                    GrindMicrons = State.GrindMicrons,
-                    WaterTempC = State.WaterTempC,
-                    ExpectedTime = State.ExpectedTime,
-                    ExpectedOutput = State.ExpectedOutput,
-                    ActualTime = State.ActualTime,
-                    ActualOutput = State.ActualOutput,
-                    DrinkType = State.DrinkType,
-                    BrewMethod = State.BrewMethod,
-                    Rating = State.Rating,
-                    TastingNotes = State.TastingNotes
-                };
-                await _shotService.CreateShotAsync(dto);
-
-                _preferencesService.SetLastDrinkType(State.DrinkType);
-                _preferencesService.SetLastBagId(State.SelectedBagId);
-                _preferencesService.SetLastMachineId(State.SelectedMachineId);
-                _preferencesService.SetLastGrinderId(State.SelectedGrinderId);
-                _preferencesService.SetLastAccessoryIds(State.SelectedAccessoryIds);
-                if (State.SelectedMaker != null) _preferencesService.SetLastMadeById(State.SelectedMaker.Id);
-                if (State.SelectedRecipient != null) _preferencesService.SetLastMadeForId(State.SelectedRecipient.Id);
-
                 await _feedbackService.ShowSuccessAsync($"{State.DrinkType} logged");
                 await LoadDataAsync();
             }
@@ -695,51 +522,14 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     {
         try
         {
-            // 1) Default value resolution: existing state, then bean-method
-            // last-shot µm, then brew-method default.
-            int? micron = State.GrindMicrons;
-            if (micron == null && State.SelectedBagId.HasValue)
-            {
-                var bag = await _bagRepo.GetByIdAsync(State.SelectedBagId.Value);
-                if (bag != null)
-                {
-                    micron = await _shotRecords.GetMostRecentMicronsByBeanAsync(bag.BeanId, State.BrewMethod);
-                }
-            }
-            var range = _rangeService.Resolve(DrinkValueMetric.GrindMicrons, State.BrewMethod);
-            if (micron == null) micron = (int)range.Default;
-
-            // 2) Anchors for the live badge. No grinder selected → no badge.
-            IReadOnlyList<BaristaNotes.Core.Services.Grind.GrindAnchor>? anchors = null;
-            string? grinderName = null;
-            bool uncalibrated = false;
-            if (State.SelectedGrinderId.HasValue)
-            {
-                var equip = State.AvailableEquipment.FirstOrDefault(e => e.Id == State.SelectedGrinderId.Value);
-                grinderName = equip?.Name;
-                // Auto-heal DF64 profiles created against the prior 0–9 dial
-                // assumption (they shipped with stale AnchorsJson). No-op for
-                // already-current data.
-                await _grinderProfiles.EnsureCurrentSeedsAsync(State.SelectedGrinderId.Value);
-                var profile = await _grinderProfiles.GetByEquipmentIdAsync(State.SelectedGrinderId.Value);
-                var parsed = BaristaNotes.Core.Services.Grind.DeterministicGrindInterpolator.ParseAnchors(profile?.AnchorsJson);
-                if (parsed.Count >= 2)
-                {
-                    anchors = parsed;
-                }
-                else
-                {
-                    anchors = BaristaNotes.Core.Services.Grind.KnownGrinderSeeds.TryGet(grinderName);
-                    uncalibrated = anchors == null;
-                }
-            }
+            var loaded = await _grindPickerWorkflow.LoadAsync(State);
 
             SetState(s =>
             {
-                s.PickerGrindMicrons = micron;
-                s.PickerGrindAnchors = anchors;
-                s.PickerGrinderName = grinderName;
-                s.PickerGrinderUncalibrated = uncalibrated;
+                s.PickerGrindMicrons = loaded.Microns;
+                s.PickerGrindAnchors = loaded.Anchors;
+                s.PickerGrinderName = loaded.GrinderName;
+                s.PickerGrinderUncalibrated = loaded.IsUncalibrated;
                 s.PickerValueChanged = false;
                 s.PickerShowsFullRange = false;
                 s.ActivePicker = GridPickerKind.GrindMicrons;
@@ -1042,12 +832,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         return bag?.BeanName ?? State.BeanName ?? "—";
     }
 
-    string RatingDisplayValue()
-    {
-        // Display the 0-4 rating (constitution §V) as a five-star glyph row.
-        var n = State.Rating;
-        return new string('★', n + 1) + new string('☆', 4 - n);
-    }
+    string RatingDisplayValue() => DrinkDisplay.RatingText(State.Rating);
 
     string EquipmentName(int? id)
     {
@@ -1081,30 +866,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 isSelected: o => (BrewMethod)o == State.BrewMethod,
                 onSelect: o => SetState(s =>
                 {
-                    var newMethod = (BrewMethod)o;
-                    if (newMethod != s.BrewMethod)
-                    {
-                        if (!Props.ShotId.HasValue)
-                        {
-                            s.DoseIn = _rangeService
-                                .Resolve(DrinkValueMetric.DoseIn, newMethod)
-                                .Default;
-                            s.ExpectedOutput = _rangeService
-                                .Resolve(DrinkValueMetric.Yield, newMethod)
-                                .Default;
-                            s.ExpectedTime = _rangeService
-                                .Resolve(DrinkValueMetric.Time, newMethod)
-                                .Default;
-                            s.ActualTime = null;
-                            s.ActualOutput = null;
-                        }
-
-                        // Snap drink type to a valid option for the new method.
-                        var validDrinks = newMethod.DrinkTypesFor();
-                        if (!validDrinks.Contains(s.DrinkType))
-                            s.DrinkType = validDrinks[0];
-                    }
-                    s.BrewMethod = newMethod;
+                    _drinkWorkflow.ChangeBrewMethod(s, (BrewMethod)o, Props.ShotId.HasValue);
                     s.ActivePicker = GridPickerKind.None;
                 })),
 
@@ -1474,26 +1236,9 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     // Brew durations span 10s (espresso) to 24h (cold brew). Format the
     // tile readout so each method reads naturally: seconds for espresso,
     // m:ss for pour-over / french press, Hh Mm for cold brew / cold drip.
-    static string FormatTimeDisplay(decimal seconds)
-    {
-        var s = (int)Math.Round((double)seconds);
-        if (s < 60) return s.ToString("0");
-        if (s < 3600)
-        {
-            var m = s / 60;
-            var rem = s % 60;
-            return rem == 0 ? $"{m}:00" : $"{m}:{rem:00}";
-        }
-        var h = s / 3600;
-        var mins = (s % 3600) / 60;
-        return mins == 0 ? $"{h}h" : $"{h}h {mins}m";
-    }
+    static string FormatTimeDisplay(decimal seconds) => DrinkDisplay.TimeValue(seconds);
 
-    static string? TimeDisplayUnit(decimal seconds)
-    {
-        var s = (int)Math.Round((double)seconds);
-        return s < 60 ? "s" : null;
-    }
+    static string? TimeDisplayUnit(decimal seconds) => DrinkDisplay.TimeUnit(seconds);
 
     VisualNode MassScroller(
         string title,
@@ -1505,18 +1250,9 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         var textPrimary = isLight ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
         var textSecondary = isLight ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
         var accent = isLight ? AppColors.Light.Primary : AppColors.Dark.Primary;
-        var activeRange = State.PickerShowsFullRange
-            ? effectiveRange.HardRange
-            : effectiveRange.Range;
-        var current = State.PickerValue ?? original;
-        var clamped = ClampMassValue(current, activeRange.Minimum, activeRange.Maximum);
-        var wholeValue = decimal.Truncate(clamped);
-        var selectedWhole = (int)wholeValue;
-        var selectedTenth = (int)((clamped - wholeValue) * 10m);
-        var firstWhole = (int)Math.Floor(activeRange.Minimum);
-        var lastWhole = (int)Math.Floor(activeRange.Maximum);
-        var wholeValues = Enumerable.Range(firstWhole, lastWhole - firstWhole + 1).ToList();
-        var tenthValues = Enumerable.Range(0, 10).ToList();
+        var selection = new MassPickerState(
+            effectiveRange, original, State.PickerValue,
+            State.PickerValueChanged, State.PickerShowsFullRange);
 
         return Grid(rows: "Auto,Auto,*", columns: "*",
             Grid(rows: "*", columns: "Auto,*,Auto",
@@ -1526,8 +1262,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     .FontSize(12).CharacterSpacing(3)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .TextColor(textSecondary).HCenter().VCenter().GridColumn(0).GridColumnSpan(3),
-                Button("Done").OnClicked(() => onDone(
-                    State.PickerValueChanged ? clamped : original))
+                Button("Done").OnClicked(() => onDone(selection.DoneValue))
                     .BackgroundColor(Colors.Transparent).TextColor(accent)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .GridColumn(2)
@@ -1542,32 +1277,28 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
 
             Grid(rows: "*", columns: "*,Auto,*,Auto",
                 MassScrollerColumn(
-                    wholeValues,
-                    selectedWhole,
+                    selection.WholeValues,
+                    selection.SelectedWhole,
                     value => value.ToString(),
                     value => SetState(s =>
                     {
-                        s.PickerValue = ClampMassValue(
-                            value + (clamped - wholeValue),
-                            activeRange.Minimum,
-                            activeRange.Maximum);
-                        s.PickerValueChanged = true;
+                        selection.SelectWhole(value);
+                        s.PickerValue = selection.StagedValue;
+                        s.PickerValueChanged = selection.HasChanged;
                     }),
                     textPrimary,
                     accent,
                     "MassWhole").GridColumn(0),
                 Label(".").FontSize(48).TextColor(textSecondary).VCenter().GridColumn(1),
                 MassScrollerColumn(
-                    tenthValues,
-                    selectedTenth,
+                    selection.TenthValues,
+                    selection.SelectedTenth,
                     value => value.ToString(),
                     value => SetState(s =>
                     {
-                        s.PickerValue = ClampMassValue(
-                            wholeValue + value / 10m,
-                            activeRange.Minimum,
-                            activeRange.Maximum);
-                        s.PickerValueChanged = true;
+                        selection.SelectTenth(value);
+                        s.PickerValue = selection.StagedValue;
+                        s.PickerValueChanged = selection.HasChanged;
                     }),
                     textPrimary,
                     accent,
@@ -1617,9 +1348,6 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             });
     }
 
-    static decimal ClampMassValue(decimal value, decimal min, decimal max)
-        => Math.Round(Math.Clamp(value, min, max), 1, MidpointRounding.AwayFromZero);
-
     VisualNode NumericScroller(
         string title,
         string? unit,
@@ -1632,34 +1360,9 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         var textPrimary = isLight ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
         var textSecondary = isLight ? AppColors.Light.TextSecondary : AppColors.Dark.TextSecondary;
         var accent = isLight ? AppColors.Light.Primary : AppColors.Dark.Primary;
-        var activeRange = State.PickerShowsFullRange
-            ? effectiveRange.HardRange
-            : effectiveRange.Range;
-        var step = effectiveRange.Step;
-
-        var values = new List<decimal>();
-        for (var value = activeRange.Minimum; value <= activeRange.Maximum; value += step)
-        {
-            values.Add(value);
-        }
-        if (values.Count == 0 || values[^1] != activeRange.Maximum)
-        {
-            values.Add(activeRange.Maximum);
-        }
-
-        var current = State.PickerValue ?? original;
-        if (activeRange.Contains(current) && !values.Contains(current))
-        {
-            values.Add(current);
-            values.Sort();
-        }
-        var clamped = activeRange.Clamp(current);
-        var snappedIndex = values
-            .Select((value, index) => (value, index, delta: Math.Abs(value - clamped)))
-            .OrderBy(candidate => candidate.delta)
-            .First()
-            .index;
-        var snappedValue = values[snappedIndex];
+        var selection = new NumericPickerState(
+            effectiveRange, original, State.PickerValue,
+            State.PickerValueChanged, State.PickerShowsFullRange);
 
         return Grid(rows: "Auto,Auto,*", columns: "*",
             Grid(rows: "*", columns: "Auto,*,Auto",
@@ -1669,8 +1372,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     .FontSize(12).CharacterSpacing(3)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .TextColor(textSecondary).HCenter().VCenter().GridColumn(0).GridColumnSpan(3),
-                Button("Done").OnClicked(() => onDone(
-                    State.PickerValueChanged ? snappedValue : original))
+                Button("Done").OnClicked(() => onDone(selection.DoneValue))
                     .BackgroundColor(Colors.Transparent).TextColor(accent)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .GridColumn(2)
@@ -1684,10 +1386,10 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 accent).GridRow(1),
 
             CollectionView()
-                .ItemsSource(values, v =>
+                .ItemsSource(selection.Values, v =>
                 {
-                    var selected = v == values[snappedIndex];
-                    var format = step < 1 ? "0.#" : "0";
+                    var selected = v == selection.DisplayedValue;
+                    var format = selection.Step < 1 ? "0.#" : "0";
                     var text = formatter?.Invoke(v)
                         ?? (unit != null ? $"{v.ToString(format)}{unit}" : v.ToString(format));
                     return Button(text)
@@ -1702,8 +1404,9 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     .AutomationId($"NumericValue_{v:0.##}")
                     .OnClicked(() => SetState(s =>
                     {
-                        s.PickerValue = v;
-                        s.PickerValueChanged = true;
+                        selection.Select(v);
+                        s.PickerValue = selection.StagedValue;
+                        s.PickerValueChanged = selection.HasChanged;
                     }));
                 })
                 .SelectionMode(MauiControls.SelectionMode.None)
@@ -1711,7 +1414,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 {
                     if (sender is MauiControls.CollectionView cv)
                     {
-                        CenterCollectionViewItemAfterLayout(cv, snappedIndex);
+                        CenterCollectionViewItemAfterLayout(cv, selection.SelectedIndex);
                     }
                 })
                 .GridRow(2)
@@ -1726,11 +1429,8 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         Color accent)
     {
         var outsidePreferred = !effectiveRange.Range.Contains(original);
-        var description = outsidePreferred
-            ? "Current value is outside your preferred range."
-            : State.PickerShowsFullRange
-                ? "Showing the full allowed range."
-                : "Showing your preferred range.";
+        var description = DrinkDisplay.RangeDescription(
+            effectiveRange, original, State.PickerShowsFullRange);
 
         return Grid(rows: "Auto", columns: "*,Auto",
             Label(description)
@@ -1780,43 +1480,9 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         var effectiveRange = _rangeService.Resolve(
             DrinkValueMetric.GrindMicrons,
             State.BrewMethod);
-        var rangeMin = (int)effectiveRange.Range.Minimum;
-        var rangeMax = (int)effectiveRange.Range.Maximum;
-        var rangeStep = (int)effectiveRange.Step;
-        var domainMin = (int)effectiveRange.HardRange.Minimum;
-        var domainMax = (int)effectiveRange.HardRange.Maximum;
-        const int outsideStep = 50;
-        var values = new List<int>();
-        if (State.PickerShowsFullRange)
-        {
-            for (var v = domainMin; v < rangeMin; v += outsideStep) values.Add(v);
-        }
-        for (var v = rangeMin; v <= rangeMax; v += rangeStep) values.Add(v);
-        if (values.Count == 0 || values[^1] != rangeMax) values.Add(rangeMax);
-        if (State.PickerShowsFullRange)
-        {
-            for (var v = rangeMax + outsideStep; v <= domainMax; v += outsideStep) values.Add(v);
-        }
-
-        var current = State.PickerGrindMicrons
-            ?? State.GrindMicrons
-            ?? (int)effectiveRange.Default;
-        values.Add(current);
-        if (State.PickerShowsFullRange)
-        {
-            values.Add(domainMin);
-            values.Add(domainMax);
-        }
-        values = values.Distinct().OrderBy(value => value).ToList();
-        // Snap to nearest value present in the variable-step list.
-        var snappedIndex = 0;
-        var bestDelta = int.MaxValue;
-        for (var i = 0; i < values.Count; i++)
-        {
-            var d = Math.Abs(values[i] - current);
-            if (d < bestDelta) { bestDelta = d; snappedIndex = i; }
-        }
-        var snappedValue = values[snappedIndex];
+        var selection = new GrindPickerState(
+            effectiveRange, State.GrindMicrons, State.PickerGrindMicrons,
+            State.PickerValueChanged, State.PickerShowsFullRange);
 
         return Grid(rows: "Auto,Auto,*,Auto", columns: "*",
             // Header
@@ -1828,10 +1494,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .TextColor(textSecondary).HCenter().VCenter().GridColumn(0).GridColumnSpan(3),
                 Button("Done")
-                    .OnClicked(() => CommitGrindMicrons(
-                        !State.PickerValueChanged && State.GrindMicrons.HasValue
-                            ? State.GrindMicrons.Value
-                            : snappedValue))
+                    .OnClicked(() => CommitGrindMicrons(selection.DoneValue))
                     .BackgroundColor(Colors.Transparent).TextColor(accent)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .GridColumn(2)
@@ -1848,10 +1511,10 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             // on load to center the user's brew-method range without
             // hiding out-of-range values.
             CollectionView()
-                .ItemsSource(values, v =>
+                .ItemsSource(selection.Values, v =>
                 {
-                    var inRange = v >= rangeMin && v <= rangeMax;
-                    var selected = v == snappedValue;
+                    var inRange = selection.IsPreferred(v);
+                    var selected = v == selection.StagedValue;
                     var rowHeight = selected ? 96 : (inRange ? 72 : 48);
                     var fontSize = selected ? 56 : (inRange ? 32 : 20);
                     var color = selected ? accent
@@ -1870,8 +1533,9 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     .AutomationId($"GrindValue_{v}")
                     .OnClicked(() => SetState(s =>
                     {
-                        s.PickerGrindMicrons = v;
-                        s.PickerValueChanged = true;
+                        selection.Select(v);
+                        s.PickerGrindMicrons = selection.StagedValue;
+                        s.PickerValueChanged = selection.HasChanged;
                     }));
                 })
                 .SelectionMode(MauiControls.SelectionMode.None)
@@ -1879,13 +1543,13 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 {
                     if (sender is MauiControls.CollectionView cv)
                     {
-                        CenterCollectionViewItemAfterLayout(cv, snappedIndex);
+                        CenterCollectionViewItemAfterLayout(cv, selection.SelectedIndex);
                     }
                 })
                 .GridRow(2),
 
             // Sticky bottom translation badge.
-            GrindTranslationBadge(snappedValue, textPrimary, textSecondary, accent)
+            GrindTranslationBadge(selection.StagedValue, textPrimary, textSecondary, accent)
                 .GridRow(3)
         ).BackgroundColor(surface);
     }
@@ -1940,20 +1604,19 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     VisualNode GrindTranslationBadge(int microns, Color textPrimary, Color textSecondary, Color accent)
     {
         var anchors = State.PickerGrindAnchors;
-        string main;
+        var main = DrinkDisplay.GrindBadge(
+            State.SelectedGrinderId, State.PickerGrinderName, anchors, microns);
         string? cta = null;
         Action? onTap = null;
 
         if (!State.SelectedGrinderId.HasValue)
         {
-            main = "Select grinder for dial setting";
             cta = "→";
             onTap = () => Open(GridPickerKind.Grinder);
         }
         else if (anchors == null || anchors.Count < 2)
         {
             // Grinder selected but uncalibrated.
-            main = $"{State.PickerGrinderName ?? "Grinder"} · Set up scale";
             cta = "→";
             // Navigate to grinder equipment detail so user can add anchors.
             onTap = async () =>
@@ -1962,21 +1625,6 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 if (State.SelectedGrinderId.HasValue)
                     await MauiControls.Shell.Current.GoToAsync($"equipmentDetail?id={State.SelectedGrinderId.Value}");
             };
-        }
-        else
-        {
-            var result = BaristaNotes.Core.Services.Grind.DeterministicGrindInterpolator
-                .Interpolate(anchors, microns);
-            if (result?.Suggested is decimal s)
-            {
-                // Round to a reasonable precision (0.1) for display.
-                var rounded = Math.Round(s, 1);
-                main = $"{State.PickerGrinderName ?? "Grinder"} · {rounded:0.#}";
-            }
-            else
-            {
-                main = $"{State.PickerGrinderName ?? "Grinder"} · —";
-            }
         }
 
         var badge = Grid(rows: "*", columns: "*,Auto",
@@ -2022,30 +1670,14 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     bool PrefersFahrenheit
         => State.TempUnit == BaristaNotes.Core.Models.Enums.TemperatureUnit.Fahrenheit;
 
-    static double CelsiusToFahrenheit(decimal c) => (double)c * 9.0 / 5.0 + 32.0;
-    static decimal FahrenheitToCelsius(double f) => Math.Round((decimal)((f - 32.0) * 5.0 / 9.0), 2);
+    static double CelsiusToFahrenheit(decimal c) => DrinkDisplay.CelsiusToFahrenheit(c);
+    static decimal FahrenheitToCelsius(double f) => DrinkDisplay.FahrenheitToCelsius(f);
 
-    string WaterTempMain()
-    {
-        if (!State.WaterTempC.HasValue) return "—";
-        return PrefersFahrenheit
-            ? $"{CelsiusToFahrenheit(State.WaterTempC.Value):0}"
-            : $"{State.WaterTempC.Value:0.#}";
-    }
+    string WaterTempMain() => DrinkDisplay.WaterTemperatureValue(State.WaterTempC, State.TempUnit);
 
-    string? WaterTempUnit()
-    {
-        if (!State.WaterTempC.HasValue) return null;
-        return PrefersFahrenheit ? "°F" : "°C";
-    }
+    string? WaterTempUnit() => DrinkDisplay.WaterTemperatureUnit(State.WaterTempC, State.TempUnit);
 
-    string? WaterTempSub()
-    {
-        if (!State.WaterTempC.HasValue) return null;
-        return PrefersFahrenheit
-            ? $"{State.WaterTempC.Value:0.#} °C"
-            : $"{CelsiusToFahrenheit(State.WaterTempC.Value):0} °F";
-    }
+    string? WaterTempSub() => DrinkDisplay.WaterTemperatureSecondary(State.WaterTempC, State.TempUnit);
 
     VisualNode WaterTempPicker()
     {
@@ -2566,11 +2198,9 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     workflowToken);
 
                 PhotoIntentChoice choice;
-                if (analysis.Success
-                    && analysis.IsObvious
-                    && analysis.Intent != PhotoWorkflowIntent.Unknown)
+                if (PhotoWorkflowRules.AutomaticChoice(analysis) is { } automaticChoice)
                 {
-                    choice = ToPhotoIntentChoice(analysis.Intent);
+                    choice = automaticChoice;
                 }
                 else
                 {
@@ -2626,15 +2256,6 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         }
     }
 
-    private static PhotoIntentChoice ToPhotoIntentChoice(PhotoWorkflowIntent intent)
-        => intent switch
-        {
-            PhotoWorkflowIntent.Coffee => PhotoIntentChoice.Coffee,
-            PhotoWorkflowIntent.Profile => PhotoIntentChoice.Profile,
-            PhotoWorkflowIntent.Room => PhotoIntentChoice.Room,
-            _ => PhotoIntentChoice.Cancel
-        };
-
     private static async Task<PhotoIntentChoice> AskForPhotoIntentAsync(
         CancellationToken cancellationToken)
     {
@@ -2681,12 +2302,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         BeanLabelExtraction? coffeeDetails,
         CancellationToken cancellationToken)
     {
-        if (coffeeDetails is null
-            || (string.IsNullOrWhiteSpace(coffeeDetails.Name)
-                && string.IsNullOrWhiteSpace(coffeeDetails.Roaster)
-                && string.IsNullOrWhiteSpace(coffeeDetails.Origin)
-                && !coffeeDetails.RoastDate.HasValue
-                && string.IsNullOrWhiteSpace(coffeeDetails.Notes)))
+        if (PhotoWorkflowRules.NeedsCoffeeExtraction(coffeeDetails))
         {
             using var extractionStream = new MemoryStream(imageBytes, writable: false);
             coffeeDetails = await _visionService.ExtractBeanLabelAsync(
@@ -2700,9 +2316,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             return;
         }
 
-        var prefill = coffeeDetails?.Success == true
-            ? coffeeDetails
-            : new BeanLabelExtraction { Success = true };
+        var prefill = PhotoWorkflowRules.CoffeePrefill(coffeeDetails);
         var popup = _serviceProvider.GetRequiredService<AddCoffeePopup>();
         await popup.InitializeAsync(prefill);
         popup.OnCreated = bag =>

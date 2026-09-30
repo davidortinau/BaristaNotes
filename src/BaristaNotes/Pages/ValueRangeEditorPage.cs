@@ -1,4 +1,3 @@
-using System.Globalization;
 using BaristaNotes.Core.Models;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using Application = Microsoft.Maui.Controls.Application;
@@ -13,14 +12,8 @@ class ValueRangeEditorPageProps
 
 class ValueRangeEditorPageState
 {
-    public string MinimumText { get; set; } = "";
-    public string MaximumText { get; set; } = "";
-    public string OriginalMinimumText { get; set; } = "";
-    public string OriginalMaximumText { get; set; } = "";
-    public decimal OriginalMinimumCanonical { get; set; }
-    public decimal OriginalMaximumCanonical { get; set; }
+    public RangeEditorDraft? Draft { get; set; }
     public string? ErrorMessage { get; set; }
-    public bool HasOverride { get; set; }
     public bool IsSaving { get; set; }
 }
 
@@ -38,9 +31,10 @@ partial class ValueRangeEditorPage : Component<ValueRangeEditorPageState, ValueR
     RangeEditorUnit EditorUnit =>
         DrinkValueRangeFormatting.GetEditorUnit(Props.Metric, Props.Method);
 
-    bool IsDirty =>
-        State.MinimumText != State.OriginalMinimumText
-        || State.MaximumText != State.OriginalMaximumText;
+    RangeEditorDraft Draft =>
+        State.Draft ?? throw new InvalidOperationException("The range editor has not loaded.");
+
+    bool IsDirty => State.Draft?.IsDirty == true;
 
     protected override void OnMounted()
     {
@@ -90,58 +84,37 @@ partial class ValueRangeEditorPage : Component<ValueRangeEditorPageState, ValueR
 
     void LoadValues()
     {
-        var custom = _rangeService.GetSettings().Overrides.LastOrDefault(
-            item => item.Metric == Props.Metric && item.Method == Props.Method);
-        var range = custom is null
-            ? Definition.AutoRange
-            : new DrinkValueRange(custom.Minimum, custom.Maximum);
-        var minimum = DrinkValueRangeFormatting.FormatEditorValue(range.Minimum, EditorUnit);
-        var maximum = DrinkValueRangeFormatting.FormatEditorValue(range.Maximum, EditorUnit);
-
+        var draft = new RangeEditorDraft(Props.Metric, Props.Method, _rangeService.GetSettings());
         SetState(s =>
         {
-            s.MinimumText = minimum;
-            s.MaximumText = maximum;
-            s.OriginalMinimumText = minimum;
-            s.OriginalMaximumText = maximum;
-            s.OriginalMinimumCanonical = range.Minimum;
-            s.OriginalMaximumCanonical = range.Maximum;
-            s.HasOverride = custom is not null;
+            s.Draft = draft;
             s.ErrorMessage = null;
         });
     }
 
     void UpdateMinimum(string value)
     {
-        SetState(s => s.MinimumText = value);
-        ValidateIfComplete(value, State.MaximumText);
+        var draft = Draft;
+        SetState(s =>
+        {
+            draft.MinimumText = value;
+            s.ErrorMessage = draft.ValidationError;
+        });
     }
 
     void UpdateMaximum(string value)
     {
-        SetState(s => s.MaximumText = value);
-        ValidateIfComplete(State.MinimumText, value);
-    }
-
-    void ValidateIfComplete(string minimumText, string maximumText)
-    {
-        if (string.IsNullOrWhiteSpace(minimumText) || string.IsNullOrWhiteSpace(maximumText))
+        var draft = Draft;
+        SetState(s =>
         {
-            SetState(s => s.ErrorMessage = null);
-            return;
-        }
-
-        TryGetCanonicalRange(minimumText, maximumText, out _, out var error);
-        SetState(s => s.ErrorMessage = error);
+            draft.MaximumText = value;
+            s.ErrorMessage = draft.ValidationError;
+        });
     }
 
     async Task SaveAsync()
     {
-        if (!TryGetCanonicalRange(
-                State.MinimumText,
-                State.MaximumText,
-                out var range,
-                out var error))
+        if (!Draft.TryGetRange(out var range, out var error))
         {
             SetState(s => s.ErrorMessage = error);
             return;
@@ -195,18 +168,12 @@ partial class ValueRangeEditorPage : Component<ValueRangeEditorPageState, ValueR
 
     async Task UseRecommendedAsync()
     {
-        if (!State.HasOverride)
+        if (!Draft.HasOverride)
         {
-            var minimum = DrinkValueRangeFormatting.FormatEditorValue(
-                Definition.AutoRange.Minimum,
-                EditorUnit);
-            var maximum = DrinkValueRangeFormatting.FormatEditorValue(
-                Definition.AutoRange.Maximum,
-                EditorUnit);
+            var draft = Draft;
             SetState(s =>
             {
-                s.MinimumText = minimum;
-                s.MaximumText = maximum;
+                draft.UseRecommended();
                 s.ErrorMessage = null;
             });
             return;
@@ -227,67 +194,6 @@ partial class ValueRangeEditorPage : Component<ValueRangeEditorPageState, ValueR
         _allowNavigation = true;
         await MauiControls.Shell.Current.GoToAsync("..");
     }
-
-    bool TryGetCanonicalRange(
-        string minimumText,
-        string maximumText,
-        out DrinkValueRange range,
-        out string? error)
-    {
-        range = Definition.AutoRange;
-
-        if (!TryParseDisplayValue(minimumText, out var displayMinimum)
-            || !TryParseDisplayValue(maximumText, out var displayMaximum))
-        {
-            error = $"Enter valid values in {EditorUnit.Label}.";
-            return false;
-        }
-
-        var minimum = minimumText == State.OriginalMinimumText
-            ? State.OriginalMinimumCanonical
-            : displayMinimum * EditorUnit.Scale;
-        var maximum = maximumText == State.OriginalMaximumText
-            ? State.OriginalMaximumCanonical
-            : displayMaximum * EditorUnit.Scale;
-
-        if (minimum >= maximum)
-        {
-            error = "Minimum must be less than maximum.";
-            return false;
-        }
-
-        if (!Definition.HardRange.Contains(minimum)
-            || !Definition.HardRange.Contains(maximum))
-        {
-            error = $"Use values from {DrinkValueRangeFormatting.FormatRange(Props.Metric, Definition.HardRange)}.";
-            return false;
-        }
-
-        if (Props.Metric is DrinkValueMetric.DoseIn or DrinkValueMetric.Yield
-            && (decimal.Round(minimum, 1) != minimum || decimal.Round(maximum, 1) != maximum))
-        {
-            error = "Use no more than one decimal place.";
-            return false;
-        }
-
-        if (Props.Metric is DrinkValueMetric.GrindMicrons or DrinkValueMetric.Time
-            && (decimal.Truncate(minimum) != minimum || decimal.Truncate(maximum) != maximum))
-        {
-            error = "Use values that convert to whole units.";
-            return false;
-        }
-
-        range = new(minimum, maximum);
-        error = null;
-        return true;
-    }
-
-    static bool TryParseDisplayValue(string text, out decimal value) =>
-        decimal.TryParse(
-            text,
-            NumberStyles.Number,
-            CultureInfo.CurrentCulture,
-            out value);
 
     public override VisualNode Render()
     {
@@ -339,13 +245,13 @@ partial class ValueRangeEditorPage : Component<ValueRangeEditorPageState, ValueR
                 GuidanceTile(),
                 ValueFieldTile(
                     "MINIMUM",
-                    State.MinimumText,
+                    State.Draft?.MinimumText ?? "",
                     "Minimum value",
                     UpdateMinimum,
                     "RangeMinimum"),
                 ValueFieldTile(
                     "MAXIMUM",
-                    State.MaximumText,
+                    State.Draft?.MaximumText ?? "",
                     "Maximum value",
                     UpdateMaximum,
                     "RangeMaximum"),

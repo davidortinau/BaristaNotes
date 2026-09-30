@@ -43,6 +43,12 @@ public class BagRepository : IBagRepository
             .FirstOrDefaultAsync(b => b.Id == bagId);
     }
 
+    public Task<int> GetShotCountAsync(int bagId)
+    {
+        var targetBagId = bagId;
+        return _context.ShotRecords.CountAsync(shot => shot.BagId == targetBagId);
+    }
+
     public async Task<List<Bag>> GetBagsForBeanAsync(int beanId, bool includeCompleted = true)
     {
         var targetBeanId = beanId;

@@ -1319,6 +1319,7 @@ public partial class ShotRecordEntityType
         runtimeEntityType.AddAnnotation("Relational:TableName", "ShotRecords");
         runtimeEntityType.AddAnnotation("Relational:ViewName", null);
         runtimeEntityType.AddAnnotation("Relational:ViewSchema", null);
+        runtimeEntityType.AddAnnotation("Sqlite:UseSqlReturningClause", false);
 
         Customize(runtimeEntityType);
     }

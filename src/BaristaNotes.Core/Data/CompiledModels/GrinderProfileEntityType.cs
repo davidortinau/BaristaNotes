@@ -505,6 +505,7 @@ public partial class GrinderProfileEntityType
         runtimeEntityType.AddAnnotation("Relational:TableName", "GrinderProfiles");
         runtimeEntityType.AddAnnotation("Relational:ViewName", null);
         runtimeEntityType.AddAnnotation("Relational:ViewSchema", null);
+        runtimeEntityType.AddAnnotation("Sqlite:UseSqlReturningClause", false);
 
         Customize(runtimeEntityType);
     }

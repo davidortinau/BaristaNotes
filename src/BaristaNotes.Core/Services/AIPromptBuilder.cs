@@ -6,7 +6,7 @@ namespace BaristaNotes.Core.Services;
 
 /// <summary>
 /// Utility class for building AI prompts from shot context.
-/// Extracted for testability from the MAUI-dependent AIAdviceService.
+/// Used by the shared AI advice service and its provider-independent tests.
 /// </summary>
 public static class AIPromptBuilder
 {

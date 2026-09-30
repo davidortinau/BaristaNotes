@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Source AppColors.Light and the source Android window surface. -->
+  <color name="barista_surface">#FCEFE1</color>
+  <color name="barista_primary">#86543F</color>
+  <color name="barista_text_primary">#352B23</color>
+  <bool name="barista_light_status_bar">true</bool>
+</resources>

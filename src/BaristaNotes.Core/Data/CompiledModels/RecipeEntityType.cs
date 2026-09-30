@@ -860,6 +860,7 @@ public partial class RecipeEntityType
         runtimeEntityType.AddAnnotation("Relational:TableName", "Recipes");
         runtimeEntityType.AddAnnotation("Relational:ViewName", null);
         runtimeEntityType.AddAnnotation("Relational:ViewSchema", null);
+        runtimeEntityType.AddAnnotation("Sqlite:UseSqlReturningClause", false);
 
         Customize(runtimeEntityType);
     }

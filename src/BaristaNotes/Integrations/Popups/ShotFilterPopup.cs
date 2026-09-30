@@ -109,7 +109,7 @@ public class ShotFilterPopup : ActionModalPopup
         {
             _beanChipsLayout.Children.Add(CreateChip(
                 bean.Name,
-                _workingFilters.BeanIds.Contains(bean.Id),
+                () => _workingFilters.BeanIds.Contains(bean.Id),
                 () => ToggleBeanSelection(bean.Id)
             ));
         }
@@ -120,7 +120,7 @@ public class ShotFilterPopup : ActionModalPopup
         {
             _peopleChipsLayout.Children.Add(CreateChip(
                 person.Name,
-                _workingFilters.MadeForIds.Contains(person.Id),
+                () => _workingFilters.MadeForIds.Contains(person.Id),
                 () => ToggleMadeForSelection(person.Id)
             ));
         }
@@ -143,13 +143,17 @@ public class ShotFilterPopup : ActionModalPopup
             _ratingChipsLayout.Children.Add(CreateRatingChip(
                 ratingIcons[i],
                 rating,
-                _workingFilters.Ratings.Contains(rating),
+                () => _workingFilters.Ratings.Contains(rating),
                 () => ToggleRatingSelection(rating)
             ));
         }
         
         UpdateClearButtonState();
-        
+
+        // Explicit rebuilds must detach the reused layouts before assigning a new host.
+        if (PopupContent is Controls.ScrollView { Content: Controls.VerticalStackLayout previousContent })
+            previousContent.Children.Clear();
+
         PopupContent = new Controls.ScrollView
         {
             Content = new Controls.VerticalStackLayout
@@ -201,16 +205,17 @@ public class ShotFilterPopup : ActionModalPopup
         };
     }
     
-    private Controls.View CreateChip(string label, bool isSelected, Action onTap)
+    private Controls.View CreateChip(string label, Func<bool> isSelected, Action onTap)
     {
-        var backgroundColor = isSelected ? AppColors.Dark.Primary : AppColors.Dark.SurfaceVariant;
-        var textColor = isSelected ? AppColors.Dark.OnPrimary : AppColors.Dark.TextPrimary;
+        var selected = isSelected();
+        var backgroundColor = selected ? AppColors.Dark.Primary : AppColors.Dark.SurfaceVariant;
+        var textColor = selected ? AppColors.Dark.OnPrimary : AppColors.Dark.TextPrimary;
         
         var border = new Controls.Border
         {
             BackgroundColor = backgroundColor,
             StrokeThickness = 1,
-            Stroke = isSelected ? AppColors.Dark.Primary : AppColors.Dark.Outline,
+            Stroke = selected ? AppColors.Dark.Primary : AppColors.Dark.Outline,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = ChipCornerRadius },
             Padding = new Thickness(12, 0),
             HeightRequest = ChipHeight,
@@ -227,22 +232,27 @@ public class ShotFilterPopup : ActionModalPopup
         };
         
         var tapGesture = new Controls.TapGestureRecognizer();
-        tapGesture.Tapped += (s, e) => onTap();
+        tapGesture.Tapped += (s, e) =>
+        {
+            onTap();
+            UpdateChipAppearance(border, isSelected());
+        };
         border.GestureRecognizers.Add(tapGesture);
         
         return border;
     }
     
-    private Controls.View CreateRatingChip(string iconGlyph, int rating, bool isSelected, Action onTap)
+    private Controls.View CreateRatingChip(string iconGlyph, int rating, Func<bool> isSelected, Action onTap)
     {
-        var backgroundColor = isSelected ? AppColors.Dark.Primary : AppColors.Dark.SurfaceVariant;
-        var iconColor = isSelected ? AppColors.Dark.OnPrimary : AppColors.Dark.TextPrimary;
+        var selected = isSelected();
+        var backgroundColor = selected ? AppColors.Dark.Primary : AppColors.Dark.SurfaceVariant;
+        var iconColor = selected ? AppColors.Dark.OnPrimary : AppColors.Dark.TextPrimary;
         
         var border = new Controls.Border
         {
             BackgroundColor = backgroundColor,
             StrokeThickness = 1,
-            Stroke = isSelected ? AppColors.Dark.Primary : AppColors.Dark.Outline,
+            Stroke = selected ? AppColors.Dark.Primary : AppColors.Dark.Outline,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = ChipCornerRadius },
             Padding = new Thickness(8, 0),
             HeightRequest = ChipHeight,
@@ -263,7 +273,11 @@ public class ShotFilterPopup : ActionModalPopup
         Controls.AutomationProperties.SetName(border, $"Rating {rating}");
         
         var tapGesture = new Controls.TapGestureRecognizer();
-        tapGesture.Tapped += (s, e) => onTap();
+        tapGesture.Tapped += (s, e) =>
+        {
+            onTap();
+            UpdateChipAppearance(border, isSelected());
+        };
         border.GestureRecognizers.Add(tapGesture);
         
         return border;
@@ -276,7 +290,6 @@ public class ShotFilterPopup : ActionModalPopup
         else
             _workingFilters.BeanIds.Add(beanId);
         
-        Build(); // Rebuild to update chip states
     }
     
     private void ToggleMadeForSelection(int personId)
@@ -286,7 +299,6 @@ public class ShotFilterPopup : ActionModalPopup
         else
             _workingFilters.MadeForIds.Add(personId);
         
-        Build();
     }
     
     private void ToggleRatingSelection(int rating)
@@ -296,9 +308,19 @@ public class ShotFilterPopup : ActionModalPopup
         else
             _workingFilters.Ratings.Add(rating);
         
-        Build();
     }
-    
+
+    private void UpdateChipAppearance(Controls.Border chip, bool selected)
+    {
+        if (chip.Content is not Controls.Label label)
+            throw new InvalidOperationException("A filter chip must contain its label.");
+
+        chip.BackgroundColor = selected ? AppColors.Dark.Primary : AppColors.Dark.SurfaceVariant;
+        chip.Stroke = selected ? AppColors.Dark.Primary : AppColors.Dark.Outline;
+        label.TextColor = selected ? AppColors.Dark.OnPrimary : AppColors.Dark.TextPrimary;
+        UpdateClearButtonState();
+    }
+
     private void UpdateClearButtonState()
     {
         _clearButton.IsEnabled = _workingFilters.HasFilters;

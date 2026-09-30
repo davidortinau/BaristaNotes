@@ -275,5 +275,11 @@ public class BaristaNotesContext : DbContext
                 .HasDatabaseName("IX_GrindTranslationCache_Key");
             entity.HasIndex(e => e.ExpiresAt);
         });
+
+        // The pinned SQLite provider can lose RETURNING writes when reset encounters a read lock.
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            entityType.UseSqlReturningClause(false);
+        }
     }
 }

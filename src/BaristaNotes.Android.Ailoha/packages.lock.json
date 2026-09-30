@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net11.0-android37.0": {
+      "Xamarin.Kotlin.StdLib": {
+        "type": "Direct",
+        "requested": "[2.2.20, )",
+        "resolved": "2.2.20",
+        "contentHash": "DEcXVVpvnKjGxsNj8X41pENkw3defzN0WwhUI9JZkzgvuluzQDwAN3J2S2WEVvaXYRcyFlQmV/duFk/HKoyRzw==",
+        "dependencies": {
+          "Xamarin.Jetbrains.Annotations": "26.0.2.3"
+        }
+      },
+      "Xamarin.Jetbrains.Annotations": {
+        "type": "Transitive",
+        "resolved": "26.0.2.3",
+        "contentHash": "dSXWSYq/F7UAb2B3skXLkW7ZRK8lYkAyUWKXeL6Cn8EyubnDGrpLd0FN7akLFjsG7Li7WdSj4NdDTWbfOLnCOA=="
+      }
+    },
+    "net11.0-android37.0/android-arm64": {}
+  }
+}

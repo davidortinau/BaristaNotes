@@ -9,13 +9,8 @@ class EquipmentDetailPageProps
     public EquipmentType? PresetType { get; set; }
 }
 
-class EquipmentDetailPageState
+class EquipmentDetailPageState : EquipmentDraft
 {
-    public int? EquipmentId { get; set; }
-    public string Name { get; set; } = "";
-    public EquipmentType SelectedType { get; set; } = EquipmentType.Machine;
-    public string Notes { get; set; } = "";
-
     public bool IsSaving { get; set; }
     public bool IsLoading { get; set; }
     public string? ErrorMessage { get; set; }
@@ -24,8 +19,8 @@ class EquipmentDetailPageState
 partial class EquipmentDetailPage : Component<EquipmentDetailPageState, EquipmentDetailPageProps>
 {
     [Inject] IEquipmentService _equipmentService;
+    [Inject] EquipmentWorkflow _equipmentWorkflow;
     [Inject] IFeedbackService _feedbackService;
-    [Inject] IDataChangeNotifier _dataChangeNotifier;
 
     static readonly (EquipmentType type, string label)[] TypeChoices = new[]
     {
@@ -75,9 +70,7 @@ partial class EquipmentDetailPage : Component<EquipmentDetailPageState, Equipmen
 
             SetState(s =>
             {
-                s.Name = equipment.Name;
-                s.SelectedType = equipment.Type;
-                s.Notes = equipment.Notes ?? "";
+                s.ApplyLoadedData(equipment);
                 s.IsLoading = false;
             });
         }
@@ -93,9 +86,9 @@ partial class EquipmentDetailPage : Component<EquipmentDetailPageState, Equipmen
 
     bool ValidateForm()
     {
-        if (string.IsNullOrWhiteSpace(State.Name))
+        if (State.ValidationError is { } error)
         {
-            SetState(s => s.ErrorMessage = "Equipment name is required");
+            SetState(s => s.ErrorMessage = error);
             return false;
         }
 
@@ -115,32 +108,9 @@ partial class EquipmentDetailPage : Component<EquipmentDetailPageState, Equipmen
 
         try
         {
-            if (State.EquipmentId.HasValue && State.EquipmentId.Value > 0)
-            {
-                var updateDto = new UpdateEquipmentDto
-                {
-                    Name = State.Name,
-                    Type = State.SelectedType,
-                    Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes
-                };
-
-                await _equipmentService.UpdateEquipmentAsync(State.EquipmentId.Value, updateDto);
-                _dataChangeNotifier.NotifyDataChanged(DataChangeType.EquipmentUpdated, State.EquipmentId.Value);
-                await _feedbackService.ShowSuccessAsync($"'{State.Name}' updated");
-            }
-            else
-            {
-                var createDto = new CreateEquipmentDto
-                {
-                    Name = State.Name,
-                    Type = State.SelectedType,
-                    Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes
-                };
-
-                var createdEquipment = await _equipmentService.CreateEquipmentAsync(createDto);
-                _dataChangeNotifier.NotifyDataChanged(DataChangeType.EquipmentCreated, createdEquipment);
-                await _feedbackService.ShowSuccessAsync($"'{State.Name}' created");
-            }
+            await _equipmentWorkflow.SaveAsync(State);
+            await _feedbackService.ShowSuccessAsync(
+                State.IsEditing ? $"'{State.Name}' updated" : $"'{State.Name}' created");
 
             await Microsoft.Maui.Controls.Shell.Current.GoToAsync("..");
         }
@@ -166,8 +136,7 @@ partial class EquipmentDetailPage : Component<EquipmentDetailPageState, Equipmen
             SecondaryActionButtonText = "Cancel",
             ActionButtonCommand = new Command(async () =>
             {
-                await _equipmentService.ArchiveEquipmentAsync(State.EquipmentId!.Value);
-                _dataChangeNotifier.NotifyDataChanged(DataChangeType.EquipmentUpdated, State.EquipmentId!.Value);
+                await _equipmentWorkflow.ArchiveAsync(State.EquipmentId!.Value);
                 await _feedbackService.ShowSuccessAsync($"'{State.Name}' archived");
                 await IPopupService.Current.PopAsync();
                 await MauiControls.Shell.Current.GoToAsync("..");

@@ -1,5 +1,19 @@
 # Data Layer
 
+Native Bag Detail uses `IBagService.GetShotCountAsync` instead of counting an
+unloaded `Bag.ShotRecords` navigation collection. The query counts all associated
+rows, as the source detail page does when its collection is loaded. Rating and
+active-bag summaries keep their separate soft-delete filtering. This adds no
+schema, cascade, or eager-load change to ordinary bag reads.
+
+Checked-in EF query interceptors contain source-file checksums. A repository
+query edit requires regeneration with the matching EF tools, not manual edits
+to encoded locations. Generate outside the source tree, then install the
+affected generated file and run a normal build with all interceptors enabled.
+Keep any bootstrap exclusions local to the generation command; do not leave
+them in the project. Preserve the generated files' nullable annotation context
+and review unchanged SQL as well as the new query.
+
 BaristaNotes uses Entity Framework Core with SQLite. The application keeps all
 current user data on the device.
 
@@ -138,8 +152,8 @@ must remain synchronized.
 After an EF model or query change:
 
 1. use an EF tool version that matches the project packages;
-2. update the EF migration history;
-3. update the equivalent `DatabaseInitializer` schema step;
+2. update the EF migration history if the database schema changes;
+3. update the equivalent `DatabaseInitializer` step only for a schema change;
 4. regenerate the NativeAOT compiled model and precompiled queries;
 5. review all generated changes;
 6. run database integration tests; and
@@ -147,6 +161,34 @@ After an EF model or query change:
 
 Do not hand-edit generated EF logic except for a documented tool-output
 compatibility correction that cannot be generated correctly.
+
+The checked-in `Create` methods for `EquipmentEntityType`,
+`GrindTranslationCacheEntityType`, `RecipeEntityType`, and `ShotRecordEntityType`
+retain narrow `IL3050` suppressions for their concrete, statically rooted enum
+converters. The EF generator does not emit these existing compatibility
+annotations. Preserve them when reviewing regenerated output; do not replace
+them with project-wide warning suppression.
+
+## SQLite Write Contention
+
+The pinned `Microsoft.Data.Sqlite` 11 Preview 7 provider can report a successful
+`RETURNING` write after SQLite has rolled it back under a concurrent reader.
+Its reset retry calls `sqlite3_reset` again, but that does not retry the failed
+statement. SQLite documents this case in its
+[`sqlite3_reset` contract](https://www.sqlite.org/c3ref/reset.html).
+
+`BaristaNotesContext` disables the SQL `RETURNING` clause for every mapped
+table through EF's supported `UseSqlReturningClause(false)` setting. The
+compiled model contains the same setting. This uses EF's insert/select and
+affected-row query strategy; it does not change the database schema, journaling
+mode, or the separate bean/bag write boundary. No migration or data reset is
+needed. Inserts, updates, and deletes must all persist before reporting success.
+
+`SqliteWriteContentionTests` holds a real read transaction in an isolated
+file-backed database using the app's rollback-journal mode. It exercises both
+the design-time and compiled models, then checks the persisted write through
+a new context. Remove the opt-out only after a provider update passes these
+tests and the native create/reload/restart flow.
 
 ## Adding a Schema Change
 

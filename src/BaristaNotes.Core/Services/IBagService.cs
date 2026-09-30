@@ -43,6 +43,13 @@ public interface IBagService
     /// <param name="id">Bag ID</param>
     /// <returns>Bag if found, null otherwise</returns>
     Task<Bag?> GetBagByIdAsync(int id);
+
+    /// <summary>
+    /// Counts all associated shot rows, matching the source detail page's loaded
+    /// collection count, without requiring those entities to be tracked.
+    /// This includes soft-deleted rows; rating aggregates filter them separately.
+    /// </summary>
+    Task<int> GetShotCountAsync(int bagId);
     
     /// <summary>
     /// Gets all bags for a specific bean, ordered by roast date descending (newest first).

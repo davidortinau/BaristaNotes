@@ -1,6 +1,7 @@
 #if IOS && !NATIVEAOT
 using BaristaNotes.Platforms.iOS;
 #endif
+using BaristaNotes.Core.Hosting;
 
 namespace BaristaNotes.Hosting;
 
@@ -27,10 +28,7 @@ internal static class AIChatClientExtensions
 #pragma warning restore MAUIAI0001
 #endif
 
-        builder.Services
-            .AddSingleton<IAIAdviceService, AIAdviceService>()
-            .AddSingleton<IGrindTranslationAI, GrindTranslationAI>()
-            .AddScoped<IGrindTranslationService, GrindTranslationService>();
+        builder.Services.AddBaristaNotesAI();
 
         return builder;
     }

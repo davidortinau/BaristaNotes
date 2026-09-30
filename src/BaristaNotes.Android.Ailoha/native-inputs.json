@@ -1,0 +1,30 @@
+{
+  "officialPackage": "com.ailoha:ailoha-android-agent:0.1.13",
+  "packageVersionId": 60022949,
+  "publishedAt": "2026-05-12T23:28:59Z",
+  "releaseTag": "v0.1.13",
+  "releaseCommit": "037a25bc8d0e6f88636039fa0cb4c94b0b662634",
+  "license": "Ailoha Binary Distribution License 1.0",
+  "licenseNote": "Published POM also contains an MIT entry; use the restrictive official binary grant from the release-tag LICENSE, not an inferred permission to rebuild or redistribute source.",
+  "inputs": [
+    {
+      "file": "ailoha-android-agent-0.1.13.aar",
+      "url": "https://maven.pkg.github.com/redth/ailoha/com/ailoha/ailoha-android-agent/0.1.13/ailoha-android-agent-0.1.13.aar",
+      "sha256": "da70bfe4ed82038aa19f887dfb4b7b9f653e42c42689c409e41b3c54a15fea9d",
+      "bytes": 101115
+    },
+    {
+      "file": "nanohttpd-2.3.1.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/nanohttpd/nanohttpd/2.3.1/nanohttpd-2.3.1.jar",
+      "sha256": "de864c47818157141a24c9acb36df0c47d7bf15b7ff48c90610f3eb4e5df0e58",
+      "bytes": 51211
+    }
+  ],
+  "managedDependencies": [
+    {
+      "package": "Xamarin.Kotlin.StdLib",
+      "version": "2.2.20",
+      "mavenCoordinate": "org.jetbrains.kotlin:kotlin-stdlib:2.2.20"
+    }
+  ]
+}

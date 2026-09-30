@@ -1,3 +1,5 @@
+using BaristaNotes.Core.Hosting;
+
 namespace BaristaNotes.Hosting;
 
 internal static class VoiceServiceExtensions
@@ -8,13 +10,8 @@ internal static class VoiceServiceExtensions
         builder.Services
             .AddSingleton<ISpeechToText>(SpeechToText.Default)
             .AddSingleton<ISpeechRecognitionService, SpeechRecognitionService>()
-            .AddSingleton<IDataChangeNotifier, DataChangeNotifier>()
-            .AddSingleton<INavigationRegistry, NavigationRegistry>()
-            .AddScoped<BaristaNotes.Services.AI.NavigationTools>()
-            .AddScoped<BaristaNotes.Services.AI.ProfileContextTools>()
-            .AddScoped<BaristaNotes.Services.AI.PhotoQueryTools>()
-            .AddScoped<VoiceCommandService>()
-            .AddScoped<IVoiceCommandService>(sp => sp.GetRequiredService<VoiceCommandService>());
+            .AddSingleton<IVoicePlatformActions, MauiVoicePlatformActions>()
+            .AddBaristaNotesVoice();
 
         // Cross-platform voice overlay via WindowOverlay pattern.
         builder.UseVoiceOverlay();

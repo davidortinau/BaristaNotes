@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>LSRequiresIPhoneOS</key><true/>
+  <key>UIDeviceFamily</key><array><integer>1</integer></array>
+  <key>UIRequiredDeviceCapabilities</key><array><string>arm64</string></array>
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+  <key>UILaunchScreen</key><dict/>
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>BaristaNotes uses speech recognition to let you log shots hands-free while brewing.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>BaristaNotes needs microphone access to hear your voice commands.</string>
+  <key>NSCameraUsageDescription</key>
+  <string>BaristaNotes needs camera access to count people and calculate coffee needs</string>
+  <key>UIAppFonts</key>
+  <array>
+    <string>Fonts/Manrope-Regular.ttf</string>
+    <string>Fonts/Manrope-SemiBold.ttf</string>
+    <string>Fonts/MaterialSymbols.ttf</string>
+    <string>Fonts/coffee-icons.ttf</string>
+  </array>
+  <key>UIApplicationSceneManifest</key>
+  <dict>
+    <key>UIApplicationSupportsMultipleScenes</key><false/>
+    <key>UISceneConfigurations</key>
+    <dict>
+      <key>UIWindowSceneSessionRoleApplication</key>
+      <array>
+        <dict>
+          <key>UISceneConfigurationName</key><string>Native</string>
+          <key>UISceneDelegateClassName</key><string>NativeSceneDelegate</string>
+        </dict>
+      </array>
+    </dict>
+  </dict>
+</dict>
+</plist>

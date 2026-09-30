@@ -321,46 +321,31 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
 
     VisualNode ShotRow(ShotRecordDto shot)
     {
-        var primary = shot.BrewMethod.DisplayName();
-        var ratio = $"{shot.DoseIn:0.#}g → {shot.ActualOutput ?? shot.ExpectedOutput:0.#}g";
-        var timeSec = shot.ActualTime ?? shot.ExpectedTime;
-        var timeText = $"{timeSec:0}s";
-        // Canonical 0-4 (constitution §V). The Math.Clamp is a one-line safety
-        // net for the cold-launch race window where the migration hasn't yet
-        // shifted legacy 1-5 data — without it, Rating=5 throws inside the
-        // UICollectionView cell-creation block.
-        string ratingText = "";
-        if (shot.Rating.HasValue)
-        {
-            var r = Math.Clamp(shot.Rating.Value, 0, 4);
-            ratingText = new string('★', r + 1) + new string('☆', 4 - r);
-        }
-        var bean = shot.Bean?.Name ?? shot.Bag?.BeanName ?? "—";
-        var when = FormatTimestamp(shot.Timestamp);
+        var display = DrinkDisplay.ActivityRow(shot);
 
         return Border(
             Grid(rows: "Auto,Auto", columns: "*,Auto",
-                Label(primary)
+                Label(display.Title)
                     .FontSize(22)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .TextColor(TextPrimary())
                     .LineBreakMode(LineBreakMode.TailTruncation)
                     .MaxLines(1)
                     .GridRow(0).GridColumn(0),
-                Label(ratio)
+                Label(display.Ratio)
                     .FontSize(18)
                     .FontAttributes(MauiControls.FontAttributes.Bold)
                     .TextColor(TextPrimary())
                     .HEnd()
                     .GridRow(0).GridColumn(1),
-                Label($"{bean}  ·  {when}")
+                Label(display.Subtitle)
                     .FontSize(13)
                     .TextColor(TextSecondary())
                     .LineBreakMode(LineBreakMode.TailTruncation)
                     .MaxLines(1)
                     .GridRow(1).GridColumn(0)
                     .Margin(0, 4, 0, 0),
-                Label($"{timeText}   {ratingText}".Trim())
+                Label(display.Result)
                     .FontSize(13)
                     .TextColor(TextSecondary())
                     .HEnd()
@@ -374,16 +359,6 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         .StrokeShape(new Rectangle())
         .Margin(0, 0, 0, 1) // 1px gap reveals DividerColor underneath
         .OnTapped(() => NavigateToDetail(shot.Id));
-    }
-
-    static string FormatTimestamp(DateTime ts)
-    {
-        var local = ts.ToLocalTime();
-        var today = DateTime.Today;
-        if (local.Date == today) return $"Today {local:h:mm tt}";
-        if (local.Date == today.AddDays(-1)) return $"Yesterday {local:h:mm tt}";
-        if (local.Date > today.AddDays(-7)) return local.ToString("ddd h:mm tt");
-        return local.ToString("MMM d, yyyy");
     }
 
     // ------------------------------------------------------------

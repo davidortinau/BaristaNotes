@@ -1,3 +1,5 @@
+using BaristaNotes.Core.Hosting;
+
 namespace BaristaNotes.Hosting;
 
 internal static class DataAccessExtensions
@@ -11,22 +13,8 @@ internal static class DataAccessExtensions
         // acceptable use of Console.WriteLine in the application.
         Console.WriteLine($"Database path: {dbPath}");
 
-        builder.Services.AddDbContext<BaristaNotesContext>(options =>
-            options
-                .UseModel(BaristaNotes.Core.Data.CompiledModels.BaristaNotesContextModel.Instance)
-                .UseSqlite($"Data Source={dbPath}"));
-
         builder.Services
-            .AddScoped<DatabaseInitializer>()
-            .AddSingleton<DatabaseInitializationService>()
-            .AddScoped<IEquipmentRepository, EquipmentRepository>()
-            .AddScoped<IBeanRepository, BeanRepository>()
-            .AddScoped<IBagRepository, BagRepository>()
-            .AddScoped<IUserProfileRepository, UserProfileRepository>()
-            .AddScoped<IShotRecordRepository, ShotRecordRepository>()
-            .AddScoped<IRecipeRepository, RecipeRepository>()
-            .AddScoped<IGrinderProfileRepository, GrinderProfileRepository>()
-            .AddScoped<IGrindTranslationCacheRepository, GrindTranslationCacheRepository>()
+            .AddBaristaNotesData(dbPath)
             .AddSingleton<IPreferencesStore, MauiPreferencesStore>();
 
         return builder;

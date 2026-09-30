@@ -327,6 +327,7 @@ public partial class ShotEquipmentEntityType
         runtimeEntityType.AddAnnotation("Relational:TableName", "ShotEquipments");
         runtimeEntityType.AddAnnotation("Relational:ViewName", null);
         runtimeEntityType.AddAnnotation("Relational:ViewSchema", null);
+        runtimeEntityType.AddAnnotation("Sqlite:UseSqlReturningClause", false);
 
         Customize(runtimeEntityType);
     }

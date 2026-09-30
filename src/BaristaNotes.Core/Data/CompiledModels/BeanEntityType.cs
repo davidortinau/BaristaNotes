@@ -492,6 +492,7 @@ public partial class BeanEntityType
         runtimeEntityType.AddAnnotation("Relational:TableName", "Beans");
         runtimeEntityType.AddAnnotation("Relational:ViewName", null);
         runtimeEntityType.AddAnnotation("Relational:ViewSchema", null);
+        runtimeEntityType.AddAnnotation("Sqlite:UseSqlReturningClause", false);
 
         Customize(runtimeEntityType);
     }

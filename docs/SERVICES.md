@@ -17,7 +17,12 @@ putting all registrations in one method.
 | `AddVoiceServices` | Speech recognition, data notifications, navigation tools, voice tools, and overlay |
 | `AddAIChatClients` | AI advice, grind translation, and optional local chat client |
 
-Registration files are under `src/BaristaNotes/Hosting/`.
+MAUI registration wrappers are under `src/BaristaNotes/Hosting/`. Shared data,
+domain, and recipe registrations now live in
+`src/BaristaNotes.Core/Hosting/ServiceCollectionExtensions.cs`. The native heads
+register platform `IPreferencesStore` and `IImageProcessingService` adapters,
+then call `AddBaristaNotesCore(databasePath)`. No native head references the
+MAUI application or `Microsoft.Maui.Controls`.
 
 ## Lifetimes
 
@@ -28,6 +33,89 @@ Registration files are under `src/BaristaNotes/Hosting/`.
 | Transient | Popup instances |
 
 The EF context is scoped. It must not be changed to a singleton.
+
+`AddBaristaNotesAI()` is an opt-in shared registration for `IAIAdviceService`,
+`IGrindTranslationAI`, and `IVisionService`. The head supplies `IConfiguration` and can register
+a platform `IChatClient`. The manual native composition does not enable AI
+implicitly. The advice service retains its session-level local-provider state
+but reads each shot/bean context in a fresh scope instead of capturing a
+scoped data service in a singleton.
+Bean recommendation context uses the existing eager-loading bean-history query
+so it does not depend on earlier EF tracking to populate bags or equipment.
+All matching shots are loaded before the existing rating-first top-ten ranking;
+the latest shot still supplies the equipment names.
+
+## Shared Application Workflows
+
+`BaristaNotes.Core/Services/Workflows/` contains app logic used by both native
+heads and the retained MAUI pages:
+
+| Type | Responsibility |
+|---|---|
+| `DrinkDraft` / `DrinkLoadResult` | Editable values and loaded reference data without native control types |
+| `DrinkWorkflow` | Load new/edit state, apply effective method defaults, save, and remember selections |
+| `BeanCreationWorkflow` | Create a bean and initial bag, preserving separate write outcomes and notifications |
+| `AddCoffeeDraft` / `AddCoffeeWorkflow` | Photo/Browse coffee creation, trimmed fields, explicit roast date and bag notes without extra global notifications |
+| `PhotoWorkflowRules` | Source photo intent choice and coffee-extraction/prefill decisions |
+| `BeanDraft` / `BeanWorkflow` | Bean form mapping, URL normalization, explicit optional-field clearing and update/delete notifications |
+| `BagDraft` / `BagWorkflow` | Bag form validation, create/update mapping and source notification payloads |
+| `MassPickerState` | Whole/tenth selection, preferred/full range, staged value and unchanged Done semantics |
+| `NumericPickerState` | Time/temperature lists, exact current-value inclusion, range toggles and staged Done semantics |
+| `GrindPickerState` / `GrindPickerWorkflow` | Variable-step micron lists, current/history/default selection and configured/seeded grinder anchors |
+| `EquipmentDraft` / `EquipmentWorkflow` | Equipment form values, blank-name check, explicit note clearing, save/archive and source notifications |
+| `ProfileDraft` / `ProfileWorkflow` | Profile details, staged-photo save boundary, partial failure and source notifications |
+| `RangeEditorDraft` | Range text, dirty state, source validation, recommended-value staging and canonical precision |
+| `DrinkDisplay` / `DrinkValueRangeFormatting` | Shared value, unit, rating, timestamp and range text |
+
+Native controls own measurement, scrolling, focus, view reuse and UI-thread
+updates. They do not duplicate these workflows or their arithmetic.
+
+Grind selection is distinct from time and mass selection: the current micron
+value stays in the list even outside the allowed domain. Full-range rows use
+50-micron steps outside the preferred interval. Opening the selector uses the
+current value, then the bean/method history, then the effective default.
+Configured grinder anchors and the existing DF64 seed refresh remain shared.
+`DrinkDisplay.GrindBadge` formats the live native dial-setting label; each head
+owns the badge actions and navigation.
+
+Equipment archive remains separate from deletion. The source form's DELETE
+action confirms an archive, which hides equipment from active lists without
+deleting its row. `EquipmentWorkflow` retains that operation and the source
+notification payloads; platform UI owns the confirmation, feedback and return.
+
+Bean creation still uses `BeanCreationWorkflow` so its initial-bag result
+remains separate. Bag completion/reactivation still persists immediately
+through `IBagService`, independently of the form Save action. Confirmation
+wording and the existing delete behavior remain platform-owned source behavior.
+
+The Add Coffee modal uses a different source flow from manual Bean Detail.
+Its notes belong to the bag, it trims form text, and its successful callback
+can select the returned bag after dismissal. `AddCoffeeWorkflow` preserves
+that distinction; the manual initial-bag flow does not auto-select.
+
+Profile details and a staged photo are separate saves. The draft receives its
+saved profile ID before photo work, so a failed photo save leaves an editable
+profile rather than retrying creation. Failed photos retain staged bytes;
+successful photo saves clear them. The workflow does not change the existing
+image validation or replacement order. Platform UI still owns photo selection,
+immediate existing-profile image changes, partial-success messages and navigation.
+
+`ShotFilterCriteria` is now in Core's `Services/DTOs/` namespace. A filter modal
+edits a clone and applies it explicitly. Dismissing the modal does not apply
+its working copy.
+
+`NavigationRegistry` also lives in Core. It retains the source route
+descriptions, ordering and voice aliases. Platform heads still perform actual
+navigation; sharing the registry does not add a missing native route or
+implement the voice UI.
+
+The retained MAUI filter updates chip selection and colors in place. It does
+not rebuild the popup host during a tap. An explicit content rebuild detaches
+the reused layouts first, so a native view is not attached to two parents.
+
+For selected optional update fields, `FieldUpdate<T>` separates omission from
+explicit assignment: default means unchanged, `Set(value)` stores the value,
+and `Set(null)` clears an optional field. Required-field validation remains.
 
 ## Domain Services
 
@@ -72,6 +160,12 @@ setting changes.
 The drink logging page uses the effective range for controls and preserves an
 existing historical value even when it is outside the preferred range.
 
+`RangeEditorDraft` loads a method's saved override even when its mode is Auto.
+It parses values in the current culture and keeps unchanged canonical values
+when minutes or hours have rounded display text. It does not save or remove
+preferences. Each UI owns confirmation and navigation, then uses the shared
+range service to persist an explicit Save or confirmed removal.
+
 ## Data Access Services
 
 Repositories are under `BaristaNotes.Core/Data/Repositories/`.
@@ -92,9 +186,17 @@ Current repositories cover:
 scope, runs initialization once, and shares the result with application
 startup.
 
+The coordinator is in `BaristaNotes.Core/Services/`. Failed initialization can
+be retried; concurrent callers share the same active initialization task.
+
 See [Data Layer](DATA_LAYER.md) for schema rules.
 
 ## Feedback and Theme Services
+
+Theme mode values and the `AppThemeMode` preference format live in Core's
+`ThemeMode` and `ThemePreference`. Each head still owns effective system-theme
+resolution, platform appearance, resource updates and native view refresh.
+The retained MAUI theme service uses the same preference helper.
 
 `IFeedbackService` wraps the application feedback system:
 
@@ -107,6 +209,11 @@ await _feedbackService.ShowErrorAsync(
 
 It also exposes feedback and loading-state observables and supports haptic
 feedback.
+
+MAUI toast presentation awaits `PushAsync(..., waitUntilClosed: false)` so its
+two-second hold starts after appearance. It then closes that specific toast,
+not the topmost unrelated popup. Native presenters reproduce this approved
+lifecycle correction while retaining the source feedback design.
 
 `IThemeService` stores and applies light, dark, or system theme mode. UI code
 uses the shared theme keys and design constants.
@@ -134,15 +241,32 @@ The voice pipeline combines:
 - `Microsoft.Extensions.AI` function invocation; and
 - a window-level voice overlay.
 
-`VoiceTools.g.cs` is checked in because its NativeAOT-safe schema and invocation
-code must not depend on runtime reflection.
+`VoiceCommandService`, its tool classes, and the checked-in `VoiceTools.g.cs`
+now live in `BaristaNotes.Core/Services/Voice`. Their existing namespaces remain
+unchanged to preserve the generated type references and tool schema identity.
+The generated file is byte-identical to its source version.
+
+`AddBaristaNotesVoice()` registers the scoped engine and tools. A head supplies
+`IVoicePlatformActions` for queued navigation, camera capture and browser launch;
+the MAUI head uses `MauiVoicePlatformActions`. Speech recognition and window
+overlays remain platform-owned. This shared registration does not create those
+native controls or request microphone/camera permission.
+
+The Attributes generator is disabled for this checked-in tool context, as in
+the original MAUI project. Core also pins the original application's
+`NuGet.CommandLine` 7.9.0 override because the recognizer otherwise resolves
+the older 5.11.5 transitive build tool. Neither adds a Controls dependency.
 
 AI provider behavior:
 
 1. Supported non-NativeAOT iOS builds register Apple Intelligence.
-2. Services try the local client when it is available.
+2. Advice and grind services try the local client when it is available.
 3. Services can fall back to Azure OpenAI.
 4. NativeAOT builds exclude the Apple Intelligence package and local client.
+
+The source voice-command engine explicitly disables its local-client branch.
+The extraction preserves that setting: voice tool calling currently requires
+Azure configuration. It does not silently enable Apple voice tool calls.
 
 Azure OpenAI configuration uses:
 

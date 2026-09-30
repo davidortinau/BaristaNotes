@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <style name="Barista.MainTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+    <item name="android:windowBackground">@color/barista_surface</item>
+    <item name="android:colorBackground">@color/barista_surface</item>
+    <item name="android:colorAccent">@color/barista_primary</item>
+    <item name="android:statusBarColor">@color/barista_surface</item>
+    <item name="android:windowLightStatusBar">@bool/barista_light_status_bar</item>
+    <item name="android:windowActionModeOverlay">true</item>
+    <item name="android:forceDarkAllowed">false</item>
+  </style>
+  <style name="Barista.DarkTheme" parent="android:style/Theme.Material.NoActionBar">
+    <item name="android:windowBackground">@color/barista_surface</item>
+    <item name="android:colorBackground">@color/barista_surface</item>
+    <item name="android:colorAccent">@color/barista_primary</item>
+    <item name="android:statusBarColor">@color/barista_surface</item>
+    <item name="android:windowLightStatusBar">@bool/barista_light_status_bar</item>
+    <item name="android:windowActionModeOverlay">true</item>
+    <item name="android:forceDarkAllowed">false</item>
+  </style>
+  <style name="Barista.SplashTheme" parent="Barista.MainTheme">
+    <item name="android:windowBackground">@drawable/barista_splash</item>
+  </style>
+</resources>

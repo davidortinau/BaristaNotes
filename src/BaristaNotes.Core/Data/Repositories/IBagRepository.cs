@@ -19,6 +19,8 @@ public interface IBagRepository
     /// </summary>
     Task<Bag?> GetByIdAsync(int id);
 
+    Task<int> GetShotCountAsync(int bagId);
+
     /// <summary>
     /// Gets all bags for a specific bean.
     /// </summary>

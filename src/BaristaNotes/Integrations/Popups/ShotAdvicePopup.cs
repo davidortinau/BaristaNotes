@@ -5,7 +5,7 @@ namespace BaristaNotes.Integrations.Popups;
 
 /// <summary>
 /// Modal popup that displays AI-generated advice for an existing shot.
-/// Shown after a successful call to <see cref="BaristaNotes.Services.IAIAdviceService.GetAdviceForShotAsync"/>
+/// Shown after a successful call to <see cref="BaristaNotes.Core.Services.IAIAdviceService.GetAdviceForShotAsync"/>
 /// from <c>ShotLoggingGridPage</c>'s edit-mode AI tile.
 /// </summary>
 /// <remarks>

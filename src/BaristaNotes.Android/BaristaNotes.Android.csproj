@@ -1,0 +1,69 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>BaristaNotes.AndroidApp</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
+    <ApplicationId>com.simplyprofound.baristanotes.nativeapp</ApplicationId>
+    <ApplicationTitle>BaristaNotes Native</ApplicationTitle>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
+    <AndroidPackageFormats>apk</AndroidPackageFormats>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <NuGetLockFilePath>packages.$(Configuration).lock.json</NuGetLockFilePath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(NativeUiFixture)' == 'true' And '$(Configuration)' == 'Debug'">
+    <ApplicationId>com.simplyprofound.baristanotes.nativefixture</ApplicationId>
+    <ApplicationTitle>BaristaNotes Native Fixture</ApplicationTitle>
+    <DefineConstants>$(DefineConstants);NATIVE_UI_FIXTURE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(NativePerformance)' == 'true'">
+    <ApplicationId>com.simplyprofound.baristanotes.perf.nativeviews$(NativePerformanceDataset)</ApplicationId>
+    <ApplicationTitle>Barista Notes Native Perf $(NativePerformanceDataset)</ApplicationTitle>
+    <DefineConstants>$(DefineConstants);NATIVE_PERFORMANCE</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="11.0.0-rc.1.26425.128" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="11.0.0-rc.1.26425.128" />
+    <PackageReference Include="Xamarin.AndroidX.RecyclerView" Version="1.4.0.6" />
+    <ProjectReference Include="../BaristaNotes.Core/BaristaNotes.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <ProjectReference Include="../BaristaNotes.Android.Ailoha/BaristaNotes.Android.Ailoha.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AndroidAsset Remove="Assets/appsettings.Development.json" />
+    <AndroidAsset Include="$(MSBuildThisFileDirectory)../BaristaNotes/appsettings.Development.json"
+                  Link="appsettings.Development.json"
+                  Condition="Exists('$(MSBuildThisFileDirectory)../BaristaNotes/appsettings.Development.json')" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(NativePerformance)' == 'true'">
+    <AndroidAsset Include="$(NativePerformanceDatabase)" Link="performance\barista_notes.db" />
+    <AndroidAsset Include="$(NativePerformanceMetadata)" Link="performance\preferences.txt" />
+  </ItemGroup>
+
+  <Target Name="ValidateNativeUiFixture" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(NativeUiFixture)' == 'true' And '$(Configuration)' != 'Debug'" Text="NativeUiFixture is a Debug-only isolated UI test app. Do not build a Release fixture." />
+  </Target>
+
+  <Target Name="ValidateNativePerformanceConfiguration"
+          BeforeTargets="PrepareForBuild"
+          Condition="'$(NativePerformance)' == 'true'">
+    <Error Condition="'$(Configuration)' != 'Release'"
+           Text="NativePerformance is supported only for Release builds." />
+    <Error Condition="'$(NativePerformanceDataset)' != '100' And '$(NativePerformanceDataset)' != '1000'"
+           Text="NativePerformanceDataset must be 100 or 1000." />
+    <Error Condition="!Exists('$(NativePerformanceDatabase)')"
+           Text="NativePerformanceDatabase does not exist: $(NativePerformanceDatabase)" />
+    <Error Condition="!Exists('$(NativePerformanceMetadata)')"
+           Text="NativePerformanceMetadata does not exist: $(NativePerformanceMetadata)" />
+  </Target>
+</Project>

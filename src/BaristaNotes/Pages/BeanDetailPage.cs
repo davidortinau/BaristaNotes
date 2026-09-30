@@ -1,4 +1,5 @@
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
+using BaristaNotes.Core.Services.Workflows;
 using Application = Microsoft.Maui.Controls.Application;
 
 namespace BaristaNotes.Pages;
@@ -8,15 +9,8 @@ class BeanDetailPageProps
     public int? BeanId { get; set; }
 }
 
-class BeanDetailPageState
+class BeanDetailPageState : BeanDraft
 {
-    public int? BeanId { get; set; }
-    public string Name { get; set; } = "";
-    public string Roaster { get; set; } = "";
-    public string Origin { get; set; } = "";
-    public string Notes { get; set; } = "";
-    public string RoasterUrl { get; set; } = "";
-
     public bool IsSaving { get; set; }
     public bool IsLoading { get; set; }
     public string? ErrorMessage { get; set; }
@@ -46,6 +40,8 @@ class BeanDetailPageState
 partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProps>
 {
     [Inject] IBeanService _beanService;
+    [Inject] BeanCreationWorkflow _beanCreationWorkflow;
+    [Inject] BeanWorkflow _beanWorkflow;
     [Inject] IBagService _bagService;
     [Inject] IShotService _shotService;
     [Inject] IRecipeService _recipeService;
@@ -53,7 +49,6 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
     [Inject] BaristaNotes.Core.Data.Repositories.IEquipmentRepository _equipmentRepository;
     [Inject] BaristaNotes.Core.Data.Repositories.IGrinderProfileRepository _grinderProfileRepository;
     [Inject] BaristaNotes.Core.Services.Grind.IGrindTranslationService _grindTranslationService;
-    [Inject] IDataChangeNotifier _dataChangeNotifier;
 
     const int PageSize = 20;
 
@@ -106,11 +101,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
 
             SetState(s =>
             {
-                s.Name = bean.Name;
-                s.Roaster = bean.Roaster ?? "";
-                s.Origin = bean.Origin ?? "";
-                s.Notes = bean.Notes ?? "";
-                s.RoasterUrl = bean.RoasterUrl ?? "";
+                s.ApplyLoadedData(bean);
                 s.RatingAggregate = bean.RatingAggregate;
                 s.IsLoading = false;
             });
@@ -371,9 +362,9 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
 
     bool ValidateForm()
     {
-        if (string.IsNullOrWhiteSpace(State.Name))
+        if (State.ValidationError is { } error)
         {
-            SetState(s => s.ErrorMessage = "Bean name is required");
+            SetState(s => s.ErrorMessage = error);
             return false;
         }
 
@@ -395,31 +386,13 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
         {
             if (State.BeanId.HasValue && State.BeanId.Value > 0)
             {
-                var updateDto = new UpdateBeanDto
-                {
-                    Name = State.Name,
-                    Roaster = string.IsNullOrWhiteSpace(State.Roaster) ? null : State.Roaster,
-                    Origin = string.IsNullOrWhiteSpace(State.Origin) ? null : State.Origin,
-                    Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes,
-                    RoasterUrl = string.IsNullOrWhiteSpace(State.RoasterUrl) ? string.Empty : State.RoasterUrl.Trim()
-                };
-
-                await _beanService.UpdateBeanAsync(State.BeanId.Value, updateDto);
-                _dataChangeNotifier.NotifyDataChanged(DataChangeType.BeanUpdated, State.BeanId.Value);
+                await _beanWorkflow.UpdateAsync(State);
                 await _feedbackService.ShowSuccessAsync($"Bean '{State.Name}' updated");
             }
             else
             {
-                var createDto = new CreateBeanDto
-                {
-                    Name = State.Name,
-                    Roaster = string.IsNullOrWhiteSpace(State.Roaster) ? null : State.Roaster,
-                    Origin = string.IsNullOrWhiteSpace(State.Origin) ? null : State.Origin,
-                    Notes = string.IsNullOrWhiteSpace(State.Notes) ? null : State.Notes,
-                    RoasterUrl = string.IsNullOrWhiteSpace(State.RoasterUrl) ? null : State.RoasterUrl.Trim()
-                };
-
-                var result = await _beanService.CreateBeanAsync(createDto);
+                var creation = await _beanCreationWorkflow.CreateWithInitialBagAsync(State.ToCreateDto());
+                var result = creation.Bean;
                 if (!result.Success)
                 {
                     SetState(s =>
@@ -438,14 +411,6 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
                         s.ErrorMessage = "Bean creation did not return the new bean";
                     });
                     return;
-                }
-
-                _dataChangeNotifier.NotifyDataChanged(DataChangeType.BeanCreated, result.Data);
-
-                var bagResult = await _bagService.CreateNewBagForBeanAsync(result.Data.Id, DateTime.Today);
-                if (bagResult.Success && bagResult.Data is not null)
-                {
-                    _dataChangeNotifier.NotifyDataChanged(DataChangeType.BagCreated, bagResult.Data.Id);
                 }
 
                 await _feedbackService.ShowSuccessAsync($"Bean '{State.Name}' created");
@@ -475,8 +440,7 @@ partial class BeanDetailPage : Component<BeanDetailPageState, BeanDetailPageProp
             SecondaryActionButtonText = "Cancel",
             ActionButtonCommand = new Command(async () =>
             {
-                await _beanService.DeleteBeanAsync(State.BeanId!.Value);
-                _dataChangeNotifier.NotifyDataChanged(DataChangeType.BeanUpdated, State.BeanId!.Value);
+                await _beanWorkflow.DeleteAsync(State.BeanId!.Value);
                 await _feedbackService.ShowSuccessAsync($"Bean '{State.Name}' deleted");
                 await IPopupService.Current.PopAsync();
                 await MauiControls.Shell.Current.GoToAsync("..");

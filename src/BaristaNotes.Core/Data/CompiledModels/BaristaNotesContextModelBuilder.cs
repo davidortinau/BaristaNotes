@@ -16,7 +16,7 @@ namespace BaristaNotes.Core.Data.CompiledModels;
 public partial class BaristaNotesContextModel
 {
     private BaristaNotesContextModel()
-        : base(skipDetectChanges: false, modelId: new Guid("1a511c6a-8c00-40f2-9091-bfa010a4e476"), entityTypeCount: 9)
+        : base(skipDetectChanges: false, modelId: new Guid("1d6c3022-76f9-4514-b772-2eac5b3fab6c"), entityTypeCount: 9)
     {
     }
 

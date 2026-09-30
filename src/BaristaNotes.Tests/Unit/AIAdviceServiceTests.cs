@@ -7,8 +7,8 @@ namespace BaristaNotes.Tests.Unit;
 
 /// <summary>
 /// Tests for AIPromptBuilder and AIAdviceResponseDto functionality.
-/// Note: Full AIAdviceService tests require MAUI project reference.
-/// These tests focus on the testable Core layer components.
+/// These tests cover Core prompts and DTOs. SharedAIServiceTests exercises
+/// the extracted provider service without a MAUI project reference.
 /// </summary>
 public class AIAdviceServiceTests
 {

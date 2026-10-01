@@ -19,6 +19,12 @@ public class MainActivity : MauiAppCompatActivity
         ApplyWindowTheme();
         base.OnCreate(savedInstanceState);
 
+#if MAUI_PERFORMANCE
+        IPlatformApplication.Current!.Services
+            .GetRequiredService<MauiPerformanceProbe>()
+            .ConfigureAndroid(this, Intent);
+#endif
+
         _application = MauiControls.Application.Current;
         if (_application is not null)
             _application.RequestedThemeChanged += OnRequestedThemeChanged;

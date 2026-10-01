@@ -7,7 +7,13 @@ namespace BaristaNotes.Native.iOS;
 [Register("NativeAppDelegate")]
 public sealed class AppDelegate : UIApplicationDelegate
 {
-    public ILoggerFactory Logging { get; } = LoggerFactory.Create(builder => builder.AddDebug());
+    public ILoggerFactory Logging { get; } = LoggerFactory.Create(builder =>
+    {
+        builder.AddDebug();
+#if NATIVE_PERFORMANCE
+        builder.AddProvider(new NativePerformanceLogProvider());
+#endif
+    });
     internal NativeServices? Services { get; private set; }
 
     public override bool FinishedLaunching(UIApplication application, NSDictionary? launchOptions)

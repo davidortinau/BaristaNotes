@@ -132,6 +132,7 @@ internal sealed class ActivityViewController : SliceViewController
                     _table.Hidden = _source.Shots.Count == 0;
                     _navigation[2].SetTitleColor(filters.HasFilters ? NativeTheme.Primary : NativeTheme.TextPrimary, UIControlState.Normal);
                     Root.SetNeedsLayout();
+                    Host.Performance.ActivityReady(Host, results.TotalCount, _source.Shots.Count);
                     break;
                 }
                 catch (Exception exception)

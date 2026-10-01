@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title description">
+  <title id="title">Screen transition time</title>
+  <desc id="description">Lower is better. Each value is the median of ten fresh-process samples.</desc>
+  <rect x="0" y="0" width="1200" height="720" rx="0" fill="#F8FAFC"/>
+  <text x="50" y="52" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" text-anchor="start" fill="#0F172A">Screen transition time</text>
+  <text x="50" y="80" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="400" text-anchor="start" fill="#475569">Lower is better. Each value is the median of ten fresh-process samples.</text>
+  <rect x="40" y="110" width="550" height="540" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="64" y="148" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" text-anchor="start" fill="#0F172A">iOS p50</text>
+  <line x1="224.0" y1="176" x2="224.0" y2="626" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="224.0" y="169" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="middle" fill="#475569">0</text>
+  <line x1="290.0" y1="176" x2="290.0" y2="626" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="290.0" y="169" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="middle" fill="#475569">110</text>
+  <line x1="356.0" y1="176" x2="356.0" y2="626" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="356.0" y="169" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="middle" fill="#475569">220</text>
+  <line x1="422.0" y1="176" x2="422.0" y2="626" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="422.0" y="169" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="middle" fill="#475569">330</text>
+  <line x1="488.0" y1="176" x2="488.0" y2="626" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="488.0" y="169" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="middle" fill="#475569">440</text>
+  <line x1="554.0" y1="176" x2="554.0" y2="626" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="554.0" y="169" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="middle" fill="#475569">550</text>
+  <text x="62" y="213.82" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" text-anchor="start" fill="#0F172A">New Drink to Activity</text>
+  <text x="214" y="254.20000000000002" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">MAUI full R2R</text>
+  <rect x="224" y="241.20000000000002" width="290.04" height="18" rx="4" fill="#6D28D9"/>
+  <text x="508.03999999999996" y="254.20000000000002" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="end" fill="#FFFFFF">483.4 ms</text>
+  <text x="214" y="297.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">MAUI Native AOT</text>
+  <rect x="224" y="284.0" width="180.06000000000003" height="18" rx="4" fill="#DB2777"/>
+  <text x="410.06000000000006" y="297.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">300.1 ms</text>
+  <text x="214" y="339.79999999999995" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">Native full R2R</text>
+  <rect x="224" y="326.79999999999995" width="58.98" height="18" rx="4" fill="#0369A1"/>
+  <text x="288.98" y="339.79999999999995" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">98.3 ms</text>
+  <text x="214" y="382.59999999999997" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">Native AOT</text>
+  <rect x="224" y="369.59999999999997" width="39.12" height="18" rx="4" fill="#059669"/>
+  <text x="269.12" y="382.59999999999997" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">65.2 ms</text>
+  <text x="62" y="427.82" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" text-anchor="start" fill="#0F172A">Activity to Settings</text>
+  <text x="214" y="468.19999999999993" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">MAUI full R2R</text>
+  <rect x="224" y="455.19999999999993" width="79.98000000000002" height="18" rx="4" fill="#6D28D9"/>
+  <text x="309.98" y="468.19999999999993" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">133.3 ms</text>
+  <text x="214" y="510.99999999999994" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">MAUI Native AOT</text>
+  <rect x="224" y="497.99999999999994" width="79.98000000000002" height="18" rx="4" fill="#DB2777"/>
+  <text x="309.98" y="510.99999999999994" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">133.3 ms</text>
+  <text x="214" y="553.8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">Native full R2R</text>
+  <rect x="224" y="540.8" width="28.86" height="18" rx="4" fill="#0369A1"/>
+  <text x="258.86" y="553.8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">48.1 ms</text>
+  <text x="214" y="596.6" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">Native AOT</text>
+  <rect x="224" y="583.6" width="36.48" height="18" rx="4" fill="#059669"/>
+  <text x="266.48" y="596.6" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">60.8 ms</text>
+  <rect x="610" y="110" width="550" height="540" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="634" y="148" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" text-anchor="start" fill="#0F172A">Android p50</text>
+  <line x1="794.0" y1="176" x2="794.0" y2="626" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="794.0" y="169" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="middle" fill="#475569">0</text>
+  <line x1="860.0" y1="176" x2="860.0" y2="626" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="860.0" y="169" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="middle" fill="#475569">140</text>
+  <line x1="926.0" y1="176" x2="926.0" y2="626" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="926.0" y="169" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="middle" fill="#475569">280</text>
+  <line x1="992.0" y1="176" x2="992.0" y2="626" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="992.0" y="169" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="middle" fill="#475569">420</text>
+  <line x1="1058.0" y1="176" x2="1058.0" y2="626" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="1058.0" y="169" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="middle" fill="#475569">560</text>
+  <line x1="1124.0" y1="176" x2="1124.0" y2="626" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="1124.0" y="169" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="middle" fill="#475569">700</text>
+  <text x="632" y="205.87142857142857" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" text-anchor="start" fill="#0F172A">New Drink to Activity</text>
+  <text x="784" y="235.85714285714286" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">MAUI full R2R</text>
+  <rect x="794" y="223.29714285714286" width="189.9857142857143" height="17.12" rx="4" fill="#6D28D9"/>
+  <text x="989.9857142857143" y="235.85714285714286" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">403 ms</text>
+  <text x="784" y="266.42857142857144" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">MAUI partial R2R</text>
+  <rect x="794" y="253.86857142857144" width="257.82428571428574" height="17.12" rx="4" fill="#A855F7"/>
+  <text x="1057.8242857142857" y="266.42857142857144" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">546.9 ms</text>
+  <text x="784" y="297.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">MAUI Native AOT</text>
+  <rect x="794" y="284.44" width="127.4742857142857" height="17.12" rx="4" fill="#DB2777"/>
+  <text x="927.4742857142857" y="297.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">270.4 ms</text>
+  <text x="784" y="327.57142857142856" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">Native full R2R</text>
+  <rect x="794" y="315.01142857142855" width="190.59857142857143" height="17.12" rx="4" fill="#0369A1"/>
+  <text x="990.5985714285714" y="327.57142857142856" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">404.3 ms</text>
+  <text x="784" y="358.14285714285717" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">Native partial R2R</text>
+  <rect x="794" y="345.58285714285716" width="319.2514285714286" height="17.12" rx="4" fill="#0EA5E9"/>
+  <text x="1107.2514285714287" y="358.14285714285717" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="end" fill="#FFFFFF">677.2 ms</text>
+  <text x="784" y="388.7142857142857" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">Native AOT</text>
+  <rect x="794" y="376.1542857142857" width="106.30714285714286" height="17.12" rx="4" fill="#059669"/>
+  <text x="906.3071428571428" y="388.7142857142857" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">225.5 ms</text>
+  <text x="632" y="419.87142857142857" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" text-anchor="start" fill="#0F172A">Activity to Settings</text>
+  <text x="784" y="449.85714285714283" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">MAUI full R2R</text>
+  <rect x="794" y="437.29714285714283" width="20.130000000000003" height="17.12" rx="4" fill="#6D28D9"/>
+  <text x="820.13" y="449.85714285714283" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">42.7 ms</text>
+  <text x="784" y="480.42857142857144" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">MAUI partial R2R</text>
+  <rect x="794" y="467.86857142857144" width="21.78" height="17.12" rx="4" fill="#A855F7"/>
+  <text x="821.78" y="480.42857142857144" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">46.2 ms</text>
+  <text x="784" y="511.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">MAUI Native AOT</text>
+  <rect x="794" y="498.44" width="9.94714285714286" height="17.12" rx="4" fill="#DB2777"/>
+  <text x="809.9471428571428" y="511.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">21.1 ms</text>
+  <text x="784" y="541.5714285714286" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">Native full R2R</text>
+  <rect x="794" y="529.0114285714286" width="29.982857142857142" height="17.12" rx="4" fill="#0369A1"/>
+  <text x="829.9828571428571" y="541.5714285714286" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">63.6 ms</text>
+  <text x="784" y="572.1428571428572" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">Native partial R2R</text>
+  <rect x="794" y="559.5828571428573" width="42.9" height="17.12" rx="4" fill="#0EA5E9"/>
+  <text x="842.9" y="572.1428571428572" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">91 ms</text>
+  <text x="784" y="602.7142857142858" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="end" fill="#0F172A">Native AOT</text>
+  <rect x="794" y="590.1542857142858" width="21.544285714285717" height="17.12" rx="4" fill="#059669"/>
+  <text x="821.5442857142857" y="602.7142857142858" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" text-anchor="start" fill="#0F172A">45.7 ms</text>
+</svg>

@@ -26,6 +26,9 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
 {
     [Inject] IShotService _shotService;
     [Inject] DatabaseInitializationService _databaseInitialization;
+#if MAUI_PERFORMANCE
+    [Inject] MauiPerformanceProbe _performanceProbe;
+#endif
 
     protected override void OnMounted()
     {
@@ -100,6 +103,9 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
             {
                 var totalResult = await _shotService.GetShotHistoryAsync(0, 1);
                 SetState(s => s.TotalShotCount = totalResult.TotalCount);
+#if MAUI_PERFORMANCE
+                _performanceProbe.ActivityReady(totalResult.TotalCount, shots.Count);
+#endif
             }
         }
         catch (Exception ex)

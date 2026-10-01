@@ -17,9 +17,19 @@ public static class MauiProgram
             .AddAIChatClients()           // Apple Intelligence (iOS) + advice + grind translation
             .AddDebugDiagnostics();       // #if DEBUG: Debug logger + DevFlow
 
+#if MAUI_PERFORMANCE
+        builder.Services.AddSingleton<MauiPerformanceProbe>();
+#if IOS
+        builder.Logging.AddProvider(new MauiPerformanceLogProvider());
+#endif
+#endif
+
         RouteRegistration.RegisterAll();
 
         var app = builder.Build();
+#if MAUI_PERFORMANCE
+        MauiPerformanceFixture.ConfigurePreferences(app.Services);
+#endif
         var databaseInitialization =
             app.Services.GetRequiredService<DatabaseInitializationService>();
         _ = databaseInitialization.InitializeAsync();

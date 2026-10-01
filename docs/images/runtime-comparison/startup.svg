@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title description">
+  <title id="title">Process-cold startup</title>
+  <desc id="description">Lower is better. Bars show p50. Markers show p90.</desc>
+  <rect x="0" y="0" width="1200" height="720" rx="0" fill="#F8FAFC"/>
+  <text x="50" y="52" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" text-anchor="start" fill="#0F172A">Process-cold startup</text>
+  <text x="50" y="80" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="400" text-anchor="start" fill="#475569">Lower is better. Bars show p50. Markers show p90.</text>
+  <rect x="40" y="110" width="550" height="540" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="64" y="148" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" text-anchor="start" fill="#0F172A">iOS - DX24</text>
+  <line x1="224.0" y1="178" x2="224.0" y2="616" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="224.0" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="middle" fill="#475569">0</text>
+  <line x1="290.0" y1="178" x2="290.0" y2="616" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="290.0" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="middle" fill="#475569">110</text>
+  <line x1="356.0" y1="178" x2="356.0" y2="616" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="356.0" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="middle" fill="#475569">220</text>
+  <line x1="422.0" y1="178" x2="422.0" y2="616" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="422.0" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="middle" fill="#475569">330</text>
+  <line x1="488.0" y1="178" x2="488.0" y2="616" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="488.0" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="middle" fill="#475569">440</text>
+  <line x1="554.0" y1="178" x2="554.0" y2="616" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="554.0" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="middle" fill="#475569">550</text>
+  <text x="212" y="250.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" text-anchor="end" fill="#0F172A">MAUI full R2R</text>
+  <rect x="224" y="232.0" width="294.18" height="26" rx="5" fill="#6D28D9"/>
+  <text x="511.18000000000006" y="250.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="end" fill="#FFFFFF">490.3 ms</text>
+  <line x1="527.1800000000001" y1="227.0" x2="527.1800000000001" y2="263.0" stroke="#0F172A" stroke-width="2"/>
+  <circle cx="527.1800000000001" cy="245.0" r="4" fill="#0F172A" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="212" y="356.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" text-anchor="end" fill="#0F172A">MAUI Native AOT</text>
+  <rect x="224" y="338.0" width="193.08" height="26" rx="5" fill="#DB2777"/>
+  <text x="410.08000000000004" y="356.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="end" fill="#FFFFFF">321.8 ms</text>
+  <line x1="437.66" y1="333.0" x2="437.66" y2="369.0" stroke="#0F172A" stroke-width="2"/>
+  <circle cx="437.66" cy="351.0" r="4" fill="#0F172A" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="212" y="462.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" text-anchor="end" fill="#0F172A">Native full R2R</text>
+  <rect x="224" y="444.0" width="191.4" height="26" rx="5" fill="#0369A1"/>
+  <text x="408.4" y="462.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="end" fill="#FFFFFF">319 ms</text>
+  <line x1="424.58000000000004" y1="439.0" x2="424.58000000000004" y2="475.0" stroke="#0F172A" stroke-width="2"/>
+  <circle cx="424.58000000000004" cy="457.0" r="4" fill="#0F172A" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="212" y="568.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" text-anchor="end" fill="#0F172A">Native AOT</text>
+  <rect x="224" y="550.0" width="111.54" height="26" rx="5" fill="#059669"/>
+  <text x="328.54" y="568.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="end" fill="#FFFFFF">185.9 ms</text>
+  <line x1="344.18" y1="545.0" x2="344.18" y2="581.0" stroke="#0F172A" stroke-width="2"/>
+  <circle cx="344.18" cy="563.0" r="4" fill="#0F172A" stroke="#FFFFFF" stroke-width="2"/>
+  <rect x="64" y="622" width="20" height="10" rx="3" fill="#475569"/>
+  <text x="90" y="632" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="start" fill="#475569">p50 bar</text>
+  <circle cx="176" cy="627" r="4" fill="#0F172A" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="187" y="632" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="start" fill="#475569">p90 marker</text>
+  <rect x="610" y="110" width="550" height="540" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="634" y="148" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" text-anchor="start" fill="#0F172A">Android - Pixel 5</text>
+  <line x1="794.0" y1="178" x2="794.0" y2="616" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="794.0" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="middle" fill="#475569">0</text>
+  <line x1="860.0" y1="178" x2="860.0" y2="616" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="860.0" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="middle" fill="#475569">240</text>
+  <line x1="926.0" y1="178" x2="926.0" y2="616" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="926.0" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="middle" fill="#475569">480</text>
+  <line x1="992.0" y1="178" x2="992.0" y2="616" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="992.0" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="middle" fill="#475569">720</text>
+  <line x1="1058.0" y1="178" x2="1058.0" y2="616" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="1058.0" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="middle" fill="#475569">960</text>
+  <line x1="1124.0" y1="178" x2="1124.0" y2="616" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="1124.0" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="middle" fill="#475569">1200</text>
+  <text x="782" y="232.33333333333334" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" text-anchor="end" fill="#0F172A">MAUI full R2R</text>
+  <rect x="794" y="214.33333333333334" width="267.7125" height="26" rx="5" fill="#6D28D9"/>
+  <text x="1054.7125" y="232.33333333333334" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="end" fill="#FFFFFF">973.5 ms</text>
+  <line x1="1072.025" y1="209.33333333333334" x2="1072.025" y2="245.33333333333334" stroke="#0F172A" stroke-width="2"/>
+  <circle cx="1072.025" cy="227.33333333333334" r="4" fill="#0F172A" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="782" y="303.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" text-anchor="end" fill="#0F172A">MAUI partial R2R</text>
+  <rect x="794" y="285.0" width="311.3" height="26" rx="5" fill="#A855F7"/>
+  <text x="1098.3" y="303.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="end" fill="#FFFFFF">1132 ms</text>
+  <line x1="1114.65" y1="280.0" x2="1114.65" y2="316.0" stroke="#0F172A" stroke-width="2"/>
+  <circle cx="1114.65" cy="298.0" r="4" fill="#0F172A" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="782" y="373.6666666666667" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" text-anchor="end" fill="#0F172A">MAUI Native AOT</text>
+  <rect x="794" y="355.6666666666667" width="77.0" height="26" rx="5" fill="#DB2777"/>
+  <text x="864.0" y="373.6666666666667" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="end" fill="#FFFFFF">280 ms</text>
+  <line x1="1043.7" y1="350.6666666666667" x2="1043.7" y2="386.6666666666667" stroke="#0F172A" stroke-width="2"/>
+  <circle cx="1043.7" cy="368.6666666666667" r="4" fill="#0F172A" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="782" y="444.3333333333333" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" text-anchor="end" fill="#0F172A">Native full R2R</text>
+  <rect x="794" y="426.3333333333333" width="153.0375" height="26" rx="5" fill="#0369A1"/>
+  <text x="940.0375" y="444.3333333333333" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="end" fill="#FFFFFF">556.5 ms</text>
+  <line x1="953.225" y1="421.3333333333333" x2="953.225" y2="457.3333333333333" stroke="#0F172A" stroke-width="2"/>
+  <circle cx="953.225" cy="439.3333333333333" r="4" fill="#0F172A" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="782" y="515.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" text-anchor="end" fill="#0F172A">Native partial R2R</text>
+  <rect x="794" y="497.0" width="258.225" height="26" rx="5" fill="#0EA5E9"/>
+  <text x="1045.225" y="515.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="end" fill="#FFFFFF">939 ms</text>
+  <line x1="1064.6" y1="492.0" x2="1064.6" y2="528.0" stroke="#0F172A" stroke-width="2"/>
+  <circle cx="1064.6" cy="510.0" r="4" fill="#0F172A" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="782" y="585.6666666666667" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" text-anchor="end" fill="#0F172A">Native AOT</text>
+  <rect x="794" y="567.6666666666667" width="49.775" height="26" rx="5" fill="#059669"/>
+  <text x="836.775" y="585.6666666666667" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="end" fill="#FFFFFF">181 ms</text>
+  <line x1="847.9" y1="562.6666666666667" x2="847.9" y2="598.6666666666667" stroke="#0F172A" stroke-width="2"/>
+  <circle cx="847.9" cy="580.6666666666667" r="4" fill="#0F172A" stroke="#FFFFFF" stroke-width="2"/>
+  <rect x="634" y="622" width="20" height="10" rx="3" fill="#475569"/>
+  <text x="660" y="632" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="start" fill="#475569">p50 bar</text>
+  <circle cx="746" cy="627" r="4" fill="#0F172A" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="757" y="632" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" text-anchor="start" fill="#475569">p90 marker</text>
+</svg>

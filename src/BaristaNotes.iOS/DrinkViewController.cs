@@ -116,6 +116,7 @@ internal sealed partial class DrinkViewController : SliceViewController
             _retryRead = null;
             _loaded = true;
             UpdateTiles();
+            Host.Performance.DrinkReady(Host);
 #if DEBUG
             var testForm = NativeReadFaults.TakeLaunchForm();
             if (testForm == "bean") Host.PushViewController(new BeanDetailViewController(Host), false);
@@ -169,6 +170,7 @@ internal sealed partial class DrinkViewController : SliceViewController
         await RefreshBagsAsync();
         await RefreshPeopleAsync();
         await RefreshEquipmentAsync();
+        Host.Performance.DrinkReady(Host);
     }
 
     private async Task RefreshEquipmentAsync()

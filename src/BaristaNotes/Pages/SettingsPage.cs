@@ -24,6 +24,10 @@ partial class SettingsPage : Component<SettingsPageState>
     [Inject]
     IDrinkValueRangeService _rangeService;
 
+#if MAUI_PERFORMANCE
+    [Inject] MauiPerformanceProbe _performanceProbe;
+#endif
+
     protected override void OnMounted()
     {
         base.OnMounted();
@@ -52,6 +56,9 @@ partial class SettingsPage : Component<SettingsPageState>
     {
         var mode = await _themeService.GetThemeModeAsync();
         SetState(s => s.CurrentThemeMode = mode);
+#if MAUI_PERFORMANCE
+        _performanceProbe.SettingsReady();
+#endif
     }
 
     async Task OnThemeSelected(ThemeMode mode)

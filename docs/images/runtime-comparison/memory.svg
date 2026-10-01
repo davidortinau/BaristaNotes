@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title description">
+  <title id="title">Memory by application state</title>
+  <desc id="description">Lower is better. Platform memory measures are not comparable to each other.</desc>
+  <rect x="0" y="0" width="1200" height="720" rx="0" fill="#F8FAFC"/>
+  <text x="50" y="52" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" text-anchor="start" fill="#0F172A">Memory by application state</text>
+  <text x="50" y="80" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="400" text-anchor="start" fill="#475569">Lower is better. Platform memory measures are not comparable to each other.</text>
+  <rect x="40" y="110" width="550" height="540" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="64" y="148" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" text-anchor="start" fill="#0F172A">iOS physical footprint</text>
+  <line x1="106" y1="576.0" x2="566" y2="576.0" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="96" y="580.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="end" fill="#475569">0</text>
+  <line x1="106" y1="506.4" x2="566" y2="506.4" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="96" y="510.4" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="end" fill="#475569">28</text>
+  <line x1="106" y1="436.8" x2="566" y2="436.8" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="96" y="440.8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="end" fill="#475569">56</text>
+  <line x1="106" y1="367.2" x2="566" y2="367.2" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="96" y="371.2" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="end" fill="#475569">84</text>
+  <line x1="106" y1="297.6" x2="566" y2="297.6" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="96" y="301.6" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="end" fill="#475569">112</text>
+  <line x1="106" y1="228.0" x2="566" y2="228.0" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="96" y="232.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="end" fill="#475569">140</text>
+  <rect x="122.16666666666669" y="374.7565714285714" width="28" height="201.24342857142855" rx="3" fill="#6D28D9"/>
+  <text x="136.16666666666669" y="369.7565714285714" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8" font-weight="600" text-anchor="middle" fill="#0F172A">81.0</text>
+  <rect x="153.16666666666669" y="413.48400000000004" width="28" height="162.516" rx="3" fill="#DB2777"/>
+  <text x="167.16666666666669" y="408.48400000000004" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8" font-weight="600" text-anchor="middle" fill="#0F172A">65.4</text>
+  <rect x="184.16666666666669" y="424.99285714285713" width="28" height="151.00714285714287" rx="3" fill="#0369A1"/>
+  <text x="198.16666666666669" y="419.99285714285713" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8" font-weight="600" text-anchor="middle" fill="#0F172A">60.8</text>
+  <rect x="215.16666666666669" y="447.11571428571426" width="28" height="128.8842857142857" rx="3" fill="#059669"/>
+  <text x="229.16666666666669" y="442.11571428571426" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8" font-weight="600" text-anchor="middle" fill="#0F172A">51.9</text>
+  <text x="182.66666666666669" y="600" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#0F172A">Initial</text>
+  <rect x="275.50000000000006" y="332.3005714285714" width="28" height="243.6994285714286" rx="3" fill="#6D28D9"/>
+  <text x="289.50000000000006" y="327.3005714285714" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8" font-weight="600" text-anchor="middle" fill="#0F172A">98.0</text>
+  <rect x="306.50000000000006" y="375.05485714285714" width="28" height="200.94514285714286" rx="3" fill="#DB2777"/>
+  <text x="320.50000000000006" y="370.05485714285714" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8" font-weight="600" text-anchor="middle" fill="#0F172A">80.8</text>
+  <rect x="337.50000000000006" y="424.52057142857143" width="28" height="151.47942857142857" rx="3" fill="#0369A1"/>
+  <text x="351.50000000000006" y="419.52057142857143" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8" font-weight="600" text-anchor="middle" fill="#0F172A">60.9</text>
+  <rect x="368.50000000000006" y="445.77342857142855" width="28" height="130.22657142857145" rx="3" fill="#059669"/>
+  <text x="382.50000000000006" y="440.77342857142855" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8" font-weight="600" text-anchor="middle" fill="#0F172A">52.4</text>
+  <text x="336.00000000000006" y="600" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#0F172A">Activity</text>
+  <rect x="428.83333333333337" y="259.79228571428575" width="28" height="316.20771428571425" rx="3" fill="#6D28D9"/>
+  <text x="442.83333333333337" y="254.79228571428575" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8" font-weight="600" text-anchor="middle" fill="#0F172A">127.2</text>
+  <rect x="459.83333333333337" y="293.2002857142857" width="28" height="282.7997142857143" rx="3" fill="#DB2777"/>
+  <text x="473.83333333333337" y="288.2002857142857" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8" font-weight="600" text-anchor="middle" fill="#0F172A">113.8</text>
+  <rect x="490.83333333333337" y="415.9945714285714" width="28" height="160.00542857142858" rx="3" fill="#0369A1"/>
+  <text x="504.83333333333337" y="410.9945714285714" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8" font-weight="600" text-anchor="middle" fill="#0F172A">64.4</text>
+  <rect x="521.8333333333334" y="449.6262857142857" width="28" height="126.37371428571429" rx="3" fill="#059669"/>
+  <text x="535.8333333333334" y="444.6262857142857" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8" font-weight="600" text-anchor="middle" fill="#0F172A">50.8</text>
+  <text x="489.33333333333337" y="600" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#0F172A">Repeated</text>
+  <rect x="64.0" y="165" width="13" height="13" rx="2" fill="#6D28D9"/>
+  <text x="83.0" y="176" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="start" fill="#0F172A">MAUI full R2R</text>
+  <rect x="315.0" y="165" width="13" height="13" rx="2" fill="#DB2777"/>
+  <text x="334.0" y="176" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="start" fill="#0F172A">MAUI Native AOT</text>
+  <rect x="64.0" y="185" width="13" height="13" rx="2" fill="#0369A1"/>
+  <text x="83.0" y="196" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="start" fill="#0F172A">Native full R2R</text>
+  <rect x="315.0" y="185" width="13" height="13" rx="2" fill="#059669"/>
+  <text x="334.0" y="196" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="start" fill="#0F172A">Native AOT</text>
+  <text x="62" y="625" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="start" fill="#475569">MiB</text>
+  <rect x="610" y="110" width="550" height="540" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="634" y="148" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" text-anchor="start" fill="#0F172A">Android proportional set size</text>
+  <line x1="676" y1="576.0" x2="1136" y2="576.0" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="666" y="580.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="end" fill="#475569">0</text>
+  <line x1="676" y1="510.4" x2="1136" y2="510.4" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="666" y="514.4" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="end" fill="#475569">84</text>
+  <line x1="676" y1="444.8" x2="1136" y2="444.8" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="666" y="448.8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="end" fill="#475569">168</text>
+  <line x1="676" y1="379.2" x2="1136" y2="379.2" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="666" y="383.2" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="end" fill="#475569">252</text>
+  <line x1="676" y1="313.6" x2="1136" y2="313.6" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="666" y="317.6" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="end" fill="#475569">336</text>
+  <line x1="676" y1="248.0" x2="1136" y2="248.0" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="666" y="252.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="end" fill="#475569">420</text>
+  <rect x="689.5" y="295.6459047619048" width="18.555555555555557" height="280.3540952380952" rx="3" fill="#6D28D9"/>
+  <rect x="711.0555555555555" y="414.4912380952381" width="18.555555555555557" height="161.5087619047619" rx="3" fill="#A855F7"/>
+  <rect x="732.6111111111111" y="447.7207619047619" width="18.555555555555557" height="128.2792380952381" rx="3" fill="#DB2777"/>
+  <rect x="754.1666666666666" y="359.8089523809524" width="18.555555555555557" height="216.1910476190476" rx="3" fill="#0369A1"/>
+  <rect x="775.7222222222222" y="467.7287619047619" width="18.555555555555557" height="108.27123809523809" rx="3" fill="#0EA5E9"/>
+  <rect x="797.2777777777778" y="484.1756190476191" width="18.555555555555557" height="91.82438095238095" rx="3" fill="#059669"/>
+  <text x="752.6666666666666" y="600" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#0F172A">Initial</text>
+  <rect x="842.8333333333334" y="283.6739047619048" width="18.555555555555557" height="292.3260952380952" rx="3" fill="#6D28D9"/>
+  <rect x="864.3888888888889" y="410.6099047619048" width="18.555555555555557" height="165.39009523809523" rx="3" fill="#A855F7"/>
+  <rect x="885.9444444444445" y="441.5824761904762" width="18.555555555555557" height="134.4175238095238" rx="3" fill="#DB2777"/>
+  <rect x="907.5" y="352.73352380952383" width="18.555555555555557" height="223.2664761904762" rx="3" fill="#0369A1"/>
+  <rect x="929.0555555555557" y="468.5175238095238" width="18.555555555555557" height="107.48247619047619" rx="3" fill="#0EA5E9"/>
+  <rect x="950.6111111111112" y="479.4664761904762" width="18.555555555555557" height="96.53352380952381" rx="3" fill="#059669"/>
+  <text x="906.0" y="600" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#0F172A">Activity</text>
+  <rect x="996.1666666666669" y="272.56095238095236" width="18.555555555555557" height="303.43904761904764" rx="3" fill="#6D28D9"/>
+  <rect x="1017.7222222222224" y="401.35561904761903" width="18.555555555555557" height="174.64438095238094" rx="3" fill="#A855F7"/>
+  <rect x="1039.277777777778" y="434.97561904761903" width="18.555555555555557" height="141.02438095238097" rx="3" fill="#DB2777"/>
+  <rect x="1060.8333333333335" y="338.41085714285714" width="18.555555555555557" height="237.58914285714286" rx="3" fill="#0369A1"/>
+  <rect x="1082.3888888888891" y="456.9125714285714" width="18.555555555555557" height="119.08742857142857" rx="3" fill="#0EA5E9"/>
+  <rect x="1103.9444444444446" y="471.64133333333336" width="18.555555555555557" height="104.35866666666666" rx="3" fill="#059669"/>
+  <text x="1059.3333333333335" y="600" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#0F172A">Repeated</text>
+  <rect x="634.0" y="165" width="13" height="13" rx="2" fill="#6D28D9"/>
+  <text x="653.0" y="176" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="start" fill="#0F172A">MAUI full R2R</text>
+  <rect x="885.0" y="165" width="13" height="13" rx="2" fill="#A855F7"/>
+  <text x="904.0" y="176" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="start" fill="#0F172A">MAUI partial R2R</text>
+  <rect x="634.0" y="185" width="13" height="13" rx="2" fill="#DB2777"/>
+  <text x="653.0" y="196" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="start" fill="#0F172A">MAUI Native AOT</text>
+  <rect x="885.0" y="185" width="13" height="13" rx="2" fill="#0369A1"/>
+  <text x="904.0" y="196" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="start" fill="#0F172A">Native full R2R</text>
+  <rect x="634.0" y="205" width="13" height="13" rx="2" fill="#0EA5E9"/>
+  <text x="653.0" y="216" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="start" fill="#0F172A">Native partial R2R</text>
+  <rect x="885.0" y="205" width="13" height="13" rx="2" fill="#059669"/>
+  <text x="904.0" y="216" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="500" text-anchor="start" fill="#0F172A">Native AOT</text>
+  <text x="632" y="625" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" text-anchor="start" fill="#475569">MiB</text>
+</svg>

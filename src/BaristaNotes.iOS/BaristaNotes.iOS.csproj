@@ -24,6 +24,14 @@
     <TrimMode>partial</TrimMode>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(NativePerformance)' == 'true'">
+    <ApplicationId>com.simplyprofound.baristanotes.native</ApplicationId>
+    <ApplicationTitle>BaristaNotes Performance</ApplicationTitle>
+    <ApplicationDisplayVersion>2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>900</ApplicationVersion>
+    <DefineConstants>$(DefineConstants);NATIVE_PERFORMANCE</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)../BaristaNotes.Core/BaristaNotes.Core.csproj" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="11.0.0-rc.1.26425.128" />
@@ -54,4 +62,24 @@
   <ItemGroup Condition="'$(Configuration)' != 'Debug'">
     <Compile Remove="NativeInspection.cs" />
   </ItemGroup>
+
+  <ItemGroup Condition="'$(NativePerformance)' == 'true'">
+    <BundleResource Include="$(NativePerformanceDatabase)" LogicalName="performance/barista_notes.db" />
+    <BundleResource Include="$(NativePerformanceMetadata)" LogicalName="performance/preferences.txt" />
+  </ItemGroup>
+
+  <Target Name="ValidateNativePerformanceConfiguration"
+          BeforeTargets="PrepareForBuild"
+          Condition="'$(NativePerformance)' == 'true'">
+    <Error Condition="'$(Configuration)' != 'Release'"
+           Text="NativePerformance is supported only for Release builds." />
+    <Error Condition="'$(ApplicationId)' != 'com.simplyprofound.baristanotes.native'"
+           Text="NativePerformance builds must use the isolated com.simplyprofound.baristanotes.native application ID. Evaluated ApplicationId: $(ApplicationId)" />
+    <Error Condition="'$(NativePerformanceDataset)' != '1000'"
+           Text="The iOS runtime comparison uses the accepted 1000-drink fixture." />
+    <Error Condition="!Exists('$(NativePerformanceDatabase)')"
+           Text="NativePerformanceDatabase does not exist: $(NativePerformanceDatabase)" />
+    <Error Condition="!Exists('$(NativePerformanceMetadata)')"
+           Text="NativePerformanceMetadata does not exist: $(NativePerformanceMetadata)" />
+  </Target>
 </Project>

@@ -61,6 +61,8 @@
            Text="NativePerformance is supported only for Release builds." />
     <Error Condition="'$(NativePerformanceDataset)' != '100' And '$(NativePerformanceDataset)' != '1000'"
            Text="NativePerformanceDataset must be 100 or 1000." />
+    <Error Condition="'$(ApplicationId)' != 'com.simplyprofound.baristanotes.perf.nativeviews$(NativePerformanceDataset)'"
+           Text="NativePerformance builds must use the isolated performance application ID for the selected dataset. Evaluated ApplicationId: $(ApplicationId)" />
     <Error Condition="!Exists('$(NativePerformanceDatabase)')"
            Text="NativePerformanceDatabase does not exist: $(NativePerformanceDatabase)" />
     <Error Condition="!Exists('$(NativePerformanceMetadata)')"

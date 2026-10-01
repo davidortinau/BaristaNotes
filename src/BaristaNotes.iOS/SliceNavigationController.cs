@@ -11,6 +11,7 @@ internal sealed class SliceNavigationController : UINavigationController
     public NativeServices Services { get; }
     public ILoggerFactory Logging { get; }
     public WindowFeedbackHost FeedbackHost { get; }
+    internal NativePerformanceProbe Performance { get; }
     private DrinkViewController? _newDrink;
     private ActivityViewController? _activity;
     private SettingsViewController? _settings;
@@ -24,6 +25,7 @@ internal sealed class SliceNavigationController : UINavigationController
         Services = services;
         Logging = logging;
         FeedbackHost = new WindowFeedbackHost(() => View?.Window, logging.CreateLogger<WindowFeedbackHost>());
+        Performance = new NativePerformanceProbe(services, logging);
         SetNavigationBarHidden(true, false);
         _newDrink = new DrinkViewController(this);
         SetViewControllers([_newDrink], false);
@@ -33,6 +35,7 @@ internal sealed class SliceNavigationController : UINavigationController
     {
         if (FeedbackHost.IsShowing || !CanNavigate(NewDrink)) return;
         _newDrink ??= new DrinkViewController(this);
+        Performance.NavigationStarting("drink");
         SetViewControllers([_newDrink], false);
     }
 
@@ -40,6 +43,7 @@ internal sealed class SliceNavigationController : UINavigationController
     {
         if (FeedbackHost.IsShowing || !CanNavigate(Activity)) return;
         _activity ??= new ActivityViewController(this);
+        Performance.NavigationStarting("activity");
         SetViewControllers([_activity], false);
     }
 
@@ -53,6 +57,7 @@ internal sealed class SliceNavigationController : UINavigationController
     {
         if (FeedbackHost.IsShowing || !CanNavigate(Settings)) return;
         _settings ??= new SettingsViewController(this);
+        Performance.NavigationStarting("settings");
         SetViewControllers([_settings], false);
     }
 
@@ -149,6 +154,7 @@ internal sealed class SliceNavigationController : UINavigationController
         if (disposing)
         {
             _ = ObserveVoiceRetirementAsync(DetachVoiceWindowAsync());
+            Performance.Dispose();
         }
         base.Dispose(disposing);
     }

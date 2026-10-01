@@ -108,6 +108,12 @@ internal sealed class SettingsViewController(SliceNavigationController host) : S
         UpdateUnitFonts();
     }
 
+    public override void ViewDidAppear(bool animated)
+    {
+        base.ViewDidAppear(animated);
+        Host.Performance.SettingsReady(Host);
+    }
+
     public override void ViewDidDisappear(bool animated)
     {
         _visible = false;

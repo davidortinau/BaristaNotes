@@ -19,10 +19,17 @@ internal sealed class NativeServices : IDisposable
         Directory.CreateDirectory(DataDirectory);
         var services = new ServiceCollection();
         services.AddSingleton(logging);
+#if NATIVE_PERFORMANCE
+        var performancePreferences = new NativePerformancePreferencesStore();
+        services.AddSingleton<IPreferencesStore>(performancePreferences);
+        var databasePath = NativePerformanceFixture.PrepareDatabase(DataDirectory);
+#else
         services.AddSingleton<IPreferencesStore, NativePreferencesStore>();
+        var databasePath = Path.Combine(DataDirectory, "barista_notes.db");
+#endif
         services.AddSingleton<IImageProcessingService>(provider =>
             new NativeImageProcessingService(DataDirectory, provider.GetRequiredService<ILogger<NativeImageProcessingService>>()));
-        services.AddBaristaNotesCore(Path.Combine(DataDirectory, "barista_notes.db"));
+        services.AddBaristaNotesCore(databasePath);
         NativeAdviceConfiguration.AddAdvice(services, DataDirectory, logging);
         services.AddSingleton<NativeVoiceOverlay>();
         services.AddSingleton<IOverlayService>(provider => provider.GetRequiredService<NativeVoiceOverlay>());
@@ -33,6 +40,9 @@ internal sealed class NativeServices : IDisposable
         services.AddScoped<ISpeechRecognitionService, NativeSpeechRecognitionService>();
         services.AddBaristaNotesVoice();
         _provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+#if NATIVE_PERFORMANCE
+        NativePerformanceFixture.ConfigurePreferences(_provider);
+#endif
     }
 
     public T Singleton<T>() where T : notnull => _provider.GetRequiredService<T>();

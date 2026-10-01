@@ -129,12 +129,18 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
     [Inject] IDataChangeNotifier _dataChangeNotifier;
     [Inject] IAIAdviceService _aiAdviceService;
     [Inject] IServiceProvider _serviceProvider;
+#if MAUI_PERFORMANCE
+    [Inject] MauiPerformanceProbe _performanceProbe;
+#endif
 
     // Cancellation token for voice commands.
     private CancellationTokenSource? _voiceCts;
     private CancellationTokenSource? _photoWorkflowCts;
     private bool _photoWorkflowActive;
     private bool _isUnmounting;
+#if MAUI_PERFORMANCE
+    private bool _dataLoaded;
+#endif
 
     // Pauses speech recognition when the camera capture flow is active.
     private bool _speechPaused;
@@ -203,6 +209,10 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 _drinkWorkflow.ApplyLoadedData(s, loaded);
                 s.IsLoading = false;
             });
+#if MAUI_PERFORMANCE
+            _dataLoaded = true;
+            _performanceProbe.DrinkReady();
+#endif
         }
         catch (BaristaNotes.Core.Services.Exceptions.EntityNotFoundException) when (Props.ShotId.HasValue)
         {
@@ -416,6 +426,11 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
 
         // Shell retains this page while range settings are edited.
         SetState(s => s.RangeSettingsRevision++);
+
+#if MAUI_PERFORMANCE
+        if (_dataLoaded)
+            _performanceProbe.DrinkReady();
+#endif
 
         // Cross-page voice trigger: ActivityFeedPage's voice tile sets this
         // flag and navigates here. Fire after the page is visible so the

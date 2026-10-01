@@ -52,6 +52,15 @@
 		<DefineConstants>$(DefineConstants);NATIVEAOT</DefineConstants>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(MauiPerformance)' == 'true'">
+		<ApplicationId Condition="'$(TargetFramework)' == 'net11.0-ios'">com.simplyprofound.baristanotes.maui.performance</ApplicationId>
+		<ApplicationId Condition="'$(TargetFramework)' == 'net11.0-android'">com.simplyprofound.baristanotes.perf.maui.$(MauiPerformanceVariant)</ApplicationId>
+		<ApplicationTitle>BaristaNotes MAUI Performance</ApplicationTitle>
+		<ApplicationDisplayVersion>2.0</ApplicationDisplayVersion>
+		<ApplicationVersion>901</ApplicationVersion>
+		<DefineConstants>$(DefineConstants);MAUI_PERFORMANCE</DefineConstants>
+	</PropertyGroup>
+
 	<!-- Disable the managed linker so the dotnet watch startup hook
 	     (Microsoft.Extensions.DotNetDeltaApplier.dll) can call BCL APIs like
 	     System.Environment.GetCommandLineArgs() that nothing else in the app
@@ -88,6 +97,16 @@
 		<!-- iOS: PROJECT ROOT with BundleResource (per Shiny docs) -->
 		<BundleResource Include="appsettings.json" Condition="$(TargetFramework.Contains('ios')) or $(TargetFramework.Contains('maccatalyst'))" />
 		<BundleResource Include="appsettings.Development.json" Condition="($(TargetFramework.Contains('ios')) or $(TargetFramework.Contains('maccatalyst'))) and Exists('appsettings.Development.json')" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(MauiPerformance)' == 'true' And '$(TargetFramework)' == 'net11.0-ios'">
+		<BundleResource Include="$(MauiPerformanceDatabase)" LogicalName="performance/barista_notes.db" />
+		<BundleResource Include="$(MauiPerformanceMetadata)" LogicalName="performance/preferences.txt" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(MauiPerformance)' == 'true' And '$(TargetFramework)' == 'net11.0-android'">
+		<AndroidAsset Include="$(MauiPerformanceDatabase)" Link="performance\barista_notes.db" />
+		<AndroidAsset Include="$(MauiPerformanceMetadata)" Link="performance\preferences.txt" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -165,5 +184,26 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\BaristaNotes.Core\BaristaNotes.Core.csproj" />
 	</ItemGroup>
+
+	<Target Name="ValidateMauiPerformanceConfiguration"
+			BeforeTargets="PrepareForBuild"
+			Condition="'$(MauiPerformance)' == 'true'">
+		<Error Condition="'$(Configuration)' != 'Release'"
+			   Text="MauiPerformance is supported only for Release builds." />
+		<Error Condition="'$(TargetFramework)' != 'net11.0-ios' And '$(TargetFramework)' != 'net11.0-android'"
+			   Text="MauiPerformance is supported only for net11.0-ios and net11.0-android." />
+		<Error Condition="'$(TargetFramework)' == 'net11.0-android' And '$(MauiPerformanceVariant)' != 'fullr2r' And '$(MauiPerformanceVariant)' != 'partialr2r' And '$(MauiPerformanceVariant)' != 'aot'"
+			   Text="MauiPerformanceVariant must be fullr2r, partialr2r, or aot for Android." />
+		<Error Condition="'$(TargetFramework)' == 'net11.0-ios' And '$(ApplicationId)' != 'com.simplyprofound.baristanotes.maui.performance'"
+			   Text="iOS MauiPerformance builds must use the isolated com.simplyprofound.baristanotes.maui.performance application ID. Evaluated ApplicationId: $(ApplicationId)" />
+		<Error Condition="'$(TargetFramework)' == 'net11.0-android' And '$(ApplicationId)' != 'com.simplyprofound.baristanotes.perf.maui.$(MauiPerformanceVariant)'"
+			   Text="Android MauiPerformance builds must use the isolated performance application ID for the selected variant. Evaluated ApplicationId: $(ApplicationId)" />
+		<Error Condition="'$(MauiPerformanceDataset)' != '1000'"
+			   Text="The MAUI comparison uses the accepted 1000-drink fixture." />
+		<Error Condition="!Exists('$(MauiPerformanceDatabase)')"
+			   Text="MauiPerformanceDatabase does not exist: $(MauiPerformanceDatabase)" />
+		<Error Condition="!Exists('$(MauiPerformanceMetadata)')"
+			   Text="MauiPerformanceMetadata does not exist: $(MauiPerformanceMetadata)" />
+	</Target>
 
 </Project>

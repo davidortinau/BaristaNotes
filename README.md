@@ -1,23 +1,21 @@
 # BaristaNotes
 
-BaristaNotes is a .NET MAUI application for recording coffee drinks across
-espresso and manual brewing methods. It uses MauiReactor for declarative UI,
-Entity Framework Core with SQLite for local data, and optional AI services for
-advice, voice commands, image analysis, and grind translation.
+BaristaNotes is a personal coffee journal for recording espresso and manual
+brewing methods. The current application has native .NET for iOS and .NET for
+Android heads built with UIKit and Android Views. Models, data access,
+workflows, AI services, and presentation values are shared through
+`BaristaNotes.Core`.
 
-Native .NET for iOS and .NET for Android variations are also under development.
-They use UIKit and Android Views, share application logic through
-`BaristaNotes.Core`, and install beside the MAUI app with separate data.
-The MAUI app remains the feature and design reference. Native feature parity
-is being checked in stages and is not yet complete.
+The .NET MAUI application remains in the repository as the feature and design
+reference. It also provides the Mac Catalyst and Windows heads. The native
+mobile apps do not depend on `Microsoft.Maui.Controls`.
 
-![BaristaNotes mobile screens](docs/screenshots/Dribbble.png)
+![Current native iOS and Android application screens](docs/screenshots/current/native-app-overview.png)
+
+Current native iOS and Android application captures. These are running-app
+screenshots, not design mockups.
 
 ## Features
-
-This list describes the MAUI reference app. The native variations implement
-the same scope in stages; their project guides distinguish implemented
-features from remaining verification.
 
 - Log drinks for espresso, pour over, V60, moka, drip, Aeropress, French press,
   Turkish, siphon, cupping, cold brew, cold drip, and steep-and-release methods.
@@ -39,13 +37,13 @@ The project files are the source of truth for exact package versions.
 
 | Area | Current technology |
 |---|---|
-| Runtime | .NET 11 Preview 7 |
-| App framework | .NET MAUI 11 |
-| UI | MauiReactor 4.0.18 |
-| Data | Entity Framework Core 11 Preview 7 and SQLite |
-| UI support | CommunityToolkit.Maui 15.0.0 and UXDivers.Popups.Maui 0.9.4 |
+| Runtime and toolchain | .NET 11 RC2 |
+| Native iOS | .NET for iOS with UIKit |
+| Native Android | .NET for Android with Android Views and RecyclerView |
+| Reference app | .NET MAUI 11 with MauiReactor 4.0.18 |
+| Shared application layer | `BaristaNotes.Core` |
+| Data | Entity Framework Core 11 and SQLite |
 | AI | Microsoft.Extensions.AI 10.9.0 and Azure.AI.OpenAI 2.9.0-beta.1 |
-| Configuration | Shiny.Extensions.Configuration 5.4.0 |
 | Tests | xUnit 2.9.3, Moq, and isolated in-memory/file-backed SQLite databases |
 
 CoreSync packages are present for future synchronization work. The current app
@@ -55,7 +53,7 @@ stores its data locally and does not perform cloud synchronization.
 
 ```text
 src/
-  BaristaNotes/          # MAUI application
+  BaristaNotes/          # MAUI feature and design reference
   BaristaNotes.Core/     # Shared models, data, workflows, and presentation values
   BaristaNotes.iOS/      # Native UIKit application
   BaristaNotes.Android/  # Native Android Views application
@@ -71,12 +69,17 @@ See [Project Structure](docs/PROJECT_STRUCTURE.md) for more detail.
 
 ## Build and Test
 
-Install the .NET 11 Preview 7 SDK and the MAUI workloads that match it.
+Install a consistent .NET 11 RC2 SDK and matching iOS, Android, and MAUI
+workloads.
 
 ```bash
-dotnet workload restore src/BaristaNotes/BaristaNotes.csproj
-dotnet restore src/BaristaNotes/BaristaNotes.csproj
+dotnet restore src/BaristaNotes.sln
 
+# Native mobile heads
+dotnet build src/BaristaNotes.iOS/BaristaNotes.iOS.csproj -c Release
+dotnet build src/BaristaNotes.Android/BaristaNotes.Android.csproj -c Release
+
+# MAUI reference heads
 dotnet build src/BaristaNotes -f net11.0-ios
 dotnet build src/BaristaNotes -f net11.0-android
 dotnet build src/BaristaNotes -f net11.0-maccatalyst
@@ -86,48 +89,33 @@ dotnet test src/BaristaNotes.Tests
 
 On Windows, the app also targets `net11.0-windows10.0.19041.0`.
 
-For the full setup and run workflow, see
-[Getting Started](docs/GETTING_STARTED.md).
+The RC2 SDK and workload package builds must agree. The measured environment
+needed a session-only runtime-pack override because the installed SDK requested
+build `26478.115` while the available workload packs were `26475.136`. See the
+[runtime comparison](docs/native-aot-runtime-comparison.md) before substituting
+package versions.
 
-## Native Variations
+For the MAUI reference-head setup and DevFlow run workflow, see
+[Getting Started](docs/GETTING_STARTED.md). The native-head guides linked below
+cover the platform-specific projects.
 
-Use the platform project guides for SDK selection, official Ailoha binary
-inputs, build commands, and current verification limits:
+## Architecture
+
+The native heads use platform controls and navigation while sharing application
+behavior through `BaristaNotes.Core`:
 
 - [Native iOS](src/BaristaNotes.iOS/README.md)
 - [Native Android](src/BaristaNotes.Android/README.md)
 
-The native heads do not use `Microsoft.Maui.Controls`, MauiReactor, or
-`MauiAppBuilder`. Debug builds use the native Ailoha agents through local
-bindings. Release builds exclude the agents and binding projects. The
-solution does not build the Debug-only binding projects in Release.
+Native controls own layout, accessibility, navigation, media capture, and
+platform integration. Core owns drink loading and saving, validation, method
+defaults, selectors, filters, settings workflows, image-analysis routing,
+voice-command tools, and display formatting.
 
-Native iOS currently uses the compatible installed .NET 11 Preview 7 tools;
-the Android head has also been built with .NET 11 RC1. Follow each guide rather
-than assuming one machine-wide SDK configuration fits both binding toolchains.
-Keep native agent binaries and credentials out of source control.
-
-All heads use the shared Core registration and workflows. A host registers its
-`IPreferencesStore` and `IImageProcessingService`, calls
-`AddBaristaNotesCore(databasePath)`, and awaits
-`DatabaseInitializationService.InitializeAsync()`. Native controls own layout
-and event dispatch; Core owns drink loading/saving, method defaults, initial
-bean/bag creation, selector arithmetic, filters, and display formatting.
-Range-editor state, grind history/default resolution, and equipment
-save/archive operations also live in Core. Sharing a workflow does not mean
-that every native screen that uses it is implemented or fully checked.
-Shared voice commands retain the source tool definitions; each head supplies
-the small `IVoicePlatformActions` adapter and its own speech/overlay UI.
-
-Selected nullable update fields use `FieldUpdate<T>`. An omitted field remains
-unchanged, `FieldUpdate<T>.Set(value)` sets it, and
-`FieldUpdate<T>.Set(null)` clears an optional field. This prevents rating-only
-or notes-only updates from erasing unrelated values and lets explicit form
-clears persist. Required-field validation and the 0-4 rating scale remain.
-
-Toast feedback now starts its two-second hold after the appearing animation,
-then dismisses that specific toast. This corrects the previous MAUI ordering,
-which waited for closure before starting the dismissal timer.
+Debug builds can use native Ailoha inspection agents through local binding
+projects. Release builds exclude the agents and binding projects. Keep native
+agent binaries, development configuration, credentials, and generated packages
+out of source control.
 
 ## Local AI Configuration
 
@@ -142,27 +130,30 @@ AI features are optional. Most cloud AI paths use these configuration keys:
 }
 ```
 
-For iOS and Mac Catalyst, save this content in:
+The native iOS and Android heads, plus the MAUI Apple heads, read:
 
 ```text
 src/BaristaNotes/appsettings.Development.json
 ```
 
-For Android, save it in:
+The MAUI Android head can also read:
 
 ```text
 src/BaristaNotes/Platforms/Android/Assets/appsettings.Development.json
 ```
 
-Both files are ignored by Git. Debug builds load the development file over
-`appsettings.json`. Do not commit API keys.
+Both files are ignored by Git. Personal native Release builds currently bundle
+the shared development file when it exists. This supports the private device
+workflow, but it is not secure for public distribution. Do not commit API keys
+or distribute packages that contain them.
 
 Older local files can contain an `OpenAI` section. That section is no longer
 read. Rename it to `AzureOpenAI` and add the resource endpoint.
 
-Supported non-NativeAOT iOS builds try Apple Intelligence first and can fall
-back to Azure OpenAI. NativeAOT releases exclude the Apple Intelligence
-integration and use Azure OpenAI when it is configured.
+The native iOS head tries Apple Intelligence first on iOS 26 and can fall back
+to Azure OpenAI. The MAUI iOS head uses Apple Intelligence only in supported
+non-NativeAOT builds. Its NativeAOT configuration excludes that integration and
+uses Azure OpenAI when it is configured.
 
 The app currently uses `gpt-4.1-mini` for advice, voice commands, and grind
 translation. Image workflows use `gpt-4o` and `gpt-4o-mini`.
@@ -173,8 +164,9 @@ OpenAI. The backend must keep the key and must not return it to the app.
 
 ## Data and Schema Updates
 
-The SQLite file is named `barista_notes.db` and is stored under
-`FileSystem.AppDataDirectory`.
+The SQLite file is named `barista_notes.db`. Each head stores it in the
+platform application-data directory. Every application identity has its own
+sandbox.
 
 The app initializes and upgrades the database through
 `DatabaseInitializer`. It preserves existing records, validates the resulting
@@ -184,29 +176,21 @@ NativeAOT builds use the checked-in EF compiled model and query interceptors.
 Do not delete the app, its data directory, or the database to fix a schema
 problem. See [Data Layer](docs/DATA_LAYER.md) for the supported process.
 
-## iOS NativeAOT Release
+## Runtime Performance
 
-Use `dotnet publish`, not `dotnet build -t:Publish`:
+The benchmark matrix compares the MAUI and native architectures with CoreCLR
+full R2R, Android partial R2R, and Native AOT. It uses isolated application
+identities and the same accepted 1,000-drink fixture.
 
-```bash
-dotnet publish src/BaristaNotes/BaristaNotes.csproj \
-  -f net11.0-ios -c Release -r ios-arm64 \
-  -p:EnableNativeAot=true \
-  -p:PublishAot=true \
-  -p:PublishAotUsingRuntimePack=true \
-  -p:MicrosoftNETCoreAppRefPackageVersion=11.0.0-preview.7.26381.103 \
-  -p:MtouchLink=Full
-```
+![Process-cold startup comparison](docs/images/runtime-comparison/startup.svg)
 
-Important constraints:
+Native AOT produced the best startup, memory, and package-size results for the
+native heads. Android MAUI Native AOT has a fast median but a long startup
+tail. iOS partial R2R is not supported by the current workload.
 
-- Do not pass `TargetFrameworks=net11.0-ios`. That global property also reaches
-  `BaristaNotes.Core` and removes its required `net11.0` restore target.
-- Keep `MicrosoftNETCoreAppRefPackageVersion` aligned with the installed SDK
-  until the iOS and Android workloads use the same runtime pack.
-- Review all `IL2xxx` and `IL3xxx` warnings before installation.
-- Install over the existing app. Do not uninstall first because uninstalling
-  deletes the app data.
+See [Runtime and UI architecture performance comparison](docs/native-aot-runtime-comparison.md)
+for the full methodology, package identities, memory results, transition
+results, warning analysis, and raw-evidence locations.
 
 ## Development Documentation
 
@@ -214,6 +198,8 @@ Important constraints:
 - [Project Structure](docs/PROJECT_STRUCTURE.md)
 - [Data Layer](docs/DATA_LAYER.md)
 - [Service Architecture](docs/SERVICES.md)
+- [Native Architecture Refactor](docs/native-architecture-refactor-report.md)
+- [Runtime Performance Comparison](docs/native-aot-runtime-comparison.md)
 - [MauiReactor Patterns](docs/MAUIREACTOR_PATTERNS.md)
 - [Contributing](docs/CONTRIBUTING.md)
 - [Project Constitution](.specify/memory/constitution.md)

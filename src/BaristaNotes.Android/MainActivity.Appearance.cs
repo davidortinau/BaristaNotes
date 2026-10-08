@@ -72,12 +72,12 @@ public sealed partial class MainActivity
         if (!OperatingSystem.IsAndroidVersionAtLeast(35))
         {
 #pragma warning disable CS0618, CA1422
-            window.SetStatusBarColor(_style.Surface);
+            window.SetStatusBarColor(_page == "beans" ? Android.Graphics.Color.Transparent : _style.Surface);
 #pragma warning restore CS0618, CA1422
         }
         var controller = WindowCompat.GetInsetsController(window, window.DecorView)
             ?? throw new InvalidOperationException("Window appearance controller is unavailable.");
-        controller.AppearanceLightStatusBars = !_style.IsDark;
+        controller.AppearanceLightStatusBars = _page == "beans" && !_beanTitlePinned || !_style.IsDark;
         // As in the pinned Activity, navigation-bar treatment remains with the
         // selected platform theme/edge-to-edge policy, not a new app override.
     }

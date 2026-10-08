@@ -3,6 +3,7 @@ using Android.Views;
 using Android.Widget;
 using BaristaNotes.AndroidApp.Views;
 using BaristaNotes.Core.Services;
+using BaristaNotes.Core.Services.DTOs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -31,26 +32,18 @@ public sealed partial class MainActivity
     {
         ClearTransient();
         _page = "beans";
-        var root = _style.Column();
-        root.SetPadding(_style.Dp(1), _style.Dp(1), _style.Dp(1), _style.Dp(1));
+        _beanTitlePinned = false;
+        var root = new EdgeAwareColumn(this, () => Window?.DecorView)
+        {
+            Orientation = Orientation.Vertical, ExtendBehindStatusBar = true
+        };
+        root.SetContentPadding(_style.Dp(1), 0, _style.Dp(1), _style.Dp(1));
         root.SetBackgroundColor(_style.Outline);
         var screen = new NativeScreen(root);
-        var header = (ViewGroup)BuildHeader("BEANS", "0 beans");
-        var count = (TextView)header.GetChildAt(1)!;
+        var header = (ViewGroup)BuildHeader("BEANS", "0 beans", safeArea: false, compact: true);
+        var count = (TextView)((ViewGroup)header.GetChildAt(0)!).GetChildAt(1)!;
         NativeStyle.Identify(count, "BeanCount");
-        root.AddView(header, new LinearLayout.LayoutParams(-1, -2) { BottomMargin = _style.Dp(1) });
-        var body = new FrameLayout(this);
-        body.SetBackgroundColor(_style.Surface);
-        var adapter = new BeanListAdapter(_style, id => Choice(() =>
-            ObserveBeanTask(() => ShowBeanDetailAsync(new BeanDetailState(id), loadBean: true)))());
-        var list = new SelectorRecyclerView(this);
-        list.SetAdapter(adapter);
-        list.SetBackgroundColor(_style.Outline);
-        list.Visibility = ViewStates.Gone;
-        NativeStyle.Identify(list, "BeanList");
-        screen.Own(list);
-        screen.Own(adapter);
-        body.AddView(list, new FrameLayout.LayoutParams(-1, -1));
+        var map = AddBeanMap(screen);
         var status = _style.Column();
         status.SetGravity(GravityFlags.Center);
         status.SetPadding(_style.Dp(24), _style.Dp(24), _style.Dp(24), _style.Dp(24));
@@ -71,8 +64,22 @@ public sealed partial class MainActivity
         retry.Visibility = ViewStates.Gone;
         Bind(screen, retry, () => ObserveBeanTask(ShowBeansAsync));
         status.AddView(retry, new LinearLayout.LayoutParams(-2, -2) { TopMargin = _style.Dp(12) });
-        body.AddView(status, new FrameLayout.LayoutParams(-1, -1));
-        root.AddView(body, _style.Fill(weight: 1));
+        var page = new BeanPageView(_style, map, header, status, id => Choice(() =>
+            ObserveBeanTask(() => ShowBeanDetailAsync(new BeanDetailState(id), loadBean: true)))(),
+            pinned =>
+            {
+                if (_destroyed || !ReferenceEquals(_transient, screen)) return;
+                _beanTitlePinned = pinned;
+                ApplyNativeWindowTheme();
+            });
+        var list = page.List;
+        root.AddView(page, _style.Fill(weight: 1));
+        screen.OnDispose(() =>
+        {
+            _beanListReturnState?.Dispose();
+            _beanListReturnState = list.GetLayoutManager()?.OnSaveInstanceState();
+        });
+        screen.Own(page);
         var navigation = BuildNavigation(screen,
             ("\uefef", "New Drink", "NavDrink", () => { _editingShotId = null; ShowDrink(); }),
             ("\uf009", "Activity", "NavActivity", () => RunOperation(ShowHistoryAsync)),
@@ -84,27 +91,91 @@ public sealed partial class MainActivity
         root.AddView(navigation, new LinearLayout.LayoutParams(-1, -2) { TopMargin = _style.Dp(1) });
         _transient = screen;
         Present(root, edgeToEdge: true);
-        try
+        IReadOnlyList<BeanDto> activeBeans = [];
+        var listLoaded = false;
+        string? listError = null;
+
+        void UpdateCount(IReadOnlyList<BeanDto> beans)
         {
-            var beans = await InScopeAsync(services =>
-                services.GetRequiredService<IBeanService>().GetAllActiveBeansAsync());
-            if (_destroyed || !ReferenceEquals(_transient, screen))
+            var beanCount = beans.Count == 1 ? "1 bean" : $"{beans.Count} beans";
+            count.Text = map.HasSelection ? map.SelectionLabel : beanCount;
+        }
+
+        void RenderRows()
+        {
+            if (_destroyed || !ReferenceEquals(_transient, screen)) return;
+            if (map.WaitingForSelection || (!map.HasSelection && !listLoaded))
+            {
+                count.Text = "0 beans";
+                page.SetItems([]);
+                status.Visibility = ViewStates.Visible;
+                var error = map.WaitingForSelection ? null : listError;
+                progress.Visibility = error == null ? ViewStates.Visible : ViewStates.Gone;
+                title.Text = "ERROR";
+                message.Text = error;
+                title.Visibility = message.Visibility = retry.Visibility =
+                    error == null ? ViewStates.Gone : ViewStates.Visible;
+                page.RequestLayout();
                 return;
-            count.Text = beans.Count == 1 ? "1 bean" : $"{beans.Count} beans";
+            }
+            var beans = map.HasSelection ? map.SelectedBeans : activeBeans;
+            UpdateCount(beans);
             progress.Visibility = ViewStates.Gone;
+            retry.Visibility = ViewStates.Gone;
             if (beans.Count == 0)
             {
-                status.SetPadding(_style.Dp(32), _style.Dp(32), _style.Dp(32), _style.Dp(32));
+                status.Visibility = ViewStates.Visible;
+                page.SetItems([]);
                 title.Text = "NO BEANS";
                 message.Text = "Add your favorite coffee beans";
                 title.Visibility = message.Visibility = ViewStates.Visible;
             }
             else
             {
-                adapter.SetItems(beans);
+                page.SetItems(beans);
                 status.Visibility = ViewStates.Gone;
-                list.Visibility = ViewStates.Visible;
             }
+            page.RequestLayout();
+            RestoreBeanListPosition(list, screen);
+        }
+
+        EventHandler selection = (_, _) =>
+        {
+            if (_destroyed || !ReferenceEquals(_transient, screen)) return;
+            _beanListReturnState?.Dispose();
+            _beanListReturnState = null;
+            var manager = list.GetLayoutManager() as AndroidX.RecyclerView.Widget.LinearLayoutManager;
+            var first = manager?.FindFirstVisibleItemPosition() ?? 0;
+            var heroOffset = manager?.FindViewByPosition(0)?.Top ?? 0;
+            RenderRows();
+            if (first == 0) manager?.ScrollToPositionWithOffset(0, heroOffset);
+            else manager?.ScrollToPositionWithOffset(1, 0);
+        };
+        map.SelectionChanged += selection;
+        screen.OnDispose(() => map.SelectionChanged -= selection);
+        EventHandler origins = (_, _) =>
+        {
+            if (_destroyed || !ReferenceEquals(_transient, screen) || !map.HasSelection) return;
+            UpdateCount(map.SelectedBeans);
+            page.RequestLayout();
+        };
+        map.OriginsChanged += origins;
+        screen.OnDispose(() => map.OriginsChanged -= origins);
+        _ = LoadBeanOriginsAsync(map, screen, () =>
+        {
+            if (listLoaded || map.HasSelection) RenderRows();
+        });
+        try
+        {
+            var beans = await InScopeAsync(services =>
+                services.GetRequiredService<IBeanService>().GetAllActiveBeansAsync());
+            if (_destroyed || !ReferenceEquals(_transient, screen))
+                return;
+            activeBeans = beans;
+            listLoaded = true;
+            if (beans.Count == 0)
+                status.SetPadding(_style.Dp(32), _style.Dp(32), _style.Dp(32), _style.Dp(32));
+            RenderRows();
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { throw; }
         catch (Exception exception)
@@ -112,10 +183,30 @@ public sealed partial class MainActivity
             _logger.LogError(exception, "Loading native beans failed");
             if (_destroyed || !ReferenceEquals(_transient, screen))
                 return;
-            progress.Visibility = ViewStates.Gone;
-            title.Text = "ERROR";
-            message.Text = ErrorMessage(exception);
-            title.Visibility = message.Visibility = retry.Visibility = ViewStates.Visible;
+            listError = ErrorMessage(exception);
+            RenderRows();
+        }
+    }
+
+    private async Task LoadBeanOriginsAsync(BeanMapPanel map, NativeScreen screen, Action loaded)
+    {
+        try
+        {
+            var beans = await InScopeAsync(services =>
+                services.GetRequiredService<IBeanService>().GetAllSavedBeansAsync());
+            if (_destroyed || !ReferenceEquals(_transient, screen)) return;
+            map.SetBeans(beans);
+            loaded();
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception error)
+        {
+            _logger.LogError(error, "Loading native saved bean origins failed");
+            if (!_destroyed && ReferenceEquals(_transient, screen))
+            {
+                map.ReportOriginError();
+                loaded();
+            }
         }
     }
 

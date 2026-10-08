@@ -61,6 +61,11 @@
 		<DefineConstants>$(DefineConstants);MAUI_PERFORMANCE</DefineConstants>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(BaristaMapsComparison)' == 'true'">
+		<ApplicationId>com.simplyprofound.baristanotes.maps.maui</ApplicationId>
+		<ApplicationTitle>BaristaNotes Maps MAUI</ApplicationTitle>
+	</PropertyGroup>
+
 	<!-- Disable the managed linker so the dotnet watch startup hook
 	     (Microsoft.Extensions.DotNetDeltaApplier.dll) can call BCL APIs like
 	     System.Environment.GetCommandLineArgs() that nothing else in the app
@@ -147,6 +152,11 @@
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="11.0.0-rc.1.26425.128" />
 	</ItemGroup>
 
+	<ItemGroup Condition="'$(TargetFramework)' == 'net11.0-ios' Or '$(TargetFramework)' == 'net11.0-android'">
+		<PackageReference Include="Mapsui.Maui" Version="5.1.0" />
+		<PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="3.119.2" />
+	</ItemGroup>
+
 	<Target Name="RemoveMauiAiAttributesGenerator" BeforeTargets="CoreCompile">
 		<ItemGroup>
 			<Analyzer Remove="$(PkgMicrosoft_Maui_AI_Attributes)/analyzers/dotnet/cs/Microsoft.Maui.AI.Attributes.Generators.dll" />
@@ -204,6 +214,17 @@
 			   Text="MauiPerformanceDatabase does not exist: $(MauiPerformanceDatabase)" />
 		<Error Condition="!Exists('$(MauiPerformanceMetadata)')"
 			   Text="MauiPerformanceMetadata does not exist: $(MauiPerformanceMetadata)" />
+	</Target>
+
+	<Target Name="ValidateMapsComparisonConfiguration"
+			BeforeTargets="PrepareForBuild"
+			Condition="'$(BaristaMapsComparison)' == 'true'">
+		<Error Condition="'$(MauiPerformance)' == 'true'"
+			   Text="Maps comparison and performance fixture builds must remain separate." />
+		<Error Condition="'$(TargetFramework)' != 'net11.0-ios' And '$(TargetFramework)' != 'net11.0-android'"
+			   Text="Maps comparison builds support only iOS and Android." />
+		<Error Condition="'$(ApplicationId)' != 'com.simplyprofound.baristanotes.maps.maui'"
+			   Text="Maps comparison builds must use the isolated MAUI maps application ID." />
 	</Target>
 
 </Project>

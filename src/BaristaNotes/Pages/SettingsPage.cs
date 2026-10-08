@@ -24,6 +24,10 @@ partial class SettingsPage : Component<SettingsPageState>
     [Inject]
     IDrinkValueRangeService _rangeService;
 
+#if IOS || ANDROID
+    [Inject] BaristaNotes.Core.Services.Origins.NominatimOriginGeocoder _geocoder;
+    [Inject] ILogger<SettingsPage> _logger;
+#endif
 #if MAUI_PERFORMANCE
     [Inject] MauiPerformanceProbe _performanceProbe;
 #endif
@@ -85,6 +89,27 @@ partial class SettingsPage : Component<SettingsPageState>
             "value-ranges",
             props => props.Metric = metric);
     }
+
+#if IOS || ANDROID
+    async Task ChangeGeocoderEndpointAsync()
+    {
+        var page = ContainerPage ?? throw new InvalidOperationException("Settings page is unavailable.");
+        try
+        {
+            var endpoint = await page.DisplayPromptAsync("Map geocoder",
+                "HTTPS Nominatim-compatible search endpoint. Only saved origin text is sent; successful lookups are cached per endpoint.",
+                "Save", "Cancel", initialValue: _geocoder.Endpoint);
+            if (endpoint is null)
+                return;
+            _geocoder.Endpoint = endpoint;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not change the origin geocoder endpoint");
+            await page.DisplayAlertAsync("Map geocoder", ex.Message, "OK");
+        }
+    }
+#endif
 
     // ============================================================
     // Rendering
@@ -163,10 +188,17 @@ partial class SettingsPage : Component<SettingsPageState>
 
     VisualNode RenderBody()
     {
+#if IOS || ANDROID
+        const string rows = "Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*";
+        const int footerRow = 16;
+#else
+        const string rows = "Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*";
+        const int footerRow = 15;
+#endif
         return Grid("*", "*",
             ScrollView(
                 Grid(
-                    rows: "Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*",
+                    rows: rows,
                     columns: "*",
                     SectionLabel("APPEARANCE").GridRow(0),
                     ThemePickerRow().GridRow(1),
@@ -186,13 +218,17 @@ partial class SettingsPage : Component<SettingsPageState>
                     ValueRangeTile(DrinkValueMetric.Time).GridRow(12),
                     SectionLabel("ABOUT").GridRow(13),
                     AboutTile().GridRow(14),
+#if IOS || ANDROID
+                    ManageTile("MAP GEOCODER", "Change search service endpoint",
+                        async () => await ChangeGeocoderEndpointAsync()).GridRow(15),
+#endif
                     Border()
                         .BackgroundColor(SurfaceColor())
                         .StrokeThickness(0)
                         .StrokeShape(new Rectangle())
                         .MinimumHeightRequest(16)
                         .VerticalOptions(LayoutOptions.Fill)
-                        .GridRow(15)
+                        .GridRow(footerRow)
                 )
                 .RowSpacing(1)
                 .BackgroundColor(DividerColor())

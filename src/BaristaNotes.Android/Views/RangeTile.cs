@@ -48,7 +48,8 @@ internal sealed class RangeTile : FrameLayout
         ActionButton = style.Button("", "RangeTileAction");
         ActionButton.SetPadding(0, 0, 0, 0);
         ActionButton.SetTextColor(Color.Transparent);
-        ActionButton.FocusableInTouchMode = true;
+        ActionButton.Focusable = true;
+        ActionButton.FocusableInTouchMode = false;
         AddView(ActionButton, new LayoutParams(-1, -1));
     }
 

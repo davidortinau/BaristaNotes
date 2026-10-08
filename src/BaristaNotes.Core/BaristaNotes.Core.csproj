@@ -11,9 +11,13 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="BaristaNotes.Tests" />
+    <EmbeddedResource Include="Data/origin-countries.json" LogicalName="BaristaNotes.Core.origin-countries.json" />
+    <EmbeddedResource Include="Data/origin-country-codes.json" LogicalName="BaristaNotes.Core.origin-country-codes.json" />
+    <EmbeddedResource Include="Data/native-origin-countries.json" LogicalName="BaristaNotes.OriginCountries.json" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Mapsui.Tiling" Version="5.1.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="11.0.0-rc.1.26425.128" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="11.0.0-rc.1.26425.128">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

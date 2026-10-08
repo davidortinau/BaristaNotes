@@ -56,6 +56,7 @@ public sealed partial class NativeApplication(IntPtr handle, JniHandleOwnership 
             dataDirectory: dataDirectory,
             logger: provider.GetRequiredService<ILogger<AndroidImageProcessingService>>()));
         services.AddBaristaNotesCore(databasePath);
+        services.AddBaristaNotesOriginGeocoding(dataDirectory);
         using var baseSettings = Assets!.Open("appsettings.json");
         using var bundledDevelopmentSettings = Assets.List("")?.Contains(
             "appsettings.Development.json", StringComparer.Ordinal) == true

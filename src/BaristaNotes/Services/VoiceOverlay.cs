@@ -18,6 +18,7 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
     private bool _isCollapsed;
     private bool _isMicActive;
     private bool _isProcessing;
+    internal bool IsMapSuspended { get; private set; }
 
     public new bool IsVisible => _isOverlayVisible;
     public bool IsCollapsed => _isCollapsed;
@@ -33,6 +34,13 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
         _panel = new VoiceOverlayPanel(this);
         this.AddWindowElement(_panel);
         this.Tapped += VoiceOverlay_Tapped;
+    }
+
+    internal void SetMapSuspended(bool suspended)
+    {
+        IsMapSuspended = suspended;
+        DisableUITouchEventPassthrough = _isOverlayVisible && !_isCollapsed && !suspended;
+        Invalidate();
     }
 
     /// <summary>
@@ -52,7 +60,7 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
                 gesture.CancelsTouchesInView = false;
                 gesture.ShouldReceiveTouch = (recognizer, touch) =>
                 {
-                    if (!_isOverlayVisible || _isCollapsed || _isProcessing) return false;
+                    if (IsMapSuspended || !_isOverlayVisible || _isCollapsed || _isProcessing) return false;
                     var point = touch.LocationInView(uiWindow);
                     return _panel.IsMicButtonArea(new Point(point.X, point.Y));
                 };
@@ -65,7 +73,7 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
 #if IOS
     private void HandleiOSTouchGesture(UILongPressGestureRecognizer gesture)
     {
-        if (!_isOverlayVisible || _isCollapsed) return;
+        if (IsMapSuspended || !_isOverlayVisible || _isCollapsed) return;
 
         switch (gesture.State)
         {
@@ -93,7 +101,7 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
 
     private void VoiceOverlay_Tapped(object? sender, WindowOverlayTappedEventArgs e)
     {
-        if (!_isOverlayVisible) return;
+        if (IsMapSuspended || !_isOverlayVisible) return;
 
         // If collapsed, check if FAB was tapped
         if (_isCollapsed)
@@ -161,7 +169,7 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
         _isProcessing = false;
         _panel.SetMicPressed(false);
         _panel.Show(collapsed: false);
-        this.DisableUITouchEventPassthrough = true;
+        this.DisableUITouchEventPassthrough = !IsMapSuspended;
         this.Invalidate();
         VisibilityChanged?.Invoke(this, true);
     }
@@ -199,7 +207,7 @@ public class VoiceOverlay : WindowOverlay, IOverlayService
 
         _isCollapsed = false;
         _panel.Show(collapsed: false);
-        this.DisableUITouchEventPassthrough = true;
+        this.DisableUITouchEventPassthrough = !IsMapSuspended;
         this.Invalidate();
     }
 
@@ -290,7 +298,7 @@ public class VoiceOverlayPanel : IWindowOverlayElement
 
     public bool Contains(Point point)
     {
-        if (!_isVisible)
+        if (_overlay.IsMapSuspended || !_isVisible)
             return false;
 
         if (_isCollapsed)
@@ -328,7 +336,7 @@ public class VoiceOverlayPanel : IWindowOverlayElement
 
     public void Draw(ICanvas canvas, RectF dirtyRect)
     {
-        if (!_isVisible) return;
+        if (_overlay.IsMapSuspended || !_isVisible) return;
 
         try
         {

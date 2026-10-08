@@ -30,6 +30,7 @@ internal sealed class NativeServices : IDisposable
         services.AddSingleton<IImageProcessingService>(provider =>
             new NativeImageProcessingService(DataDirectory, provider.GetRequiredService<ILogger<NativeImageProcessingService>>()));
         services.AddBaristaNotesCore(databasePath);
+        services.AddBaristaNotesOriginGeocoding(DataDirectory);
         NativeAdviceConfiguration.AddAdvice(services, DataDirectory, logging);
         services.AddSingleton<NativeVoiceOverlay>();
         services.AddSingleton<IOverlayService>(provider => provider.GetRequiredService<NativeVoiceOverlay>());

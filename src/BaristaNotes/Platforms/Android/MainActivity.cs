@@ -10,6 +10,7 @@ namespace BaristaNotes;
 public class MainActivity : MauiAppCompatActivity
 {
     private MauiControls.Application? _application;
+    private bool _beanMapVisible;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -43,6 +44,12 @@ public class MainActivity : MauiAppCompatActivity
     private void OnRequestedThemeChanged(object? sender, AppThemeChangedEventArgs e)
         => ApplyWindowTheme();
 
+    internal void SetBeanMapVisible(bool visible)
+    {
+        _beanMapVisible = visible;
+        ApplyWindowTheme();
+    }
+
     private void ApplyWindowTheme()
     {
         if (Window is not { } window)
@@ -56,7 +63,7 @@ public class MainActivity : MauiAppCompatActivity
         if (!OperatingSystem.IsAndroidVersionAtLeast(35))
         {
 #pragma warning disable CS0618
-            window.SetStatusBarColor(background);
+            window.SetStatusBarColor(_beanMapVisible ? Android.Graphics.Color.Transparent : background);
 #pragma warning restore CS0618
         }
 

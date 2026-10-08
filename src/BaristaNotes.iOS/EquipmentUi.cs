@@ -1,3 +1,4 @@
+using BaristaNotes.Core.Services;
 using CoreGraphics;
 using Foundation;
 using UIKit;
@@ -11,15 +12,23 @@ internal sealed class EquipmentHeader : UIView
     private string _captionText = "";
     private string _titleText = "";
     private readonly bool _adaptiveTitle;
+    private readonly bool _compact;
+    private readonly UIView? _separator;
     public nfloat TopInset { get; set; }
 
-    public EquipmentHeader(string id, bool adaptiveTitle = false, bool wrapTitle = false)
+    public EquipmentHeader(string id, bool adaptiveTitle = false, bool wrapTitle = false, bool compact = false)
     {
         AccessibilityIdentifier = id;
         BackgroundColor = NativeTheme.Surface;
         _adaptiveTitle = adaptiveTitle;
+        _compact = compact;
         if (wrapTitle) _title.LineBreakMode = UILineBreakMode.WordWrap;
         AddSubviews(_caption, _title);
+        if (compact)
+        {
+            _separator = new UIView { BackgroundColor = NativeTheme.Outline };
+            AddSubview(_separator);
+        }
     }
 
     public void Update(string caption, string title)
@@ -40,17 +49,27 @@ internal sealed class EquipmentHeader : UIView
         SetNeedsLayout();
     }
 
-    public override CGSize SizeThatFits(CGSize size) => new(size.Width, (nfloat)Math.Max(120,
-        TopInset + 28 + SliceUi.Measure(_caption, size.Width - 32).Height +
-        SliceUi.Measure(_title, size.Width - 32).Height));
+    public nfloat LegacyHeightThatFits(CGSize size, nfloat topInset) => (nfloat)Math.Max(120,
+        topInset + 28 + SliceUi.Measure(_caption, size.Width - 32).Height +
+        SliceUi.Measure(_title, size.Width - 32).Height);
+
+    public override CGSize SizeThatFits(CGSize size) => new(size.Width, _compact
+        ? (nfloat)BeanPageGeometry.CompactHeaderHeight(SliceUi.Measure(_caption, size.Width - 32).Height,
+            SliceUi.Measure(_title, size.Width - 32).Height)
+        : LegacyHeightThatFits(size, TopInset));
 
     public override void LayoutSubviews()
     {
         base.LayoutSubviews();
         var caption = SliceUi.Measure(_caption, Bounds.Width - 32);
         var title = SliceUi.Measure(_title, Bounds.Width - 32);
-        _caption.Frame = new CGRect(16, TopInset + 14, Bounds.Width - 32, caption.Height);
-        _title.Frame = new CGRect(16, Bounds.Height - 14 - title.Height, Bounds.Width - 32, title.Height);
+        _caption.Frame = new CGRect(16, _compact ? BeanPageGeometry.HeaderPadding : TopInset + 14,
+            Bounds.Width - 32, caption.Height);
+        _title.Frame = new CGRect(16, _compact ? _caption.Frame.Bottom + BeanPageGeometry.LabelGap :
+            Bounds.Height - 14 - title.Height, Bounds.Width - 32, title.Height);
+        if (_separator != null)
+            _separator.Frame = new CGRect(0, Bounds.Height - BeanPageGeometry.SeparatorHeight,
+                Bounds.Width, BeanPageGeometry.SeparatorHeight);
     }
 }
 
@@ -141,6 +160,7 @@ internal sealed class EquipmentRows : UICollectionView
     private readonly RowsLayout _layout;
     private bool _centerPending;
     private nfloat _width;
+    private nfloat _height;
 
     public EquipmentRows(EquipmentRowStyle style, string id)
         : base(CGRect.Empty, new UICollectionViewFlowLayout
@@ -159,10 +179,82 @@ internal sealed class EquipmentRows : UICollectionView
         RegisterClassForCell(typeof(RowCell), "equipment-row");
     }
 
+    public void ConfigurePage(UIView hero, UIView title, UIView state, Action<nfloat> scrolled,
+        Func<CGPoint, bool> blocksScroll)
+    {
+        _source.Page = new PageContent(hero, title, state, scrolled, blocksScroll);
+        RegisterClassForCell(typeof(PageCell), "equipment-page-hero");
+        RegisterClassForCell(typeof(PageCell), "equipment-page-state");
+        RegisterClassForSupplementaryView(typeof(PageHeader), UICollectionElementKindSection.Header, "equipment-page-title");
+        SetCollectionViewLayout(new PageFlowLayout
+        {
+            MinimumLineSpacing = 0, MinimumInteritemSpacing = 0,
+            ScrollDirection = UICollectionViewScrollDirection.Vertical,
+            SectionHeadersPinToVisibleBounds = true
+        }, false);
+        DelaysContentTouches = false;
+    }
+
+    public void SetPageHeights(nfloat hero, nfloat title, nfloat safeTop = default)
+    {
+        if (_source.Page is not { } page) return;
+        var flow = (PageFlowLayout)CollectionViewLayout;
+        if (page.HeroHeight == hero && page.TitleHeight == title && flow.SafeTop == safeTop) return;
+        page.HeroHeight = hero;
+        page.TitleHeight = title;
+        flow.HeroHeight = hero;
+        flow.SafeTop = safeTop;
+        _layout.InvalidateMeasurements();
+        CollectionViewLayout.InvalidateLayout();
+    }
+
+    private sealed class PageFlowLayout : UICollectionViewFlowLayout
+    {
+        public nfloat HeroHeight { get; set; }
+        public nfloat SafeTop { get; set; }
+
+        // UIKit can return nil for absent attributes despite the non-nullable binding signatures.
+        public override UICollectionViewLayoutAttributes[] LayoutAttributesForElementsInRect(CGRect rect)
+        {
+            var attributes = base.LayoutAttributesForElementsInRect(rect);
+            if (attributes == null) return null!;
+            return SafeTop <= 0 ? attributes : attributes.Select(AtUsableTop).ToArray();
+        }
+
+        public override UICollectionViewLayoutAttributes LayoutAttributesForSupplementaryView(NSString kind, NSIndexPath indexPath)
+        {
+            var attributes = base.LayoutAttributesForSupplementaryView(kind, indexPath);
+            return attributes == null ? null! : AtUsableTop(attributes);
+        }
+
+        private UICollectionViewLayoutAttributes AtUsableTop(UICollectionViewLayoutAttributes attributes)
+        {
+            if (SafeTop <= 0 || CollectionView is not { } collection ||
+                attributes.RepresentedElementKind != UICollectionElementKindSectionKey.Header.ToString() ||
+                attributes.IndexPath.Section != 1) return attributes;
+            // Retain native section-header pinning; only its usable-top inset differs.
+            var adjusted = (UICollectionViewLayoutAttributes)attributes.Copy();
+            var frame = adjusted.Frame;
+            var offset = collection.ContentOffset.Y;
+            frame.Y = (nfloat)Math.Min(offset + BeanPageGeometry.TitleTop(HeroHeight, offset, SafeTop),
+                CollectionViewContentSize.Height - frame.Height);
+            adjusted.Frame = frame;
+            return adjusted;
+        }
+    }
+
+    public override bool GestureRecognizerShouldBegin(UIGestureRecognizer gestureRecognizer)
+    {
+        if (gestureRecognizer == PanGestureRecognizer && _source.Page is { } page &&
+            page.Hero.Window != null && page.BlocksScroll(gestureRecognizer.LocationInView(page.Hero))) return false;
+        return base.GestureRecognizerShouldBegin(gestureRecognizer);
+    }
+
     public void Update(IReadOnlyList<EquipmentRow> rows, UITraitCollection traits, bool center = false)
     {
         _source.Rows = rows;
         _source.FontTraits = traits;
+        _layout.InvalidateMeasurements();
         _centerPending |= center;
         ReloadData();
         CollectionViewLayout.InvalidateLayout();
@@ -172,11 +264,14 @@ internal sealed class EquipmentRows : UICollectionView
     public override void LayoutSubviews()
     {
         base.LayoutSubviews();
-        if (_width != Bounds.Width)
+        if (_width != Bounds.Width || _height != Bounds.Height)
         {
             _width = Bounds.Width;
+            _height = Bounds.Height;
+            _layout.InvalidateMeasurements();
             CollectionViewLayout.InvalidateLayout();
         }
+        if (_source.Page != null) return;
         var selectedIndex = _source.Rows.ToList().FindIndex(row => row.Selected);
         var inset = selectedIndex >= 0 && _source.Style != EquipmentRowStyle.Management ? Bounds.Height / 2 : 0;
         if (ContentInset.Top != inset) ContentInset = new UIEdgeInsets(inset, 0, inset, 0);
@@ -196,22 +291,63 @@ internal sealed class EquipmentRows : UICollectionView
         public EquipmentRowStyle Style { get; } = style;
         public IReadOnlyList<EquipmentRow> Rows { get; set; } = [];
         public UITraitCollection FontTraits { get; set; } = new();
-        public override nint GetItemsCount(UICollectionView collectionView, nint section) => Rows.Count;
+        public PageContent? Page { get; set; }
+        public override nint NumberOfSections(UICollectionView collectionView) => Page == null ? 1 : 2;
+        public override nint GetItemsCount(UICollectionView collectionView, nint section) =>
+            Page == null ? Rows.Count : section == 0 ? 1 : Rows.Count + 1;
         public override UICollectionViewCell GetCell(UICollectionView collectionView, NSIndexPath indexPath)
         {
+            if (Page is { } page && (indexPath.Section == 0 || indexPath.Item == Rows.Count))
+            {
+                var host = (PageCell)collectionView.DequeueReusableCell(
+                    indexPath.Section == 0 ? "equipment-page-hero" : "equipment-page-state", indexPath);
+                host.Bind(indexPath.Section == 0 ? page.Hero : page.State);
+                return host;
+            }
             var cell = (RowCell)collectionView.DequeueReusableCell("equipment-row", indexPath);
             cell.Bind(Rows[(int)indexPath.Item], Style, FontTraits);
             return cell;
+        }
+
+        public override UICollectionReusableView GetViewForSupplementaryElement(UICollectionView collectionView,
+            NSString elementKind, NSIndexPath indexPath)
+        {
+            var header = (PageHeader)collectionView.DequeueReusableSupplementaryView(elementKind, "equipment-page-title", indexPath);
+            if (Page != null) header.Bind(Page.Title);
+            return header;
         }
     }
 
     private sealed class RowsLayout(RowsSource source) : UICollectionViewDelegateFlowLayout
     {
         private readonly UILabel _measure = new() { Lines = 0 };
+        private nfloat? _rowsHeight;
+        public void InvalidateMeasurements() => _rowsHeight = null;
+
+        public override void Scrolled(UIScrollView scrollView) => source.Page?.Scrolled(scrollView.ContentOffset.Y);
+
+        public override CGSize GetReferenceSizeForHeader(UICollectionView collectionView, UICollectionViewLayout layout, nint section) =>
+            source.Page is { } page && section == 1 ? new CGSize(collectionView.Bounds.Width, page.TitleHeight) : CGSize.Empty;
+
         public override CGSize GetSizeForItem(UICollectionView collectionView, UICollectionViewLayout layout, NSIndexPath indexPath)
         {
+            if (source.Page is { } page)
+            {
+                if (indexPath.Section == 0) return new CGSize(collectionView.Bounds.Width, page.HeroHeight);
+                if (indexPath.Item == source.Rows.Count)
+                {
+                    _rowsHeight ??= (nfloat)source.Rows.Sum(row => (double)RowSize(collectionView.Bounds.Width, row).Height);
+                    var available = (nfloat)Math.Max(1, collectionView.Bounds.Height - page.TitleHeight - _rowsHeight.Value);
+                    return new CGSize(collectionView.Bounds.Width, (nfloat)Math.Max(available,
+                        page.State.SizeThatFits(new CGSize(collectionView.Bounds.Width, nfloat.MaxValue)).Height));
+                }
+            }
             var row = source.Rows[(int)indexPath.Item];
-            var width = collectionView.Bounds.Width;
+            return RowSize(collectionView.Bounds.Width, row);
+        }
+
+        private CGSize RowSize(nfloat width, EquipmentRow row)
+        {
             if (source.Style == EquipmentRowStyle.Grind)
                 return new CGSize(width, row.Selected ? 96 : row.Preferred ? 72 : 48);
             if (source.Style == EquipmentRowStyle.Management)
@@ -231,6 +367,55 @@ internal sealed class EquipmentRows : UICollectionView
             var text = SliceUi.Measure(_measure, width - 48 - (multiple ? 49 : row.Selected ? 18 : 0)).Height;
             if (multiple) text = (nfloat)Math.Max(text, SourceScaledText.Font(24, false, source.FontTraits).LineHeight);
             return new CGSize(width, text + (multiple ? 32 : 36));
+        }
+    }
+
+    private sealed class PageContent(UIView hero, UIView title, UIView state, Action<nfloat> scrolled,
+        Func<CGPoint, bool> blocksScroll)
+    {
+        public UIView Hero { get; } = hero;
+        public UIView Title { get; } = title;
+        public UIView State { get; } = state;
+        public Action<nfloat> Scrolled { get; } = scrolled;
+        public Func<CGPoint, bool> BlocksScroll { get; } = blocksScroll;
+        public nfloat HeroHeight { get; set; }
+        public nfloat TitleHeight { get; set; }
+    }
+
+    [Register("EquipmentPageCell")]
+    private sealed class PageCell : UICollectionViewCell
+    {
+        private UIView? _content;
+        public PageCell(ObjCRuntime.NativeHandle handle) : base(handle) { ContentView.ClipsToBounds = true; }
+        public void Bind(UIView content)
+        {
+            if (_content != content && _content?.Superview == ContentView) _content.RemoveFromSuperview();
+            _content = content;
+            ContentView.AddSubview(content);
+            content.Frame = ContentView.Bounds;
+        }
+        public override void LayoutSubviews()
+        {
+            base.LayoutSubviews();
+            if (_content?.Superview == ContentView) _content.Frame = ContentView.Bounds;
+        }
+    }
+
+    [Register("EquipmentPageHeader")]
+    private sealed class PageHeader : UICollectionReusableView
+    {
+        private UIView? _content;
+        public PageHeader(ObjCRuntime.NativeHandle handle) : base(handle) { }
+        public void Bind(UIView content)
+        {
+            _content = content;
+            AddSubview(content);
+            content.Frame = Bounds;
+        }
+        public override void LayoutSubviews()
+        {
+            base.LayoutSubviews();
+            if (_content?.Superview == this) _content.Frame = Bounds;
         }
     }
 

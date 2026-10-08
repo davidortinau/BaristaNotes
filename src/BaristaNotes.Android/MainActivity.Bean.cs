@@ -3,6 +3,7 @@ using Android.Views;
 using Android.Views.InputMethods;
 using Android.Widget;
 using BaristaNotes.AndroidApp.Views;
+using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.Workflows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -190,19 +191,32 @@ public sealed partial class MainActivity
         Present(column, edgeToEdge: true);
     }
 
-    private View BuildHeader(string caption, string title)
+    private View BuildHeader(string caption, string title, bool safeArea = true, bool compact = false)
     {
-        var header = new EdgeAwareColumn(this, () => Window?.DecorView) { Orientation = Orientation.Vertical };
-        header.SetMinimumHeight(_style.Dp(120));
+        LinearLayout header = safeArea
+            ? new EdgeAwareColumn(this, () => Window?.DecorView) { Orientation = Orientation.Vertical }
+            : _style.Column();
+        header.SetMinimumHeight(compact ? 0 : _style.Dp(120));
         header.SetBackgroundColor(_style.Surface);
-        header.SetContentPadding(_style.Dp(16), _style.Dp(14), _style.Dp(16), _style.Dp(14));
+        if (header is EdgeAwareColumn edge)
+            edge.SetContentPadding(_style.Dp(16), _style.Dp(14), _style.Dp(16), _style.Dp(14));
+        else
+            header.SetPadding(_style.Dp(16), _style.Dp(compact ? BeanPageGeometry.HeaderPadding : 14),
+                _style.Dp(16), _style.Dp(compact ? BeanPageGeometry.HeaderPadding : 14));
         var label = _style.Label(caption, 10, true, _style.Secondary);
         label.LetterSpacing = 2 * .0624f;
         header.AddView(label);
         var value = _style.Label(title, 28, true);
         value.Gravity = GravityFlags.Bottom;
-        header.AddView(value, _style.Fill(weight: 1));
-        return header;
+        header.AddView(value, compact
+            ? new LinearLayout.LayoutParams(-1, -2) { TopMargin = _style.Dp(BeanPageGeometry.LabelGap) }
+            : _style.Fill(weight: 1));
+        if (!compact) return header;
+        var outlined = new FrameLayout(this);
+        outlined.SetBackgroundColor(_style.Outline);
+        outlined.SetPadding(0, 0, 0, _style.Dp(BeanPageGeometry.SeparatorHeight));
+        outlined.AddView(header, new FrameLayout.LayoutParams(-1, -2));
+        return outlined;
     }
 
     private void ConfigureBeanAction(Button action)

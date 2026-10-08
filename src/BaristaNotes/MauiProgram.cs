@@ -1,10 +1,18 @@
-﻿namespace BaristaNotes;
+﻿#if IOS || ANDROID
+using SkiaSharp.Views.Maui.Controls.Hosting;
+#endif
+
+namespace BaristaNotes;
 
 public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
+
+#if IOS || ANDROID
+        builder.UseSkiaSharp();
+#endif
 
         builder
             .ConfigureBaristaApp()        // MauiReactor + theme + resources + UXDivers + CT + fonts + handlers

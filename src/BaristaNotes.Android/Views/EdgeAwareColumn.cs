@@ -38,6 +38,7 @@ internal readonly record struct WindowEdgeInsets(int Left, int Top, int Right, i
 // actual overlap is added to its visual padding; parent None does not consume it.
 internal sealed class EdgeAwareColumn(Context context, Func<View?> windowRoot) : LinearLayout(context)
 {
+    public bool ExtendBehindStatusBar { get; init; }
     private readonly int[] _location = new int[2];
     private int _left;
     private int _top;
@@ -61,7 +62,7 @@ internal sealed class EdgeAwareColumn(Context context, Func<View?> windowRoot) :
         var x = _location[0];
         var y = _location[1];
         var safeLeft = Math.Clamp(insets.Left - x, 0, insets.Left);
-        var safeTop = y >= 0 ? Math.Clamp(insets.Top - y, 0, insets.Top) : 0;
+        var safeTop = !ExtendBehindStatusBar && y >= 0 ? Math.Clamp(insets.Top - y, 0, insets.Top) : 0;
         var safeRight = Math.Clamp(x + Width - (root.Width - insets.Right), 0, insets.Right);
         var safeBottom = Math.Clamp(y + Height - (root.Height - insets.Bottom), 0, insets.Bottom);
         if (PaddingLeft == _left + safeLeft && PaddingTop == _top + safeTop

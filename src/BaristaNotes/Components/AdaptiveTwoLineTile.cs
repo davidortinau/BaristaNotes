@@ -189,6 +189,14 @@ internal sealed class AdaptiveTwoLineTile : Component<AdaptiveTwoLineTileState>
                 MauiControls.SemanticProperties.DescriptionProperty,
                 _accessibilityName ?? string.Empty)
             .OnClicked(_onTapped)
+#if ANDROID
+            .OnLoaded((sender, _) =>
+            {
+                if (sender is MauiControls.Button button &&
+                    button.Handler?.PlatformView is Android.Views.View native)
+                    native.FocusableInTouchMode = false;
+            })
+#endif
             .OnFocused(() => SetState(s => s.IsFocused = true))
             .OnUnfocused(() => SetState(s => s.IsFocused = false));
 

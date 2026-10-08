@@ -2,6 +2,27 @@
   "version": 1,
   "dependencies": {
     "net11.0-android37.0": {
+      "Mapsui.Android": {
+        "type": "Direct",
+        "requested": "[5.1.0, )",
+        "resolved": "5.1.0",
+        "contentHash": "zHjjvQzCJIL8l6gs2Zl339OopHDy7il1ba2+rH5i6wYREPPmj/iYBcWrm8s+/34V6oRUWK9t+eFNHi7EXbT3kg==",
+        "dependencies": {
+          "BruTile": "[6.0.0, 7.0.0)",
+          "HarfBuzzSharp": "8.3.1.3",
+          "Mapsui": "5.1.0",
+          "Mapsui.Rendering.Skia": "5.1.0",
+          "Mapsui.Tiling": "5.1.0",
+          "NetTopologySuite": "2.6.0",
+          "NetTopologySuite.IO.GeoJSON4STJ": "[4.0.0, 5.0.0)",
+          "SkiaSharp": "3.119.2",
+          "SkiaSharp.HarfBuzz": "3.119.2",
+          "SkiaSharp.NativeAssets.Linux": "3.119.2",
+          "SkiaSharp.Views": "3.119.2",
+          "Svg.Skia": "3.2.1",
+          "Topten.RichTextKit": "0.4.167"
+        }
+      },
       "Microsoft.Extensions.Configuration.Json": {
         "type": "Direct",
         "requested": "[11.0.0-rc.1.26425.128, )",
@@ -58,6 +79,78 @@
           "Microsoft.Bcl.AsyncInterfaces": "10.0.2",
           "System.ClientModel": "1.9.0",
           "System.Memory.Data": "10.0.1"
+        }
+      },
+      "BruTile": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "AwDEphrbCWm+7gywShqyDPXB8Bc//kRJ4z49BLgIihnWkubHRbZGy+RGgq/+MYm1fkReiVZXDfcF9pgvQScb3Q=="
+      },
+      "ExCSS": {
+        "type": "Transitive",
+        "resolved": "4.3.1",
+        "contentHash": "A8UtcghHQlWxPJhJF5bsfEYO7068JHGTuJ7tzyyMjd5fE/N/xY1cVOUhzuLLFwMOCJVnM4mqSQc93W9fGfZ1kA=="
+      },
+      "HarfBuzzSharp": {
+        "type": "Transitive",
+        "resolved": "8.3.1.3",
+        "contentHash": "NGZ2+ZVNPM+NdHB/asW0/ykWngyHWwcqjrbN2nDeH1B/aptPGlCUl8wkQ2cSJxw5fdWgdmIPmNuTPWpLwNVXWg==",
+        "dependencies": {
+          "HarfBuzzSharp.NativeAssets.Android": "8.3.1.3"
+        }
+      },
+      "HarfBuzzSharp.NativeAssets.Android": {
+        "type": "Transitive",
+        "resolved": "8.3.1.3",
+        "contentHash": "Yte9/yYql8ngAjo7YgHlXSinLJcJXIRBM9gegVXpJ2SVYT1i2O/wMA+H3jmYiYiTQxHpHKi4exZUcMzry171MA=="
+      },
+      "HarfBuzzSharp.NativeAssets.Linux": {
+        "type": "Transitive",
+        "resolved": "2.8.2.3",
+        "contentHash": "Qu1yJSHEN7PD3+fqfkaClnORWN5e2xJ2Xoziz/GUi/oBT1Z+Dp2oZeiONKP6NFltboSOBkvH90QuOA6YN/U1zg==",
+        "dependencies": {
+          "HarfBuzzSharp": "2.8.2.3"
+        }
+      },
+      "Mapsui": {
+        "type": "Transitive",
+        "resolved": "5.1.0",
+        "contentHash": "uruvNpGyYq+nKdoi27zqOlAfohFShV+c1wDExbdMKGL8I4P7xHc+LeidKaE7WHAgqJSkgY9qWMnl8re5dd0ZTQ=="
+      },
+      "Mapsui.Nts": {
+        "type": "Transitive",
+        "resolved": "5.1.0",
+        "contentHash": "NmiGmHGickhrAPTi7fVncP0+Cr/jISJSaKWF55QTL5OtbJuVcwQZDzWlpC6vyucEVlGCV5MM1pQYsKOLLAdjCg==",
+        "dependencies": {
+          "Mapsui": "5.1.0",
+          "NetTopologySuite": "2.6.0",
+          "NetTopologySuite.IO.GeoJSON4STJ": "[4.0.0, 5.0.0)"
+        }
+      },
+      "Mapsui.Rendering.Skia": {
+        "type": "Transitive",
+        "resolved": "5.1.0",
+        "contentHash": "SDukkZXbsFQhgn3SKupjG0MFGlVU1flwT/94Wnxh+si5SaPqhkOtns9Ny+fMGseH8D+CBVHnD9B7NOKiOkSVOw==",
+        "dependencies": {
+          "HarfBuzzSharp": "8.3.1.3",
+          "Mapsui": "5.1.0",
+          "Mapsui.Nts": "5.1.0",
+          "NetTopologySuite": "2.6.0",
+          "NetTopologySuite.IO.GeoJSON4STJ": "[4.0.0, 5.0.0)",
+          "SkiaSharp": "3.119.2",
+          "SkiaSharp.HarfBuzz": "3.119.2",
+          "SkiaSharp.NativeAssets.Linux": "3.119.2",
+          "Svg.Skia": "3.2.1",
+          "Topten.RichTextKit": "0.4.167"
+        }
+      },
+      "Mapsui.Tiling": {
+        "type": "Transitive",
+        "resolved": "5.1.0",
+        "contentHash": "7AWSEnDY4AtpiCiedfzt4+BeJ7VGsLEiDDhAcAr/jYNuKx7Bv2kimFqjIIZZJH+Vli2pGw+Smuwi4k0dNnJJig==",
+        "dependencies": {
+          "BruTile": "[6.0.0, 7.0.0)",
+          "Mapsui": "5.1.0"
         }
       },
       "Microsoft.Bcl.AsyncInterfaces": {
@@ -263,6 +356,28 @@
           "Microsoft.Recognizers.Text": "1.8.13"
         }
       },
+      "NetTopologySuite": {
+        "type": "Transitive",
+        "resolved": "2.6.0",
+        "contentHash": "1B1OTacTd4QtFyBeuIOcThwSSLUdRZU3bSFIwM8vk36XiZlBMi3K36u74e4OqwwHRHUuJC1PhbDx4hyI266X1Q=="
+      },
+      "NetTopologySuite.Features": {
+        "type": "Transitive",
+        "resolved": "2.1.0",
+        "contentHash": "Iq+Ie9WZJj8Pyu3asHZ/UwZLim786QzWC0DmLEzFK2u3BeLHDK7iWfsYBLDb/RCBUql8VBmW6LMlsJ+LKUHduA==",
+        "dependencies": {
+          "NetTopologySuite": "[2.0.0, 3.0.0-A)"
+        }
+      },
+      "NetTopologySuite.IO.GeoJSON4STJ": {
+        "type": "Transitive",
+        "resolved": "4.0.0",
+        "contentHash": "Jdm9qBVDcHkrVn3fm3knw6pGu3Ggn31tGVRyIP1/5HSL+8EDPfUnEZF0+oVFBkOKR9tqu9aV2jmEX42Kq8F2Yw==",
+        "dependencies": {
+          "NetTopologySuite": "[2.0.0, 3.0.0-A)",
+          "NetTopologySuite.Features": "[2.1.0, 3.0.0-A)"
+        }
+      },
       "NuGet.CommandLine": {
         "type": "Transitive",
         "resolved": "7.9.0",
@@ -274,6 +389,46 @@
         "contentHash": "rKyVV0sJPo7pn0Ya5dgRs5ggGbjvnKcYSvYV2jITKgFIfeo2XHjgyi6UqNT/OnF0YBqjsNpPdgM6QjzYczWplg==",
         "dependencies": {
           "System.ClientModel": "1.14.0"
+        }
+      },
+      "ShimSkiaSharp": {
+        "type": "Transitive",
+        "resolved": "3.2.1",
+        "contentHash": "WyMf+0aj5IJcHkG/t89WApGFg756oXB30ehu9kYu9hjdfS0snkXHoAiTJZqVlqyLOvzC6eA+nOQ2hI84g//5Pg=="
+      },
+      "SkiaSharp": {
+        "type": "Transitive",
+        "resolved": "3.119.2",
+        "contentHash": "nmy2dOFWPvQKMglfpjz8+/xQQcSrL9jzul3cUyzCJVSwrmSAw+6B1sEgU7jt6NZBptwGq2k/V0kjyu2GizMFtg==",
+        "dependencies": {
+          "SkiaSharp.NativeAssets.Android": "3.119.2"
+        }
+      },
+      "SkiaSharp.HarfBuzz": {
+        "type": "Transitive",
+        "resolved": "3.119.2",
+        "contentHash": "/zabpNJYLU8k23N5JH92jGNNTrj/0CxbMbr/W/9aX9wzyTbypSKVo7/Pl6jVBZSqCI42vZAhv1akvV+SDiatzg==",
+        "dependencies": {
+          "HarfBuzzSharp": "8.3.1.3",
+          "SkiaSharp": "3.119.2"
+        }
+      },
+      "SkiaSharp.NativeAssets.Android": {
+        "type": "Transitive",
+        "resolved": "3.119.2",
+        "contentHash": "r/IIcpJRl2C6xBadDvtdeXRfyQcjvZ5Md8e7J5piZE785JM1WjTq69xoduKt48qTbUza86GhO92dYaXkYNxnxA=="
+      },
+      "SkiaSharp.NativeAssets.Linux": {
+        "type": "Transitive",
+        "resolved": "3.119.2",
+        "contentHash": "9WzxSyG/s9Id506j0Ht+Bi5ucOpWKPzd1XXr9TD4fuCafHHy2swRSlbZtC3IDQAsvCH63OerkDJajj43uSv5og=="
+      },
+      "SkiaSharp.Views": {
+        "type": "Transitive",
+        "resolved": "3.119.2",
+        "contentHash": "WpLfIsCTwoO5uzOQCRX+GkWAArla7hoDM/eq5SDN6rZyAM9f7mAe2r+mPfzD58ObRlBq2uFEVX4DmDVbn/Y5PQ==",
+        "dependencies": {
+          "SkiaSharp": "3.119.2"
         }
       },
       "SQLite": {
@@ -311,6 +466,33 @@
           "SQLitePCLRaw.core": "3.0.5"
         }
       },
+      "Svg.Custom": {
+        "type": "Transitive",
+        "resolved": "3.2.1",
+        "contentHash": "Wu0+Il+SZfY5+AT25b2PMlSbBrzGIo/6vMMMdOK8jd25I9tdJJbxOFJNG87gFgo9UY9OmpIFzVobGOHzFdJYeQ==",
+        "dependencies": {
+          "ExCSS": "4.3.1"
+        }
+      },
+      "Svg.Model": {
+        "type": "Transitive",
+        "resolved": "3.2.1",
+        "contentHash": "N4yWlvqv1XWZ+VvI29lT4HkEgtiP3rS/poMfWiVzz6Ao/3IjQCfmo2qrKphq77IqTdMYyh7wGDknMId7YrQY5Q==",
+        "dependencies": {
+          "ShimSkiaSharp": "3.2.1",
+          "Svg.Custom": "3.2.1"
+        }
+      },
+      "Svg.Skia": {
+        "type": "Transitive",
+        "resolved": "3.2.1",
+        "contentHash": "pRJtMOc2hTcnxSu7cx6lf806S+2VrQ0eqUpGMBUQQ/pIIvzrtn0+lUjdABTvjr5rsdQF9OxE+r9npq2+3c6T4A==",
+        "dependencies": {
+          "SkiaSharp": "2.88.9",
+          "Svg.Custom": "3.2.1",
+          "Svg.Model": "3.2.1"
+        }
+      },
       "System.ClientModel": {
         "type": "Transitive",
         "resolved": "1.14.0",
@@ -328,6 +510,17 @@
         "type": "Transitive",
         "resolved": "10.0.11",
         "contentHash": "4jNNt67NhCqf3bf2FN0mrsC+EH60L7Sny6poqVeiviB27Kw7TQzMmgn8HIaPc8E9EcuGusUyfeu21gLfzcBpDA=="
+      },
+      "Topten.RichTextKit": {
+        "type": "Transitive",
+        "resolved": "0.4.167",
+        "contentHash": "fARM2vAZ4ZFAcNFqRLVrjQNjXzk/2yWWXTmTZ/aYUdXJE6ZT2616v3Ojux4cVcKPx2M930sY3plLKeWppGsJaA==",
+        "dependencies": {
+          "HarfBuzzSharp.NativeAssets.Linux": "2.8.2.3",
+          "SkiaSharp": "2.88.7",
+          "SkiaSharp.HarfBuzz": "2.88.7",
+          "SkiaSharp.NativeAssets.Linux": "2.88.7"
+        }
       },
       "vswhere": {
         "type": "Transitive",
@@ -625,6 +818,7 @@
         "type": "Project",
         "dependencies": {
           "Azure.AI.OpenAI": "[2.9.0-beta.1, )",
+          "Mapsui.Tiling": "[5.1.0, )",
           "Microsoft.EntityFrameworkCore": "[11.0.0-rc.1.26425.128, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[11.0.0-rc.1.26425.128, )",
           "Microsoft.Extensions.AI": "[10.9.0, )",
@@ -637,6 +831,29 @@
       }
     },
     "net11.0-android37.0/android-arm64": {
+      "HarfBuzzSharp.NativeAssets.Android": {
+        "type": "Transitive",
+        "resolved": "8.3.1.3",
+        "contentHash": "Yte9/yYql8ngAjo7YgHlXSinLJcJXIRBM9gegVXpJ2SVYT1i2O/wMA+H3jmYiYiTQxHpHKi4exZUcMzry171MA=="
+      },
+      "HarfBuzzSharp.NativeAssets.Linux": {
+        "type": "Transitive",
+        "resolved": "2.8.2.3",
+        "contentHash": "Qu1yJSHEN7PD3+fqfkaClnORWN5e2xJ2Xoziz/GUi/oBT1Z+Dp2oZeiONKP6NFltboSOBkvH90QuOA6YN/U1zg==",
+        "dependencies": {
+          "HarfBuzzSharp": "2.8.2.3"
+        }
+      },
+      "SkiaSharp.NativeAssets.Android": {
+        "type": "Transitive",
+        "resolved": "3.119.2",
+        "contentHash": "r/IIcpJRl2C6xBadDvtdeXRfyQcjvZ5Md8e7J5piZE785JM1WjTq69xoduKt48qTbUza86GhO92dYaXkYNxnxA=="
+      },
+      "SkiaSharp.NativeAssets.Linux": {
+        "type": "Transitive",
+        "resolved": "3.119.2",
+        "contentHash": "9WzxSyG/s9Id506j0Ht+Bi5ucOpWKPzd1XXr9TD4fuCafHHy2swRSlbZtC3IDQAsvCH63OerkDJajj43uSv5og=="
+      },
       "SQLite": {
         "type": "Transitive",
         "resolved": "3.53.4",

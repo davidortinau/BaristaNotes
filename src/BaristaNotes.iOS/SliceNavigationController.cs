@@ -31,6 +31,9 @@ internal sealed class SliceNavigationController : UINavigationController
         SetViewControllers([_newDrink], false);
     }
 
+    public override UIViewController? ChildViewControllerForStatusBarStyle() =>
+        TopViewController is BeanListViewController ? TopViewController : base.ChildViewControllerForStatusBarStyle();
+
     public void NewDrink()
     {
         if (FeedbackHost.IsShowing || !CanNavigate(NewDrink)) return;
@@ -107,6 +110,7 @@ internal sealed class SliceNavigationController : UINavigationController
         var photoOwners = (ViewControllers ?? []).OfType<DrinkViewController>().ToList();
         if (_newDrink != null && !photoOwners.Contains(_newDrink)) photoOwners.Add(_newDrink);
         foreach (var owner in photoOwners) owner.RetirePhoto();
+        foreach (var owner in (ViewControllers ?? []).OfType<BeanListViewController>()) owner.RetireMap();
         _sceneDetached = true;
         var coordinator = Voice;
         Voice = null;

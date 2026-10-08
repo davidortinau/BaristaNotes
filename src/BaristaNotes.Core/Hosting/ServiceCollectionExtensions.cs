@@ -114,6 +114,18 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddBaristaNotesOriginGeocoding(this IServiceCollection services, string dataDirectory)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(dataDirectory);
+        services.AddHttpClient("origin-geocoding", client => client.Timeout = Timeout.InfiniteTimeSpan)
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+        services.TryAddSingleton<IOriginGeocoder>(provider => new NominatimOriginGeocoder(
+            provider.GetRequiredService<IHttpClientFactory>().CreateClient("origin-geocoding"), dataDirectory,
+            provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<NominatimOriginGeocoder>>()));
+        return services;
+    }
+
     public static IServiceCollection AddBaristaNotesVoice(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);

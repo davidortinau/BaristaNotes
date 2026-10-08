@@ -24,6 +24,8 @@
     <Using Include="Xunit" />
     <Using Include="Microsoft.Maui.Graphics" />
     <Compile Include="..\BaristaNotes\Resources\Styles\AppColors.cs" Link="Styles\AppColors.cs" />
+    <Compile Include="..\BaristaNotes\Components\BeanPageScrollGeometry.cs"
+             Link="Components\BeanPageScrollGeometry.cs" />
     <Compile Include="..\BaristaNotes.Android\Views\UiAnimationLifetime.cs"
              Link="Native\UiAnimationLifetime.cs" />
     <Compile Include="..\BaristaNotes.iOS\SpeechPermissionPreflight.cs"

@@ -237,6 +237,7 @@ public sealed partial class MainActivity : Activity
         }
         _host.RemoveAllViews();
         _host.AddView(view, new FrameLayout.LayoutParams(-1, -1));
+        ApplyNativeWindowTheme();
         _voiceOverlay?.BringToFront();
         UpdateVoiceInputGate();
     }
@@ -371,6 +372,9 @@ public sealed partial class MainActivity : Activity
         _host.RemoveAllViews();
         (_host.Parent as ViewGroup)?.RemoveView(_host);
         _transient?.Dispose();
+        _beanListReturnState?.Dispose();
+        _beanListReturnState = null;
+        _beanMapReturnState = null;
         _newEditor?.Screen.Dispose();
         _editEditor?.Screen.Dispose();
         _historyScreen?.Dispose();

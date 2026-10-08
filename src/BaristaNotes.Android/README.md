@@ -4,6 +4,555 @@ This is a C# .NET 11 Android Views application, not a MAUI application.
 Its package is `com.simplyprofound.baristanotes.nativeapp`, with its own sandbox.
 The minimum supported Android version remains API 24.
 
+## Beans map (coordinator validation pending)
+
+### Round 30: mixed-country test viewport and simulator signing
+
+The mixed-country rendered-feature test now explicitly overrides its
+tile-derived zoom bounds only in the tile-disabled test session. It checks
+the effective viewport and unchanged 64-DIP distances before asserting
+**Origins (3)**, country/location membership, deduplicated selection and
+repeat clearing. Runtime Core/Android behavior and the iOS lifecycle fix
+are unchanged. The iOS README's **Round 30** section provides coordinator-only
+focused tests, both Debug builds and the outstanding Duo lifecycle scenarios.
+All simulator build recipes now use SDK signing
+`EnableCodeSigning=true` and `CodesignKey=-`.
+Keep Android checks on **emulator-5556** only and preserve all five samples,
+caches, compact labels, one-tap navigation, camera and accepted geometry.
+No new build, test or runtime verification is claimed by this file-only worker.
+
+### Round 29: compact selected-origin header
+
+The selected count below **BEANS** now uses the same Core title rules as pins:
+**Guji (1)**, **Ethiopia (1)**, same-country **Ethiopia (2)**, or mixed-country
+**Origins (3)**. Counts still deduplicate bean IDs, including blends and archived
+members. The unfiltered count and **All beans** action are unchanged. Precision
+and region information remain in place metadata/map accessibility, not the
+visible header. There was no separate explanatory summary row to remove;
+no empty line or extra summary space is added. Offscreen legacy-footer
+measurements are retained solely to preserve the accepted hero edge/parallax.
+
+Focused tests now assert the exact shared visible selection label, fallback,
+all resolved precision kinds, same/mixed-country counts, archived blend
+deduplication, repeat clearing and cached restored selection. Existing compact
+marker assertions remain. Coordinates, identities, clustering threshold,
+filtering, gestures, camera, attribution, portrait layout and row navigation
+are unchanged; the iOS disposed-redraw guard is retained.
+
+The iOS README's **Round 29** section supplies coordinator-only focused-test
+and both Debug build commands. On **emulator-5556** only, compare marker/header
+text for the existing Ethiopia aggregate and separate Guji/country pins,
+repeat-clear each and use **All beans**. Check a mixed-country cluster without
+adding records, cached Detail/Back/reopen, one physical row tap, keyboard/
+TalkBack, safe pinned title/first row and full scroll/reverse in both themes
+and large text. Retain all five samples and caches; no resets or new fixtures.
+Public-service checks remain serial across prototypes; per-process throttling
+is not production-wide rate control. This file-only worker has not run builds,
+tests or runtime checks.
+
+### Round 28: compact native marker labels
+
+Shared Core now uses country/place plus count for visible pins: **Ethiopia (2)**
+at wide zoom, **Guji (1)** and **Ethiopia (1)** when separated. Same-country
+clusters use the country name; mixed-country clusters use **Origins (count)**.
+Precision/region prose stays in accessibility and place metadata,
+not visible labels. Coordinates, deduplicated counts, selection toggles, geocoding
+cache/privacy/rate limits and camera are unchanged. Focused `BeanPlaceMapTests`
+cover compact labels for each precision, clusters/blends and actual feature text.
+The stable Android map host, single-tap row handling and accepted page geometry
+are untouched.
+
+The native iOS README's **Round 28** section records the independent UIKit
+queued-redraw correction, exact upstream 5.1.0 source, fresh focused-test/both
+Debug build commands and required navigation/rotation scenarios. For Android,
+use only **emulator-5556**, preserve the five existing UI-created samples,
+and check compact labels, place/aggregate repeat toggles, one physical row tap
+on first visit/after scroll/after filter/after Back, keyboard/TalkBack,
+camera/selection retention, parallax/safe pinned title, attribution, both themes,
+large text and cached/error fallback. No reset or new public-query fixtures.
+No builds, tests or runtime checks have been run by this file-only worker.
+Public-service checks remain serial across prototypes; per-process throttling
+is not production-wide rate control.
+
+### Round 26: explicit country components and throttle-test isolation
+
+Comma-bound country components now take precedence over country words inside
+place names. `Port of Spain, Trinidad and Tobago and Ethiopia` retains the
+complete `port of spain` detail, recognizes only Trinidad and Tobago/Ethiopia,
+and does not fabricate a Spain origin. Explicit country-only comma blends and
+ambiguous detailed blends retain their prior fallback behavior. No geocoding
+coordinates, navigation, camera, geometry or saved data are changed.
+
+The two test classes using the static Nominatim request gate share one xUnit
+nonparallel collection. This isolates handler/clock observations from the
+formerly parallel place journey and unrelated tests without resetting static
+state, changing the process-wide gate or weakening the >=1-second assertion.
+Full-suite timing results remain coordinator-owned and pending.
+
+Run the focused-test and both Debug build commands in Round 24 below with fresh
+**round26** artifact paths. Repeat the entire focused suite, not only the timing
+test, to check interference. Runtime: retain the five existing samples and
+recheck real Guji region/country pins, zoom separation, repeat toggles and
+one-tap Detail/Back with camera/geometry unchanged on emulator-5556 and owned
+iOS comparison simulators only. Port of Spain parsing, exact country counts
+and ambiguous-blend fallback are covered by source tests without public queries
+or additional device records. Unresolved lookups must still show recoverable
+approximate fallback. Do not change existing samples or reset caches/data;
+exercise public lookups serially.
+This file-only worker has not run builds, tests or runtime checks.
+
+### Round 25: bounded validation-fallback and country-alias correction
+
+The four reported failures are implementation defects, not invalid fixtures.
+`InvalidDataException` is explicitly recoverable: unsupported country restrictions,
+invalid endpoint settings and rejected cached results now reach the existing
+logged, clearly approximate fallback paths without weakening parser/settings
+validation. Corrupt cache still suppresses automatic queries until explicit retry.
+Country matching now shares its existing longest non-overlapping spans with blend
+splitting, so `and` inside a catalogue name/alias cannot create a fake detailed
+query or break an otherwise explicit place/country pair.
+
+Focused assertions retain all four original cases and add country-name/blend
+conjunction coverage, exact zero requests for unsupported restrictions, separate
+endpoint cache files/reuse and query/fragment/credential rejection. Navigation,
+geometry, camera, data and SDK integrations are unchanged. Only source inspection
+was performed; builds, focused tests and runtime checks remain coordinator-owned.
+
+Run the Round 24 focused-test and both Debug build commands below with fresh
+**round25** artifact paths. Runtime checks on the same owned maps targets: country
+aliases generate no search; unsupported restrictions and invalid settings show
+recoverable approximate fallback without a request; corrupt cached country results
+show fallback without automatic querying, then recover on explicit retry; changing
+between valid HTTPS endpoints uses distinct caches and returning reuses success.
+Retain the existing five samples and recheck one-tap Detail/Back, wide/split pin
+selection, camera retention and accepted map/header geometry. No reset or migration.
+
+### Round 24: precise places and zoom clusters
+
+This supersedes the historical country-only behavior below. Both heads now use
+one Core geocoder, place model and cluster/selection implementation. The
+Round 23 `RangeTile` first-tap fix is retained. No database records, schema,
+origin text, names or accrued usage are rewritten.
+
+Country-only origins retain the original approximate Natural Earth coordinates
+and make no search request. Detailed origins query Nominatim with only detailed
+geographic text and the recognized country, restricted by ISO country code.
+Bean names, IDs and device location are never sent. Empty origins and details
+without a recognized country remain unplotted. Catalogue names, aliases and
+coordinates are unchanged; ISO codes come from the supplied public catalogue,
+with standard `no`, `fr`, `tw` replacing its non-ISO Norway/France/Taiwan values.
+Northern Cyprus, Somaliland and Kosovo have no supported restriction here;
+their detailed lookups report explicit country fallback instead of accepting
+unvalidated results.
+
+jsonv2 results must have finite coordinates, matching `address.country_code`,
+a matching named place, sub-country `place_rank` and city/locality or region
+precision. The public Guji `state_district` result is **Guji region, Ethiopia**,
+not a city. Its reference coordinates occur only in parser/HTTP tests, never
+production code. Explicit blends separate place/country pairs with `/`, `;`,
+`|`, `+` or `and`; ambiguous detailed associations show approximate-country
+fallback and a corrective error rather than guessing.
+
+Versioned cache keys include endpoint, ISO code and normalized geographic
+detail. Successful raw results are validated again on cold reads. Atomic
+app-local files in `origin-geocode-cache` persist successes and failures.
+Failures suppress automatic uncached retries across view/restart.
+**Retry origins** appears only for recoverable lookup/cache failures and
+does not re-query persisted successes. Cache-write failures are logged and
+displayed; same-process repair reuses a successful response without re-querying.
+All lookups run off the UI thread, one serial request at a time across this
+process, >=1 second between starts, with a 12-second throttle/network/body
+timeout, 128-KiB response limit, cancellation, `Retry-After` handling and no
+redirects. No polling, autocomplete, geographic dataset download or proxy.
+
+Default search: `https://nominatim.openstreetmap.org/search`; identifying
+User-Agent: `BaristaNotes-Native-OriginPrototype/0.1`. The existing clickable
+OSM copyright widget also identifies Nominatim search, without a duplicate
+copyright control. See [public policy](https://operations.osmfoundation.org/policies/nominatim/)
+and [Search API](https://nominatim.org/release-docs/latest/api/Search/).
+This is a **single-user, low-volume prototype**: per-process throttling is not
+production-wide rate control. The coordinator exercises only one new
+geocoding client/prototype at a time.
+
+For a runtime service change, atomically replace `origin-geocoding.json` in
+Android's existing `FilesDir` (iOS: existing Library directory):
+
+```json
+{"endpoint":"https://nominatim.openstreetmap.org/search","userAgent":"BaristaNotes-Native-OriginPrototype/0.1"}
+```
+
+Settings are reread on every lookup, including cache hits; no rebuild/restart.
+Endpoint must be an absolute HTTPS search URL without query, fragment or
+credentials. Optional User-Agent must remain a valid identifying BaristaNotes
+header and may include coordinator-supplied contact information. Endpoint
+changes use a separate cache namespace. Correct settings and Retry origins,
+or reopen Beans, to update already displayed places. Invalid settings send no
+request and show recoverable feedback.
+
+Clustering is app-defined connected-component grouping at **64 screen DIPs**,
+using verified Mapsui 5.1.0 `Navigator.Viewport`, `Viewport.Resolution`,
+`Viewport.WorldToScreen` and `Navigator.ViewportChanged`, not a built-in switch.
+Only aggregate marker centroids change; actual geographic coordinates do not.
+Wide Ethiopia/Guji shows two beans; sufficient zoom separates two one-bean pins.
+Stable location IDs drive place-specific selection, repeat-to-clear, screen
+recreation and Detail/Back. Clusters, totals and filtered rows deduplicate bean
+IDs, including blends. Resolution/zoom never refits the explored camera.
+Resolution completion updates selected header labels without rebinding unchanged
+bean rows in either head, avoiding interference with a live tap or keyboard focus.
+
+Accepted map-first spacing, clipped 20% parallax, permanent Android GPU host,
+safe compact pinned header/separator, portrait-only mode and bottom navigation
+are unchanged. Rich accessibility text is deliberately separate from the old
+offscreen footer measurement so hero geometry stays unchanged. No permanent
+summary caption is restored. Only genuine errors and conditional actions show.
+
+Only the coordinator executes Round 24 validation from the export root:
+
+```sh
+dotnet test src/BaristaNotes.Tests/BaristaNotes.Tests.csproj --filter "FullyQualifiedName~NominatimOriginGeocoderTests|FullyQualifiedName~BeanPlaceMapTests|FullyQualifiedName~BeanOriginMapTests|FullyQualifiedName~BeanMapSessionTests|FullyQualifiedName~BeanPageGeometryTests" --artifacts-path <fresh-round24-native-tests>
+dotnet build src/BaristaNotes.Android/BaristaNotes.Android.csproj -t:SignAndroidPackage -c Debug -r android-arm64 -p:NativeMapSlice=true -p:EmbedAssembliesIntoApk=true -p:AilohaArtifactsDirectory=<existing-agent-artifacts> --artifacts-path <fresh-round24-android-maps-debug-artifacts>
+dotnet build src/BaristaNotes.iOS/BaristaNotes.iOS.csproj -c Debug -r iossimulator-arm64 -p:NativeMapSlice=true -p:EnableCodeSigning=true -p:CodesignKey=- -p:AilohaPackageRoot=<existing-agent-package-root> --artifacts-path <fresh-round24-ios-maps-debug-artifacts>
+```
+
+Focused tests use controlled HTTP handlers, not public-service requests. They
+cover Guji parsing and rejected precision/country/coordinate mismatches,
+request privacy, durable success/failure cache, endpoint changes, corrupt
+cache, retry/cache-write repair, cancellation, serial requests and measured
+one-second spacing. The complete place journey covers five unchanged samples,
+low/high zoom, place/country/aggregate toggles, cached restart, screen recreation
+and camera retention. Existing map/session/geometry regressions are included.
+Builds, tests and device checks have **not** been run by this file-only worker.
+NativeAOT remains a separate gate.
+
+Install over only existing maps comparison apps without clearing data.
+Android: BaristaNotesMaps20261002 (`emulator-5556`), never Pixel 5 or
+`emulator-5554`. iOS: owned comparison simulators only. Runtime scenarios:
+
+1. Cold-open with real public search and the five existing UI-created samples:
+   four mapped, one empty-origin unplotted, Colombia one, Brazil one, Ethiopia/
+   Guji two in aggregate. Zoom to distinct **Guji region** and **approximate
+   Ethiopia** one-bean pins; coordinates stay unchanged by zoom.
+2. Select each precise/country/aggregate pin and repeat to clear. One physical
+   tap on an unfocused bean row must open the correct detail on first visit,
+   after scrolling, after each filter and after Back. Check Android keyboard/
+   D-pad/TalkBack and unchanged iOS single-tap/VoiceOver activation. Recheck
+   equipment/range controls sharing the retained RangeTile fix.
+3. Explore camera, scroll the map fully offscreen and reverse, then Detail/Back
+   and reopen/restart. Preserve camera, selected place, list anchor, initial map
+   edge, safe pinned header/separator and bottom navigation in both themes,
+   including short/filtered content and large text.
+4. Reopen/restart offline after success: precise pins reuse persisted lookups.
+   For an uncached detailed origin exercise unavailable service, timeout,
+   invalid JSON/country/coordinates and cache-write failure. Clearly approximate
+   fallback, explicit errors and list/detail stay usable. Restore service and
+   explicitly Retry origins without resetting camera; cached failure must not
+   silently retry on reopen/restart.
+5. Change sandbox endpoint while running, including invalid settings/recovery.
+   Check identifying header, country restriction, no bean names/location,
+   one in-flight query, >=1-second starts, timeout/cancellation when leaving,
+   no late UI update and readable clickable attribution.
+
+Beans has a Mapsui.Android 5.1.0 map first, above its existing heading, including
+list loading, empty and error states. Core's `BeanMapSession` configures one
+default OpenStreetMap tile layer and the identifying
+`BaristaNotes-Native-Maps/0.1` User-Agent for both native heads. Mapsui handles
+visible-tile fetching, cartographic rendering and pan/zoom. Round 13 moves the
+hero's top into the former title space while approximately preserving its lower
+edge. The existing RecyclerView owns a height-only hero placeholder, title,
+virtualized bean rows and state/trailing-space row as one scroll sequence.
+Round 15 keeps the hardware map attached to a permanent page-owned host, outside
+recyclable holders. The native scroll listener translates that host upward by
+the placeholder's scroll offset, clipped at the page edges. The existing map
+surface translates downward by 20% of that offset inside its own clipped
+container, preserving the 80%-speed parallax without recreating, re-fitting or
+resizing the map per frame. Collapse never hides or detaches the hardware view.
+Unhandled non-map drags are forwarded to RecyclerView in page coordinates;
+the real map and All beans control retain their normal touch handling.
+The title uses its original adapter-row placeholder and moves into a native
+pinned title host only after reaching the usable top. Reverse scroll releases
+it and reveals the same map. Minimum trailing space lets empty/short and filtered
+lists remove the entire hero and pin the title too. The source fonts, palette and row design are unchanged, and bottom navigation
+stays outside the scroller.
+
+Round 16 is a spacing-only correction. Beans opts out of the existing
+`EdgeAwareColumn` top avoidance; its side/bottom insets are unchanged.
+The actual map starts at physical y=0 behind transparent status-bar chrome.
+The old hero geometry, minus the former summary and idle control row,
+preserves the approximate visible map lower edge. Removed-footer typography
+is measured offscreen for width/font scaling; no summary view or idle control
+row is retained in the hierarchy. Genuine origin-loading and error feedback
+still appears transiently. The existing All beans action is retained inside
+the map, above attribution, only while a country is selected; it reserves no
+footer space. Mapped/unmapped/approximate-origin information remains in Core
+and the map's accessibility description rather than a permanent caption.
+
+The Beans-only header uses natural label heights, 12-DIP vertical padding,
+a 4-DIP label gap and a 1-DIP Outline separator carried with the pinned header.
+Its existing host now pins at the status/cutout inset, filling that inset only
+when pinned, so labels and row input remain below system icons. Expanded map
+icons are dark over the unchanged light cartography; pinned icons follow the
+app palette. Leaving Beans restores the existing window treatment.
+The attached hardware surface, 20% clipped parallax, scroll direction,
+virtualization, filter/camera state and portrait-only paths are unchanged.
+Shared `BeanPageGeometryTests` covers upward expansion/lower-edge geometry,
+compact multi-line label sizing and safe-edge pin/release thresholds.
+Round 16 builds and device checks are coordinator-owned and pending.
+
+Round 20 corrects Android's collapsed first-row overlap. As the title placeholder
+travels from the safe top to y=0, its reserved height grows by that overlap,
+up to the status/cutout inset. At full hero collapse the first bean starts at
+the pinned separator's lower edge; further scrolling can move rows beneath it.
+The reservation returns to zero on release, so the expanded header has no
+extra safe-area gap. Short/empty-list trailing space shrinks by the same amount,
+preserving the full-collapse scroll range. Existing holder parameters are
+updated in place. The permanent GPU host, hero height/parallax, camera/session,
+footer/navigation and iOS source are unchanged. `BeanPageGeometryTests` adds
+full-collapse row/separator and continuous inset/release regressions.
+Builds and real-frame checks remain coordinator-owned; no runtime verification
+is claimed for this correction.
+
+Round 23 corrects Android's first-tap row activation in the shared `RangeTile`.
+Its overlay Button stays focusable for keyboard/D-pad navigation, but is no
+longer focusable in touch mode: Android's normal touch dispatch can click an
+unfocused row instead of consuming the tap to focus it. Bean and equipment
+adapters and range-setting rows use this same control; their existing click
+callbacks, focus indicators, enabled states and accessibility descriptions
+are unchanged. No touch handler, synthetic click or second navigation call is
+added. iOS, map/geocoding logic and accepted scroll geometry are untouched.
+
+Only the coordinator builds and checks this correction:
+
+```sh
+dotnet build src/BaristaNotes.Android/BaristaNotes.Android.csproj -t:SignAndroidPackage -c Debug -r android-arm64 -p:NativeMapSlice=true -p:EmbedAssembliesIntoApk=true -p:AilohaArtifactsDirectory=<existing-agent-artifacts> --artifacts-path <fresh-round23-android-maps-debug-artifacts>
+```
+
+Install over only the existing maps comparison app without clearing data.
+On BaristaNotesMaps20261002 (`emulator-5556`, never the physical Pixel 5 or
+`emulator-5554`), use physical-style touch input, not automation `PerformClick`,
+to tap an unfocused bean row once on first visit, after scrolling, after map
+filtering (especially Guji in the Ethiopia-filtered list), and after Detail/Back.
+Each tap must open the correct detail exactly once. Repeat with the distinct
+Guji and approximate Ethiopia selections and their two-bean aggregate; pin
+toggles, list anchor and explored camera must remain unchanged. Check D-pad/
+keyboard focus and activation, TalkBack activation, and scroll drags without
+accidental navigation. Check equipment and value-range rows using the same
+control, including enabled/disabled range actions. Preserve the five existing
+UI-created samples, accepted pinned-title/parallax behavior and bottom navigation.
+iOS single-tap navigation remains a coordinator regression scenario, not an iOS
+source change. Build and runtime verification remain pending.
+
+Round 14's holder-metadata fix is retained: each page holder's root wrapper stays
+owned by RecyclerView. Round 15 moves only inner title/state content when binding
+a replacement holder; the hero wrapper remains empty.
+Viewport sizing updates existing RecyclerView layout parameters in place,
+preserving holder metadata, and requests layout without a data-set notification
+from the page layout pass. Bean-row layout parameters are initialized only at
+holder creation, not replaced during rebinding. The coordinator confirmed
+Round 14 launch, intermediate parallax and pinned-title states, but reverse
+scroll crashed in Skia's hardware renderer after map detachment/reattachment.
+Round 15 addresses that lifetime path; its build/device checks remain pending.
+
+Expand, Close, full-screen presentation and map-driven orientation requests are
+removed. Ordinary app orientation policy remains unchanged. Side/bottom safe-area
+insets and pinned-title top avoidance remain; map pan/pinch touches are kept out of RecyclerView
+interception, while title/row/metadata drags scroll the page. Attribution
+appears once, as the SDK's clickable on-map copyright widget, with its default
+12-DIP black text on an opaque white background in both app themes.
+Initialization and tile-load errors are logged and shown locally, not treated
+as a failed bean read. A tile failure remains labelled for the current map
+session rather than being hidden by a different tile's successful request.
+Reopening Beans creates a fresh Android map control. Round 9 restores its
+camera, consumed initial fit, country selection and list anchor from the
+Activity-owned snapshot instead of returning to the initial overview.
+
+Round 9 uses the shared Core `BeanOriginMapData` and `BeanMapSession` in both
+native heads. `GetSavedBeansForMapAsync` reuses the existing non-deleted repository
+read, includes archived beans, and does not change the active-only default list.
+The embedded `Data/origin-countries.json` is a compact derivative of the supplied
+177-country public Natural Earth catalogue: canonical names, all name aliases
+and original label coordinates are retained; unused ISO fields and duplicate
+canonical aliases are omitted. `reference_sha256` identifies the supplied input,
+not the transformed file's checksum. Provenance, public-domain terms and
+approximate-position precision remain in the resource. `JsonDocument` parsing
+does not introduce reflection-based serialization for NativeAOT.
+
+Matching is case/diacritic/punctuation insensitive at whole-word boundaries,
+with longer names claiming their spans before shorter names. Guji/Ethiopia and
+Guji, Ethiopia resolve to Ethiopia; Guji alone and empty origins remain unmapped.
+Every pin shows the country and distinct saved-bean count. The map accessibility
+description labels positions as approximate country locations and reports distinct
+mapped/unmapped totals without a visible summary. Blends can contribute to multiple pins, but combined totals
+and selection rows deduplicate bean IDs. No farm coordinates are inferred.
+
+The first successful origin read fits projected positions once, with 18% extent
+padding and at least 750 km per side in projected units. A single country gets a
+1,500 km country-scale box; empty/unmapped data gets a labelled world overview.
+Mapsui defers navigation until viewport size is available. Refreshes do not fit
+again, including adding the first resolved origin after an empty initial read.
+An interaction while the initial read is pending also keeps the explored camera.
+Android snapshots center/resolution/rotation before retiring a Beans screen and
+restores them through the SDK navigator when the replacement map initializes.
+
+A single country-pin tap filters the existing rows, shows its country/count in
+the heading, and labels archived rows. Tapping the same selected country set
+again clears it; another country replaces it. Overlapping pin/label hit records
+produce a deduplicated combined list. All beans also clears the selection
+without moving the camera and restores active-only list behavior.
+Selecting a row opens existing Bean Detail; Back reloads saved data but restores
+the selected list anchor and explored camera. Origin reads fail locally with
+logged, explicit feedback and do not block the ordinary active list.
+
+Shared Core handles Mapsui's recognized `GestureType.DoubleTap` with
+`Navigator.ZoomIn(args.ScreenPosition, duration: 200)`. Only `SingleTap` hit-tests
+and toggles countries: the SDK immediately emits the first tap of a double tap
+as a single tap, so that first tap may select/clear a pin, but the second tap
+never toggles it again. Normal SDK pan/pinch remains unchanged. Supplied 5.1.0
+`TapGestureTracker` and shared `OnPointerPressed` expose no two-finger double
+tap; two-finger zoom-out is explicitly omitted, with no custom recognizer.
+
+Published 5.1.0 API checks for this slice: `Layers/MemoryLayer.cs` exposes
+`Features`, `FeaturesWereModified` and inherited `DataHasChanged`; `PointFeature`
+accepts the tuple returned by `SphericalMercator.FromLonLat`; `Map.Tapped` and
+`BaseEventArgs.GetMapInfo` accept an explicit layer list (no removed
+`IsMapInfoLayer` property). `Navigator.ZoomToBox`, `CenterOnAndZoomTo` and
+`RotateTo` postpone calls until initialization. The empty origin-layer attribution
+widget is disabled; the single required OpenStreetMap widget is unchanged.
+
+The SDK default Hardware rendering path remains unchanged. Initialization,
+origin-read and tile-load errors retain logged, explicit local feedback.
+
+Published 5.1.0 source citations: `Mapsui.UI.Android/MapControl.cs` initializes
+`_renderMode` to Hardware and creates `SKGLSurfaceView`; the app no longer sets
+`RenderMode`. `Mapsui.Tiling/OpenStreetMap.cs` supplies the copyright text/URL,
+and `Mapsui.Tiling/Layers/TileLayer.cs` assigns them to the layer's attribution.
+`Mapsui/Map.cs` includes enabled layer attribution widgets.
+`Widgets/ButtonWidgets/HyperlinkWidget.cs` handles taps using the browser action
+registered by each native control in `Mapsui.UI.Shared/MapControl.cs`.
+The duplicate native copyright buttons are removed, not the SDK attribution.
+`TextBoxWidget`/`BoxWidget` expose the text size, background and opacity used here;
+no custom renderer or browser framework is added.
+
+For the final Hardware check, use an actual OS/device frame, not Ailoha's
+unsupported view-render screenshot of a GPU-backed map. Inspect portrait
+pixels, all screen edges and the single readable/clickable copyright
+widget in both themes, alongside the interaction scenarios below.
+
+Only the coordinator runs the following commands, from the export root, with
+an installed matching .NET 11 Android workload and the already supplied
+official Debug-agent artifacts. Angle-bracket values are placeholders for
+coordinator-owned, isolated paths. Do not use historical fixture/performance
+deployment instructions for this map run.
+
+```sh
+dotnet build src/BaristaNotes.Android/BaristaNotes.Android.csproj -t:SignAndroidPackage -c Debug -r android-arm64 -p:NativeMapSlice=true -p:EmbedAssembliesIntoApk=true -p:AilohaArtifactsDirectory=<existing-agent-artifacts> --artifacts-path <fresh-round20-android-maps-debug-artifacts>
+dotnet publish src/BaristaNotes.Android/BaristaNotes.Android.csproj -c Release -r android-arm64 -p:NativeMapSlice=true -p:PublishAot=true -p:TrimmerSingleWarn=false --artifacts-path <android-maps-release-artifacts>
+dotnet test src/BaristaNotes.Tests/BaristaNotes.Tests.csproj --filter "FullyQualifiedName~BeanPageGeometryTests" --artifacts-path <fresh-round20-native-maps-test-artifacts>
+```
+
+Round 20 needs the Debug build and focused geometry tests above; the existing Release
+command remains a separate NativeAOT gate. On the owned maps emulator, compare
+expanded/intermediate/pinned/reversed OS frames in light/dark mode: real tiles
+must reach y=0, the initial map lower edge should remain within roughly one
+former caption line of its prior position, and the compact header must have
+only its normal padding/gap plus a visible separator. Verify pinned label
+bounds start below the status/cutout inset and the first visible row can be
+tapped. At full collapse, record the pinned separator bottom and first Brazil
+row top in the same real frame: the row must begin at or below that edge, with
+its complete caption/name visible and tappable. Verify no added safe-area gap
+in the expanded header and continuous row placement through the final collapse
+segment and reverse release. Repeat with empty, short, long and filtered content; retain the
+explored camera through reverse scrolling and Detail/Back. Check Ethiopia
+two-bean toggle back to five, another country, All beans, pan/pinch/double tap,
+attribution, genuine loading/error feedback and unchanged bottom navigation.
+Use the existing form-created samples and preserve all data; do not seed/reset.
+
+The final Hardware check requires a newly signed, embedded-assembly APK, not a
+build-only or Run-only target that may reuse an old package. Use a fresh
+artifacts directory, record the exact signed APK path/hash/time, install it over
+only `com.simplyprofound.baristanotes.maps.nativeandroid`, then cold-start.
+Do not uninstall, clear data, or deploy over another task's or personal app.
+
+The map property isolates both configurations as
+`com.simplyprofound.baristanotes.maps.nativeandroid`; in Release it enables
+NativeAOT and full trimming; Release acceptance remains a separate open gate.
+Fixture/performance property combinations fail
+explicitly. Restore must regenerate the configuration lock files for the new
+Mapsui references; use `dotnet restore` with `--force-evaluate`, matching
+configuration/RID/properties/artifacts path, if the coordinator uses a locked
+restore. Release must not include the Debug inspection binding.
+
+Required runtime scenarios, on the dedicated BaristaNotesMaps20261002 ARM64
+emulator (never another task's emulator), apply
+to light and dark app themes:
+
+First cold-open and repeatedly reopen Beans in the newly signed Android build.
+Confirm the activity stays on this native Beans page without a UI-thread
+RecyclerView holder crash or a return to a previous activity. Exercise filter
+rebinding and viewport changes as well as the scroll scenarios below; a
+pre-crash metadata tree alone does not establish that the page remains usable.
+
+1. Open Beans empty, short, five-bean and longer lists, including country-filtered
+   lists. Verify map first/taller and approximately unchanged initial lower edge.
+   At intermediate offsets verify map image moves at 80% of page speed within
+   its clip while the title moves with the page. Scroll until the complete map
+   and its metadata leave view; title/count must pin at the usable top. Continue
+   scrolling and tap rows below it: no overlap or lost input.
+2. Reverse scroll to release the title and recover the same explored map/camera.
+   Repeat fully collapsed-to-visible transitions at least five times and confirm
+   the process survives without GL errors or `SKGLSurfaceViewRenderer.OnDrawFrame`
+   native crashes. Confirm the same hardware view stays attached during scrolling.
+   Open Detail/Back at a deeper row, background/foreground,
+   and check the fixed bottom navigation, status/cutout edges and normal app
+   orientation layout. No Expand, Close or full-screen map may be present.
+3. Pan/pinch the map without moving the page; drag title/rows/metadata to scroll
+   the page. One-finger double tap must visibly zoom at its tap position. On a
+   pin, its first SDK single tap may toggle selection but the recognized second
+   tap must only zoom. Two-finger double-tap zoom-out is not supported/promised.
+4. With uncached visible tiles and networking unavailable, verify a local map
+   error while list/add/detail/navigation remain usable; reopen Beans after
+   restoring networking. Do not bulk-download tiles or clear app data.
+5. Repeat representative interaction/round-trip/error scenarios using the
+   isolated NativeAOT Release APK; Debug evidence is not Release evidence.
+6. Create the approved Map sample records through Add: Ethiopia, Colombia,
+   Brazil, Guji/Ethiopia (also check Guji, Ethiopia) and empty Origin. Verify
+   Ethiopia = 2, Colombia = 1, Brazil = 1, distinct mapped = 4, unmapped = 1.
+   Check zero saved beans, only unmapped beans and one mapped country separately
+   using owned UI records; no direct database fixtures or personal-data copies.
+7. Archive a sample through its detail: its pin and selected row must remain,
+   with ARCHIVED visible. Delete an owned sample through the UI: its pin count,
+   selection rows and totals must remove it. For Brazil / Colombia blends,
+   each country counts the bean once; a combined selection counts/lists it once.
+   Check long aliases, country-boundary collisions and unmapped region-only data.
+8. Verify initial padded fit, then pan/pinch, select a pin, scroll its rows,
+   open Detail and Back. Camera and selected list anchor must survive refresh
+   and repeated scroll-away/reverse; adding/editing origins must not repeatedly
+   recenter an explored map. Ethiopia single tap shows two rows; after the SDK
+   double-tap interval, tapping Ethiopia again restores all five active samples.
+   Selecting Colombia/Brazil changes the filter. All beans resets only the
+   filter, and approximate/unmapped labels remain
+   visible. Inject an origin-read failure in a controlled build if needed;
+   active-list loading and map-data loading must report independent errors.
+
+No build, test, tile-network or device result was produced by this file-only
+implementation pass. Regression coverage retains error-free events, persistent
+failure feedback, exception logging, disposal and the single SDK attribution,
+and adds catalogue/alias resolution, distinct blend counts, archived/deleted
+semantics, padded fit, deferred initialization, camera restoration, repeated-pin
+clearing/country replacement and recognized double-tap zoom at the tap position
+without a second selection toggle. These tests have not been run by the
+file-only worker.
+Camera tests disable the tile layer's fetching; they do not establish tile
+networking, GPU rendering or device gestures. Those require the coordinator's
+owned-app/device-frame scenarios above.
+
+The coordinator reports an Android NativeAOT package was published without a
+Mapsui/Skia AOT warning, but existing EF Core/SQLite/Recognizers analysis warnings
+remain. Their full diagnostics must be expanded before any Release installation;
+package production alone is not Release acceptance. Record all restore/build/
+publish warnings and bundled Mapsui/Skia native assets. Unresolved always-throw
+or unsupported dynamic-code warnings remain blockers; no warnings are suppressed
+here. Final Hardware, iOS and Release runtime confirmation remain pending.
+
 The temporary proof screen has been replaced with the bounded manual-slice UI:
 the drink grid, custom action row, manual bean form, bag/method/drink/rating
 button lists, whole/tenth mass lists, Activity and the custom Filter Shots

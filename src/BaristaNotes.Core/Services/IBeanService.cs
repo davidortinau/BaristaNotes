@@ -6,6 +6,8 @@ namespace BaristaNotes.Core.Services;
 public interface IBeanService
 {
     Task<List<BeanDto>> GetAllActiveBeansAsync();
+    /// <summary>Returns distinct saved beans, including archived and excluding deleted records.</summary>
+    Task<List<BeanDto>> GetAllSavedBeansAsync();
     Task<BeanDto?> GetBeanByIdAsync(int id);
     Task<BeanDto?> GetBeanWithRatingsAsync(int id);
     Task<OperationResult<BeanDto>> CreateBeanAsync(CreateBeanDto dto);

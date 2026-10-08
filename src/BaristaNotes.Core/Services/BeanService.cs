@@ -49,6 +49,15 @@ public class BeanService : IBeanService
         return beans.Select(MapToDto).ToList();
     }
 
+    public async Task<List<BeanDto>> GetAllSavedBeansAsync()
+    {
+        var beans = await _beanRepository.GetNonDeletedBeansAsync();
+        return beans.Where(bean => !bean.IsDeleted)
+            .DistinctBy(bean => bean.Id)
+            .OrderBy(bean => bean.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(MapToDto).ToList();
+    }
+
     public async Task<BeanDto?> GetBeanByIdAsync(int id)
     {
         var bean = await _beanRepository.GetByIdAsync(id);

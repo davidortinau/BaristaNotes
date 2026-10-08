@@ -32,8 +32,18 @@
     <DefineConstants>$(DefineConstants);NATIVE_PERFORMANCE</DefineConstants>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(NativeMapSlice)' == 'true'">
+    <ApplicationId>com.simplyprofound.baristanotes.maps.native.ios</ApplicationId>
+    <ApplicationTitle>BaristaNotes Native Maps</ApplicationTitle>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(NativeMapSlice)' == 'true' And '$(Configuration)' == 'Release'">
+    <PublishAot>true</PublishAot>
+    <TrimMode>full</TrimMode>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)../BaristaNotes.Core/BaristaNotes.Core.csproj" />
+    <PackageReference Include="Mapsui.iOS" Version="5.1.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="11.0.0-rc.1.26425.128" />
     <PackageReference Include="Microsoft.Maui.Graphics" Version="11.0.0-rc.1.26451.6" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="11.0.0-rc.1.26425.128" />
@@ -46,6 +56,7 @@
     <BundleResource Include="$(_SourceResources)/Fonts/Manrope-SemiBold.ttf" LogicalName="Fonts/Manrope-SemiBold.ttf" />
     <BundleResource Include="$(_SourceResources)/Fonts/MaterialSymbols.ttf" LogicalName="Fonts/MaterialSymbols.ttf" />
     <BundleResource Include="$(_SourceResources)/Fonts/coffee-icons.ttf" LogicalName="Fonts/coffee-icons.ttf" />
+    <BundleResource Include="MapsuiLifecycle/LICENSE" LogicalName="Notices/Mapsui-LICENSE.txt" />
     <BundleResource Include="$(_SourceResources)/Fonts/Manrope-LICENSE_OFL.txt" LogicalName="Fonts/Manrope-LICENSE_OFL.txt" />
     <BundleResource Include="$(_SourceResources)/AppIcon/beans.png" LogicalName="Images/beans.png" />
     <ImageAsset Include="Assets.xcassets/AppIcon.appiconset/Contents.json" />
@@ -67,6 +78,13 @@
     <BundleResource Include="$(NativePerformanceDatabase)" LogicalName="performance/barista_notes.db" />
     <BundleResource Include="$(NativePerformanceMetadata)" LogicalName="performance/preferences.txt" />
   </ItemGroup>
+
+  <Target Name="ValidateNativeMapSlice" BeforeTargets="PrepareForBuild" Condition="'$(NativeMapSlice)' == 'true'">
+    <Error Condition="'$(NativePerformance)' == 'true'"
+           Text="NativeMapSlice must not share a performance application." />
+    <Error Condition="'$(ApplicationId)' != 'com.simplyprofound.baristanotes.maps.native.ios'"
+           Text="NativeMapSlice requires its isolated maps application ID." />
+  </Target>
 
   <Target Name="ValidateNativePerformanceConfiguration"
           BeforeTargets="PrepareForBuild"

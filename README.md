@@ -200,6 +200,7 @@ results, warning analysis, and raw-evidence locations.
 - [Service Architecture](docs/SERVICES.md)
 - [Native Architecture Refactor](docs/native-architecture-refactor-report.md)
 - [Runtime Performance Comparison](docs/native-aot-runtime-comparison.md)
+- [Repeatable Work Comparisons](docs/work-comparisons.md)
 - [MauiReactor Patterns](docs/MAUIREACTOR_PATTERNS.md)
 - [Contributing](docs/CONTRIBUTING.md)
 - [Project Constitution](.specify/memory/constitution.md)

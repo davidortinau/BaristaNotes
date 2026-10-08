@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "purpose": "comparison",
+  "title": "",
+  "scope": "",
+  "exclusions": [],
+  "approved_by": "",
+  "model": "",
+  "reasoning_effort": "",
+  "targets": {
+    "ios": {"device": "", "os": "", "configuration": "Release"},
+    "android": {"device": "", "os": "", "configuration": "Release"}
+  },
+  "criteria": [
+    {"id": "journey-1", "text": "", "platforms": ["ios", "android"]}
+  ]
+}

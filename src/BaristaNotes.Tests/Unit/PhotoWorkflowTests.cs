@@ -119,9 +119,9 @@ public sealed class PhotoWorkflowTests
     }
 
     [Fact]
-    public async Task ClassificationFailure_ShowsErrorInsteadOfIntentChoice()
+    public async Task ClassificationFailure_ShowsErrorThenOffersIntentForTheSamePhoto()
     {
-        var host = new TestHost(Photo([7]));
+        var host = new TestHost(Photo([7])) { Choice = PhotoIntentChoice.Profile };
         var vision = new TestVision
         {
             Classification = PhotoWorkflowAnalysis.Error("Vision service is not configured.")
@@ -130,11 +130,116 @@ public sealed class PhotoWorkflowTests
         using var workflow = Create(host, vision);
         await workflow.RunAsync(CancellationToken.None);
 
-        Assert.Equal(0, host.ChoiceCalls);
+        Assert.Equal(1, host.ChoiceCalls);
+        Assert.Equal(1, host.CaptureCalls);
+        Assert.Equal([7], host.ProfileImage);
         Assert.Null(host.CoffeePrefill);
         var alert = Assert.Single(host.Alerts);
         Assert.Equal("Photo Analysis Unavailable", alert.Title);
         Assert.Equal("Vision service is not configured.", alert.Message);
+        Assert.Equal(["capture", "alert", "choice", "profile"], host.Events);
+        Assert.False(host.ProcessingStates.Last());
+        Assert.False(workflow.IsActive);
+    }
+
+    [Fact]
+    public async Task ClassificationFailure_RetakeUsesANewCapture()
+    {
+        var host = new TestHost(Photo([1]), Photo([2])) { Choice = PhotoIntentChoice.Retake };
+        var vision = new TestVision
+        {
+            Classifications =
+            [
+                PhotoWorkflowAnalysis.Error("Provider unavailable."),
+                new PhotoWorkflowAnalysis
+                {
+                    Success = true, IsObvious = true, Intent = PhotoWorkflowIntent.Profile
+                }
+            ]
+        };
+
+        using var workflow = Create(host, vision);
+        await workflow.RunAsync(CancellationToken.None);
+
+        Assert.Equal(2, host.CaptureCalls);
+        Assert.Equal(1, host.ChoiceCalls);
+        Assert.Equal([2], host.ProfileImage);
+        Assert.Single(host.Alerts);
+        Assert.Equal(["capture", "alert", "choice", "capture", "profile"], host.Events);
+        Assert.False(host.ProcessingStates.Last());
+    }
+
+    [Fact]
+    public async Task ClassificationFailure_WaitsForErrorAcknowledgementBeforeIntentChoice()
+    {
+        var dismissed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var host = new TestHost(Photo([13]))
+        {
+            Choice = PhotoIntentChoice.Profile,
+            AlertCompletion = dismissed.Task
+        };
+        var vision = new TestVision { Classification = PhotoWorkflowAnalysis.Error("Unavailable.") };
+
+        using var workflow = Create(host, vision);
+        var run = workflow.RunAsync(CancellationToken.None);
+
+        Assert.False(run.IsCompleted);
+        Assert.Equal(0, host.ChoiceCalls);
+        Assert.Null(host.ProfileImage);
+        dismissed.SetResult();
+        await run;
+
+        Assert.Equal(1, host.ChoiceCalls);
+        Assert.Equal([13], host.ProfileImage);
+        Assert.Equal(["capture", "alert", "choice", "profile"], host.Events);
+    }
+
+    [Fact]
+    public async Task ClassificationFailure_ManualCancelDoesNotRouteOrRetake()
+    {
+        var host = new TestHost(Photo([3])) { Choice = PhotoIntentChoice.Cancel };
+        var vision = new TestVision { Classification = PhotoWorkflowAnalysis.Error("Unavailable.") };
+
+        using var workflow = Create(host, vision);
+        await workflow.RunAsync(CancellationToken.None);
+
+        Assert.Equal(1, host.ChoiceCalls);
+        Assert.Equal(1, host.CaptureCalls);
+        Assert.Null(host.ProfileImage);
+        Assert.Null(host.CoffeePrefill);
+        Assert.Null(vision.RoomQuestion);
+        Assert.False(host.ProcessingStates.Last());
+        Assert.False(workflow.IsActive);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ClassificationFailure_CancellationOrOwnerDepartureStopsRecovery(
+        bool duringChoice, bool ownerDeparture)
+    {
+        using var cancellation = new CancellationTokenSource();
+        var host = new TestHost(Photo([4])) { Choice = PhotoIntentChoice.Profile };
+        void Leave()
+        {
+            if (ownerDeparture) host.Current = false;
+            else cancellation.Cancel();
+        }
+        if (duringChoice) host.Choosing = Leave;
+        else host.Alerted = Leave;
+        var vision = new TestVision { Classification = PhotoWorkflowAnalysis.Error("Unavailable.") };
+
+        using var workflow = Create(host, vision);
+        await workflow.RunAsync(cancellation.Token);
+
+        Assert.Equal(duringChoice ? 1 : 0, host.ChoiceCalls);
+        Assert.Null(host.ProfileImage);
+        Assert.Null(host.CoffeePrefill);
+        Assert.Single(host.Alerts);
+        Assert.False(host.ProcessingStates.Last());
+        Assert.False(workflow.IsActive);
     }
 
     [Fact]
@@ -227,9 +332,9 @@ public sealed class PhotoWorkflowTests
     }
 
     [Fact]
-    public async Task AnalysisFailure_ShowsErrorAndClearsProcessing()
+    public async Task ClassificationException_ShowsErrorThenOffersSamePhotoRecovery()
     {
-        var host = new TestHost(Photo([10]));
+        var host = new TestHost(Photo([10])) { Choice = PhotoIntentChoice.Profile };
         var vision = new TestVision
         {
             ClassificationError = new InvalidOperationException("model unavailable")
@@ -239,8 +344,71 @@ public sealed class PhotoWorkflowTests
         await workflow.RunAsync(CancellationToken.None);
 
         var alert = Assert.Single(host.Alerts);
-        Assert.Equal("Error", alert.Title);
+        Assert.Equal("Photo Analysis Unavailable", alert.Title);
         Assert.Contains("model unavailable", alert.Message);
+        Assert.Equal(1, host.ChoiceCalls);
+        Assert.Equal([10], host.ProfileImage);
+        Assert.False(host.ProcessingStates.Last());
+        Assert.False(workflow.IsActive);
+    }
+
+    [Fact]
+    public async Task ClassificationCancellation_DoesNotOfferRecovery()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var host = new TestHost(Photo([11])) { Choice = PhotoIntentChoice.Profile };
+        var vision = new TestVision
+        {
+            ClassificationCallback = () =>
+            {
+                cancellation.Cancel();
+                throw new OperationCanceledException(cancellation.Token);
+            }
+        };
+
+        using var workflow = Create(host, vision);
+        await workflow.RunAsync(cancellation.Token);
+
+        Assert.Empty(host.Alerts);
+        Assert.Equal(0, host.ChoiceCalls);
+        Assert.Null(host.ProfileImage);
+        Assert.False(host.ProcessingStates.Last());
+        Assert.False(workflow.IsActive);
+    }
+
+    [Fact]
+    public async Task ProviderTimeoutWithoutOwnerCancellation_OffersSamePhotoRecovery()
+    {
+        var host = new TestHost(Photo([12])) { Choice = PhotoIntentChoice.Profile };
+        var vision = new TestVision
+        {
+            ClassificationError = new OperationCanceledException("Provider timed out.")
+        };
+
+        using var workflow = Create(host, vision);
+        await workflow.RunAsync(CancellationToken.None);
+
+        Assert.Equal("Provider timed out.", Assert.Single(host.Alerts).Message);
+        Assert.Equal(1, host.ChoiceCalls);
+        Assert.Equal([12], host.ProfileImage);
+        Assert.False(host.ProcessingStates.Last());
+    }
+
+    [Fact]
+    public async Task CaptureReadFailure_DoesNotOfferIntentWithoutImageBytes()
+    {
+        var host = new TestHost(new VoicePhoto("photo.jpg",
+            () => Task.FromException<Stream>(new IOException("Capture could not be read."))));
+        var vision = new TestVision();
+
+        using var workflow = Create(host, vision);
+        await workflow.RunAsync(CancellationToken.None);
+
+        var alert = Assert.Single(host.Alerts);
+        Assert.Equal("Error", alert.Title);
+        Assert.Contains("Capture could not be read.", alert.Message);
+        Assert.Equal(0, host.ChoiceCalls);
+        Assert.Null(host.ProfileImage);
         Assert.False(host.ProcessingStates.Last());
         Assert.False(workflow.IsActive);
     }
@@ -264,12 +432,17 @@ public sealed class PhotoWorkflowTests
         public BeanLabelExtraction? CoffeePrefill { get; private set; }
         public byte[]? ProfileImage { get; private set; }
         public List<(string Title, string Message)> Alerts { get; } = [];
+        public List<string> Events { get; } = [];
+        public Action? Alerted { get; set; }
+        public Action? Choosing { get; set; }
+        public Task AlertCompletion { get; set; } = Task.CompletedTask;
         public bool IsCurrent => Current;
         public bool IsCaptureSupported => CaptureSupported;
 
         public Task<VoicePhoto?> CaptureAsync(CancellationToken cancellation)
         {
             CaptureCalls++;
+            Events.Add("capture");
             return Task.FromResult<VoicePhoto?>(
                 _photos.TryDequeue(out var photo) ? photo : null);
         }
@@ -279,6 +452,8 @@ public sealed class PhotoWorkflowTests
         public Task<PhotoIntentChoice> ChooseIntentAsync(CancellationToken cancellation)
         {
             ChoiceCalls++;
+            Events.Add("choice");
+            Choosing?.Invoke();
             return Task.FromResult(Choice);
         }
 
@@ -293,6 +468,7 @@ public sealed class PhotoWorkflowTests
         public Task OpenProfileAsync(byte[] image)
         {
             ProfileImage = image;
+            Events.Add("profile");
             return Task.CompletedTask;
         }
 
@@ -302,7 +478,9 @@ public sealed class PhotoWorkflowTests
             CancellationToken cancellation)
         {
             Alerts.Add((title, message));
-            return Task.CompletedTask;
+            Events.Add("alert");
+            Alerted?.Invoke();
+            return AlertCompletion;
         }
     }
 

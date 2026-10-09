@@ -51,16 +51,7 @@ public sealed partial class MainActivity
         if (plan.IsRoot)
             ClearVoiceNavigationHistory();
         else
-        {
-            var root = _host.GetChildAt(0) ?? throw new InvalidOperationException("The voice navigation origin is unavailable.");
-            _voiceNavigation.Push(new(plan, new VoicePageSnapshot(_page, root,
-                ReferenceEquals(_host.Parent, Window?.DecorView), _transient, _editEditor, _editDraft, _editingShotId,
-                _beanEditor, _bagEditor, _profileEditor, _equipmentEditor, _rangeDraft, _beanShotReturn,
-                _settingsFromHistory, _beanCreateReturnToList, _refreshSettingsAppearance)));
-            // The pushed page remains an owned native view, not a reconstructed
-            // DTO or a second save/create operation when Back restores it.
-            _transient = null;
-        }
+            PushNavigationFrame(plan);
         HideKeyboard();
         try
         {
@@ -124,6 +115,17 @@ public sealed partial class MainActivity
                 RestoreVoicePage(_voiceNavigation.Pop().Previous);
             throw;
         }
+    }
+
+    private void PushNavigationFrame(VoiceRoutePlan plan)
+    {
+        var root = _host.GetChildAt(0) ?? throw new InvalidOperationException("The native navigation origin is unavailable.");
+        _voiceNavigation.Push(new(plan, new VoicePageSnapshot(_page, root,
+            ReferenceEquals(_host.Parent, Window?.DecorView), _transient, _editEditor, _editDraft, _editingShotId,
+            _beanEditor, _bagEditor, _profileEditor, _equipmentEditor, _rangeDraft, _beanShotReturn,
+            _settingsFromHistory, _beanCreateReturnToList, _refreshSettingsAppearance)));
+        // Retain the exact native owner and draft for Back, including nested routes.
+        _transient = null;
     }
 
     private bool TryReturnVoiceNavigation()

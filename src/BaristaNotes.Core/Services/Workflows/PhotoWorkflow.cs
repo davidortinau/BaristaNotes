@@ -68,7 +68,21 @@ public sealed class PhotoWorkflow(
 
                 EnsureCurrent(cancellation);
                 using var classification = new MemoryStream(image, writable: false);
-                var analysis = await vision.ClassifyPhotoAsync(classification, cancellation);
+                PhotoWorkflowAnalysis analysis;
+                try
+                {
+                    analysis = await vision.ClassifyPhotoAsync(classification, cancellation);
+                }
+                catch (OperationCanceledException) when (
+                    cancellation.IsCancellationRequested || !host.IsCurrent)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    logger.LogError(exception, "Photo classification failed; offering manual intent for the captured image");
+                    analysis = PhotoWorkflowAnalysis.Error(exception.Message);
+                }
                 EnsureCurrent(cancellation);
                 if (!analysis.Success)
                 {
@@ -77,7 +91,7 @@ public sealed class PhotoWorkflow(
                         "Photo Analysis Unavailable",
                         analysis.ErrorMessage ?? "Could not analyze the photo.",
                         cancellation);
-                    return;
+                    EnsureCurrent(cancellation);
                 }
 
                 var choice = PhotoWorkflowRules.AutomaticChoice(analysis);
@@ -119,6 +133,7 @@ public sealed class PhotoWorkflow(
 
                     case PhotoIntentChoice.Profile:
                         host.SetProcessing(false);
+                        EnsureCurrent(cancellation);
                         await host.OpenProfileAsync(image);
                         break;
 

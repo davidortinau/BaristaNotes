@@ -136,7 +136,11 @@ internal sealed class PhotoWorkflowSession : IPhotoWorkflowHost
             title, message, UIAlertControllerStyle.Alert);
         _alert = alert;
         alert.AddAction(UIAlertAction.Create(
-            "OK", UIAlertActionStyle.Default, _ => done.TrySetResult()));
+            "OK", UIAlertActionStyle.Default, _ =>
+            {
+                // Manual intent can present another modal immediately after this alert.
+                alert.DismissViewController(true, () => done.TrySetResult());
+            }));
         _host.PresentViewController(alert, true, null);
         try
         {

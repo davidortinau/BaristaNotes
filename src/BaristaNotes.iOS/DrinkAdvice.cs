@@ -74,12 +74,20 @@ internal sealed partial class DrinkViewController
     }
     public override void ViewWillDisappear(bool animated)
     {
+        _recipeVersion++;
         CancelAdvice();
         base.ViewWillDisappear(animated);
     }
     protected override void Dispose(bool disposing)
     {
-        if (disposing) CancelAdvice();
+        if (disposing)
+        {
+            _recipeVersion++;
+            CancelAdvice();
+            foreach (var tile in _tiles) tile.Dispose();
+            _tiles.Clear();
+            _people.Dispose();
+        }
         base.Dispose(disposing);
     }
 

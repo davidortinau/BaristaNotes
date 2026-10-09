@@ -104,13 +104,14 @@ public sealed partial class MainActivity
         void RenderRows()
         {
             if (_destroyed || !ReferenceEquals(_transient, screen)) return;
-            if (map.WaitingForSelection || (!map.HasSelection && !listLoaded))
+            var display = BeanListReads.Display(listLoaded, map.WaitingForSelection, map.HasSelection, listError);
+            if (display != BeanListReadState.Content)
             {
                 count.Text = "0 beans";
                 page.SetItems([]);
                 status.Visibility = ViewStates.Visible;
-                var error = map.WaitingForSelection ? null : listError;
-                progress.Visibility = error == null ? ViewStates.Visible : ViewStates.Gone;
+                var error = listError;
+                progress.Visibility = display == BeanListReadState.Loading ? ViewStates.Visible : ViewStates.Gone;
                 title.Text = "ERROR";
                 message.Text = error;
                 title.Visibility = message.Visibility = retry.Visibility =
@@ -161,10 +162,7 @@ public sealed partial class MainActivity
         };
         map.OriginsChanged += origins;
         screen.OnDispose(() => map.OriginsChanged -= origins);
-        _ = LoadBeanOriginsAsync(map, screen, () =>
-        {
-            if (listLoaded || map.HasSelection) RenderRows();
-        });
+        _ = LoadBeanOriginsAsync(map, screen, RenderRows);
         try
         {
             var beans = await InScopeAsync(services =>

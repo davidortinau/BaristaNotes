@@ -9,6 +9,7 @@ using BaristaNotes.Core.Models.Enums;
 using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.Workflows;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace BaristaNotes.AndroidApp;
 
@@ -33,6 +34,12 @@ public sealed partial class MainActivity
         // Like the retained source page's OnAppearing, refresh presentation
         // preferences on return without replacing canonical draft values.
         Draft.TempUnit = _app.Services.GetRequiredService<IPreferencesService>().GetTemperatureUnit();
+        // Bean history can open a second edit draft while a recipe route retains
+        // the original editor. Do not reuse or dispose that retained native owner.
+        if (_editingShotId.HasValue && _editEditor is { } retained &&
+            _voiceNavigation.Any(frame => ReferenceEquals(frame.Previous.EditEditor, retained)
+                && !ReferenceEquals(frame.Previous.EditDraft, _editDraft)))
+            _editEditor = null;
         var editor = _editingShotId.HasValue
             ? _editEditor ??= BuildDrinkEditor(isEditing: true)
             : _newEditor ??= BuildDrinkEditor(isEditing: false);
@@ -142,11 +149,55 @@ public sealed partial class MainActivity
         if (select is not null)
         {
             tile.Focusable = true;
-            Bind(editor.Screen, tile, select);
+            Bind(editor.Screen, tile, select, key == "Bag"
+                ? () => RunOperation(() => OpenRecipeForSelectedBagAsync(editor)) : null);
         }
         else
             tile.ContentDescription = $"{caption}. Editing this field is outside the current first slice.";
         return tile;
+    }
+
+    private async Task OpenRecipeForSelectedBagAsync(DrinkEditor editor)
+    {
+        var draft = Draft;
+        var revision = _presentationRevision;
+        bool IsOwner() => !_destroyed && _page == "drink" && ReferenceEquals(Draft, draft)
+            && ReferenceEquals(_host.GetChildAt(0), editor.Screen.Root);
+        if (!IsOwner()) return;
+        var bag = draft.AvailableBags.FirstOrDefault(item => item.Id == draft.SelectedBagId);
+        if (bag == null)
+        {
+            ShowFeedback("Select a bag first to view its recipe.");
+            return;
+        }
+        var method = draft.BrewMethod;
+        try
+        {
+            var recipe = await InScopeAsync(provider =>
+                provider.GetRequiredService<IRecipeService>().GetRecipeForBeanAndMethodAsync(bag.BeanId, method));
+            if (!IsOwner() || revision != _presentationRevision) return;
+            if (recipe == null)
+            {
+                ShowFeedback($"No {method.DisplayName()} recipe for {bag.BeanName} yet.");
+                return;
+            }
+            var plan = new VoiceRoutePlan(VoiceRouteKind.Bean, false, bag.BeanId, null, null, null);
+            PushNavigationFrame(plan);
+            HideKeyboard();
+            try { await ShowBeanDetailAsync(new BeanDetailState(bag.BeanId), loadBean: true); }
+            catch
+            {
+                if (!_destroyed && _voiceNavigation.TryPeek(out var frame) && ReferenceEquals(frame.Destination, plan))
+                    RestoreVoicePage(_voiceNavigation.Pop().Previous);
+                throw;
+            }
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { throw; }
+        catch (Exception error)
+        {
+            _logger.LogError(error, "Failed to open recipe for {BagId}", bag.Id);
+            if (IsOwner()) ShowFeedback("Couldn't open the recipe.", isError: true);
+        }
     }
 
     private View BuildPeopleTile(DrinkEditor editor)

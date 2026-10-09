@@ -204,18 +204,23 @@ public sealed partial class MainActivity : Activity
             ? validation.Errors.SelectMany(pair => pair.Value).FirstOrDefault() ?? exception.Message
             : exception.Message;
 
-    private void Bind(NativeScreen screen, View view, Action action) => screen.Click(view, () =>
+    private void Bind(NativeScreen screen, View view, Action action, Action? longPress = null)
     {
-        if (_busy || _destroyed || _feedback.IsVisible || _equipmentConfirmation is not null || _advicePopup is not null || VoiceBlocksInput || PhotoBlocksInput
-            || (_filterScreen is not null && (!ReferenceEquals(screen, _filterScreen) || !_filterReady)))
-            return;
-        try { action(); }
-        catch (Exception exception)
+        void Activate(Action selected)
         {
-            _logger.LogError(exception, "Native view action failed on {Page}", _page);
-            ShowFeedback(ErrorMessage(exception), isError: true);
+            if (_busy || _destroyed || _feedback.IsVisible || _equipmentConfirmation is not null || _advicePopup is not null || VoiceBlocksInput || PhotoBlocksInput
+                || (_filterScreen is not null && (!ReferenceEquals(screen, _filterScreen) || !_filterReady)))
+                return;
+            try { selected(); }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Native view action failed on {Page}", _page);
+                ShowFeedback(ErrorMessage(exception), isError: true);
+            }
         }
-    });
+        screen.Click(view, () => Activate(action));
+        if (longPress != null) screen.LongClick(view, () => Activate(longPress));
+    }
 
     private void Present(View view, bool edgeToEdge = false)
     {

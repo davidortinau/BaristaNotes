@@ -2,7 +2,8 @@
 
 Review date: October 8, 2026.
 
-**Status: work in progress, not full feature parity or release approval.**
+**Status: review findings corrected; runtime limits remain. Not full feature
+parity or release approval.**
 The user approved importing both map implementations from their independent
 comparison copies and committing progress before further UI changes.
 Frozen source archives, usage receipts, and comparison reports remain private
@@ -15,10 +16,12 @@ bean, bag, equipment, profile, settings, voice, advice, and photo journeys.
 The review found three missing or changed experiences relative to the original
 MAUI source. It also found specific map and comparison-tool defects.
 
-The user chose to fix integration build conflicts and preserve the remaining
-findings as a named backlog for this checkpoint. These findings are not
-reported as fixed. There was no confirmed new data-loss or crash finding in the
-bounded static review; that is not a guarantee that every state is safe.
+For the first checkpoint, the user chose to fix integration build conflicts
+and preserve the remaining findings as a named backlog. Before pushing, the
+user then requested correction of all four map defects, both comparison-tool
+defects, and all three port gaps. The sections below retain the original
+findings; their corrected status and verification limits are recorded in
+the final section.
 
 The import uses one shared saved-bean query, `IBeanService.GetAllSavedBeansAsync`.
 The two map implementations retain their existing namespaces and catalog
@@ -49,7 +52,7 @@ Citation roots in the tables:
 MAUI citations refer to the pinned original source unless marked as a map
 addition. Native citations refer to this checkpoint.
 
-## Missing or changed experiences
+## Original missing or changed experiences
 
 | ID | Priority | Experience | Source evidence and effect |
 |---|---|---|---|
@@ -57,11 +60,10 @@ addition. Native citations refer to this checkpoint.
 | PORT-02 | Medium | Saved profile photos in iOS drink attribution and People picker | M/Pages/ShotLoggingGridPage.cs:743-775,1069-1088 uses AvatarPath. I/PeopleViewController.cs:144-179 and I/SliceControls.cs:252-280 use fixed symbols and names. iOS profile storage/list photos are present. Android attribution uses photos in A/MainActivity.Drink.cs:264-265 and A/Views/PeopleAdapter.cs:56-71. |
 | PORT-03 | High for parity | Manual same-photo recovery after AI classification failure, both native heads | M/Pages/ShotLoggingGridPage.cs:2210-2229,2294-2302 offers manual intent and Retake, including Profile creation from the captured image. C/Services/Workflows/PhotoWorkflow.cs:73-84 alerts and returns before manual choice. Its test explicitly expects that policy. Missing configuration, timeout, or provider failure can trigger it. This is not established as an accepted product difference. |
 
-PORT-03 is a confirmed behavior difference with a priority disagreement:
+PORT-03 was a confirmed behavior difference with a priority disagreement:
 the Skeptic rates the lost recovery path High; the other roles rate it Medium
-for a progress checkpoint. It remains outstanding parity work until the user
-accepts fail-fast behavior or requests restoration of manual recovery.
-The checkpoint request did not approve that behavior change.
+for a progress checkpoint. The user subsequently requested restoration of manual recovery. The shared
+native workflow now offers the original same-photo choices after failure.
 
 ## Feature comparison
 
@@ -88,7 +90,7 @@ No rendered direct drink-delete or bean-archive entry was found in the pinned
 reference paths. Service methods alone are not proof of a missed UI feature.
 Do not add those actions under the label of parity without separate scope.
 
-## Other confirmed review findings
+## Original confirmed review findings
 
 | ID | Priority | Finding | Disposition |
 |---|---|---|---|
@@ -142,3 +144,54 @@ The restored dependency graphs for both native heads contain no
 Microsoft.Maui.Controls package. No personal app was replaced and no data
 was reset. These checks establish the integrated progress baseline, not
 closure of the review backlog or the full screen-state parity matrix.
+
+## Pre-push corrections and current status
+
+All nine findings below are addressed in source. A separate bounded
+pre-push review returned Approve with no blocking source findings.
+
+| ID | Correction |
+|---|---|
+| MAP-01 | Explicit place/country pairs no longer add countries from words in the place name. Country-only and separated blends remain supported. |
+| MAP-02 | Query qualifiers and response address hierarchy are retained and validated on lookup, persisted-cache reuse, and snapshot construction. |
+| MAP-03 | Native Android renders every origin-read completion, including failure. Active-read errors take priority over a pending restored selection, so Retry is not hidden behind stale loading. |
+| MAP-04 | MAUI applies Retry-After delta/date cooldown across clients, with cancellation and the existing minimum request spacing. |
+| TOOL-01 | Native exports omit the MAUI geometry compile link and its test, without widening source access or changing the real combined project. |
+| TOOL-02 | Incomplete measurements remain partial/unavailable. New interval attempts and recovered receipts for older attempts are reported separately. Old snapshots remain immutable. |
+| PORT-01 | Native BAG holds perform the source recipe lookup and feedback. Normal taps remain bag selection. Owner/version checks and retained navigation frames protect the draft. |
+| PORT-02 | iOS People cells and drink attribution use saved profile images, with symbol fallback, rebind/clear, and owned-image disposal. |
+| PORT-03 | Failed classification retains the captured bytes and offers manual Profile, Retake, or Cancel after explicit feedback. Successful automatic/manual routes remain intact. |
+
+The combined suite passed 953 C# tests. The comparison suite passed 39 tests
+and the actual non-live command smoke test. All four corrected Debug heads
+compiled. The nine-finding source review was clean.
+
+Live checks used the existing comparison applications and their normal forms.
+Two additional public-origin regression beans were created through the MAUI
+iOS app, not through database writes. Native bag selection and corrected
+attribution controls were inspected. The separate native maps Debug app was
+installed on DX24 with the user's explicit approval; the personal BaristaNotes
+application and its data were not replaced or cleared.
+
+For physical diagnostics, DX24 used an untrimmed Debug package with zero
+build warnings. This is not a NativeAOT or trimmed Release verification.
+The user confirmed that a real captured image completed the Room analysis,
+and that a saved profile photo appeared in both the People picker and the
+drink attribution tile.
+
+**Explicit runtime limit:** classification-failure -> manual Profile/Retake/
+Cancel is covered by focused tests, not a forced failure on DX24. Same-path
+photo replacement, all recipe/draft-departure branches, and the complete
+screen-state matrix have not received new physical/runtime acceptance.
+The user explicitly approved pushing with that limit documented. Source
+correction and a clean review do not establish blanket UI parity.
+
+The separately tracked intermittent Android startup ANR and broader
+Release/NativeAOT acceptance remain outside these nine corrections.
+
+The user subsequently requested a primary-ID NativeAOT deployment to DX24.
+Build 3 was installed over the existing app after a private data backup and
+explicit acceptance of the remaining AOT warnings. The user confirmed that
+existing data and profile images remained. See the native iOS README for
+the publish command and the accepted build-specific limits. This does not
+close the broader clean-Release or full-parity gates.

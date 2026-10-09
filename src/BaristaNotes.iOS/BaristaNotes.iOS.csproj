@@ -19,7 +19,7 @@
     <ApplicationId>com.simplyprofound.baristanotes</ApplicationId>
     <ApplicationTitle>BaristaNotes</ApplicationTitle>
     <ApplicationDisplayVersion>2.0</ApplicationDisplayVersion>
-    <ApplicationVersion>2</ApplicationVersion>
+    <ApplicationVersion>3</ApplicationVersion>
     <PublishReadyToRun>false</PublishReadyToRun>
     <TrimMode>partial</TrimMode>
   </PropertyGroup>

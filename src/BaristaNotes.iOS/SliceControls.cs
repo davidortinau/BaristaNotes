@@ -1,5 +1,8 @@
+using BaristaNotes.Core.Services;
+using BaristaNotes.Core.Services.DTOs;
 using CoreGraphics;
 using Foundation;
+using Microsoft.Extensions.Logging;
 using UIKit;
 
 namespace BaristaNotes.Native.iOS;
@@ -182,9 +185,13 @@ internal sealed class DrinkTile : UIControl
     private readonly int? _fixedValueSize;
     private UIView? _customContent;
     private int _valueSize;
+    private readonly UILongPressGestureRecognizer? _hold;
+    private readonly UIAccessibilityCustomAction? _longPressAction;
+    private readonly EventHandler _tap;
     public nfloat TopInset { get; set; }
 
-    public DrinkTile(string caption, string id, Action tap, bool inverted = false, int? valueFontSize = null)
+    public DrinkTile(string caption, string id, Action tap, bool inverted = false,
+        int? valueFontSize = null, Action? longPress = null)
     {
         AccessibilityIdentifier = id;
         IsAccessibilityElement = true;
@@ -195,7 +202,24 @@ internal sealed class DrinkTile : UIControl
         SliceUi.TrackedText(_caption, caption, 10, 2,
             inverted ? NativeTheme.Surface.ColorWithAlpha(0.7f) : NativeTheme.Secondary);
         AddSubviews(_caption, _value, _unit);
-        TouchUpInside += (_, _) => tap();
+        _tap = (_, _) => tap();
+        TouchUpInside += _tap;
+        if (longPress != null)
+        {
+            _hold = new UILongPressGestureRecognizer(gesture =>
+            {
+                if (gesture.State == UIGestureRecognizerState.Began) longPress();
+            })
+            {
+                // A recognized hold must not release into the normal BAG picker.
+                CancelsTouchesInView = true
+            };
+            AddGestureRecognizer(_hold);
+            _longPressAction = new UIAccessibilityCustomAction("View recipe",
+                new Func<UIAccessibilityCustomAction, bool>(_ => { longPress(); return true; }));
+            AccessibilityCustomActions = [_longPressAction];
+            AccessibilityHint = "Activate to select a bag. Long press to view its recipe.";
+        }
     }
 
     public void SetValue(string value, string? unit = null)
@@ -247,14 +271,30 @@ internal sealed class DrinkTile : UIControl
         if (_customContent != null)
             _customContent.Frame = new CGRect(16, 14 + caption.Height, Bounds.Width - 32, Bounds.Height - 28 - caption.Height);
     }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            TouchUpInside -= _tap;
+            if (_hold != null)
+            {
+                RemoveGestureRecognizer(_hold);
+                _hold.Dispose();
+            }
+            AccessibilityCustomActions = null;
+            _longPressAction?.Dispose();
+        }
+        base.Dispose(disposing);
+    }
 }
 
 internal sealed class PeopleTileContent : UIView
 {
     private readonly UILabel _maker = SliceUi.Label("—", 11, secondary: true);
     private readonly UILabel _recipient = SliceUi.Label("—", 11, secondary: true);
-    private readonly UILabel _makerIcon = CreatePerson();
-    private readonly UILabel _recipientIcon = CreatePerson();
+    private readonly ProfileAvatarView _makerIcon = new(40);
+    private readonly ProfileAvatarView _recipientIcon = new(40);
     private readonly UILabel _arrow = SliceUi.Label("\ue941", 22);
     public PeopleTileContent()
     {
@@ -263,28 +303,26 @@ internal sealed class PeopleTileContent : UIView
         _maker.LineBreakMode = _recipient.LineBreakMode = UILineBreakMode.TailTruncation;
         _arrow.Font = NativeTheme.Icons(22);
         _arrow.TextColor = NativeTheme.Primary;
+        _makerIcon.ConfigurePeople(40, selected: false);
+        _recipientIcon.ConfigurePeople(40, selected: false);
         AddSubviews(_maker, _recipient, _makerIcon, _recipientIcon, _arrow);
     }
-    public void Update(string? maker, string? recipient)
+    public void Update(UserProfileDto? maker, UserProfileDto? recipient, IImageProcessingService images, ILogger logger)
     {
-        _maker.Text = string.IsNullOrWhiteSpace(maker) ? "—" : maker;
-        _recipient.Text = string.IsNullOrWhiteSpace(recipient) ? "—" : recipient;
-        _maker.TextColor = string.IsNullOrWhiteSpace(maker) ? NativeTheme.Secondary : NativeTheme.TextPrimary;
-        _recipient.TextColor = string.IsNullOrWhiteSpace(recipient) ? NativeTheme.Secondary : NativeTheme.TextPrimary;
+        var makerName = maker?.Name;
+        var recipientName = recipient?.Name;
+        _maker.Text = string.IsNullOrWhiteSpace(makerName) ? "—" : makerName;
+        _recipient.Text = string.IsNullOrWhiteSpace(recipientName) ? "—" : recipientName;
+        _maker.TextColor = string.IsNullOrWhiteSpace(makerName) ? NativeTheme.Secondary : NativeTheme.TextPrimary;
+        _recipient.TextColor = string.IsNullOrWhiteSpace(recipientName) ? NativeTheme.Secondary : NativeTheme.TextPrimary;
+        _makerIcon.SetProfile(maker, images, logger);
+        _recipientIcon.SetProfile(recipient, images, logger);
         SetNeedsLayout();
     }
-    private static UILabel CreatePerson() => new()
-    {
-        Text = "\ue7fd", Font = NativeTheme.Icons(22), TextColor = NativeTheme.Secondary,
-        TextAlignment = UITextAlignment.Center, BackgroundColor = NativeTheme.Secondary.ColorWithAlpha(0.12f),
-        ClipsToBounds = true, Layer = { CornerRadius = 20, BorderWidth = 1, BorderColor = NativeTheme.Secondary.ColorWithAlpha(0.4f).CGColor }
-    };
     public override void LayoutSubviews()
     {
         base.LayoutSubviews();
         var nameHeight = (nfloat)Math.Max(SliceUi.Measure(_maker, 60).Height, SliceUi.Measure(_recipient, 60).Height);
-        var border = NativeTheme.Secondary.ColorWithAlpha(0.4f).GetResolvedColor(TraitCollection).CGColor;
-        _makerIcon.Layer.BorderColor = _recipientIcon.Layer.BorderColor = border;
         var makerWidth = (nfloat)Math.Max(40, SliceUi.Measure(_maker, Bounds.Width / 3).Width);
         var recipientWidth = (nfloat)Math.Max(40, SliceUi.Measure(_recipient, Bounds.Width / 3).Width);
         var arrow = SliceUi.Measure(_arrow, Bounds.Width);
@@ -297,6 +335,16 @@ internal sealed class PeopleTileContent : UIView
         x += makerWidth + arrow.Width + 16;
         _recipientIcon.Frame = new CGRect(x + (recipientWidth - 40) / 2, top, 40, 40);
         _recipient.Frame = new CGRect(x, top + 43, recipientWidth, nameHeight);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _makerIcon.Dispose();
+            _recipientIcon.Dispose();
+        }
+        base.Dispose(disposing);
     }
 }
 

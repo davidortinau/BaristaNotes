@@ -15,6 +15,8 @@ public sealed class NominatimOriginGeocoder
     public static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(12);
     private static readonly SemaphoreSlim Requests = new(1, 1);
     private static long _lastRequestFinished;
+    private static long _cooldownStarted;
+    private static TimeSpan _cooldown;
     private readonly HttpClient _http;
     private readonly IPreferencesStore _store;
     private readonly ILogger<NominatimOriginGeocoder> _logger;
@@ -85,6 +87,10 @@ public sealed class NominatimOriginGeocoder
             {
                 var delay = _lastRequestFinished == 0 ? TimeSpan.Zero :
                     TimeSpan.FromSeconds(1) - Stopwatch.GetElapsedTime(_lastRequestFinished);
+                var cooldownRemaining = _cooldownStarted == 0 ? TimeSpan.Zero :
+                    _cooldown - Stopwatch.GetElapsedTime(_cooldownStarted);
+                if (cooldownRemaining > delay)
+                    delay = cooldownRemaining;
                 if (delay > TimeSpan.Zero)
                     await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -99,6 +105,17 @@ public sealed class NominatimOriginGeocoder
                         "BaristaNotes-MAUI-Maps/1.0 (single-user-origin-comparison-prototype)");
                     using var response = await _http.SendAsync(request,
                         HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
+                    if (!response.IsSuccessStatusCode && response.Headers.RetryAfter is { } retryAfter)
+                    {
+                        var cooldown = retryAfter.Delta ??
+                            (retryAfter.Date is { } date ? date - DateTimeOffset.UtcNow : TimeSpan.Zero);
+                        if (cooldown > TimeSpan.Zero)
+                        {
+                            _cooldownStarted = Stopwatch.GetTimestamp();
+                            _cooldown = cooldown;
+                            _logger.LogWarning("Origin server requested a cooldown of {Cooldown}", cooldown);
+                        }
+                    }
                     response.EnsureSuccessStatusCode();
                     await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token).ConfigureAwait(false);
                     using var document = await JsonDocument.ParseAsync(stream,
@@ -168,7 +185,13 @@ public sealed class NominatimOriginGeocoder
             var name = Text(result, "name");
             if (name.Length == 0)
                 name = Text(address, addressType);
-            var place = new OriginPlace(name, Text(address, "country_code").ToLowerInvariant(), lon, lat, precision);
+            var place = new OriginPlace(name, Text(address, "country_code").ToLowerInvariant(), lon, lat, precision)
+            {
+                AddressHierarchy = string.Join('\n', address.EnumerateObject()
+                    .Where(property => property.Name != "country_code" && property.Value.ValueKind == JsonValueKind.String)
+                    .Select(property => property.Value.GetString() ?? "")
+                    .Where(value => !string.IsNullOrWhiteSpace(value)))
+            };
             if (IsUsable(place, query))
                 return new(place, null);
         }
@@ -186,8 +209,19 @@ public sealed class NominatimOriginGeocoder
         double.IsFinite(place.Longitude) && double.IsFinite(place.Latitude) &&
         Math.Abs(place.Longitude) <= 180 && Math.Abs(place.Latitude) < 90 &&
         place.Precision is OriginPrecision.Region or OriginPrecision.City or OriginPrecision.Locality &&
-        (" " + BeanOriginResolver.Normalize(place.Name) + " ")
-            .Contains(" " + query.Detail + " ", StringComparison.Ordinal);
+        MatchesNames(place, query);
+
+    private static bool MatchesNames(OriginPlace place, OriginQuery query)
+    {
+        if (place.AddressHierarchy is null)
+            return false;
+        var details = query.DetailNames.Length > 0 ? query.DetailNames : [query.Detail];
+        var name = " " + BeanOriginResolver.Normalize(place.Name) + " ";
+        var hierarchy = place.AddressHierarchy.Split('\n', StringSplitOptions.RemoveEmptyEntries).Append(place.Name)
+            .Select(value => " " + BeanOriginResolver.Normalize(value) + " ").ToArray();
+        return name.Contains(" " + details[0] + " ", StringComparison.Ordinal) &&
+            details.All(detail => hierarchy.Any(value => value.Contains(" " + detail + " ", StringComparison.Ordinal)));
+    }
 }
 
 [JsonSerializable(typeof(OriginLookup))]

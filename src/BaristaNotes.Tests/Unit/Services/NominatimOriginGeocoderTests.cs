@@ -20,6 +20,61 @@ public sealed class NominatimOriginGeocoderTests
     private readonly OriginQuery _query = new BeanOriginResolver().Queries("Guji, Ethiopia").Single();
 
     [Fact]
+    public async Task ParentRegion_IsValidatedAndRetainedAcrossCacheAndSnapshot()
+    {
+        var resolver = new BeanOriginResolver();
+        var query = Assert.Single(resolver.Queries("Guji, Oromia, Ethiopia"));
+        var response = GujiResponse.Replace("\"country_code\":\"et\"", "\"state\":\"Oromia\",\"country_code\":\"et\"");
+        var store = new MockPreferencesStore();
+        using var handler = new StubHandler((_, _) => Task.FromResult(Response(response)));
+        using var http = new HttpClient(handler);
+        var first = await Client(http, store).ResolveAsync(query, false, CancellationToken.None);
+        var cached = await Client(http, store).ResolveAsync(query, false, CancellationToken.None);
+        Assert.NotNull(first.Place);
+        Assert.NotNull(cached.Place);
+        Assert.Equal("Guji", cached.Place.Name);
+        Assert.Contains("Oromia", cached.Place.AddressHierarchy);
+        Assert.Single(handler.Urls);
+        Assert.True(NominatimOriginGeocoder.IsUsable(cached.Place, query));
+        Assert.False(NominatimOriginGeocoder.IsUsable(cached.Place with { Name = "Oromia" }, query));
+        Assert.False(NominatimOriginGeocoder.IsUsable(cached.Place with { AddressHierarchy = "" }, query));
+        var bean = new BaristaNotes.Core.Services.DTOs.BeanDto
+        {
+            Id = 99, Name = "Qualified origin", Origin = query.Text
+        };
+        var snapshot = resolver.Build([bean], new Dictionary<string, OriginLookup> { [query.Key] = cached });
+        Assert.Equal(OriginPrecision.Region, Assert.Single(snapshot.Locations).Precision);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RetryAfter_DelaysTheNextRequestAcrossClients(bool dateHeader)
+    {
+        using var handler = new StubHandler((_, _) =>
+        {
+            if (dateHeader)
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.TooManyRequests)
+                {
+                    Headers = { RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(DateTimeOffset.UtcNow.AddSeconds(3)) }
+                });
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+            {
+                Headers = { RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromSeconds(2)) }
+            });
+        });
+        using var http = new HttpClient(handler);
+        await Client(http, new MockPreferencesStore()).ResolveAsync(_query, false, CancellationToken.None);
+        using var canceled = new CancellationTokenSource(TimeSpan.FromMilliseconds(150));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            Client(http, new MockPreferencesStore()).ResolveAsync(_query, false, canceled.Token));
+        Assert.Single(handler.Starts);
+        await Client(http, new MockPreferencesStore()).ResolveAsync(_query, false, CancellationToken.None);
+        Assert.Equal(2, handler.Starts.Count);
+        Assert.True(Stopwatch.GetElapsedTime(handler.Starts[0], handler.Starts[1]) >= TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
     public void PublicGujiResponse_IsARegionAndNotTheCountryPoint()
     {
         var result = Parse(GujiResponse);

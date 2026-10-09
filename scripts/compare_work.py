@@ -101,6 +101,8 @@ def source_allowed(name, group):
         if group == "maui" and Path(name).name in (
                 "UiAnimationLifetimeTests.cs", "NativeSpeechPermissionTests.cs"):
             return False
+        if group == "native" and Path(name).name == "BeanPageScrollGeometryTests.cs":
+            return False
         return True
     if group == "maui":
         return name.startswith("src/BaristaNotes/")
@@ -133,16 +135,18 @@ def export_source(repo, revision, destination, group):
             path.chmod(0o700 if entry.mode & 0o111 else 0o600)
             count += 1
     require(count, f"No {group} source at {revision}.")
-    if group == "maui":
-        project = destination / "src/BaristaNotes.Tests/BaristaNotes.Tests.csproj"
-        if project.exists():
-            tree = ET.parse(project)
-            for item_group in tree.getroot().findall("ItemGroup"):
-                for node in list(item_group):
-                    include = node.get("Include", "").replace("\\", "/")
-                    if "../BaristaNotes.Android/" in include or "../BaristaNotes.iOS/" in include:
-                        item_group.remove(node)
-            tree.write(project, encoding="utf-8", xml_declaration=False)
+    project = destination / "src/BaristaNotes.Tests/BaristaNotes.Tests.csproj"
+    if project.exists():
+        tree = ET.parse(project)
+        for item_group in tree.getroot().findall("ItemGroup"):
+            for node in list(item_group):
+                include = node.get("Include", "").replace("\\", "/")
+                native_link = "../BaristaNotes.Android/" in include or "../BaristaNotes.iOS/" in include
+                maui_geometry_link = (node.tag == "Compile"
+                                      and include == "../BaristaNotes/Components/BeanPageScrollGeometry.cs")
+                if (group == "maui" and native_link) or (group == "native" and maui_geometry_link):
+                    item_group.remove(node)
+        tree.write(project, encoding="utf-8", xml_declaration=False)
     return count
 
 
@@ -277,7 +281,10 @@ def prepare(args):
                 "baseline": revision, "repository": str(repo), "scope": scope,
                 "isolation": "macOS Seatbelt; file tools only; independent CLI homes",
                 "worker_tools": list(TOOLS), "concurrency_per_group": 1,
-                "test_export_adjustments": "MAUI removes the two native-head compile links and their tests."}
+                "test_export_adjustments": (
+                    "MAUI removes the two native-head compile links and their tests. "
+                    "Native removes the MAUI BeanPageScrollGeometry compile link and "
+                    "BeanPageScrollGeometryTests.cs. The combined repository test project is unchanged.")}
     (path / "blobs").mkdir()
     (path / "attempts").mkdir()
     (path / "evidence").mkdir()
@@ -629,23 +636,12 @@ def accept(args):
     run.close()
 
 
-def aggregate(run, group):
-    attempts = list(run.db.execute("SELECT * FROM attempts WHERE work_group=? ORDER BY started_at", (group,)))
-    rows = list(run.db.execute("SELECT * FROM snapshots WHERE work_group=? ORDER BY id", (group,)))
-    final = changes(json.loads(rows[0]["files"]), json.loads(rows[-1]["files"]), run.path / "blobs")
-    churn = {}
-    for old, new in zip(rows, rows[1:]):
-        for kind, values in changes(json.loads(old["files"]), json.loads(new["files"]), run.path / "blobs").items():
-            bucket = churn.setdefault(kind, {"added": 0, "removed": 0})
-            for key in bucket:
-                bucket[key] += values[key]
+def attempt_totals(attempts, scope_changes=()):
     metrics = {"model_events": 0, "internal_nano_aiu": 0, "model_ms": 0,
                "input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0,
                "cache_write_tokens": 0, "reasoning_tokens": 0}
     unknown, unavailable_metrics, by_phase, by_model = [], set(), {}, {}
     by_scope = {}
-    scope_changes = [row[0] for row in run.db.execute(
-        "SELECT created_at FROM feedback WHERE kind='scope-addition' ORDER BY id")]
     for attempt in attempts:
         if attempt["phase"] == "check":
             continue
@@ -671,6 +667,28 @@ def aggregate(run, group):
                     unavailable_metrics.add(target)
                 else:
                     metrics[target] += count
+    return {"metrics": metrics, "unavailable_attempts": unknown, "by_phase_nano_aiu": by_phase,
+            "unavailable_metrics": sorted(unavailable_metrics), "by_scope_version_nano_aiu": by_scope,
+            "by_model_nano_aiu": by_model,
+            "attempt_ids": [row["id"] for row in attempts],
+            "recorded_attempt_ids": [row["id"] for row in attempts if row["phase"] != "check" and row["usage"]],
+            "unavailable_command_durations": [row["id"] for row in attempts if row["duration_ms"] is None],
+            "recorded_command_ms": sum(row["duration_ms"] or 0 for row in attempts),
+            "attempts": len(attempts)}
+
+
+def aggregate(run, group):
+    attempts = list(run.db.execute("SELECT * FROM attempts WHERE work_group=? ORDER BY started_at", (group,)))
+    rows = list(run.db.execute("SELECT * FROM snapshots WHERE work_group=? ORDER BY id", (group,)))
+    final = changes(json.loads(rows[0]["files"]), json.loads(rows[-1]["files"]), run.path / "blobs")
+    churn = {}
+    for old, new in zip(rows, rows[1:]):
+        for kind, values in changes(json.loads(old["files"]), json.loads(new["files"]), run.path / "blobs").items():
+            bucket = churn.setdefault(kind, {"added": 0, "removed": 0})
+            for key in bucket:
+                bucket[key] += values[key]
+    scope_changes = [row[0] for row in run.db.execute(
+        "SELECT created_at FROM feedback WHERE kind='scope-addition' ORDER BY id")]
     baseline_files, final_files = json.loads(rows[0]["files"]), json.loads(rows[-1]["files"])
     paths = {"shared": "src/BaristaNotes.Core/", "ios": "src/BaristaNotes.iOS/",
              "android": "src/BaristaNotes.Android/", "maui": "src/BaristaNotes/"}
@@ -692,16 +710,80 @@ def aggregate(run, group):
             first_evidence[target] = None if first is None else round(
                 (dt.datetime.fromisoformat(first) - dt.datetime.fromisoformat(attempts[0]["started_at"]))
                 .total_seconds() * 1000)
-    return {"metrics": metrics, "unavailable_attempts": unknown, "by_phase_nano_aiu": by_phase,
-            "unavailable_metrics": sorted(unavailable_metrics), "by_scope_version_nano_aiu": by_scope,
-            "by_model_nano_aiu": by_model, "final_change": final, "snapshot_churn": churn,
+    return {**attempt_totals(attempts, scope_changes), "final_change": final, "snapshot_churn": churn,
             "product_change_by_path": breakdown, "elapsed_to_acceptance_ms": elapsed_ms,
             "source_digest": rows[-1]["digest"],
             "first_pass_evidence_ms_by_platform": first_evidence,
-            "unavailable_command_durations": [row["id"] for row in attempts if row["duration_ms"] is None],
-            "recorded_command_ms": sum(row["duration_ms"] or 0 for row in attempts),
-            "rounds": run.round(group), "attempts": len(attempts),
+            "rounds": run.round(group),
             "accepted": bool(run.db.execute("SELECT 1 FROM acceptance WHERE work_group=?", (group,)).fetchone())}
+
+
+def interval_totals(run, group, previous, cutoff):
+    baseline = previous.get("groups", {}).get(group, {})
+    reason = None
+    for key in ("attempt_ids", "recorded_attempt_ids"):
+        if not isinstance(baseline.get(key), list):
+            reason = "Previous checkpoint lacks attempt IDs or receipt state; interval attribution is unavailable."
+    try:
+        start = dt.datetime.fromisoformat(previous["cutoff"].replace("Z", "+00:00"))
+        end = dt.datetime.fromisoformat(cutoff.replace("Z", "+00:00"))
+        if start.utcoffset() is None or end.utcoffset() is None or start > end:
+            reason = "Previous checkpoint has no usable cutoff; interval attribution is unavailable."
+    except (KeyError, TypeError, ValueError, AttributeError):
+        reason = "Previous checkpoint has no usable cutoff; interval attribution is unavailable."
+    if reason:
+        unknown = {key: None for key in attempt_totals([])["metrics"]}
+        return ({"status": "unavailable", "reason": reason, **unknown},
+                {"status": "unavailable", "reason": reason, **unknown})
+
+    previous_ids = set(baseline["attempt_ids"])
+    recorded_ids = set(baseline["recorded_attempt_ids"])
+    require(recorded_ids <= previous_ids, "Previous checkpoint receipt IDs do not match its attempts.")
+    new_attempts, reconciled_attempts = [], []
+    for row in run.db.execute("SELECT * FROM attempts WHERE work_group=? ORDER BY started_at", (group,)):
+        started = dt.datetime.fromisoformat(row["started_at"].replace("Z", "+00:00"))
+        require(started.utcoffset() is not None and started < end, "Attempt is outside the current cutoff.")
+        # A late receipt belongs to its original attempt, not to the interval that imported it.
+        if row["id"] in previous_ids or started < start:
+            if row["phase"] != "check" and row["usage"] and row["id"] not in recorded_ids:
+                reconciled_attempts.append(row)
+        else:
+            new_attempts.append(row)
+
+    def summarize(attempts):
+        value = attempt_totals(attempts)
+        return {**value["metrics"],
+                "status": "partial" if value["unavailable_metrics"] else "recorded",
+                "attempt_ids": value["attempt_ids"], "recorded_attempt_ids": value["recorded_attempt_ids"],
+                "unavailable_attempts": value["unavailable_attempts"],
+                "unavailable_metrics": value["unavailable_metrics"]}
+    return summarize(new_attempts), summarize(reconciled_attempts)
+
+
+def metric_text(value, key, divisor=1, precision=None):
+    known = value.get("metrics", value).get(key)
+    if known is None:
+        return "Unavailable"
+    number = known / divisor if divisor != 1 else known
+    text = f"{number:,.{precision}f}" if precision is not None else f"{number:,}"
+    return f"Unavailable (known: {text}; partial)" if key in value["unavailable_metrics"] else text
+
+
+def command_time_text(value):
+    known = f"{value['recorded_command_ms']:,}"
+    return f"Unavailable (known: {known}; partial)" if value["unavailable_command_durations"] else known
+
+
+def coordinator_cost_text(value):
+    known = value.get("internal_nano_aiu")
+    missing = value.get("missing_cost_events", 0)
+    if known is None or value["status"] not in ("recorded", "partial"):
+        detail = f" {missing} cost events missing;" if missing else ""
+        return f"Coordinator cost: unavailable;{detail} not zero."
+    text = f"Separate coordinator internal AI units: {known / 1e9:,.6f}"
+    if missing or value["status"] == "partial":
+        text += f" (partial; {missing} cost events missing)"
+    return text + "."
 
 
 def coordinator_cost(run, cutoff):
@@ -724,9 +806,11 @@ def coordinator_cost(run, cutoff):
             "AND julianday(created_at)>=julianday(?) AND julianday(created_at)<julianday(?) "
             "GROUP BY model,reasoning_effort",
             (config["session"], config["start"], cutoff))]
-    return {"status": "recorded" if rows else "no-records", "start": config["start"], "cutoff": cutoff,
-            "models": rows, "internal_nano_aiu": sum(r["internal_nano_aiu"] or 0 for r in rows),
-            "missing_cost_events": sum(r["missing_cost_events"] for r in rows)}
+    missing = sum(r["missing_cost_events"] for r in rows)
+    known = [r["internal_nano_aiu"] for r in rows if r["internal_nano_aiu"] is not None]
+    return {"status": "partial" if missing else "recorded" if rows else "no-records",
+            "start": config["start"], "cutoff": cutoff, "models": rows,
+            "internal_nano_aiu": sum(known) if known else None, "missing_cost_events": missing}
 
 
 def track_coordinator(args):
@@ -748,25 +832,27 @@ def snapshot(args):
     require(re.fullmatch(r"[a-z0-9][a-z0-9-]*", args.label), "Use a simple lowercase checkpoint label.")
     directory = run.path / "checkpoints" / args.label
     require(not directory.exists(), "Checkpoint already exists; immutable snapshots cannot be overwritten.")
-    cutoff = now()
+    previous = None
+    if args.compare_to:
+        require(re.fullmatch(r"[a-z0-9][a-z0-9-]*", args.compare_to), "Invalid previous checkpoint label.")
+        previous = json.loads((run.path / "checkpoints" / args.compare_to / "totals.json").read_text())
     with run.db:
         run.db.execute("BEGIN IMMEDIATE")
         require(not run.db.execute("SELECT 1 FROM attempts WHERE status='running'").fetchone(),
                 "Wait for all measured attempts to finish before taking a snapshot.")
         for group in GROUPS:
             run.snapshot(group)
+        cutoff = now()
         data = {"cutoff": cutoff, "status": "interim; no acceptance implied",
                 "run": run.manifest, "groups": {g: aggregate(run, g) for g in GROUPS},
                 "coordinator": coordinator_cost(run, cutoff),
                 "feedback": [dict(r) for r in run.db.execute(
                     "SELECT target,kind,round,created_at FROM feedback ORDER BY id")]}
-    if args.compare_to:
-        require(re.fullmatch(r"[a-z0-9][a-z0-9-]*", args.compare_to), "Invalid previous checkpoint label.")
-        previous = json.loads((run.path / "checkpoints" / args.compare_to / "totals.json").read_text())
-        data["increment_since"] = args.compare_to
-        data["increment"] = {g: {k: data["groups"][g]["metrics"][k] -
-                                previous["groups"][g]["metrics"][k]
-                                for k in data["groups"][g]["metrics"]} for g in GROUPS}
+        if previous is not None:
+            intervals = {g: interval_totals(run, g, previous, cutoff) for g in GROUPS}
+            data["increment_since"] = args.compare_to
+            data["increment"] = {g: values[0] for g, values in intervals.items()}
+            data["receipt_reconciliation"] = {g: values[1] for g, values in intervals.items()}
     directory.mkdir(parents=True, mode=0o700)
     write_json(directory / "totals.json", data)
     with sqlite3.connect(directory / "measurements.sqlite3") as copy:
@@ -798,16 +884,17 @@ def snapshot(args):
         ("Model minutes (not human labor)", "model_ms", 60000),
         ("Gross input tokens", "input_tokens", 1),
         ("Output tokens", "output_tokens", 1)]:
-        values = [data["groups"][g]["metrics"][metric] / divisor for g in GROUPS]
-        lines.append(f"| {label} | {values[0]:,.3f} | {values[1]:,.3f} |")
+        values = [metric_text(data["groups"][g], metric, divisor, 3) for g in GROUPS]
+        lines.append(f"| {label} | {values[0]} | {values[1]} |")
+    values = [command_time_text(data["groups"][g]) for g in GROUPS]
+    lines.append(f"| Recorded command milliseconds | {values[0]} | {values[1]} |")
     for kind in ("product", "tests"):
         for key in ("added", "removed"):
             values = [data["groups"][g]["final_change"].get(kind, {}).get(key, 0) for g in GROUPS]
             lines.append(f"| {kind.title()} lines {key} | {values[0]} | {values[1]} |")
     coord = data["coordinator"]
     lines += ["", "## Separate overhead", ""]
-    lines.append(f"Coordinator model units: {coord['internal_nano_aiu']/1e9:,.6f}."
-                 if coord["status"] == "recorded" else "Coordinator cost: unavailable; not zero.")
+    lines.append(coordinator_cost_text(coord))
     lines += ["", "## Measurement limits", "",
               "- Internal units are not dollars. Model minutes are not human effort.",
               "- Cache categories are included in gross input; do not add them again.",
@@ -817,7 +904,25 @@ def snapshot(args):
               "- Missing receipts remain unavailable. Source archives exclude signing keys and development credentials.",
               "- Final acceptance/report remains gated; this command does not reset counters."]
     if args.compare_to:
-        lines += ["", f"Incremental worker metrics since `{args.compare_to}` are saved in totals.json."]
+        lines += ["", f"## Interval since `{args.compare_to}`", "",
+                  "New attempts are separate from late receipt reconciliation. Each group is counted separately.",
+                  "Earlier checkpoints remain unchanged."]
+        for title, field in (("New interval attempts", "increment"),
+                             ("Recovered receipts for older attempts (not new effort)", "receipt_reconciliation")):
+            lines += ["", f"### {title}", ""]
+            for group in GROUPS:
+                if data[field][group]["status"] == "unavailable":
+                    lines += [f"{group}: {data[field][group]['reason']}", ""]
+            lines += ["| Measure | MAUI | Native |", "|---|---:|---:|"]
+            counts = [str(len(data[field][g]["attempt_ids"])) if "attempt_ids" in data[field][g]
+                      else "Unavailable" for g in GROUPS]
+            lines.append(f"| Attempts | {counts[0]} | {counts[1]} |")
+            for label, metric, divisor in (
+                    ("Recorded internal AI units", "internal_nano_aiu", 1e9),
+                    ("Model calls", "model_events", 1), ("Model minutes", "model_ms", 60000),
+                    ("Gross input tokens", "input_tokens", 1), ("Output tokens", "output_tokens", 1)):
+                values = [metric_text(data[field][g], metric, divisor, 3) for g in GROUPS]
+                lines.append(f"| {label} | {values[0]} | {values[1]} |")
     (directory / "snapshot.md").write_text("\n".join(lines) + "\n")
     write_json(directory / "checksums.json", {str(p.relative_to(directory)): digest(p.read_bytes())
                                             for p in sorted(directory.rglob("*")) if p.is_file()})
@@ -862,22 +967,15 @@ def report(args):
              f"reasoning effort: `{run.manifest['scope']['reasoning_effort']}`.", "",
              "| Measure | MAUI (iOS + Android) | Native (iOS + Android) |",
              "|---|---:|---:|"]
-    def metric(value, key):
-        known = value["metrics"][key]
-        return f"Unavailable (known: {known:,})" if key in value["unavailable_metrics"] else f"{known:,}"
     for label, key in (("Model calls", "model_events"), ("Gross input tokens", "input_tokens"),
                        ("Output tokens", "output_tokens"), ("Cache-read tokens", "cache_read_tokens"),
                        ("Cache-write tokens", "cache_write_tokens"), ("Reasoning tokens", "reasoning_tokens"),
                        ("Model execution milliseconds", "model_ms")):
-        lines.append(f"| {label} | {metric(a, key)} | {metric(b, key)} |")
+        lines.append(f"| {label} | {metric_text(a, key)} | {metric_text(b, key)} |")
     def cost(value):
-        number = value["metrics"]["internal_nano_aiu"] / 1_000_000_000
-        return f"{number:.6f}" + (" (partial; records missing)" if value["unavailable_attempts"] else "")
-    def command_time(value):
-        known = f"{value['recorded_command_ms']:,}"
-        return f"Unavailable (known: {known})" if value["unavailable_command_durations"] else known
+        return metric_text(value, "internal_nano_aiu", 1e9, 6)
     lines += [f"| Recorded internal AI usage units | {cost(a)} | {cost(b)} |",
-              f"| Recorded command milliseconds | {command_time(a)} | {command_time(b)} |",
+              f"| Recorded command milliseconds | {command_time_text(a)} | {command_time_text(b)} |",
               f"| Elapsed milliseconds to acceptance | {a['elapsed_to_acceptance_ms']} | {b['elapsed_to_acceptance_ms']} |",
               f"| Feedback round | {a['rounds']} | {b['rounds']} |",
               "", "![Recorded model cost](cost.svg)", "", "## Source changes", "",
@@ -890,8 +988,10 @@ def report(args):
             churn = value["snapshot_churn"].get(kind, {})
             lines.append(f"| {group} | {kind} | {net.get('added',0)} | {net.get('removed',0)} | "
                          f"{churn.get('added',0)} | {churn.get('removed',0)} |")
-    lines += ["", "## Cost attribution", "", "| Group | Activity | Internal AI units |",
-              "|---|---|---:|"]
+    lines += ["", "## Cost attribution", ""]
+    if a["unavailable_attempts"] or b["unavailable_attempts"]:
+        lines += ["Cost attribution, scope versions, and model totals below are known receipt subtotals only.", ""]
+    lines += ["| Group | Activity | Internal AI units |", "|---|---|---:|"]
     for group, value in data["groups"].items():
         for phase, nano in sorted(value["by_phase_nano_aiu"].items()):
             lines.append(f"| {group} | {phase} | {nano / 1_000_000_000:.6f} |")
@@ -911,8 +1011,7 @@ def report(args):
         for label, counts in value["product_change_by_path"].items():
             lines.append(f"| {group} | {label} | {counts['added']} | {counts['removed']} |")
     lines += ["", "## Limits", "", data["overhead"], ""]
-    if data["coordinator"]["status"] == "recorded":
-        lines += [f"Separate coordinator internal AI units: {data['coordinator']['internal_nano_aiu']/1e9:.6f}.", ""]
+    lines += [coordinator_cost_text(data["coordinator"]), ""]
     lines += ["First verified evidence is recorded per platform in `totals.json`.",
               "Its timestamp is the recording time, not an inferred earlier demonstration.", ""]
     lines.extend("- " + limit for limit in data["limitations"])
@@ -923,9 +1022,9 @@ def report(args):
         lines += [f"Accepted {group} source SHA-256: `{value['source_digest']}`.", ""]
     (directory / "report.md").write_text("\n".join(lines))
     top = max(a["metrics"]["internal_nano_aiu"], b["metrics"]["internal_nano_aiu"], 1)
-    svg = ['<svg xmlns="http://www.w3.org/2000/svg" width="720" height="180" role="img">',
-           '<title>Recorded model cost in internal AI usage units, not dollars</title>',
-           '<rect width="720" height="180" fill="#fff"/>']
+    svg = ['<svg xmlns="http://www.w3.org/2000/svg" width="1050" height="180" role="img">',
+           '<title>Known model cost in internal AI usage units; missing receipts are partial, not dollars</title>',
+           '<rect width="1050" height="180" fill="#fff"/>']
     for index, (group, value) in enumerate(data["groups"].items()):
         y = 35 + 70 * index
         width = 420 * value["metrics"]["internal_nano_aiu"] / top

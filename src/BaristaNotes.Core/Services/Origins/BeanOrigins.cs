@@ -61,6 +61,19 @@ public sealed class BeanOriginResolver
 
     public IReadOnlyList<OriginCountry> Resolve(string? origin)
     {
+        var components = (origin ?? "").Split(['/', ';', '|', '+', '&'],
+            StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (components.Length > 1)
+            return components.SelectMany(Resolve).DistinctBy(country => country.Name)
+                .OrderBy(country => country.Name, StringComparer.Ordinal).ToArray();
+
+        var parts = (origin ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length > 1)
+        {
+            var country = ExactCountry(parts[^1]);
+            if (country is not null && parts[..^1].Any(part => ExactCountry(part) is null))
+                return [country];
+        }
         var text = " " + Normalize(origin) + " ";
         var matches = new List<(int Start, int End, OriginCountry Country)>();
         foreach (var alias in _aliases)
@@ -78,6 +91,12 @@ public sealed class BeanOriginResolver
         }
         return matches.Select(match => match.Country).DistinctBy(country => country.Name)
             .OrderBy(country => country.Name, StringComparer.Ordinal).ToArray();
+    }
+
+    private OriginCountry? ExactCountry(string value)
+    {
+        var normalized = Normalize(value);
+        return _aliases.FirstOrDefault(alias => alias.Name == normalized).Country;
     }
 
     public IReadOnlyList<OriginQuery> Queries(string? origin)
@@ -109,7 +128,16 @@ public sealed class BeanOriginResolver
 
     private static OriginQuery Query(string origin, OriginCountry country)
     {
-        var detail = " " + Normalize(origin) + " ";
+        var detail = RemoveCountryNames(origin, country);
+        var key = detail.Length == 0 ? "country:" + country.Name : "place:" + country.Name + ":" + Normalize(origin);
+        var names = origin.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => RemoveCountryNames(part, country)).Where(value => value.Length > 0).ToArray();
+        return new OriginQuery(key, origin.Trim(), detail, country) { DetailNames = names };
+    }
+
+    private static string RemoveCountryNames(string value, OriginCountry country)
+    {
+        var detail = " " + Normalize(value) + " ";
         foreach (var alias in country.Aliases.Append(country.Name)
                      .Select(Normalize).OrderByDescending(alias => alias.Length))
         {
@@ -117,9 +145,7 @@ public sealed class BeanOriginResolver
             while (detail.Contains(needle, StringComparison.Ordinal))
                 detail = detail.Replace(needle, " ", StringComparison.Ordinal);
         }
-        detail = Normalize(detail);
-        var key = detail.Length == 0 ? "country:" + country.Name : "place:" + country.Name + ":" + Normalize(origin);
-        return new OriginQuery(key, origin.Trim(), detail, country);
+        return Normalize(detail);
     }
 
     public BeanOriginSnapshot Build(IEnumerable<BeanDto> savedBeans,

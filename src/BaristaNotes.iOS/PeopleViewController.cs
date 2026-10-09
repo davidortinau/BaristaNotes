@@ -1,7 +1,9 @@
+using BaristaNotes.Core.Services;
 using BaristaNotes.Core.Services.DTOs;
 using BaristaNotes.Core.Services.Workflows;
 using CoreGraphics;
 using Foundation;
+using Microsoft.Extensions.Logging;
 using UIKit;
 
 namespace BaristaNotes.Native.iOS;
@@ -20,12 +22,13 @@ internal sealed class PeopleViewController : SliceViewController
 
     public PeopleViewController(SliceNavigationController host, DrinkDraft draft, Action changed) : base(host)
     {
-        _by = new PeopleColumn("by", draft.AvailableUsers, draft.SelectedMaker?.Id, user =>
+        var images = host.Services.Singleton<IImageProcessingService>();
+        _by = new PeopleColumn("by", draft.AvailableUsers, draft.SelectedMaker?.Id, images, Logger, user =>
         {
             draft.SelectedMaker = user;
             changed();
         });
-        _for = new PeopleColumn("for", draft.AvailableUsers, draft.SelectedRecipient?.Id, user =>
+        _for = new PeopleColumn("for", draft.AvailableUsers, draft.SelectedRecipient?.Id, images, Logger, user =>
         {
             draft.SelectedRecipient = user;
             changed();
@@ -76,13 +79,14 @@ internal sealed class PeopleViewController : SliceViewController
         private bool _center = true;
         private CGSize _previousSize;
 
-        public PeopleColumn(string side, List<UserProfileDto> users, int? selected, Action<UserProfileDto> select)
+        public PeopleColumn(string side, List<UserProfileDto> users, int? selected,
+            IImageProcessingService images, ILogger logger, Action<UserProfileDto> select)
             : base(CGRect.Empty, new UICollectionViewFlowLayout { MinimumLineSpacing = 0, MinimumInteritemSpacing = 0 })
         {
             AccessibilityIdentifier = "people." + side;
             BackgroundColor = NativeTheme.Surface;
             ContentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentBehavior.Never;
-            _source = new PersonSource(side, users, selected, user =>
+            _source = new PersonSource(side, users, selected, images, logger, user =>
             {
                 select(user);
                 _source!.SelectedId = user.Id;
@@ -113,7 +117,8 @@ internal sealed class PeopleViewController : SliceViewController
             SetContentOffset(new CGPoint(0, attributes.Frame.GetMidY() - Bounds.Height / 2), false);
         }
 
-        private sealed class PersonSource(string side, List<UserProfileDto> users, int? selected, Action<UserProfileDto> select)
+        private sealed class PersonSource(string side, List<UserProfileDto> users, int? selected,
+            IImageProcessingService images, ILogger logger, Action<UserProfileDto> select)
             : UICollectionViewDataSource
         {
             public List<UserProfileDto> Users { get; } = users;
@@ -123,7 +128,7 @@ internal sealed class PeopleViewController : SliceViewController
             {
                 var cell = (PersonCell)collectionView.DequeueReusableCell("person", path);
                 var user = Users[(int)path.Item];
-                cell.Bind(side, user, user.Id == SelectedId, () => select(user));
+                cell.Bind(side, user, user.Id == SelectedId, images, logger, () => select(user));
                 return cell;
             }
         }
@@ -147,14 +152,13 @@ internal sealed class PeopleViewController : SliceViewController
     {
         private readonly UIButton _button = new(UIButtonType.Custom);
         private readonly UILabel _name = new() { Lines = 1, LineBreakMode = UILineBreakMode.TailTruncation, TextAlignment = UITextAlignment.Center };
-        private readonly UILabel _avatar = new() { Text = "\ue7fd", TextAlignment = UITextAlignment.Center, ClipsToBounds = true };
+        private readonly ProfileAvatarView _avatar = new(52);
         private Action? _select;
         private nfloat _avatarSize;
-        private bool _selected;
 
         public PersonCell(ObjCRuntime.NativeHandle handle) : base(handle)
         {
-            _button.TouchUpInside += (_, _) => _select?.Invoke();
+            _button.TouchUpInside += Select;
             _name.UserInteractionEnabled = _avatar.UserInteractionEnabled = false;
             _name.IsAccessibilityElement = _avatar.IsAccessibilityElement = false;
             _button.AddSubviews(_name, _avatar);
@@ -162,10 +166,10 @@ internal sealed class PeopleViewController : SliceViewController
             BackgroundColor = NativeTheme.Surface;
         }
 
-        public void Bind(string side, UserProfileDto profile, bool selected, Action select)
+        public void Bind(string side, UserProfileDto profile, bool selected,
+            IImageProcessingService images, ILogger logger, Action select)
         {
             _select = select;
-            _selected = selected;
             _button.AccessibilityIdentifier = $"people.{side}.{profile.Id}";
             _button.AccessibilityLabel = profile.Name;
             _button.AccessibilityTraits = UIAccessibilityTrait.Button | (selected ? UIAccessibilityTrait.Selected : UIAccessibilityTrait.None);
@@ -173,24 +177,31 @@ internal sealed class PeopleViewController : SliceViewController
             _name.Font = NativeTheme.Font(selected ? 18 : 14, selected);
             _name.TextColor = selected ? NativeTheme.Primary : NativeTheme.TextPrimary;
             _avatarSize = selected ? 72 : 52;
-            _avatar.Font = NativeTheme.Icons(_avatarSize * 0.55f);
-            _avatar.TextColor = NativeTheme.Secondary;
-            _avatar.BackgroundColor = NativeTheme.Secondary.ColorWithAlpha(0.12f);
-            _avatar.Layer.CornerRadius = _avatarSize / 2;
-            _avatar.Layer.BorderWidth = selected ? 3 : 1;
-            _avatar.Layer.BorderColor = (selected ? NativeTheme.Primary : NativeTheme.Secondary.ColorWithAlpha(0.4f)).CGColor;
+            _avatar.ConfigurePeople(_avatarSize, selected);
+            _avatar.SetProfile(profile, images, logger);
             SetNeedsLayout();
         }
+
+        private void Select(object? sender, EventArgs args) => _select?.Invoke();
 
         public override void LayoutSubviews()
         {
             base.LayoutSubviews();
             _button.Frame = ContentView.Bounds;
-            _avatar.Layer.BorderColor = (_selected ? NativeTheme.Primary : NativeTheme.Secondary.ColorWithAlpha(0.4f))
-                .GetResolvedColor(TraitCollection).CGColor;
             _avatar.Frame = new CGRect((Bounds.Width - _avatarSize) / 2, 14, _avatarSize, _avatarSize);
             _name.Frame = new CGRect(8, _avatar.Frame.Bottom + 6, Bounds.Width - 16,
                 SliceUi.Measure(_name, Bounds.Width - 16).Height);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _button.TouchUpInside -= Select;
+                _select = null;
+                _avatar.Dispose();
+            }
+            base.Dispose(disposing);
         }
     }
 }

@@ -6,11 +6,15 @@ public enum OriginPrecision { ApproximateCountry, Region, City, Locality }
 
 public sealed record OriginQuery(string Key, string Text, string Detail, OriginCountry Country)
 {
+    public string[] DetailNames { get; init; } = [];
     public bool NeedsLookup => Detail.Length > 0;
 }
 
 public sealed record OriginPlace(
-    string Name, string CountryCode, double Longitude, double Latitude, OriginPrecision Precision);
+    string Name, string CountryCode, double Longitude, double Latitude, OriginPrecision Precision)
+{
+    public string AddressHierarchy { get; init; } = "";
+}
 
 public sealed record OriginLookup(OriginPlace? Place, string? Error);
 

@@ -118,6 +118,22 @@ internal sealed class NativeScreen(View root) : IDisposable
         _cleanup.Add(() => view.Click -= handler);
     }
 
+    public void LongClick(View view, Action action)
+    {
+        EventHandler<View.LongClickEventArgs> handler = (_, args) =>
+        {
+            // Consume the hold even when the owner blocks input.
+            args.Handled = true;
+            action();
+        };
+        view.LongClick += handler;
+        _cleanup.Add(() =>
+        {
+            view.LongClick -= handler;
+            view.LongClickable = false;
+        });
+    }
+
     public void Own(IDisposable resource) => _cleanup.Add(resource.Dispose);
     public void OnDispose(Action release) => _cleanup.Add(release);
 

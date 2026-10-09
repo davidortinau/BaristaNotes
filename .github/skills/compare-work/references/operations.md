@@ -61,7 +61,11 @@ and tool changes are not exported. Commit only with user approval.
 MAUI receives its head, Core, and relevant tests. Native receives both native
 heads, Core, tests, linked resources, and the debug binding projects. Each has
 its own Core copy. The MAUI test export removes two native-head compile links
-and their associated tests. This preparation difference is in the manifest.
+and their associated tests. The native test export removes the MAUI
+`BeanPageScrollGeometry.cs` compile link and `BeanPageScrollGeometryTests.cs`.
+It does not receive the MAUI components directory. Both exports retain the
+shared `AppColors.cs` link. These preparation differences are in the manifest.
+The combined repository test project and its links remain unchanged.
 
 The full worker process runs under Seatbelt. It cannot read the other group's
 files, the coordinator ledger, the original source repository, or user-home
@@ -125,6 +129,8 @@ Reports count recorded internal cost and gross input from `modelMetrics`.
 Do not add cache categories to gross input. The cost unit is nano-AIU divided
 by one billion, matching the prior cost report. Do not use premium requests
 as a dollar amount. Missing receipts are reported explicitly.
+Tables and charts label known subtotals as partial when receipts or metrics
+are missing. A missing command duration is unavailable, not an inferred zero.
 
 Round floating-point per-model cost fields to the nearest nano-AIU for
 reconciliation. The CLI's integer total is authoritative; allow at most one
@@ -151,6 +157,9 @@ is configured. Missing configuration/data is unavailable, not zero. This adapter
 selects numeric usage fields only, never conversation text, and opens SQLite
 read-only. Human time and external device-check time are still not automatically
 measured. Configure the session/start boundary before a new comparison starts.
+An event with a null cost makes coordinator cost partial. If no event has a
+known cost, the cost total is null and the report says unavailable. Known
+coordinator cost stays separate from each architecture's subtotal.
 
 `snapshot` is an interim report, not the accepted final report. It refuses active
 attempts and existing labels, preserves a ledger backup/source archives/receipts,
@@ -158,6 +167,16 @@ and hashes the files. It does not reset counters or create a signoff.
 Use technical and ux feedback kinds separately; legacy defect rows remain technical.
 Worker launch output now shows actual file-tool activity rather than remaining
 silent until completion. An emulator service is not an active implementation.
+
+New snapshots record attempt IDs, IDs with imported model receipts, and a cutoff.
+With `--compare-to`, `increment` contains only new attempts in the cutoff interval.
+`receipt_reconciliation` contains receipts imported for older attempts since the
+earlier snapshot. Those receipts increase the cumulative known subtotal, but are
+not new interval effort. Both fields retain per-group missing-metric flags.
+Earlier snapshots and receipts are not rewritten. If an older snapshot lacks
+attempt IDs, receipt state, or a usable cutoff, interval attribution is
+unavailable (null values with an explicit reason), not a cumulative subtraction
+or an invented zero. Cumulative current totals remain available with their limits.
 
 Keep raw records private. Acceptance is not permission to publish, commit,
 push, overwrite a personal app, or discard the independently produced source.

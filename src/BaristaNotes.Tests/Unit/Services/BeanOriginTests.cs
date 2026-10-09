@@ -70,6 +70,20 @@ public sealed class BeanOriginTests
     }
 
     [Fact]
+    public void ExplicitCountry_DoesNotTreatPlaceNamesAsAdditionalCountries()
+    {
+        var snapshot = _resolver.Build([Bean(1, "Port of Spain, Trinidad and Tobago")]);
+        Assert.Equal("Trinidad and Tobago", Assert.Single(snapshot.Countries).Country.Name);
+        var query = Assert.Single(_resolver.Queries("Port of Spain, Trinidad and Tobago"));
+        Assert.True(query.NeedsLookup);
+        Assert.Equal("port of spain", query.Detail);
+        Assert.Equal("Trinidad and Tobago", query.Country.Name);
+        Assert.Equal(new[] { "Brazil", "Trinidad and Tobago" },
+            _resolver.Resolve("Brazil / Port of Spain, Trinidad and Tobago").Select(country => country.Name));
+        Assert.Equal(new[] { "Brazil", "Colombia" }, _resolver.Resolve("Brazil, Colombia").Select(country => country.Name));
+    }
+
+    [Fact]
     public void Build_ApprovedSamplesCountBeansNotDistinctOriginStrings()
     {
         var beans = new[]

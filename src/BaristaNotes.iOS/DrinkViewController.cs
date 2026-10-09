@@ -23,6 +23,7 @@ internal sealed partial class DrinkViewController : SliceViewController
     private bool _loaded;
     private bool _busy;
     private bool _openingPicker;
+    private int _recipeVersion;
     private Func<Task>? _retryRead;
 
     public DrinkViewController(SliceNavigationController host, int? editingId = null) : base(host) => _editingId = editingId;
@@ -32,7 +33,8 @@ internal sealed partial class DrinkViewController : SliceViewController
         base.ViewDidLoad();
         Root.BackgroundColor = NativeTheme.Outline;
         AddTile("METHOD", "drink.method", static owner => owner.PickMethod());
-        AddTile("BAG", "drink.bag", static owner => _ = owner.GuardAsync(owner.OpenBagAsync));
+        AddTile("BAG", "drink.bag", static owner => _ = owner.GuardAsync(owner.OpenBagAsync),
+            static owner => _ = owner.OpenRecipeForSelectedBagAsync());
         AddTile("DRINK TYPE", "drink.type", static owner => owner.PickDrinkType());
         AddTile("RATING", "drink.rating", static owner => owner.PickRating());
         AddTile("DOSE IN", "ShotTile_DoseIn", static owner => owner.OpenMass(true));
@@ -92,14 +94,19 @@ internal sealed partial class DrinkViewController : SliceViewController
         else _voiceReadiness = GuardAsync(RefreshReferencesAsync);
     }
 
-    private void AddTile(string label, string id, Action<DrinkViewController> action)
+    private void AddTile(string label, string id, Action<DrinkViewController> action,
+        Action<DrinkViewController>? longPress = null)
     {
-        var tile = new DrinkTile(label, id, WeakUiCallback.Create(this, action, static (owner, activate) =>
+        Action Guarded(Action<DrinkViewController> callback) =>
+            WeakUiCallback.Create(this, callback, static (owner, activate) =>
         {
             if (!owner._busy && !owner._openingPicker && owner._loaded &&
+                owner.Host.IsSceneAttached && owner.Host.TopViewController == owner &&
                 !owner.Host.FeedbackHost.IsShowing && owner.Host.PresentedViewController == null)
                 activate(owner);
-        }));
+        });
+        var tile = new DrinkTile(label, id, Guarded(action),
+            longPress: longPress == null ? null : Guarded(longPress));
         _tiles.Add(tile);
         Root.AddSubview(tile);
     }
@@ -307,6 +314,38 @@ internal sealed partial class DrinkViewController : SliceViewController
         Host.PushViewController(new ChoiceViewController(Host, "BAG", rows), false);
     }
 
+    private async Task OpenRecipeForSelectedBagAsync()
+    {
+        var bag = _draft.AvailableBags.FirstOrDefault(item => item.Id == _draft.SelectedBagId);
+        if (bag == null)
+        {
+            Host.FeedbackHost.Show("Select a bag first to view its recipe.", NativeFeedbackKind.Information);
+            return;
+        }
+        var method = _draft.BrewMethod;
+        var version = ++_recipeVersion;
+        bool IsCurrent() => version == _recipeVersion && Host.IsSceneAttached && Host.TopViewController == this;
+        _openingPicker = true;
+        try
+        {
+            var recipe = await Services.RunAsync(provider =>
+                provider.GetRequiredService<IRecipeService>().GetRecipeForBeanAndMethodAsync(bag.BeanId, method));
+            if (!IsCurrent()) return;
+            if (recipe == null)
+            {
+                Host.FeedbackHost.Show($"No {method.DisplayName()} recipe for {bag.BeanName} yet.", NativeFeedbackKind.Information);
+                return;
+            }
+            Host.PushViewController(new BeanDetailViewController(Host, bag.BeanId), false);
+        }
+        catch (Exception error)
+        {
+            Logger.LogError(error, "Failed to open recipe for {BagId}", bag.Id);
+            if (IsCurrent()) ShowFeedback("Couldn't open the recipe.", isError: true);
+        }
+        finally { _openingPicker = false; }
+    }
+
     private void PickMethod()
     {
         var rows = BrewMethodExtensions.All.Select(method => new ChoiceRow(
@@ -393,6 +432,10 @@ internal sealed partial class DrinkViewController : SliceViewController
     private void UpdateTiles()
     {
         if (_tiles.Count == 0) return;
+        if (_draft.SelectedMaker is { } maker)
+            _draft.SelectedMaker = _draft.AvailableUsers.FirstOrDefault(user => user.Id == maker.Id);
+        if (_draft.SelectedRecipient is { } recipient)
+            _draft.SelectedRecipient = _draft.AvailableUsers.FirstOrDefault(user => user.Id == recipient.Id);
         _tiles[0].SetValue(_draft.BrewMethod.DisplayName());
         _tiles[1].SetValue(_draft.AvailableBags.FirstOrDefault(bag => bag.Id == _draft.SelectedBagId)?.BeanName ?? _draft.BeanName ?? "—");
         _tiles[2].SetValue(_draft.DrinkType);
@@ -405,7 +448,8 @@ internal sealed partial class DrinkViewController : SliceViewController
         _tiles[8].SetValue(DrinkDisplay.WaterTemperatureValue(_draft.WaterTempC, _draft.TempUnit),
             DrinkDisplay.WaterTemperatureUnit(_draft.WaterTempC, _draft.TempUnit));
         _tiles[9].SetValue($"{_draft.SelectedMaker?.Name ?? "—"} → {_draft.SelectedRecipient?.Name ?? "—"}");
-        _people.Update(_draft.SelectedMaker?.Name, _draft.SelectedRecipient?.Name);
+        _people.Update(_draft.SelectedMaker, _draft.SelectedRecipient,
+            Services.Singleton<IImageProcessingService>(), Logger);
         _tiles[10].SetValue(_draft.AvailableEquipment.FirstOrDefault(x => x.Id == _draft.SelectedMachineId)?.Name ?? "—");
         _tiles[11].SetValue(_draft.AvailableEquipment.FirstOrDefault(x => x.Id == _draft.SelectedGrinderId)?.Name ?? "—");
         _save?.SetValue(_editingId.HasValue ? "Update" : "Log Drink");

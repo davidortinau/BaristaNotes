@@ -458,6 +458,44 @@ part of later source-led implementation.
 
 ## Building
 
+### Primary DX24 NativeAOT build 3
+
+The primary release identity is `com.simplyprofound.baristanotes`, version
+2.0, build 3. Publish it with `dotnet publish`, not a Debug deployment or the
+isolated `NativeMapSlice` identity:
+
+```sh
+dotnet publish src/BaristaNotes.iOS/BaristaNotes.iOS.csproj \
+  -c Release -r ios-arm64 \
+  -p:PublishAot=true -p:PublishAotUsingRuntimePack=true \
+  -p:TrimMode=full -p:MtouchLink=Full \
+  -p:MicrosoftNETCoreAppRefPackageVersion=11.0.0-rc.2.26475.136
+```
+
+This command records the current RC2 runtime-pack version; keep it aligned
+with the installed SDK/workloads. The coordinator used the existing local
+package feed and per-run Xcode-version exception. Do not change global SDK
+or Xcode configuration to reproduce that exception.
+
+Build 3 was installed over the existing primary application on DX24, without
+uninstalling it. A private backup of the database, preferences, and profile
+images was retained before replacement. The backup passed SQLite integrity.
+The user confirmed that existing drinks, beans, profiles, and profile photos
+were still present after launch. Post-install export timed out, so exact
+post-install row-count equality was not established.
+
+**Accepted runtime risks, not a clean release signoff:** the user explicitly
+accepted the residual Apple Intelligence JSON tool serialization, EF Core
+AOT/trimming, and Spatialite extension-discovery warnings for this install.
+No always-throw diagnostic appeared in this publish. Re-check all IL2xxx and
+IL3xxx diagnostics on later publishes; this acceptance applies to build 3,
+not all future packages.
+
+The four separately identified native/MAUI performance and native maps test
+apps were uninstalled only after explicit confirmation of their test-data
+deletion. The primary app and the independently installed Comet sample were
+not in the deletion set.
+
 Use an installed, internally consistent .NET 11 SDK and iOS workload, with Xcode.
 Keep outputs isolated using `--artifacts-path` on restore and build.
 

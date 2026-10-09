@@ -25,6 +25,9 @@ The report distinguishes measured model cost, command duration, final source
 change, and snapshot churn. Cached tokens are not added to gross input.
 Internal AI usage units are not dollars, and model duration is not human labor.
 Missing records remain unavailable.
+Tables and charts mark known worker subtotals as partial when a receipt or
+metric is missing. A null coordinator cost event also keeps that total partial.
+If no coordinator event has a known cost, its total is unavailable, not zero.
 
 AI-worker isolation and build-tool isolation are separate. If Apple or Android
 tools cannot build inside the OS sandbox, user-approved coordinator builds can
@@ -40,8 +43,20 @@ Configure `track-coordinator` with the coordinator session and start time to
 include its recorded model cost separately. `snapshot --label LABEL` now saves
 an interim comparison, ledger, source archives and receipts before acceptance.
 Later snapshots can use `--compare-to LABEL` for incremental worker metrics.
+New snapshots record attempt IDs, imported receipt IDs, and a cutoff. Interval
+metrics count new attempts only. Late receipts for older attempts appear
+separately as receipt reconciliation; they are not new interval effort.
+Earlier snapshots remain unchanged. Old snapshots without the required attempt
+state or cutoff give an unavailable interval with an explicit limit, not an
+estimated difference.
 Technical corrections and UX feedback have separate kinds. Human effort and
 external device time remain unmeasured unless separately recorded.
+
+The test exports exclude implementation-specific links and tests symmetrically:
+MAUI omits the two native-head helpers and their tests; native omits the MAUI
+`BeanPageScrollGeometry.cs` link and `BeanPageScrollGeometryTests.cs`.
+Both retain the shared `AppColors.cs` link. The manifest records these export
+adjustments. The real combined test project keeps all its links.
 
 No benchmark feature starts until you supply and approve its scope. Application
 runtime checks remain required for acceptance; a successful build is not enough.
@@ -51,4 +66,6 @@ both app versions as work in progress on October 8, 2026. The frozen private
 records remain unchanged; this is not final comparison or release acceptance.
 See the [native port feature review](native-port-review.md) for source coverage,
 missing experiences, and the documented app/tooling backlog. The export and
-incomplete-receipt findings must be addressed before the next affected comparison.
+incomplete-receipt tooling findings are fixed for new exports and snapshots.
+This does not assert that any frozen run was affected. No private accepted
+report or original receipt was changed.

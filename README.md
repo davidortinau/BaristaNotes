@@ -10,7 +10,7 @@ The .NET MAUI application remains in the repository as the feature and design
 reference. It also provides the Mac Catalyst and Windows heads. The native
 mobile apps do not depend on `Microsoft.Maui.Controls`.
 
-![Current native iOS and Android application screens](docs/screenshots/current/native-app-overview.png)
+![Current native iOS and Android application screens](docs/screenshots/01-warm-editorial-nine-screen-fan.png)
 
 Current native iOS and Android application captures. These are running-app
 screenshots, not design mockups.

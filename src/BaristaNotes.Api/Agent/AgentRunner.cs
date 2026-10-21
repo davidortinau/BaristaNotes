@@ -227,6 +227,7 @@ public sealed class AgentRunner(
         var citeable = CiteableShots(memory, needs, snapshot, forMe);
         var request = new RankRequest(
             memory.Where(m => m.Kind != MemoryKind.NeverRoaster)
+                .OrderBy(m => m.Key, StringComparer.Ordinal)
                 .Select(m => new RankMemory(m.Statement, m.Key, Citations(m.EvidenceJson).Select(c => c.ShotId).ToList()))
                 .ToList(),
             needs,
@@ -234,6 +235,7 @@ public sealed class AgentRunner(
             citeable);
 
         var picks = await model.RankAsync(request, ct);
+        await ReportReplayAsync(run);
         var accepted = Accept(picks, needs, candidates, forMe, out var ignoredPicks, out var cited, out var dropped);
 
         await Write(run, LedgerKind.EvidenceChecked,
@@ -326,7 +328,7 @@ public sealed class AgentRunner(
         IReadOnlyDictionary<int, SnapshotShot> forMe, CancellationToken ct)
     {
         var rows = await db.Memory.ToListAsync(ct);
-        var active = rows.Where(r => r.RemovedAt is null).ToList();
+        var active = rows.Where(r => r.RemovedAt is null).OrderBy(r => r.Key, StringComparer.Ordinal).ToList();
         var guests = snapshot.Shots.Count - forMe.Count;
 
         if (snapshotRow.LearnedHash == snapshotRow.Hash && active.Any(r => r.Source == "learned"))
@@ -346,6 +348,7 @@ public sealed class AgentRunner(
             snapshot.Bags,
             forMe.Values.ToList(),
             rows.Where(r => r.RemovedAt is not null).Select(r => r.Key).Distinct().ToList()), ct);
+        await ReportReplayAsync(run);
 
         var dropped = 0;
         var checkedItems = new List<LearnedPreference>();
@@ -367,7 +370,9 @@ public sealed class AgentRunner(
         if (dropped > 0) notes.Add($"Dropped {dropped} citations that do not match your notes or ratings.");
         await Write(run, LedgerKind.Learned, $"Learned {merge.ToAdd.Count} preferences.", string.Join(" ", notes));
 
-        return await db.Memory.Where(r => r.RemovedAt == null).ToListAsync(ct);
+        return (await db.Memory.Where(r => r.RemovedAt == null).ToListAsync(ct))
+            .OrderBy(r => r.Key, StringComparer.Ordinal)
+            .ToList();
     }
 
     static RankNeed BuildNeed(SnapshotBag bag, IReadOnlyDictionary<int, SnapshotBean> beans, IReadOnlyList<SnapshotShot> shots)
@@ -486,6 +491,17 @@ public sealed class AgentRunner(
                 $"{Money.Format(result.Order.Total, result.Order.Currency)}. " +
                 $"{Money.Format(record.BudgetLeft, proposal.Currency)} left this month.",
                 proposal.Roaster, proposal.Id);
+        }
+    }
+
+    /// <summary>Says so in the ledger when the answer came from a rehearsal recording.</summary>
+    async Task ReportReplayAsync(RunRow run)
+    {
+        if (RunContext.Value is { Flags.ReplayReason: { } reason } scope)
+        {
+            scope.Flags.ReplayReason = null;
+            await Write(run, LedgerKind.Notice, "Used a rehearsal answer.",
+                $"{reason} I used the answer recorded for this same request in rehearsal.");
         }
     }
 

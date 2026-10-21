@@ -63,10 +63,12 @@ public static class Extensions
             {
                 tracing.AddSource(builder.Environment.ApplicationName)
                     .AddAspNetCoreInstrumentation(tracing =>
-                        // Exclude health check requests from tracing
+                        // Exclude health checks and the app's polling, which
+                        // would hide the agent's work in the dashboard.
                         tracing.Filter = context =>
                             !context.Request.Path.StartsWithSegments(HealthEndpointPath)
                             && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath)
+                            && !IsPoll(context.Request)
                     )
                     // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
                     //.AddGrpcClientInstrumentation()
@@ -77,6 +79,11 @@ public static class Extensions
 
         return builder;
     }
+
+    // Reads the app repeats while a run is going: run status, ledger, and status card.
+    private static bool IsPoll(Microsoft.AspNetCore.Http.HttpRequest request) =>
+        Microsoft.AspNetCore.Http.HttpMethods.IsGet(request.Method)
+        && (request.Path.StartsWithSegments("/runs") || request.Path.StartsWithSegments("/agent/status"));
 
     private static TBuilder AddOpenTelemetryExporters<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {

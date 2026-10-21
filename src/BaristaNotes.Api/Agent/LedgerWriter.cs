@@ -55,7 +55,17 @@ public sealed class LedgerWriter(IDbContextFactory<AgentDb> dbs, TimeProvider ti
 /// The run a piece of code is working for. HTTP retry callbacks use it to
 /// write "retrying" entries to the right ledger.
 /// </summary>
-public sealed record RunScope(Guid RunId, LedgerWriter Ledger);
+public sealed record RunScope(Guid RunId, LedgerWriter Ledger)
+{
+    public RunFlags Flags { get; } = new();
+}
+
+/// <summary>Things code deeper in the call stack reports back to the run.</summary>
+public sealed class RunFlags
+{
+    /// <summary>Set when a rehearsal answer replaced the model, with the reason.</summary>
+    public string? ReplayReason { get; set; }
+}
 
 public static class RunContext
 {

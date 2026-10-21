@@ -242,7 +242,7 @@ public static class Prompts
 
         text.AppendLine();
         text.AppendLine("Drinks made for this person:");
-        foreach (var shot in request.ForMeShots.OrderBy(s => s.MadeAt))
+        foreach (var shot in request.ForMeShots.OrderBy(s => s.MadeAt).ThenBy(s => s.Id))
         {
             var bean = bags.TryGetValue(shot.BagId, out var bag) && beans.TryGetValue(bag.BeanId, out var b) ? b.Name : "unknown bean";
             text.AppendLine($"- drink {shot.Id}: {bean}, {shot.DrinkType}, {Rating(shot.Rating)}, {shot.MadeAt:yyyy-MM-dd}: \"{shot.TastingNotes}\"");
@@ -290,7 +290,7 @@ public static class Prompts
 
         text.AppendLine();
         text.AppendLine("Drinks you may cite:");
-        foreach (var shot in request.Shots.OrderBy(s => s.MadeAt))
+        foreach (var shot in request.Shots.OrderBy(s => s.MadeAt).ThenBy(s => s.Id))
         {
             text.AppendLine($"- drink {shot.Id}: {shot.BeanName}, {shot.DrinkType}, {Rating(shot.Rating)}: \"{shot.Note}\"");
         }

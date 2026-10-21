@@ -39,6 +39,10 @@ var api = builder.AddProject<Projects.BaristaNotes_Api>("api")
         """{"trigger":"dashboard"}""", "Starts an agent run, the same as Run now in the app.", "Play", highlighted: true))
     .WithHttpCommand("/runs/stop", "Stop run", commandName: "stop-run", commandOptions: Json(
         "{}", "Stops the run that is going. Effects that already happened stay in the ledger.", "Stop"))
+    .WithHttpCommand("/demo/model-mode", "Use rehearsal answers", commandName: "model-replay", commandOptions: Json(
+        """{"mode":"Only"}""", "For bad conference Wi-Fi: the agent uses answers recorded in rehearsal, and the ledger says so.", "PlugDisconnected"))
+    .WithHttpCommand("/demo/model-mode", "Use live model", commandName: "model-live", commandOptions: Json(
+        """{"mode":"Auto"}""", "Calls Foundry, records each answer, and falls back to a recording only if Foundry cannot be reached.", "PlugConnected"))
     .WithHttpCommand("/demo/reset", "Reset demo", commandName: "reset-demo", commandOptions: Json(
         "{}", "Clears runs, picks, orders, check-ins, and memory in the API and the shop.", "ArrowReset",
         confirm: "Reset the API and the shop? The app's demo data is reset from its Settings page."));

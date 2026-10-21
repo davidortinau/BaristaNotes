@@ -57,8 +57,12 @@ builder.Services.AddSingleton<IChatClient>(sp =>
         .AsBuilder()
         .UseOpenTelemetry(sp.GetRequiredService<ILoggerFactory>(), FoundryReorderModel.TelemetrySource,
             c => c.EnableSensitiveData = builder.Environment.IsDevelopment())
+        .Use(inner => new ReplayChatClient(inner, sp.GetRequiredService<ModelReplay>(), sp.GetRequiredService<ILogger<ReplayChatClient>>()))
         .Build(sp);
 });
+builder.Services.AddSingleton(new ModelReplay(
+    Path.Combine(dataDirectory, "replay"),
+    builder.Configuration.GetValue("Agent:Replay", ReplayMode.Auto)));
 builder.Services.AddSingleton<IReorderModel, FoundryReorderModel>();
 
 builder.Services.AddSingleton<LedgerWriter>();

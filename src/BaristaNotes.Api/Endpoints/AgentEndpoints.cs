@@ -405,6 +405,15 @@ public static class AgentEndpoints
 
     static void MapDemo(WebApplication app)
     {
+        // Conference Wi-Fi switch: Only = use rehearsal answers, Auto = live model with replay as backup.
+        app.MapPost("/demo/model-mode", (ModelModeRequest request, ModelReplay replay) =>
+        {
+            replay.Mode = request.Mode;
+            return Results.Ok(new { mode = replay.Mode.ToString() });
+        });
+
+        app.MapGet("/demo/model-mode", (ModelReplay replay) => Results.Ok(new { mode = replay.Mode.ToString() }));
+
         app.MapPost("/demo/reset", async (RunCoordinator runs, AgentDb db, ShopClient shop, ILoggerFactory logs, CancellationToken ct) =>
         {
             await runs.StopAllAsync();
@@ -431,3 +440,5 @@ public static class AgentEndpoints
         });
     }
 }
+
+public sealed record ModelModeRequest([property: System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ReplayMode>))] ReplayMode Mode);

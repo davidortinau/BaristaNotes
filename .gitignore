@@ -134,3 +134,5 @@ _ReSharper*/
 *.vssscc
 BaristaNotes/SyncfusionLicense.txt
 *.lscache
+# Playwright CLI output (may contain credentials)
+.playwright-cli/

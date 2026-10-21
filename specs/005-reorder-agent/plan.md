@@ -1,15 +1,30 @@
 # Implementation Plan: Reorder agent for the Trust Fall demo
 
-**Branch:** `005-reorder-agent`, from `main` at `8b7c138` | **Date:** 2026-10-20 | **Talk:** Techorama NL, Tuesday 27 October, 16:00 | **Status:** Draft for David's review. No code yet.
+**Branch:** `005-reorder-agent`, from `main` at `8b7c138` | **Date:** 2026-10-20 | **Talk:** Techorama NL, Tuesday 27 October, 16:00 | **Status:** Gates 1-3 done on 21 October. Gate 4 partly done. See [the runbook](demo-runbook.md).
 
 > [!summary]
 > Add an Aspire AppHost, a Web API that runs a coffee reorder agent, and a fictional roaster shop. Everything runs on this Mac. The agent checks the roasters you watch, skips what does not fit, explains its pick with your own tasting notes, and prepares a cart. Within a fixed monthly budget it can reorder a favorite on its own. The Foundry key moves out of the app into AppHost user secrets. The API forwards the app's existing AI calls, so no key ships in the app.
 
 ## Progress
 
-| Gate | Status, 2026-10-20 |
+| Gate | Status, 2026-10-21 |
 |---|---|
-| 1 | **Done, except one check.** Mac Catalyst builds and runs. AppHost, api, and shop run. The Foundry key is in AppHost user secrets and is not in the Mac Catalyst bundle. A chat request with a fake key went through the forwarder and Foundry answered. The app starts from the AppHost and uses the demo database. **Not yet checked:** an AI call made by the app itself. Check it in Gate 2 with demo data |
+| 1 | **Done.** The app's own AI call goes through the forwarder: the voice harness asked "How many shots have I pulled?" and got "You have pulled 22 shots in total" (`POST /openai/deployments/gpt-4.1-mini/chat/completions`, 200) |
+| 2 | **Done.** Beats 2-5 run end to end in the Mac Catalyst app: run, ledger, pick with evidence, Buy, checkout in the shop, signed webhook, Ordered in the app |
+| 3 | **Done.** All 8 beats work in the app, driven with DevFlow. Not automated: the three confirmation popups (Forget, Never this roaster, Reset demo data). Their API calls are tested |
+| 4 | **Partly done.** Demo data, pacing, dashboard commands, rehearsal replay, and the [runbook](demo-runbook.md) are done. Left for David: the rehearsal on the presentation machine, the backup video, and the [open decisions](#needs-davids-input) |
+
+Tests: 49 API, 36 shop, 1005 app (52 new). Commits on the branch: `c1bfd0d` to `0f717d0`.
+
+### Added beyond the plan
+
+| What | Why |
+|---|---|
+| Rehearsal replay (`ReplayChatClient`): records each model answer, replays it when Foundry cannot be reached, or always via the dashboard command **Use rehearsal answers** | Conference Wi-Fi. The ledger says "Used a rehearsal answer", so the stage never pretends |
+| Suggestion from a roaster you don't watch (Fennick Roastery). Ledger only, no cart | David's original "broaden out to other roasters" idea, kept at suggestion level |
+| More code checks on model output: a like must cite drinks rated 3-4 and a dislike 0-2; a finished coffee rated below 3 is never re-picked; the ranker is told what you had from each roaster | Each came from a real model mistake in testing (see the [findings log](#findings-log)) |
+| `app-ios` resource on a dedicated simulator, "BaristaNotes Agent Demo" (iOS 27.0, iPhone 17 Pro, trusts the dev certificate) | The fallback stage head from the plan. Tested: it connects to the API and loads the demo data |
+| Automation IDs on all agent tiles, from their accessible names | DevFlow and future UI tests |
 
 ### What Mac Catalyst needed
 
@@ -20,7 +35,19 @@
 | Restore failed, and the app was killed at launch after incremental builds | This Mac had an internal RC2 SDK. Now on the public SDK `11.0.100-rc.2.26504.105` and workload set `11.0.100-rc.2.26513.2`. The repo `nuget.config` uses nuget.org and `../LocalNuGets` only. The whole solution restores |
 | Build fails: the macios SDK expects Xcode 27.0, this Mac has 27.1 | `ValidateXcodeVersion=false`, set by the AppHost as an environment variable |
 
-Debug Mac Catalyst data is in `~/Library/` (not sandboxed). Backups: `~/Library/barista_notes.db.bak-pre-005-2026-10-20` and the container copy.
+Debug Mac Catalyst data is in `~/Library/` (not sandboxed). The demo uses `~/Library/barista_notes_demo.db`. David's `barista_notes.db` was checked on 21 October: unchanged since 28 August. Backups: `~/Library/barista_notes.db.bak-pre-005-2026-10-20` and the container copy.
+
+## Needs David's input
+
+| # | Decision | Recommendation |
+|---|---|---|
+| 1 | Beat 8 (memory). Removing "You like natural-process coffees" works and is never relearned, but the next pick stays Guji Natural: the other preferences and the finished bag's own notes still point there | Show the Memory page and remove an item, then use **Never this roaster** on the pick for the visible change: the next run skips Copperhaze and picks Rwanda Natural |
+| 2 | Beat 6b, the duplicate order with **Ignore idempotency keys**. It needs a **Reset demo** before beat 6 | Show the bug first, reset, then the fix. Or show only the fix and describe the bug |
+| 3 | The dashboard shows the prompts and answers in Development (`EnableSensitiveData`). The data is fictional | Keep it: "see what the model saw" is a strong trust moment |
+| 4 | Step delay is 900 ms. A first run takes about 20 s, a run with remembered preferences about 15 s | Keep, or set 600 ms for a faster stage |
+| 5 | The Foundry key is still in the git-ignored `src/BaristaNotes/appsettings.Development.json`, for the iOS head. Mac Catalyst no longer bundles it | Remove it after the talk, or route iOS through the API too |
+| 6 | From 20 October: rotate the internal feed PAT that was shown in tool output | Rotate |
+| 7 | Optional: give the terminal Accessibility permission | Lets DevFlow and UI scripting reach the confirmation popups on Mac Catalyst |
 
 ## Decisions (David, 2026-10-20)
 
@@ -131,14 +158,21 @@ This table is TF-12, "AI proposes. Apps enforce permission."
 ### API endpoints
 
 ```text
-GET/PUT  /agent/settings              autonomy, monthly budget, watched roasters
+GET      /agent/status                 settings, budget spent and left, latest run, check-in, last snapshot
+GET/PUT  /agent/settings               autonomy, monthly budget, watched roasters, step delay
+GET      /roasters                     the shop's roasters, with Watched
 POST     /snapshot   DELETE /snapshot
 GET      /memory     DELETE /memory/{id}     removed items stay removed
-POST     /checkins                    finished bag IDs
-POST     /runs       POST /runs/{id}/stop    GET /runs/latest    GET /runs/{id}/ledger
-GET      /proposals/{id}    POST /proposals/{id}/cart    POST /proposals/{id}/dismiss
-POST     /webhooks/orders             from shop
-*        /openai/{**catch-all}        forwarder to Foundry
+POST     /checkins   GET /checkins/latest
+POST     /runs       POST /runs/{id}/stop    POST /runs/stop (dashboard)
+GET      /runs/latest  GET /runs/{id}  GET /runs/{id}/ledger?after={seq}
+POST     /ledger/{entryId}/remove-cart
+GET      /proposals?runId=  GET /proposals/{id}
+POST     /proposals/{id}/cart  POST /proposals/{id}/dismiss  POST /proposals/{id}/never-roaster
+POST     /webhooks/orders              from the shop, HMAC-SHA256 signed
+POST     /demo/reset                   API and shop
+GET/POST /demo/model-mode              Auto (live, replay as backup) or Only (rehearsal answers)
+*        /openai/{**catch-all}         forwarder to Foundry, loopback only
 ```
 
 ### MAUI app screens
@@ -163,7 +197,7 @@ The existing voice tool `open_roaster_url` does not change and is not part of th
 | Principle | Status |
 |---|---|
 | I. Code quality | Pass. Analyzers on new projects, no warnings |
-| II. Test-first | **Exception approved by David, 2026-10-20.** Tests first for critical paths only: budget, autonomy policy, one order per finished bag, idempotent order, evidence validation, removed memory stays removed, forwarder header handling. UI and full contract tests deferred to a debt item in `tasks.md`. Needs David's approval |
+| II. Test-first | **Exception approved by David, 2026-10-20.** Tests first for critical paths only: budget, autonomy policy, one order per finished bag, idempotent order, evidence validation, removed memory stays removed, forwarder header handling. UI and full contract tests are deferred. Approved by David |
 | III. UX consistency | Pass. MauiReactor, `MaterialSymbolsFont`, `IFeedbackService`, loading states, no emoji |
 | V. Rating scale | Pass. 0-4 scale. A favorite is rated 3 or higher |
 | VI. Architecture constraints | Pass. MauiReactor only |
@@ -172,15 +206,15 @@ The existing voice tool `open_roaster_url` does not change and is not part of th
 
 ## Schedule
 
-| Day | Goal | Gate |
-|---|---|---|
-| Tue 20 Oct, evening | Repo `nuget.config` and clean restore. AppHost, api, and shop skeletons. Project Aspire channel set to stable. MAUI app launched from the AppHost on Mac Catalyst. Existing AI advice works through the forwarder with no key in the app | **1:** key off the device, app talks to api |
-| Wed 21 Oct | Catalogs, filters, ledger, model pick with evidence, cart, checkout, webhook. App ledger and proposal pages | **2:** beats 2-5 end to end |
-| Thu 22 Oct | Settings, auto-reorder, idempotency and fault toggles, Stop, check-in, Memory page. Policy tests | **3:** all 8 beats |
-| Fri 23 Oct | Cologne MAUI Day keynote. No build work planned | |
-| Sat 24 Oct | Demo data, step pacing, dashboard commands, polish. Record a full backup video. **Feature freeze** | **4:** backup video exists |
-| Sun 25 Oct | Update outline TF-06 to TF-15 and the deck for this demo. Rehearse | |
-| Mon 26 Oct | Code freeze. Full run on the presentation machine, including a run on phone hotspot | **5:** rehearsal passes |
+| Day | Goal | Gate | Status |
+|---|---|---|---|
+| Tue 20 Oct, evening | Repo `nuget.config` and clean restore. AppHost, api, and shop skeletons. MAUI app launched from the AppHost on Mac Catalyst. AI through the forwarder | **1** | Done |
+| Wed 21 Oct | Catalogs, filters, ledger, model pick with evidence, cart, checkout, webhook. App ledger and proposal pages | **2** | Done |
+| Thu 22 Oct | Settings, auto-reorder, idempotency and fault toggles, Stop, check-in, Memory page. Policy tests | **3** | Done on 21 Oct |
+| Fri 23 Oct | Cologne MAUI Day keynote. No build work planned | | |
+| Sat 24 Oct | Demo data, step pacing, dashboard commands, polish. Record a full backup video. **Feature freeze** | **4** | Demo data, pacing, commands, replay, runbook done. Backup video left |
+| Sun 25 Oct | Update outline TF-06 to TF-15 and the deck for this demo. Rehearse | | |
+| Mon 26 Oct | Code freeze. Full run on the presentation machine, including a run on phone hotspot | **5** | |
 
 ## Cut line
 
@@ -199,8 +233,31 @@ The existing voice tool `open_roaster_url` does not change and is not part of th
 | Mac Catalyst layout looks like a stretched phone app | Check at Gate 1. Use a fixed phone-sized window |
 | Fictional names match real businesses | Check before seeding |
 
-## Questions for David
+## Findings log
 
-1. Approve the test-first exception?
-2. Demo monthly budget: €40?
-3. Mac Catalyst for the stage, or the iOS simulator?
+### Fixed on 21 October
+
+| Found | Fix |
+|---|---|
+| The model cited a drink rated 2 ("Sour") as evidence for "You prefer light roasts" | Code check: a like cites drinks rated 3-4, a dislike 0-2 |
+| The model re-picked Nyeri Washed (rated 2.3) against its instructions | Code skips a finished coffee rated below 3: "You rated it 2.3 of 4. Looking for something you may like more." |
+| The model said "You have not tried this roaster" for roasters you had | The prompt lists what you had from each roaster |
+| Replay missed: memory items reached the prompt in a different order each run | Stable order by key, and by date then ID for drinks |
+| Demo reset continued the ids (SQLite AUTOINCREMENT), so recordings would not match | Reset clears `sqlite_sequence` for the demo tables |
+| Skipped steps grouped at the first skip broke the timeline | Grouped at the latest skip |
+| The pick page showed the evidence below the fold | Why and evidence first; price and budget side by side |
+
+### Open
+
+| Severity | Finding |
+|---|---|
+| Low | Two runs for the same finished bag can leave two open carts. The agent never orders twice, but you could buy both by hand |
+| Low | Cart creation is a POST, so the resilience handler retries it too. On a timeout the shop could get a second cart. Nothing is charged |
+| Runbook | Restarting the AppHost resets the shop (in memory) but not the API. Order numbers restart at #1001. Always **Reset demo** after a restart |
+| Dev loop | Restarting the `app-maccatalyst` resource does not quit a running app, so a new build is not launched. Quit the app first (Aspire.Hosting.Maui preview) |
+| Tooling | DevFlow on Mac Catalyst cannot see or tap the UXDivers confirmation popups. `ui alert` auto-detected a booted iOS simulator instead of the Catalyst app and reported its "NEW PROFILE" dialog; pass `--pid` |
+| Tooling | On the iOS simulator the popup buttons appear in `ui alert tree`, but `ui drag` and Ailoha `ui swipe` both return `success: false` with no detail, so the popup still cannot be tapped |
+| Tooling | `screencapture -l` and AppleScript UI scripting fail from this shell (no Screen Recording or Accessibility permission). DevFlow screenshots work |
+| Cosmetic | The DEBUG AI tool harness expects an empty database. With demo data it logs "LLM FAIL ... You have pulled 22 shots". Harmless |
+| Cosmetic | The model's "why" sometimes stretches a preference, for example "light roast Ethiopian" for the Rwanda Natural |
+| Docs | The `maui-aspire` skill in maui-skills still says MAUI cannot be orchestrated by Aspire. `Aspire.Hosting.Maui` does it |

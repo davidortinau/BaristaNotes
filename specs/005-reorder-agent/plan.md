@@ -14,7 +14,7 @@
 | 3 | **Done.** All 8 beats work in the app, driven with DevFlow. Not automated: the three confirmation popups (Forget, Never this roaster, Reset demo data). Their API calls are tested |
 | 4 | **Partly done.** Demo data, pacing, dashboard commands, rehearsal replay, and the [runbook](demo-runbook.md) are done. Left for David: the rehearsal on the presentation machine, the backup video, and the [open decisions](#needs-davids-input) |
 
-Tests: 49 API, 36 shop, 1005 app (52 new). Commits on the branch: `c1bfd0d` to `0f717d0`.
+Tests: 61 API, 37 shop, 1005 app (52 new). A code review of the branch on 21 October found 9 issues; 8 are fixed (see the [findings log](#findings-log)).
 
 ### Added beyond the plan
 
@@ -49,6 +49,7 @@ Debug Mac Catalyst data is in `~/Library/` (not sandboxed). The demo uses `~/Lib
 | 5 | The Foundry key is still in the git-ignored `src/BaristaNotes/appsettings.Development.json`, for the iOS head. Mac Catalyst no longer bundles it | Remove it after the talk, or route iOS through the API too |
 | 6 | From 20 October: rotate the internal feed PAT that was shown in tool output | Rotate |
 | 7 | Optional: give the terminal Accessibility permission | Lets DevFlow and UI scripting reach the confirmation popups on Mac Catalyst |
+| 8 | Before the fix below, demo runs wrote `last_bag_id = 3` (a demo bag) to the real app's preferences on this Mac. Your real data has bags 1 and 2, so nothing matches it | Leave it, or run `defaults delete com.simplyprofound.baristanotes last_bag_id` |
 
 ## Decisions (David, 2026-10-20)
 
@@ -246,6 +247,14 @@ The existing voice tool `open_roaster_url` does not change and is not part of th
 | Replay missed: memory items reached the prompt in a different order each run | Stable order by key, and by date then ID for drinks |
 | Demo reset continued the ids (SQLite AUTOINCREMENT), so recordings would not match | Reset clears `sqlite_sequence` for the demo tables |
 | Skipped steps grouped at the first skip broke the timeline | Grouped at the latest skip |
+| Review: the agent could still act on a pick you had just dismissed or bought, and read the autonomy level only once per run | The runner rereads the pick and the settings before acting, and claims a cart only if the pick is still Proposed |
+| Review: if the webhook recorded the second order first, the ledger said both "charged twice" and "Order placed" | Duplicate detection works whichever side records first |
+| Review: an unknown autonomy value fell through to auto-order | The policy fails closed; settings reject unknown values. Tested |
+| Review: any web page open on the Mac could POST to the API or shop (loopback is not authentication) | State changes need an `X-Requested-By` header, which a page cannot send cross-site without a preflight. The forwarder needs `api-key`. Tested |
+| Review: demo mode shared preferences with the real app | Demo mode uses its own preferences file |
+| Review: check-in marked bags finished on the device before the API had it | The API gets the check-in first |
+| Review: the "While you were away" card never appeared after a run you watched, nor while Activity was open | The card refreshes while visible and shows "Agent at work" during a run. The runbook starts that beat from the dashboard |
+| Review: the order-timeout fault could stay armed | "Disarm order timeout" command; Reset demo also clears it |
 | The pick page showed the evidence below the fold | Why and evidence first; price and budget side by side |
 
 ### Open
@@ -254,6 +263,8 @@ The existing voice tool `open_roaster_url` does not change and is not part of th
 |---|---|
 | Low | Two runs for the same finished bag can leave two open carts. The agent never orders twice, but you could buy both by hand |
 | Low | Cart creation is a POST, so the resilience handler retries it too. On a timeout the shop could get a second cart. Nothing is charged |
+| Low | The iOS fallback head still bundles `appsettings.Development.json` with the keys (decision 5). Mac Catalyst does not |
+| Low | While "Ignore idempotency keys" is on, refreshing a checkout page creates a second order. Turn it off right after beat 6b (in the runbook) |
 | Runbook | Restarting the AppHost resets the shop (in memory) but not the API. Order numbers restart at #1001. Always **Reset demo** after a restart |
 | Dev loop | Restarting the `app-maccatalyst` resource does not quit a running app, so a new build is not launched. Quit the app first (Aspire.Hosting.Maui preview) |
 | Tooling | DevFlow on Mac Catalyst cannot see or tap the UXDivers confirmation popups. `ui alert` auto-detected a booted iOS simulator instead of the Catalyst app and reported its "NEW PROFILE" dialog; pass `--pid` |

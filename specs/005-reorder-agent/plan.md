@@ -11,7 +11,7 @@
 |---|---|
 | 1 | **Done.** The app's own AI call goes through the forwarder: the voice harness asked "How many shots have I pulled?" and got "You have pulled 22 shots in total" (`POST /openai/deployments/gpt-4.1-mini/chat/completions`, 200) |
 | 2 | **Done.** Beats 2-5 run end to end in the Mac Catalyst app: run, ledger, pick with evidence, Buy, checkout in the shop, signed webhook, Ordered in the app |
-| 3 | **Done.** All 8 beats work in the app, driven with DevFlow. Not automated: the three confirmation popups (Forget, Never this roaster, Reset demo data). Their API calls are tested |
+| 3 | **Done.** All 8 beats work in the app, driven with DevFlow, including the three confirmation popups (Forget, Never this roaster, Reset demo data) since the DevFlow fix on 21 October. See [docs/ui-automation.md](../../docs/ui-automation.md) |
 | 4 | **Partly done.** Demo data, pacing, dashboard commands, rehearsal replay, and the [runbook](demo-runbook.md) are done. A silent, app-only draft backup video of beats 1-6 (iOS simulator) is in the davidos project assets. Left for David: the rehearsal on the presentation machine, the narrated backup video, and the [open decisions](#needs-davids-input) |
 
 Tests: 61 API, 37 shop, 1005 app (52 new). A code review of the branch on 21 October found 9 issues; 8 are fixed (see the [findings log](#findings-log)).
@@ -48,7 +48,6 @@ Debug Mac Catalyst data is in `~/Library/` (not sandboxed). The demo uses `~/Lib
 | 4 | Step delay is 900 ms. A first run takes about 20 s, a run with remembered preferences about 15 s | Keep, or set 600 ms for a faster stage |
 | 5 | The Foundry key is still in the git-ignored `src/BaristaNotes/appsettings.Development.json`, for the iOS head. Mac Catalyst no longer bundles it | Remove it after the talk, or route iOS through the API too |
 | 6 | From 20 October: rotate the internal feed PAT that was shown in tool output | Rotate |
-| 7 | Optional: give the terminal Accessibility permission | Lets DevFlow and UI scripting reach the confirmation popups on Mac Catalyst |
 | 8 | Before the fix below, demo runs wrote `last_bag_id = 3` (a demo bag) to the real app's preferences on this Mac. Your real data has bags 1 and 2, so nothing matches it | Leave it, or run `defaults delete com.simplyprofound.baristanotes last_bag_id` |
 
 ## Decisions (David, 2026-10-20)
@@ -267,8 +266,9 @@ The existing voice tool `open_roaster_url` does not change and is not part of th
 | Low | While "Ignore idempotency keys" is on, refreshing a checkout page creates a second order. Turn it off right after beat 6b (in the runbook) |
 | Runbook | Restarting the AppHost resets the shop (in memory) but not the API. Order numbers restart at #1001. Always **Reset demo** after a restart |
 | Dev loop | Restarting the `app-maccatalyst` resource does not quit a running app, so a new build is not launched. Quit the app first (Aspire.Hosting.Maui preview) |
-| Tooling | DevFlow on Mac Catalyst cannot see or tap the UXDivers confirmation popups. `ui alert` auto-detected a booted iOS simulator instead of the Catalyst app and reported its "NEW PROFILE" dialog; pass `--pid` |
-| Tooling | On the iOS simulator the popup buttons appear in `ui alert tree`, but `ui drag` and Ailoha `ui swipe` both return `success: false` with no detail, so the popup still cannot be tapped |
+| Fixed in DevFlow | UXDivers popups were invisible to DevFlow: the popup page is attached to the UIWindow, outside the MAUI tree. Fixed on maui-labs branch `davidortinau/devflow-cli-lease-and-overlay-popups` (local build pinned in this repo) |
+| Fixed in DevFlow | Back-to-back `maui devflow` commands refused each other for 10 s (new lease id per process). Same branch |
+| Explained | `ui drag` came from the global `maui`, a Comet branch build: only Comet's agent implements it. `ui alert` targets OS dialogs; on Mac Catalyst pass `--pid`, or it picks a booted simulator |
 | Tooling | `screencapture -l` and AppleScript UI scripting fail from this shell (no Screen Recording or Accessibility permission). DevFlow screenshots work |
 | Cosmetic | The DEBUG AI tool harness expects an empty database. With demo data it logs "LLM FAIL ... You have pulled 22 shots". Harmless |
 | Cosmetic | The model's "why" sometimes stretches a preference, for example "light roast Ethiopian" for the Rwanda Natural |

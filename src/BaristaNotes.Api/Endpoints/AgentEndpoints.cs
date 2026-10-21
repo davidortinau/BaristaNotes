@@ -48,6 +48,14 @@ public static class AgentEndpoints
 
         app.MapPut("/agent/settings", async (AgentSettings update, AgentDb db, CancellationToken ct) =>
         {
+            if (!Enum.IsDefined(update.Autonomy))
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["autonomy"] = ["Autonomy must be Watch, PrepareCart, or ReorderFavorites."],
+                });
+            }
+
             if (update.MonthlyBudget is < 0 or > 1000)
             {
                 return Results.ValidationProblem(new Dictionary<string, string[]>

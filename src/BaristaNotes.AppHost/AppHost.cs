@@ -21,6 +21,10 @@ var shop = builder.AddProject<Projects.BaristaNotes_RoasterShop>("shop")
         """{"order_timeout_armed":true}""",
         "The next order is created, then the shop waits longer than the API's timeout before answering.",
         "Timer"))
+    .WithHttpCommand("/api/demo/faults", "Disarm order timeout", commandName: "disarm-timeout", commandOptions: Json(
+        """{"order_timeout_armed":false}""",
+        "Turns the order timeout off if no order used it.",
+        "TimerOff"))
     .WithHttpCommand("/api/demo/faults", "Ignore idempotency keys", commandName: "ignore-keys", commandOptions: Json(
         """{"ignore_idempotency_keys":true}""",
         "Simulates a shop that ignores Idempotency-Key, so a retried order becomes a second order.",
@@ -87,6 +91,8 @@ static HttpCommandOptions Json(string body, string description, string icon, boo
     PrepareRequest = context =>
     {
         context.Request.Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
+        // The API and the shop refuse state changes without this header (cross-site protection).
+        context.Request.Headers.Add("X-Requested-By", "Aspire dashboard");
         return Task.CompletedTask;
     },
 };

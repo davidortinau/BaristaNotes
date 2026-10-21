@@ -23,7 +23,9 @@ internal static class DataAccessExtensions
 #if MAUI_PERFORMANCE
         builder.Services.AddSingleton<IPreferencesStore, MauiPerformancePreferencesStore>();
 #else
-        builder.Services.AddSingleton<IPreferencesStore, MauiPreferencesStore>();
+        // Demo mode keeps its own preferences, like its own database.
+        builder.Services.AddSingleton<IPreferencesStore>(_ => new MauiPreferencesStore(
+            BaristaNotes.Services.Agent.AgentApiAddress.IsDemo ? "com.simplyprofound.baristanotes.demo" : null));
 #endif
 
         return builder;

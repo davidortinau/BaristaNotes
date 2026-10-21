@@ -315,6 +315,21 @@ public sealed class AgentRunner(
                 $"{Money.Format(item.Price, item.Currency)} + {Money.Format(item.Shipping, item.Currency)} shipping. {proposal.Why}",
                 item.Roaster, proposal.Id);
 
+            await Task.Delay(step, time, ct);
+
+            // The pick is already visible in the app. Before acting, read it and
+            // the settings again: you may have tapped Not now or Buy, or changed
+            // the autonomy level, while I was working.
+            await db.Entry(proposal).ReloadAsync(CancellationToken.None);
+            await db.Entry(settings).ReloadAsync(CancellationToken.None);
+            if (proposal.Status != ProposalStatus.Proposed)
+            {
+                await Write(run, LedgerKind.Notice,
+                    $"You already acted on this pick ({proposal.Status}). I did nothing more.", null, item.Roaster, proposal.Id);
+                progress.Outcomes.Add("handled by you");
+                continue;
+            }
+
             (_, budgetLeft) = await AgentState.BudgetAsync(db, settings, time.GetUtcNow().UtcDateTime, ct);
             var decision = ReorderPolicy.Decide(new PolicyInput(
                 settings.Autonomy,
@@ -326,7 +341,6 @@ public sealed class AgentRunner(
                 orderedBags.Contains(need.BagId),
                 settings.Currency));
 
-            await Task.Delay(step, time, ct);
             switch (decision)
             {
                 case PolicyDecision.Notify notify:
@@ -337,8 +351,9 @@ public sealed class AgentRunner(
                     break;
 
                 case PolicyDecision.PrepareCart cart:
-                    await PrepareCartAsync(db, run, proposal, cart.Reason, progress, ct);
-                    progress.Outcomes.Add("cart ready");
+                    progress.Outcomes.Add(await PrepareCartAsync(db, run, proposal, cart.Reason, progress, ct)
+                        ? "cart ready"
+                        : "handled by you");
                     break;
 
                 case PolicyDecision.PlaceOrder:
@@ -488,7 +503,8 @@ public sealed class AgentRunner(
         return accepted.OrderBy(a => needs.ToList().FindIndex(n => n.BagId == a.Item1.BagId)).ToList();
     }
 
-    async Task PrepareCartAsync(AgentDb db, RunRow run, ProposalRow proposal, string? reason, Progress progress, CancellationToken ct)
+    /// <summary>Returns false when you acted on the pick first, so my cart was removed.</summary>
+    async Task<bool> PrepareCartAsync(AgentDb db, RunRow run, ProposalRow proposal, string? reason, Progress progress, CancellationToken ct)
     {
         await Write(run, LedgerKind.CartCreating, $"Creating a cart at {proposal.RoasterName}.", null, proposal.Roaster, proposal.Id);
 
@@ -496,15 +512,29 @@ public sealed class AgentRunner(
         var cart = await shop.CreateCartAsync(proposal.Roaster, proposal.VariantId, proposal.Id, ct);
         progress.InFlight = null;
 
-        proposal.CartId = cart.Id;
-        proposal.CheckoutUrl = cart.CheckoutUrl;
-        proposal.Status = ProposalStatus.CartReady;
-        proposal.ActionNote = reason;
-        await db.SaveChangesAsync(CancellationToken.None);
+        // Claim the pick only if you have not acted on it meanwhile.
+        var claimed = await db.Proposals
+            .Where(p => p.Id == proposal.Id && p.Status == ProposalStatus.Proposed)
+            .ExecuteUpdateAsync(set => set
+                .SetProperty(p => p.CartId, cart.Id)
+                .SetProperty(p => p.CheckoutUrl, cart.CheckoutUrl)
+                .SetProperty(p => p.Status, ProposalStatus.CartReady)
+                .SetProperty(p => p.ActionNote, reason), CancellationToken.None);
+        await db.Entry(proposal).ReloadAsync(CancellationToken.None);
+        if (claimed == 0)
+        {
+            var removed = await shop.DeleteCartAsync(cart.Id, CancellationToken.None);
+            await Write(run, LedgerKind.Notice, "You acted on this pick while I was creating a cart.",
+                removed ? $"I removed my cart at {proposal.RoasterName}." : $"My cart at {proposal.RoasterName} could not be removed.",
+                proposal.Roaster, proposal.Id);
+            return false;
+        }
+
         progress.Effects.Add($"the cart at {proposal.RoasterName} is still open");
 
         await Write(run, LedgerKind.CartReady, $"Cart ready at {proposal.RoasterName}. Nothing charged.",
             reason ?? "Open the pick and tap Buy to check out.", proposal.Roaster, proposal.Id, cart.Id);
+        return true;
     }
 
     /// <summary>Returns false when the pick is out of date and nothing was ordered.</summary>
@@ -535,14 +565,18 @@ public sealed class AgentRunner(
         await db.Entry(proposal).ReloadAsync(CancellationToken.None);
         progress.Effects.Add($"order {result.Order.OrderNumber} at {proposal.RoasterName}");
 
-        if (result.Replayed)
+        if (record.IsDuplicate)
+        {
+            // The duplicate is already in the ledger, written by whoever recorded it.
+        }
+        else if (result.Replayed)
         {
             await Write(run, LedgerKind.Ordered, $"The shop returned the existing order {result.Order.OrderNumber}.",
                 "Same Idempotency-Key, so no second order. " +
                 $"{Money.Format(record.BudgetLeft, proposal.Currency)} left this month.",
                 proposal.Roaster, proposal.Id);
         }
-        else if (!record.IsDuplicate)
+        else
         {
             await Write(run, LedgerKind.Ordered, $"Order {result.Order.OrderNumber} placed at {proposal.RoasterName}.",
                 $"{Money.Format(result.Order.Total, result.Order.Currency)}. " +

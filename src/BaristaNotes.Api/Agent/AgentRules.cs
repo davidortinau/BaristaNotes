@@ -53,6 +53,13 @@ public static class ReorderPolicy
 
             case Autonomy.PrepareCart:
                 return new PolicyDecision.PrepareCart(null);
+
+            case Autonomy.ReorderFavorites:
+                break;
+
+            default:
+                // Fail closed: an unknown level never spends money.
+                return new PolicyDecision.Notify("Unknown autonomy setting, so I only tell you.");
         }
 
         if (!input.IsSameProductAsFinishedBag)

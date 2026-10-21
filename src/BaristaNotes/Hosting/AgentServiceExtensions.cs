@@ -17,6 +17,10 @@ internal static class AgentServiceExtensions
         builder.Services.AddHttpClient<AgentApiClient>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
+
+            // The API refuses state changes without this header, so a web page
+            // open on the same machine cannot trigger them.
+            client.DefaultRequestHeaders.Add("X-Requested-By", "BaristaNotes");
             if (api is not null)
             {
                 // Relative request paths keep any base path only with a trailing slash.

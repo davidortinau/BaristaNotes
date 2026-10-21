@@ -155,6 +155,44 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         }
     }
 
+    CancellationTokenSource? _agentCardRefresh;
+
+    /// <summary>
+    /// Keeps the agent card current while this page is visible, so a run
+    /// started from the Aspire dashboard shows up without leaving the page.
+    /// Runs on the UI context; stops when the page disappears.
+    /// </summary>
+    async Task RefreshAgentCardWhileVisibleAsync()
+    {
+        _agentCardRefresh?.Cancel();
+        var refresh = _agentCardRefresh = new CancellationTokenSource();
+        while (_agentApi.IsConnected && !refresh.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(3), refresh.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            await LoadAgentCardAsync();
+        }
+    }
+
+    void StopAgentCardRefresh()
+    {
+        _agentCardRefresh?.Cancel();
+        _agentCardRefresh = null;
+    }
+
+    protected override void OnWillUnmount()
+    {
+        StopAgentCardRefresh();
+        base.OnWillUnmount();
+    }
+
     async Task OpenAgentCardAsync(AgentHomeCard card)
     {
         var route = card.Kind == AgentHomeCardKind.CheckIn ? "checkin" : "agent";
@@ -243,7 +281,9 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         {
             _ = LoadShotsAsync(isRefresh: true);
             _ = LoadAgentCardAsync();
-        });
+            _ = RefreshAgentCardWhileVisibleAsync();
+        })
+        .OnDisappearing(StopAgentCardRefresh);
     }
 
     // ------------------------------------------------------------
@@ -297,9 +337,12 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
 
     VisualNode AgentCardTile(AgentHomeCard card)
     {
-        var glyph = card.Kind == AgentHomeCardKind.CheckIn
-            ? MaterialSymbolsFont.Inventory_2
-            : MaterialSymbolsFont.Smart_toy;
+        var glyph = card.Kind switch
+        {
+            AgentHomeCardKind.CheckIn => MaterialSymbolsFont.Inventory_2,
+            AgentHomeCardKind.Working => MaterialSymbolsFont.Autorenew,
+            _ => MaterialSymbolsFont.Smart_toy,
+        };
 
         return new AdaptiveTwoLineTile(
                 Label(card.Label)

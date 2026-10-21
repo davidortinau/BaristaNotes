@@ -75,6 +75,22 @@ partial class CheckInPage : Component<CheckInPageState>
         var stillHave = State.Bags.Where(bag => !State.Finished.Contains(bag.Id)).Select(bag => bag.Id).ToList();
         SetState(s => s.IsSaving = true);
 
+        // Tell the agent first. If it cannot be reached, nothing changes on
+        // this device, so the same check-in can simply be saved again.
+        try
+        {
+            await _agentApi.SendCheckInAsync(new CheckIn(finished, stillHave));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not send the check-in to the agent");
+            SetState(s => s.IsSaving = false);
+            await _feedbackService.ShowErrorAsync(
+                "The agent could not be reached. Nothing was changed.",
+                "Check that the API is running, then save again.");
+            return;
+        }
+
         try
         {
             foreach (var bagId in finished)
@@ -85,25 +101,20 @@ partial class CheckInPage : Component<CheckInPageState>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Could not mark finished bags complete");
+            _logger.LogError(ex, "The agent has the check-in, but finished bags could not be marked on this device");
             SetState(s => s.IsSaving = false);
-            await _feedbackService.ShowErrorAsync("Could not save your bags.", "Try again.");
+            await _feedbackService.ShowErrorAsync("The agent has your check-in, but this device could not mark the bags finished.", "Try again.");
             return;
         }
 
         try
         {
-            await _agentApi.SendCheckInAsync(new CheckIn(finished, stillHave));
             await _agentApi.SendSnapshotAsync(await _localData.BuildAsync());
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Saved the check-in locally but could not send it to the agent");
-            SetState(s => s.IsSaving = false);
-            await _feedbackService.ShowErrorAsync(
-                "Saved on this device, but the agent could not be reached.",
-                "Check that the API is running, then save again.");
-            return;
+            // Not fatal: Run now sends a fresh snapshot first.
+            _logger.LogWarning(ex, "Could not send the snapshot after the check-in");
         }
 
         await _feedbackService.ShowSuccessAsync(AgentText.CheckInThanks(finished.Count));

@@ -38,9 +38,14 @@ public sealed class AgentHomeCardTests
     }
 
     [Fact]
-    public void RunningRun_ShowsNoCard()
+    public void RunningRun_ShowsTheAgentAtWork()
     {
-        Assert.Null(AgentHomeCard.Decide(Status(checkInDue: false, Run(RunStatus.Running)), 3, null));
+        var card = AgentHomeCard.Decide(Status(checkInDue: false, Run(RunStatus.Running)), 3, null);
+
+        Assert.NotNull(card);
+        Assert.Equal(AgentHomeCardKind.Working, card.Kind);
+        Assert.Equal("AGENT AT WORK", card.Label);
+        Assert.Equal("WATCH", card.Action);
     }
 
     [Fact]

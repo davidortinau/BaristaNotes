@@ -24,8 +24,8 @@
 | Beat | On stage | What the audience sees | Dashboard or shop |
 |---|---|---|---|
 | 1 Check-in | Activity tab → **Still have these?** → mark Kochere Natural **Finished** → Save | The app asks for what it cannot see | |
-| 2 Run | Settings → Agent activity → **Run now** | The ledger fills step by step: checked, skipped with reasons | Optional: show the trace in the dashboard (Traces → `invoke_agent`) |
-| 3 While you were away | Back to Activity: the card "While you were away · checked 5 roasters · skipped 12 · 1 pick" | Doing nothing, with a reason, is also a ledger entry | |
+| 2 Run | Stay on the Activity tab. Dashboard `api` → **Run agent** (the agent works on its own). The card changes to "Agent at work". Tap **Watch** | The ledger fills step by step: checked, skipped with reasons | Optional: show the trace in the dashboard (Traces → `POST /runs`) |
+| 3 While you were away | Variation: start the run from the dashboard, stay on Activity, and wait for "While you were away · checked 5 roasters · skipped 12 · 1 pick". A run you watched to the end in the app counts as seen and does not get this card | Doing nothing, with a reason, is also a ledger entry | |
 | 4 Why this one | Tap the pick (Guji Natural) | Why, evidence from your own notes with ratings, what it does not know, budget left. "Checked 4 citations against your notes. All found." | |
 | 5 Buy | **Buy** opens the shop checkout. Place the order | "Prepared by the Barista Notes agent". Back in the app: Ordered #1001, budget €57.50 left | Shop orders page shows #1001 |
 | 6 Autonomy and retry | Settings → autonomy **Reorder**. Check in Huila Washed as finished. Dashboard `shop` → **Arm order timeout**. **Run now** | Ledger: "Ordering...", "Retrying POST /api/orders ... same Idempotency-Key", "The shop returned the existing order #1002". One order | Shop orders page: one #1002 |
@@ -44,7 +44,8 @@
 | api | Use live model | Back to Foundry. Replays only if Foundry cannot be reached |
 | api | Reset demo | Clears runs, picks, orders, check-ins, and memory in the API and the shop |
 | shop | Arm order timeout | The next order is created, then the shop waits 6 s. The API gives up after 3 s and retries |
-| shop | Ignore idempotency keys | The shop creates a new order for every request, like a buggy store |
+| shop | Disarm order timeout | Turns the timeout off if no order used it (for example after a Cart-mode run) |
+| shop | Ignore idempotency keys | The shop creates a new order for every request, like a buggy store. Turn it off with **Honor idempotency keys** right after beat 6b: while it is on, refreshing a checkout page also creates a second order |
 | shop | Honor idempotency keys | The fix |
 | shop | Raise prices 10% | Every price goes up 10%. Picks made before are out of date, and Buy refuses them |
 | shop | Normal prices | Back to the catalog prices. **Reset demo** also does this |

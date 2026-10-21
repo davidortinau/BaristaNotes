@@ -5,6 +5,7 @@ namespace BaristaNotes.Services.Agent;
 public enum AgentHomeCardKind
 {
     CheckIn,
+    Working,
     WhileAway,
 }
 
@@ -26,6 +27,17 @@ public sealed record AgentHomeCard(AgentHomeCardKind Kind, string Label, string 
                 "STILL HAVE THESE?",
                 AgentText.Count(openBagCount, "open bag", "open bags"),
                 "CHECK IN");
+        }
+
+        if (status.LatestRun is { Status: RunStatus.Running } running)
+        {
+            return new AgentHomeCard(
+                AgentHomeCardKind.Working,
+                "AGENT AT WORK",
+                running.RoastersChecked == 0
+                    ? "Starting a run"
+                    : $"Checked {AgentText.Count(running.RoastersChecked, "roaster", "roasters")} so far",
+                "WATCH");
         }
 
         if (status.LatestRun is { Status: not RunStatus.Running } run

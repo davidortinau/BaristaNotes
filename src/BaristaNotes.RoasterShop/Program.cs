@@ -40,6 +40,24 @@ app.UseAntiforgery();
 app.MapDefaultEndpoints();
 app.MapStaticAssets();
 
+// Cross-site protection for the JSON API: a web page cannot send a custom
+// header to another site without a CORS preflight, and this shop answers none.
+// The checkout and admin pages use antiforgery tokens instead.
+app.Use(async (context, next) =>
+{
+    var method = context.Request.Method;
+    if (context.Request.Path.StartsWithSegments("/api")
+        && !HttpMethods.IsGet(method) && !HttpMethods.IsHead(method) && !HttpMethods.IsOptions(method)
+        && string.IsNullOrEmpty(context.Request.Headers["X-Requested-By"]))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await context.Response.WriteAsJsonAsync(new { error = "Missing the X-Requested-By header." });
+        return;
+    }
+
+    await next();
+});
+
 // API before Razor components.
 app.MapShopApi();
 app.MapRazorComponents<App>();

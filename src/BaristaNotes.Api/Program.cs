@@ -5,6 +5,7 @@ using BaristaNotes.Api.Agent;
 using BaristaNotes.Api.Data;
 using BaristaNotes.Api.Endpoints;
 using BaristaNotes.Api.Forwarding;
+using BaristaNotes.Api.Security;
 using BaristaNotes.Api.Shop;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
@@ -37,7 +38,11 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IDbContextFactory<AgentDb
 // attempt timeout for stage pacing, and a ledger entry for each retry.
 var shopAttemptTimeout = TimeSpan.FromSeconds(builder.Configuration.GetValue("Shop:AttemptTimeoutSeconds", 3));
 #pragma warning disable EXTEXP0001 // Experimental, and the documented way to replace the default handler for one client.
-builder.Services.AddHttpClient<ShopClient>(c => c.BaseAddress = new Uri(builder.Configuration["Shop:Url"] ?? "https+http://shop"))
+builder.Services.AddHttpClient<ShopClient>(c =>
+    {
+        c.BaseAddress = new Uri(builder.Configuration["Shop:Url"] ?? "https+http://shop");
+        c.DefaultRequestHeaders.Add(ClientHeader.Name, "BaristaNotes.Api");
+    })
     .RemoveAllResilienceHandlers()
 #pragma warning restore EXTEXP0001
     .AddStandardResilienceHandler(o =>
@@ -85,6 +90,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 
 await app.Services.GetRequiredService<RunCoordinator>().RecoverAsync();
 
+app.UseClientHeaderCheck();
 app.MapDefaultEndpoints();
 
 if (app.Environment.IsDevelopment())

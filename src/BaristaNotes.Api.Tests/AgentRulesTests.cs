@@ -78,6 +78,15 @@ public class ReorderPolicyTests
     }
 
     [Theory]
+    [InlineData(7)]
+    [InlineData(-1)]
+    public void An_unknown_autonomy_level_never_orders(int level)
+    {
+        // Fail closed: only an explicit Reorder favorites setting may order.
+        Assert.IsType<PolicyDecision.Notify>(ReorderPolicy.Decide(Favorite((Autonomy)level)));
+    }
+
+    [Theory]
     [InlineData(Autonomy.Watch)]
     [InlineData(Autonomy.PrepareCart)]
     [InlineData(Autonomy.ReorderFavorites)]

@@ -27,8 +27,14 @@ public sealed class OrderRecorder(IDbContextFactory<AgentDb> dbs, LedgerWriter l
 
             if (await db.Orders.FindAsync(order.Id) is not null)
             {
+                // Already recorded by the other reporter (webhook or agent). It is a
+                // duplicate if the pick's first order is a different one.
+                var known = order.ProposalId is Guid pid ? await db.Proposals.FindAsync(pid) : null;
                 var (_, leftNow) = await AgentState.BudgetAsync(db, settings, now);
-                return new OrderRecord(IsNew: false, IsDuplicate: false, leftNow);
+                return new OrderRecord(
+                    IsNew: false,
+                    IsDuplicate: known?.OrderId is not null && known.OrderId != order.Id,
+                    leftNow);
             }
 
             db.Orders.Add(new OrderRow

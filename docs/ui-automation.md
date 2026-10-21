@@ -25,7 +25,7 @@ Why not one tool: an agent lives inside the app and reports that app's UI tree. 
 1. Back-to-back CLI commands no longer refuse each other for 10 s ("Another session is driving this app").
 2. Popups that a library attaches to the native window (UXDivers.Popups here) are visible to tree, query, and tap.
 
-When those fixes ship in a published preview, set both pins to that version.
+The fixes are in review as dotnet/maui-labs#726 (lease) and dotnet/maui-labs#727 (popups). When they ship in a published preview, set both pins to that version.
 
 ## Everyday commands
 

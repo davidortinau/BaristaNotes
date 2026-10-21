@@ -141,6 +141,9 @@
 		<!-- CoreSync (for future sync capability - using latest available version) -->
 		<PackageReference Include="CoreSync.Sqlite" Version="1.0.0" />
 		<PackageReference Include="CoreSync.Http.Client" Version="1.0.0" />
+		<!-- CoreSync.Http(.Client) 1.0.0 pins MessagePack 3.1.7, which has a moderate advisory
+		     (GHSA-qhrr-8q5h-9q3h). Lift it until CoreSync ships with a fixed version. -->
+		<PackageReference Include="MessagePack" Version="3.1.12" />
 		<PackageReference Include="Shiny.Extensions.Configuration" Version="5.4.0" />
 		<PackageReference Include="System.Reactive" Version="7.0.0" />
 		

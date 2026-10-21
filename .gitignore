@@ -136,3 +136,6 @@ BaristaNotes/SyncfusionLicense.txt
 *.lscache
 # Playwright CLI output (may contain credentials)
 .playwright-cli/
+
+# Agent API demo database
+src/BaristaNotes.Api/App_Data/

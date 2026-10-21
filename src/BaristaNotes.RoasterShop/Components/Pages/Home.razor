@@ -1,7 +1,79 @@
 ﻿@page "/"
+@using System.Globalization
+@inject Catalog Catalog
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Roaster Shop</PageTitle>
 
-<h1>Hello, world!</h1>
+<section class="hero">
+    <h1>Fresh coffee from six small roasters</h1>
+    <p class="muted">Every bag is 250 g and shows its roast date. Shipping is charged once per roaster.</p>
+    <nav class="roaster-index" aria-label="Roasters">
+        @foreach (var r in Catalog.Roasters)
+        {
+            <a href="#@r.Handle">@r.Name</a>
+        }
+    </nav>
+</section>
 
-Welcome to your new app.
+@foreach (var roaster in Catalog.Roasters)
+{
+    <section class="roaster" id="@roaster.Handle">
+        <div class="roaster-head">
+            <h2>@roaster.Name</h2>
+            <p class="muted">@roaster.City &middot; Shipping @Money.Display(roaster.Shipping)</p>
+        </div>
+
+        <div class="grid">
+            @foreach (var p in Catalog.ProductsFor(roaster))
+            {
+                var roasted = p.RoastDate(today);
+                <article class="card @(p.Available ? null : "is-sold-out")">
+                    <div class="card-top">
+                        <h3>@p.Title</h3>
+                        @if (!p.Available)
+                        {
+                            <span class="badge badge-muted">Sold out</span>
+                        }
+                    </div>
+                    <p class="origin">@p.OriginLabel</p>
+                    <dl class="facts">
+                        <div><dt>Process</dt><dd>@p.ProcessLabel</dd></div>
+                        <div><dt>Roast</dt><dd>@p.Roast</dd></div>
+                        <div>
+                            <dt>Roasted</dt>
+                            <dd>
+                                <time datetime="@roasted.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">@roasted.ToString("d MMM yyyy", CultureInfo.InvariantCulture)</time>
+                                <span class="muted">(@DaysAgo(p.RoastedDaysAgo))</span>
+                            </dd>
+                        </div>
+                    </dl>
+                    <p class="notes">@string.Join(", ", p.Notes)</p>
+                    <div class="card-foot">
+                        <span class="price">@Money.Display(p.Price) <span class="muted">/ @CatalogProduct.VariantTitle</span></span>
+                        @if (p.Available)
+                        {
+                            <a class="button" href="/@roaster.Handle/cart/@(p.VariantId):1">Buy</a>
+                        }
+                        else
+                        {
+                            <span class="button is-disabled" aria-disabled="true">Sold out</span>
+                        }
+                    </div>
+                </article>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    private DateOnly today;
+
+    protected override void OnInitialized() => today = Catalog.Today;
+
+    private static string DaysAgo(int days) => days switch
+    {
+        0 => "today",
+        1 => "1 day ago",
+        _ => $"{days} days ago",
+    };
+}

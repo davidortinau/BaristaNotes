@@ -1,0 +1,132 @@
+@page "/checkout/{CartId}"
+@inject ShopStore Store
+@inject Catalog Catalog
+
+<PageTitle>Checkout</PageTitle>
+
+@if (cart is null)
+{
+    <h1>Cart not found</h1>
+    <p>There is no cart <code>@CartId</code>. Carts are kept in memory, so a shop restart clears them.</p>
+    <p><a href="/">Back to the shop</a></p>
+    return;
+}
+
+<h1>Checkout</h1>
+<p class="muted">@RoasterName &middot; Cart <code title="@cart.Id">@cart.Id</code></p>
+
+@if (proposalId is not null)
+{
+    <div class="callout callout-agent">
+        <strong>Prepared by the Barista Notes agent</strong>
+        <span class="muted">Proposal <code title="@proposalId">@Ids.Short(proposalId)</code>. Nothing is ordered until you place the order.</span>
+    </div>
+}
+
+@if (cart.Status == CartStatus.Removed)
+{
+    <div class="callout callout-warn">This cart was removed.</div>
+    <p><a href="/">Back to the shop</a></p>
+    return;
+}
+
+@if (error is not null)
+{
+    <div class="callout callout-warn">@error</div>
+}
+
+@if (order is not null)
+{
+    <div class="callout callout-ok">
+        <strong>Order @order.OrderNumber placed</strong>
+        <span class="muted">@order.CreatedAt.ToString("d MMM yyyy, HH:mm:ss") &middot; No payment was taken.</span>
+    </div>
+}
+
+<table class="table lines">
+    <thead>
+        <tr><th>Coffee</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Line total</th></tr>
+    </thead>
+    <tbody>
+        @foreach (var line in Lines)
+        {
+            <tr>
+                <td>@line.Title <span class="muted">250 g</span></td>
+                <td class="num">@line.Quantity</td>
+                <td class="num">@Money.Display(line.Price)</td>
+                <td class="num">@Money.Display(line.Price * line.Quantity)</td>
+            </tr>
+        }
+    </tbody>
+    <tfoot>
+        <tr><td colspan="3">Subtotal</td><td class="num">@Money.Display(Subtotal)</td></tr>
+        <tr><td colspan="3">Shipping</td><td class="num">@Money.Display(Shipping)</td></tr>
+        <tr class="total"><td colspan="3">Total</td><td class="num">@Money.Display(Total)</td></tr>
+    </tfoot>
+</table>
+
+@if (order is null && cart.Status == CartStatus.Open)
+{
+    <form method="post" @formname="place-order" @onsubmit="PlaceOrder" class="actions">
+        <AntiforgeryToken />
+        <input type="hidden" name="Confirm" value="yes" />
+        <button type="submit" class="button button-primary">Place order</button>
+        <span class="muted">Demo shop: no payment is taken.</span>
+    </form>
+}
+else
+{
+    <p class="actions"><a href="/orders">See all orders</a> &middot; <a href="/">Back to the shop</a></p>
+}
+
+@code {
+    [Parameter]
+    public string CartId { get; set; } = "";
+
+    [SupplyParameterFromForm(FormName = "place-order")]
+    public string? Confirm { get; set; }
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    private Cart? cart;
+    private Order? order;
+    private string? proposalId;
+    private string? error;
+
+    private IReadOnlyList<LineItem> Lines => order?.Lines ?? cart!.Lines;
+    private decimal Subtotal => order?.Subtotal ?? cart!.Subtotal;
+    private decimal Shipping => order?.Shipping ?? cart!.Shipping;
+    private decimal Total => order?.Total ?? cart!.Total;
+    private string RoasterName => Catalog.FindRoaster(cart?.Roaster)?.Name ?? cart?.Roaster ?? "";
+
+    protected override void OnParametersSet() => Load();
+
+    private void Load()
+    {
+        cart = Store.GetCart(CartId);
+        if (cart is null)
+        {
+            if (HttpContext is not null) HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+        proposalId = cart.Attributes.GetValueOrDefault(ShopStore.ProposalIdAttribute);
+        order = cart.Status == CartStatus.Ordered ? Store.FindOrderForCart(cart.Id) : null;
+    }
+
+    private void PlaceOrder()
+    {
+        // The cart id is the idempotency key: a double click or a refresh
+        // returns the same order.
+        var result = Store.PlaceOrder(new OrderRequest(CartId: CartId), idempotencyKey: CartId, OrderSource.Checkout);
+        Load();
+        if (result.Outcome is OrderOutcome.Created or OrderOutcome.Replayed)
+        {
+            order = result.Order;
+        }
+        else
+        {
+            error = result.Error;
+        }
+    }
+}

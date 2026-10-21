@@ -1,3 +1,29 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
-@Body
+@* Full page loads everywhere: this behaves like a plain server-rendered shop. *@
+<div class="site" data-enhance-nav="false">
+    <div class="demo-banner" role="note">
+        Demo shop. Fictional roasters. No payment is taken.
+    </div>
+
+    <header class="site-header">
+        <div class="wrap header-inner">
+            <a class="brand" href="/">Roaster Shop</a>
+            <nav class="site-nav" aria-label="Main">
+                <NavLink href="" Match="NavLinkMatch.All">Shop</NavLink>
+                <NavLink href="orders">Orders</NavLink>
+                <NavLink href="admin">Admin</NavLink>
+            </nav>
+        </div>
+    </header>
+
+    <main class="wrap page">
+        @Body
+    </main>
+
+    <footer class="site-footer">
+        <div class="wrap">
+            Six fictional roasters for a conference demo. Any resemblance to real businesses is unintended.
+        </div>
+    </footer>
+</div>

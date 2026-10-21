@@ -31,6 +31,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BaristaNotes.RoasterShop", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BaristaNotes.Api.Tests", "BaristaNotes.Api.Tests\BaristaNotes.Api.Tests.csproj", "{3F0D8316-DDB3-423C-8E46-509B43BFC304}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BaristaNotes.RoasterShop.Tests", "BaristaNotes.RoasterShop.Tests\BaristaNotes.RoasterShop.Tests.csproj", "{0E7128E9-9A83-4C39-8CF9-772D2BC49F36}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -203,6 +205,18 @@ Global
 		{3F0D8316-DDB3-423C-8E46-509B43BFC304}.Release|x64.Build.0 = Release|Any CPU
 		{3F0D8316-DDB3-423C-8E46-509B43BFC304}.Release|x86.ActiveCfg = Release|Any CPU
 		{3F0D8316-DDB3-423C-8E46-509B43BFC304}.Release|x86.Build.0 = Release|Any CPU
+		{0E7128E9-9A83-4C39-8CF9-772D2BC49F36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E7128E9-9A83-4C39-8CF9-772D2BC49F36}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E7128E9-9A83-4C39-8CF9-772D2BC49F36}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0E7128E9-9A83-4C39-8CF9-772D2BC49F36}.Debug|x64.Build.0 = Debug|Any CPU
+		{0E7128E9-9A83-4C39-8CF9-772D2BC49F36}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0E7128E9-9A83-4C39-8CF9-772D2BC49F36}.Debug|x86.Build.0 = Debug|Any CPU
+		{0E7128E9-9A83-4C39-8CF9-772D2BC49F36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E7128E9-9A83-4C39-8CF9-772D2BC49F36}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E7128E9-9A83-4C39-8CF9-772D2BC49F36}.Release|x64.ActiveCfg = Release|Any CPU
+		{0E7128E9-9A83-4C39-8CF9-772D2BC49F36}.Release|x64.Build.0 = Release|Any CPU
+		{0E7128E9-9A83-4C39-8CF9-772D2BC49F36}.Release|x86.ActiveCfg = Release|Any CPU
+		{0E7128E9-9A83-4C39-8CF9-772D2BC49F36}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

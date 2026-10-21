@@ -46,7 +46,7 @@ Debug Mac Catalyst data is in `~/Library/` (not sandboxed). The demo uses `~/Lib
 | Memory proof in TF-11 | Memory page (point at the 3 guest drinks not used for learning), **Forget** one item (moves to Removed, never relearned), then **Never this roaster** on an open pick and run again: the roaster is skipped and another coffee is picked |
 | TF-15 retry | **Bug, then fix, no reset.** Run 1: Huila, Ignore idempotency keys + Arm order timeout: two orders, "charged twice". Run 2: Honor keys + Arm order timeout, Huehuetenango (second favorite added to the demo data): one order |
 | Monthly budget | **€100** (was €80). With €80 the fix run would be over budget after the duplicate |
-| Pacing | 900 ms steps. Dashboard **Slow steps (2.5 s)** before TF-14 so Stop has a comfortable window, then **Normal steps** |
+| Pacing | 900 ms steps. Dashboard **Stop window on (3 s)** before TF-14: a 3 s pause after each cart or order, so Stop has a comfortable window. Then **Stop window off** |
 | Prompt traces | Keep on (Development only). Show the ranker span in TF-12 and say: personal data in production, so it is off there |
 | Beat 1 | Mark **Kochere and Nyeri** finished, so TF-11 has an open pick (Nyeri's) for Never this roaster after Guji is bought in beat 5. TF-14 reuses Nyeri |
 
@@ -263,6 +263,7 @@ The existing voice tool `open_roaster_url` does not change and is not part of th
 | Review: the "While you were away" card never appeared after a run you watched, nor while Activity was open | The card refreshes while visible and shows "Agent at work" during a run. The runbook starts that beat from the dashboard |
 | Review: the order-timeout fault could stay armed | "Disarm order timeout" command; Reset demo also clears it |
 | The pick page showed the evidence below the fold | Why and evidence first; price and budget side by side |
+| The ledger said "You marked it finished in your check-in" for two bags | "You marked them finished" when more than one bag is finished |
 
 ### Open
 
@@ -281,3 +282,7 @@ The existing voice tool `open_roaster_url` does not change and is not part of th
 | Cosmetic | The DEBUG AI tool harness expects an empty database. With demo data it logs "LLM FAIL ... You have pulled 22 shots". Harmless |
 | Cosmetic | The model's "why" sometimes stretches a preference, for example "light roast Ethiopian" for the Rwanda Natural |
 | Docs | The `maui-aspire` skill in maui-skills still says MAUI cannot be orchestrated by Aspire. `Aspire.Hosting.Maui` does it |
+| Stage | The rating scales differ on screen: evidence says "4/4", a skip says "rated it 2.3 of 4", and the Activity list draws 5 stars (a 4/4 shot shows 5 stars). The audience may notice in TF-08 |
+| Cosmetic | "6 things learned" counts your own Never rule ("Added by you"). Settings → Roasters still says "5 watched" while Tidewell is blocked |
+| Cosmetic | Check-in with 4 open bags: the last row sits behind the Save bar until you scroll. With 1 or 2 bags, a large empty block fills the space above Save |
+| DevFlow | DevFlow cannot tap Stop during a run: "The UI snapshot is stale", because the agent page re-renders on every poll. A person tapping is not affected. Scripts can call `POST /runs/{id}/stop`, which is what the Stop tile does |

@@ -143,7 +143,7 @@ public sealed class AgentRunner(
 
         await Write(run, LedgerKind.Notice,
             $"Looking for a replacement for {string.Join(" and ", needs.Select(n => n.BeanName))}.",
-            "You marked it finished in your check-in.");
+            needs.Count == 1 ? "You marked it finished in your check-in." : "You marked them finished in your check-in.");
 
         // 2. Learn preferences, or use what is remembered.
         var memory = await LearnAsync(db, run, snapshotRow, snapshot, forMe, ct);

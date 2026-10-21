@@ -212,6 +212,30 @@ public sealed class AgentRunner(
             await SaveProgressAsync(db, run, progress);
         }
 
+        // Something new: roasters you do not watch. Suggestion only.
+        var discovery = new List<RankCandidate>();
+        var unwatched = shopRoasters.Values
+            .Where(r => !settings.WatchedRoasters.Contains(r.Handle) && !neverRoasters.Contains(r.Handle))
+            .ToList();
+        foreach (var roaster in unwatched)
+        {
+            ct.ThrowIfCancellationRequested();
+            var products = await shop.GetProductsAsync(roaster.Handle, ct);
+            discovery.AddRange(products
+                .Select(p => ShopClient.ToCatalogItem(roaster, p))
+                .OfType<CatalogItem>()
+                .Where(item => CandidateFilter.SkipReason(item, filter) is null)
+                .Select(item => new RankCandidate(item, item.Describe(today), null,
+                    roasterHistory.GetValueOrDefault(ProductMatch.Normalize(item.RoasterName)) ?? [])));
+        }
+
+        if (unwatched.Count > 0)
+        {
+            await Write(run, LedgerKind.Notice,
+                $"Also looked at {string.Join(" and ", unwatched.Select(r => r.Name))}, which you don't watch.",
+                "Anything from there is a suggestion only.");
+        }
+
         if (candidates.Count == 0)
         {
             await Write(run, LedgerKind.NothingToDo, "No coffee passed your filters.", "Nothing was changed in any shop.");
@@ -232,11 +256,14 @@ public sealed class AgentRunner(
                 .ToList(),
             needs,
             candidates,
-            citeable);
+            citeable)
+        {
+            Discovery = discovery,
+        };
 
-        var picks = await model.RankAsync(request, ct);
+        var ranking = await model.RankAsync(request, ct);
         await ReportReplayAsync(run);
-        var accepted = Accept(picks, needs, candidates, forMe, out var ignoredPicks, out var cited, out var dropped);
+        var accepted = Accept(ranking.Picks, needs, candidates, forMe, out var ignoredPicks, out var cited, out var dropped);
 
         await Write(run, LedgerKind.EvidenceChecked,
             dropped == 0
@@ -320,6 +347,17 @@ public sealed class AgentRunner(
                     orderedBags.Add(need.BagId);
                     break;
             }
+        }
+
+        // 6. A suggestion from a roaster you don't watch. Never a cart or an order.
+        if (ranking.Suggestion is { } suggestion &&
+            discovery.FirstOrDefault(d => d.Item.ProductId == suggestion.ProductId) is { } found)
+        {
+            await Task.Delay(step, time, ct);
+            await Write(run, LedgerKind.Notice,
+                $"Something new to try: {found.Item.Title} from {found.Item.RoasterName}.",
+                $"{suggestion.Why.Trim()} Suggestion only: you don't watch {found.Item.RoasterName}, so I did not prepare a cart.",
+                found.Item.Roaster);
         }
     }
 

@@ -34,7 +34,15 @@ public sealed record RankRequest(
     IReadOnlyList<RankMemory> Memory,
     IReadOnlyList<RankNeed> Needs,
     IReadOnlyList<RankCandidate> Candidates,
-    IReadOnlyList<RankShot> Shots);
+    IReadOnlyList<RankShot> Shots)
+{
+    /// <summary>Coffees from roasters you do not watch. The model may suggest one; it is never a pick.</summary>
+    public IReadOnlyList<RankCandidate> Discovery { get; init; } = [];
+}
+
+public sealed record ModelSuggestion(long ProductId, string Why);
+
+public sealed record RankResult(IReadOnlyList<ModelPick> Picks, ModelSuggestion? Suggestion);
 
 public sealed record ModelPick(
     int ForBagId,
@@ -47,7 +55,7 @@ public interface IReorderModel
 {
     Task<IReadOnlyList<LearnedPreference>> LearnAsync(LearnRequest request, CancellationToken ct);
 
-    Task<IReadOnlyList<ModelPick>> RankAsync(RankRequest request, CancellationToken ct);
+    Task<RankResult> RankAsync(RankRequest request, CancellationToken ct);
 }
 
 /// <summary>
@@ -128,10 +136,10 @@ public sealed class FoundryReorderModel : IReorderModel
         return result;
     }
 
-    public async Task<IReadOnlyList<ModelPick>> RankAsync(RankRequest request, CancellationToken ct)
+    public async Task<RankResult> RankAsync(RankRequest request, CancellationToken ct)
     {
         var response = await _ranker.RunAsync<RankOutput>(Prompts.Rank(request), cancellationToken: ct);
-        return response.Result.Picks
+        var picks = response.Result.Picks
             .Select(p => new ModelPick(
                 p.FinishedBagId,
                 p.ProductId,
@@ -139,6 +147,10 @@ public sealed class FoundryReorderModel : IReorderModel
                 p.Evidence.Select(e => new CitedShot(e.DrinkId, e.Point)).ToList(),
                 p.Unknowns))
             .ToList();
+        var suggestion = response.Result.Suggestions
+            .Select(x => new ModelSuggestion(x.ProductId, x.Why))
+            .FirstOrDefault();
+        return new RankResult(picks, suggestion);
     }
 
     // Structured output shapes. Descriptions become part of the JSON schema.
@@ -180,6 +192,18 @@ public sealed class FoundryReorderModel : IReorderModel
     {
         [Description("Exactly one pick per finished bag.")]
         public List<Pick> Picks { get; set; } = [];
+
+        [Description("0 or 1 coffee from the new roasters list that this person may like. Empty when nothing there fits well.")]
+        public List<Suggestion> Suggestions { get; set; } = [];
+    }
+
+    sealed class Suggestion
+    {
+        [Description("A product ID from the new roasters list.")]
+        public long ProductId { get; set; }
+
+        [Description("One short sentence to the person on why it may suit them.")]
+        public string Why { get; set; } = "";
     }
 
     sealed class Pick
@@ -225,6 +249,7 @@ public static class Prompts
         - Otherwise pick the candidate that best matches what you remember about the person. What you remember is everything you know about their taste. Do not assume other preferences.
         - why: name the notes or drinks that connect the pick to this person, in one or two short sentences. Write to the person ("you").
         - Cite 2 to 4 drinks from the list as evidence. Never invent an ID.
+        - You may also suggest one coffee from the new roasters list. It is only a suggestion, never a pick.
         - unknowns: concrete things this data cannot tell you about this pick, written to the person. For example: "You have not had a coffee from Guji." "This is a lighter roast than Huila." "You have never ordered from this roaster." No vague doubts.
         """;
 
@@ -297,7 +322,21 @@ public static class Prompts
 
         text.AppendLine();
         text.AppendLine("Candidates:");
-        foreach (var candidate in request.Candidates)
+        AppendCandidates(text, request.Candidates);
+
+        if (request.Discovery.Count > 0)
+        {
+            text.AppendLine();
+            text.AppendLine("New roasters the person does not watch (suggestion only, never a pick):");
+            AppendCandidates(text, request.Discovery);
+        }
+
+        return text.ToString();
+    }
+
+    static void AppendCandidates(StringBuilder text, IReadOnlyList<RankCandidate> candidates)
+    {
+        foreach (var candidate in candidates)
         {
             var item = candidate.Item;
             var line = new StringBuilder($"- product {item.ProductId}: {item.Title} from {item.RoasterName}. {candidate.Description} ");
@@ -313,8 +352,6 @@ public static class Prompts
 
             text.AppendLine(line.ToString());
         }
-
-        return text.ToString();
     }
 
     static string Rating(int? rating) => rating is int r ? $"rated {r}/4" : "not rated";

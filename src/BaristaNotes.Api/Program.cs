@@ -73,6 +73,7 @@ builder.Services.AddSingleton<IReorderModel, FoundryReorderModel>();
 builder.Services.AddSingleton<LedgerWriter>();
 builder.Services.AddSingleton<OrderRecorder>();
 builder.Services.AddSingleton<RunCoordinator>();
+builder.Services.AddSingleton<StagePace>();
 builder.Services.AddScoped<AgentRunner>();
 
 builder.Services.AddOpenTelemetry()

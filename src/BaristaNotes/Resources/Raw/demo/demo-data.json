@@ -9,14 +9,16 @@
     { "key": "huila", "name": "Huila Washed", "roaster": "Wickerline Roasters", "origin": "Colombia, Huila", "notes": "Washed. Medium roast. Milk chocolate, caramel." },
     { "key": "nyeri", "name": "Nyeri Washed", "roaster": "Tidewell Roasting", "origin": "Kenya, Nyeri", "notes": "Washed. Light roast. Grapefruit, blackcurrant." },
     { "key": "santos", "name": "Santos Dark", "roaster": "Ninefold Coffee", "origin": "Brazil, Santos", "notes": "Dark roast. Cocoa, smoke." },
-    { "key": "sidamo", "name": "Sidamo Natural", "roaster": "Copperhaze Coffee", "origin": "Ethiopia, Sidamo", "notes": "Natural process. Light roast. Strawberry, red wine." }
+    { "key": "sidamo", "name": "Sidamo Natural", "roaster": "Copperhaze Coffee", "origin": "Ethiopia, Sidamo", "notes": "Natural process. Light roast. Strawberry, red wine." },
+    { "key": "huehue", "name": "Huehuetenango Washed", "roaster": "Ninefold Coffee", "origin": "Guatemala, Huehuetenango", "notes": "Washed. Medium roast. Chocolate, green apple." }
   ],
   "bags": [
     { "key": "kochere-1", "bean": "kochere", "roastedDaysAgo": 27, "finished": false },
     { "key": "huila-1", "bean": "huila", "roastedDaysAgo": 21, "finished": false },
     { "key": "nyeri-1", "bean": "nyeri", "roastedDaysAgo": 9, "finished": false },
     { "key": "santos-1", "bean": "santos", "roastedDaysAgo": 75, "finished": true },
-    { "key": "sidamo-1", "bean": "sidamo", "roastedDaysAgo": 60, "finished": true }
+    { "key": "sidamo-1", "bean": "sidamo", "roastedDaysAgo": 60, "finished": true },
+    { "key": "huehue-1", "bean": "huehue", "roastedDaysAgo": 16, "finished": false }
   ],
   "shots": [
     { "bag": "kochere-1", "daysAgo": 24, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 40, "time": 29, "rating": 4, "notes": "Blueberry jam and jasmine. Best shot this month." },
@@ -44,6 +46,10 @@
 
     { "bag": "sidamo-1", "daysAgo": 58, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 40, "time": 29, "rating": 4, "notes": "Strawberry and red wine. Wow." },
     { "bag": "sidamo-1", "daysAgo": 55, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 41, "time": 28, "rating": 3, "notes": "Winey, very sweet." },
-    { "bag": "sidamo-1", "daysAgo": 50, "madeBy": "me", "madeFor": "me", "drinkType": "Flat White", "doseIn": 18, "output": 38, "time": 28, "rating": 4, "notes": "Strawberry jam in milk." }
+    { "bag": "sidamo-1", "daysAgo": 50, "madeBy": "me", "madeFor": "me", "drinkType": "Flat White", "doseIn": 18, "output": 38, "time": 28, "rating": 4, "notes": "Strawberry jam in milk." },
+    { "bag": "huehue-1", "daysAgo": 15, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 38, "time": 28, "rating": 4, "notes": "Chocolate and green apple. Lovely balance." },
+    { "bag": "huehue-1", "daysAgo": 11, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 40, "time": 27, "rating": 3, "notes": "Good, a touch tart." },
+    { "bag": "huehue-1", "daysAgo": 7, "madeBy": "me", "madeFor": "me", "drinkType": "Cortado", "doseIn": 18, "output": 36, "time": 28, "rating": 4, "notes": "Apple up front, chocolate finish. Great in a cortado." },
+    { "bag": "huehue-1", "daysAgo": 1, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 38, "time": 29, "rating": 3, "notes": "Still good. I would buy it again." }
   ]
 }

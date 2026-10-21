@@ -440,6 +440,25 @@ public static class AgentEndpoints
 
         app.MapGet("/demo/model-mode", (ModelReplay replay) => Results.Ok(new { mode = replay.Mode.ToString() }));
 
+        // Stage pacing. EffectPauseMs holds the run for a moment after each cart or
+        // order, which gives time to tap Stop without slowing every step (TF-14).
+        app.MapPost("/demo/pace", async (PaceRequest request, AgentDb db, StagePace pace, CancellationToken ct) =>
+        {
+            var settings = await AgentState.GetSettingsAsync(db, ct);
+            if (request.StepDelayMs is int step)
+            {
+                settings.StepDelayMs = Math.Clamp(step, 0, 10_000);
+                await db.SaveChangesAsync(ct);
+            }
+
+            if (request.EffectPauseMs is int pause)
+            {
+                pace.EffectPauseMs = Math.Clamp(pause, 0, 10_000);
+            }
+
+            return Results.Ok(new { stepDelayMs = settings.StepDelayMs, effectPauseMs = pace.EffectPauseMs });
+        });
+
         app.MapPost("/demo/reset", async (RunCoordinator runs, AgentDb db, ShopClient shop, ILoggerFactory logs, CancellationToken ct) =>
         {
             await runs.StopAllAsync();
@@ -468,3 +487,11 @@ public static class AgentEndpoints
 }
 
 public sealed record ModelModeRequest([property: System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ReplayMode>))] ReplayMode Mode);
+
+public sealed record PaceRequest(int? StepDelayMs, int? EffectPauseMs);
+
+/// <summary>Stage-only pacing that is not saved: resets when the API restarts.</summary>
+public sealed class StagePace
+{
+    public int EffectPauseMs { get; set; }
+}

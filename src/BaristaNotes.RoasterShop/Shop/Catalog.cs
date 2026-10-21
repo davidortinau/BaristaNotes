@@ -170,7 +170,7 @@ public sealed class Catalog
             new(Lanternfish, 4, "Decaf Colombia", ["Colombia"], "Tolima", "washed", "medium", ["caramel", "red apple"], 15.00m, 9, Available: true, Decaf: true),
 
             new(Wickerline, 1, "Huila Washed", ["Colombia"], "Huila", "washed", "medium", ["milk chocolate", "caramel"], 15.50m, 4, Available: true),
-            new(Wickerline, 2, "Gesha Lot 7", ["Panama"], "Boquete", "washed", "light", ["bergamot", "jasmine", "peach"], 89.00m, 3, Available: true),
+            new(Wickerline, 2, "Gesha Lot 7", ["Panama"], "Boquete", "washed", "light", ["bergamot", "jasmine", "peach"], 119.00m, 3, Available: true),
             new(Wickerline, 3, "Tolima Honey", ["Colombia"], "Tolima", "honey", "medium", ["panela", "orange"], 16.00m, 25, Available: true),
 
             new(Ninefold, 1, "Santos Dark", ["Brazil"], "Santos", "natural", "dark", ["cocoa", "smoke"], 12.00m, 7, Available: true),

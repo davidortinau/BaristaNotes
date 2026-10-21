@@ -21,24 +21,56 @@
 
 ## Script
 
-| Beat | On stage | What the audience sees | Dashboard or shop |
-|---|---|---|---|
-| 1 Check-in | Activity tab → **Still have these?** → mark Kochere Natural **Finished** → Save | The app asks for what it cannot see | |
-| 2 Run | Stay on the Activity tab. Dashboard `api` → **Run agent** (the agent works on its own). The card changes to "Agent at work". Tap **Watch** | The ledger fills step by step: checked, skipped with reasons | Optional: show the trace in the dashboard (Traces → `POST /runs`) |
-| 3 While you were away | Variation: start the run from the dashboard, stay on Activity, and wait for "While you were away · checked 5 roasters · skipped 12 · 1 pick". A run you watched to the end in the app counts as seen and does not get this card | Doing nothing, with a reason, is also a ledger entry | |
-| 4 Why this one | Tap the pick (Guji Natural) | Why, evidence from your own notes with ratings, what it does not know, budget left. "Checked 4 citations against your notes. All found." | |
-| 5 Buy | **Buy** opens the shop checkout. Place the order | "Prepared by the Barista Notes agent". Back in the app: Ordered #1001, budget €57.50 left | Shop orders page shows #1001 |
-| 6 Autonomy and retry | Settings → autonomy **Reorder**. Check in Huila Washed as finished. Dashboard `shop` → **Arm order timeout**. **Run now** | Ledger: "Ordering...", "Retrying POST /api/orders ... same Idempotency-Key", "The shop returned the existing order #1002". One order | Shop orders page: one #1002 |
-| 6b The bug (optional) | Reset first (see below). Dashboard `shop` → **Ignore idempotency keys** + **Arm order timeout**. Run | Ledger: "Second order for the same pick: #1002 ... charged twice" | Shop orders page: two orders marked Duplicate |
-| 7 Stop | Settings → autonomy **Cart**. Check in Nyeri Washed as finished. **Run now**, then **Stop** right after "Cart ready at Tidewell Roasting" (set the step delay to 2500 ms if the timing is tight) | "Stopped by you. Already done: the cart at Tidewell Roasting is still open." **Remove cart** on that entry | Shop cart status is "removed" |
-| 7b Stale pick (TF-14) | After a run in Cart mode: dashboard `shop` → **Raise prices 10%**. Open the pick and tap **Buy** | "The price changed from €17.50 to €19.25 since I picked it." No checkout opens. The cart is removed and the pick shows "Out of date". Afterwards: **Normal prices** | Shop prices are 10% higher |
-| 8 Memory | Settings → Memory: show what it learned, with your drinks as evidence. Forget one item: it moves to Removed and is never relearned. Then on the Guji pick tap **Never this roaster** and run again | The next run skips Copperhaze Coffee ("You said never this roaster") and picks Rwanda Natural instead. Recommended: forgetting "likes naturals" alone does not change the pick, because other preferences and the finished bag's own notes still point to Guji | |
+Talk order, with the 21 October decisions. Runs take about 15-20 s at 900 ms steps.
+
+### TF-10 Main demo (14:15-26:00)
+
+| Beat | On stage | What the audience sees |
+|---|---|---|
+| 1 Check-in | Activity tab → **Still have these?** → mark **Kochere Natural** and **Nyeri Washed** finished → Save | The app asks for what it cannot see |
+| 2 Run, unattended | Stay on Activity. Dashboard `api` → **Run agent** (the agent works on its own). Talk over the card "Agent at work" | It is working without you watching |
+| 3 While you were away | The card turns into "While you were away · checked 5 roasters · skipped … · 2 picks" → **View** | The ledger: checked, skipped with reasons (sold out, roasted too long ago, over budget, you dislike dark roasts, you still have a bag), evidence checked, two picks, two carts, nothing charged |
+| 4 Why this one | Open the **Guji Natural** pick (for Kochere) | Why, evidence from your own notes with ratings and dates, what it does not know, budget left €100 |
+| 5 Buy | **Buy** → shop checkout ("Prepared by the Barista Notes agent") → **Place order** → back to the app | Ordered #1001, €77.50 left |
+
+### TF-11 Inspectable memory (26:00-29:00)
+
+| Step | On stage | What the audience sees |
+|---|---|---|
+| 1 | Settings → Memory | Each preference cites your drinks. "3 guest drinks not used for learning": Sam's dark-roast lattes. An exception is not a preference |
+| 2 | Expand "You like natural-process coffees" → **Forget this** → Forget | It moves to Removed: never learned again |
+| 3 | Agent activity → open the **Rwanda Natural** pick (for Nyeri, Tidewell Roasting) → **Never this roaster** → Never | You decide which roasters it may use |
+| 4 | **Run now** | "Tidewell Roasting: you said never this roaster." Nyeri's pick changes, for example to Guji Natural |
+
+### TF-12 Architecture (29:00-33:00)
+
+Slide, then the dashboard: Traces → `api: POST /runs` → two `invoke_agent` spans (preference-learner, reorder-ranker), each with a `chat gpt-4.1-mini` call to Foundry, the shop calls in between. Click `invoke_agent reorder-ranker` → `gen_ai.input.messages`: exactly what the model saw. Say: Development only; in production this is personal data, so prompt capture is off.
+
+### TF-14 Stopped is not undone, stale approval (36:00-42:00)
+
+| Step | On stage | What the audience sees |
+|---|---|---|
+| 1 | Dashboard `api` → **Stop window on (3 s)** | (Each cart or order is followed by a 3 s pause) |
+| 2 | Agent activity → **Run now**. When "Cart ready at …" appears → **Stop** | "Stopped by you. Already done: the cart at … is still open." **Remove cart** on that entry |
+| 3 | Open the earlier Guji pick for Nyeri (cart ready). Dashboard `shop` → **Raise prices 10%** → tap **Buy** | "The price changed from €17.50 to €19.25 since I picked it." No checkout opens; the pick is Out of date |
+| 4 | Dashboard `shop` → **Normal prices**; `api` → **Stop window off** | |
+
+### TF-15 Retry without duplicate effects (42:00-45:00)
+
+| Step | On stage | What the audience sees |
+|---|---|---|
+| 1 | Settings → autonomy **Reorder**. Check-in: **Huila Washed** finished | Reorder favorites: it may order a finished favorite within budget |
+| 2 | Dashboard `shop` → **Ignore idempotency keys** and **Arm order timeout**. **Run now** | "Ordering Huila Washed…", "Retrying POST /api/orders … same Idempotency-Key", "Second order for the same pick: #1003 … charged twice". Shop Orders page: two orders marked Duplicate. The run also prepares a cart for Nyeri: "New coffee, so I prepared a cart instead" |
+| 3 | Dashboard `shop` → **Honor idempotency keys** and **Arm order timeout**. Check-in: **Huehuetenango Washed** finished. **Run now** | "Retrying …", "The shop returned the existing order #1004." One order. €15.00 left of €100 |
+
+No retry code was written: Aspire service defaults add the standard resilience handler, which retries POST requests too.
 
 ## Dashboard commands
 
 | Resource | Command | Effect |
 |---|---|---|
 | api | Run agent | Same as Run now in the app |
+| api | Stop window on (3 s) / Stop window off | Pause 3 s after each cart or order, so there is time to tap Stop (TF-14) |
 | api | Stop run | Stops the run that is going |
 | api | Use rehearsal answers | No model calls. Recorded answers only. The ledger says "Used a rehearsal answer" |
 | api | Use live model | Back to Foundry. Replays only if Foundry cannot be reached |

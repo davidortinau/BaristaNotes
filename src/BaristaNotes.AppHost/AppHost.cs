@@ -51,6 +51,10 @@ var api = builder.AddProject<Projects.BaristaNotes_Api>("api")
         """{"trigger":"dashboard"}""", "Starts an agent run, the same as Run now in the app.", "Play", highlighted: true))
     .WithHttpCommand("/runs/stop", "Stop run", commandName: "stop-run", commandOptions: Json(
         "{}", "Stops the run that is going. Effects that already happened stay in the ledger.", "Stop"))
+    .WithHttpCommand("/demo/pace", "Stop window on (3 s)", commandName: "pace-slow", commandOptions: Json(
+        """{"effectPauseMs":3000}""", "The run pauses 3 s after each cart or order, so there is time to tap Stop (TF-14). Other steps keep their pace.", "Pause"))
+    .WithHttpCommand("/demo/pace", "Stop window off", commandName: "pace-normal", commandOptions: Json(
+        """{"effectPauseMs":0,"stepDelayMs":900}""", "Back to the normal stage pace (900 ms steps, no pause after effects).", "Play"))
     .WithHttpCommand("/demo/model-mode", "Use rehearsal answers", commandName: "model-replay", commandOptions: Json(
         """{"mode":"Only"}""", "For bad conference Wi-Fi: the agent uses answers recorded in rehearsal, and the ledger says so.", "PlugDisconnected"))
     .WithHttpCommand("/demo/model-mode", "Use live model", commandName: "model-live", commandOptions: Json(

@@ -38,17 +38,25 @@ Tests: 61 API, 37 shop, 1005 app (52 new). A code review of the branch on 21 Oct
 
 Debug Mac Catalyst data is in `~/Library/` (not sandboxed). The demo uses `~/Library/barista_notes_demo.db`. David's `barista_notes.db` was checked on 21 October: unchanged since 28 August. Backups: `~/Library/barista_notes.db.bak-pre-005-2026-10-20` and the container copy.
 
-## Needs David's input
+## Stage decisions (David, 2026-10-21)
 
-| # | Decision | Recommendation |
+| Topic | Decision |
+|---|---|
+| TF-11 | Becomes **inspectable memory**: "Let it learn. Let me edit what it learned." It absorbs beat 8 |
+| Memory proof in TF-11 | Memory page (point at the 3 guest drinks not used for learning), **Forget** one item (moves to Removed, never relearned), then **Never this roaster** on an open pick and run again: the roaster is skipped and another coffee is picked |
+| TF-15 retry | **Bug, then fix, no reset.** Run 1: Huila, Ignore idempotency keys + Arm order timeout: two orders, "charged twice". Run 2: Honor keys + Arm order timeout, Huehuetenango (second favorite added to the demo data): one order |
+| Monthly budget | **€100** (was €80). With €80 the fix run would be over budget after the duplicate |
+| Pacing | 900 ms steps. Dashboard **Slow steps (2.5 s)** before TF-14 so Stop has a comfortable window, then **Normal steps** |
+| Prompt traces | Keep on (Development only). Show the ranker span in TF-12 and say: personal data in production, so it is off there |
+| Beat 1 | Mark **Kochere and Nyeri** finished, so TF-11 has an open pick (Nyeri's) for Never this roaster after Guji is bought in beat 5. TF-14 reuses Nyeri |
+
+## Still open (not for the stage)
+
+| # | Item | Recommendation |
 |---|---|---|
-| 1 | Beat 8 (memory). Removing "You like natural-process coffees" works and is never relearned, but the next pick stays Guji Natural: the other preferences and the finished bag's own notes still point there | Show the Memory page and remove an item, then use **Never this roaster** on the pick for the visible change: the next run skips Copperhaze and picks Rwanda Natural |
-| 2 | Beat 6b, the duplicate order with **Ignore idempotency keys**. It needs a **Reset demo** before beat 6 | Show the bug first, reset, then the fix. Or show only the fix and describe the bug |
-| 3 | The dashboard shows the prompts and answers in Development (`EnableSensitiveData`). The data is fictional | Keep it: "see what the model saw" is a strong trust moment |
-| 4 | Step delay is 900 ms. A first run takes about 20 s, a run with remembered preferences about 15 s | Keep, or set 600 ms for a faster stage |
-| 5 | The Foundry key is still in the git-ignored `src/BaristaNotes/appsettings.Development.json`, for the iOS head. Mac Catalyst no longer bundles it | Remove it after the talk, or route iOS through the API too |
-| 6 | From 20 October: rotate the internal feed PAT that was shown in tool output | Rotate |
-| 8 | Before the fix below, demo runs wrote `last_bag_id = 3` (a demo bag) to the real app's preferences on this Mac. Your real data has bags 1 and 2, so nothing matches it | Leave it, or run `defaults delete com.simplyprofound.baristanotes last_bag_id` |
+| 1 | The Foundry key is still in the git-ignored `src/BaristaNotes/appsettings.Development.json`, for the iOS head. Mac Catalyst no longer bundles it | Remove it after the talk, or route iOS through the API too |
+| 2 | From 20 October: rotate the internal feed PAT that was shown in tool output | Rotate |
+| 3 | Before the fix below, demo runs wrote `last_bag_id = 3` (a demo bag) to the real app's preferences on this Mac. Your real data has bags 1 and 2, so nothing matches it | Leave it, or run `defaults delete com.simplyprofound.baristanotes last_bag_id` |
 
 ## Decisions (David, 2026-10-20)
 
@@ -60,7 +68,7 @@ Debug Mac Catalyst data is in `~/Library/` (not sandboxed). The demo uses `~/Lib
 | Humidity and grind advice | Not in this talk |
 | Inventory | Do not infer stock from logged drinks. Many drinks are never logged. Ask David to confirm which bags he still has |
 | Hosting | Aspire on this Mac. No Azure hosting |
-| Monthly budget | €80 |
+| Monthly budget | €80, raised to €100 on 21 October (see stage decisions) |
 | Test-first exception | Approved: tests first for critical paths only (see Constitution check) |
 | Stage head | Mac Catalyst, if it builds and runs. Otherwise the iOS simulator |
 

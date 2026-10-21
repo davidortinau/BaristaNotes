@@ -53,7 +53,7 @@ public sealed class SettingsRow
     public static SettingsRow Defaults() => new()
     {
         Autonomy = Autonomy.PrepareCart,
-        MonthlyBudget = 80m,
+        MonthlyBudget = 100m,
         Currency = "EUR",
         WatchedRoasters = ["lanternfish", "wickerline", "ninefold", "tidewell", "copperhaze"],
         StepDelayMs = 900,

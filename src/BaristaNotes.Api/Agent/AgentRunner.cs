@@ -19,6 +19,7 @@ public sealed class AgentRunner(
     IReorderModel model,
     OrderRecorder orders,
     TimeProvider time,
+    Endpoints.StagePace pace,
     ILogger<AgentRunner> log)
 {
     public const int MaxRoastAgeDays = 21;
@@ -534,6 +535,7 @@ public sealed class AgentRunner(
 
         await Write(run, LedgerKind.CartReady, $"Cart ready at {proposal.RoasterName}. Nothing charged.",
             reason ?? "Open the pick and tap Buy to check out.", proposal.Roaster, proposal.Id, cart.Id);
+        await PauseAfterEffectAsync(ct);
         return true;
     }
 
@@ -584,8 +586,13 @@ public sealed class AgentRunner(
                 proposal.Roaster, proposal.Id);
         }
 
+        await PauseAfterEffectAsync(ct);
         return true;
     }
+
+    /// <summary>Stage pacing: a moment to tap Stop right after a cart or an order.</summary>
+    Task PauseAfterEffectAsync(CancellationToken ct) =>
+        pace.EffectPauseMs > 0 ? Task.Delay(TimeSpan.FromMilliseconds(pace.EffectPauseMs), time, ct) : Task.CompletedTask;
 
     /// <summary>Says so in the ledger when the answer came from a rehearsal recording.</summary>
     async Task ReportReplayAsync(RunRow run)

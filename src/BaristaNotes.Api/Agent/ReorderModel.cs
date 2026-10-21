@@ -184,7 +184,7 @@ public sealed class FoundryReorderModel : IReorderModel
         [Description("A drink ID from the list. Never invent one.")]
         public int DrinkId { get; set; }
 
-        [Description("Why this drink supports the point, at most 12 words.")]
+        [Description("What this drink shows about the person's taste, at most 12 words. Do not repeat the note; it is shown next to this.")]
         public string Point { get; set; } = "";
     }
 

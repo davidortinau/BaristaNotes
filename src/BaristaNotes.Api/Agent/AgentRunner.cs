@@ -342,9 +342,16 @@ public sealed class AgentRunner(
                     break;
 
                 case PolicyDecision.PlaceOrder:
-                    await PlaceOrderAsync(db, run, proposal, budgetLeft, progress, ct);
-                    progress.Outcomes.Add("ordered");
-                    orderedBags.Add(need.BagId);
+                    if (await PlaceOrderAsync(db, run, proposal, budgetLeft, progress, ct))
+                    {
+                        progress.Outcomes.Add("ordered");
+                        orderedBags.Add(need.BagId);
+                    }
+                    else
+                    {
+                        progress.Outcomes.Add("out of date");
+                    }
+
                     break;
             }
         }
@@ -500,8 +507,20 @@ public sealed class AgentRunner(
             reason ?? "Open the pick and tap Buy to check out.", proposal.Roaster, proposal.Id, cart.Id);
     }
 
-    async Task PlaceOrderAsync(AgentDb db, RunRow run, ProposalRow proposal, decimal budgetLeft, Progress progress, CancellationToken ct)
+    /// <summary>Returns false when the pick is out of date and nothing was ordered.</summary>
+    async Task<bool> PlaceOrderAsync(AgentDb db, RunRow run, ProposalRow proposal, decimal budgetLeft, Progress progress, CancellationToken ct)
     {
+        // The policy approved this exact price. Recheck it right before ordering.
+        var now = await shop.GetVariantNowAsync(proposal.Roaster, proposal.ProductId, proposal.VariantId, ct);
+        if (StaleCheck.Reason(proposal.Price, proposal.Currency, now) is { } stale)
+        {
+            proposal.Status = ProposalStatus.Stale;
+            proposal.ActionNote = stale + " I did not order.";
+            await db.SaveChangesAsync(CancellationToken.None);
+            await Write(run, LedgerKind.Notice, "Did not order: the pick is out of date.", stale, proposal.Roaster, proposal.Id);
+            return false;
+        }
+
         var total = proposal.Price + proposal.Shipping;
         await Write(run, LedgerKind.Ordering, $"Ordering {proposal.ProductTitle} from {proposal.RoasterName}.",
             $"{Money.Format(total, proposal.Currency)} of {Money.Format(budgetLeft, proposal.Currency)} left. " +
@@ -530,6 +549,8 @@ public sealed class AgentRunner(
                 $"{Money.Format(record.BudgetLeft, proposal.Currency)} left this month.",
                 proposal.Roaster, proposal.Id);
         }
+
+        return true;
     }
 
     /// <summary>Says so in the ledger when the answer came from a rehearsal recording.</summary>

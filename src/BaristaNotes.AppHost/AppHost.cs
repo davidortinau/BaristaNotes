@@ -28,7 +28,15 @@ var shop = builder.AddProject<Projects.BaristaNotes_RoasterShop>("shop")
     .WithHttpCommand("/api/demo/faults", "Honor idempotency keys", commandName: "honor-keys", commandOptions: Json(
         """{"ignore_idempotency_keys":false}""",
         "The shop returns the first order when the same Idempotency-Key arrives again.",
-        "ShieldCheckmark"));
+        "ShieldCheckmark"))
+    .WithHttpCommand("/api/demo/faults", "Raise prices 10%", commandName: "raise-prices", commandOptions: Json(
+        """{"price_increase_percent":10}""",
+        "Every price goes up 10%. A pick made before this is out of date, and Buy refuses it.",
+        "ArrowTrendingLines"))
+    .WithHttpCommand("/api/demo/faults", "Normal prices", commandName: "normal-prices", commandOptions: Json(
+        """{"price_increase_percent":0}""",
+        "Prices go back to the catalog prices.",
+        "ArrowUndo"));
 
 var api = builder.AddProject<Projects.BaristaNotes_Api>("api")
     .WithReference(foundry)

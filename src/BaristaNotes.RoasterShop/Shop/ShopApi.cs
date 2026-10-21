@@ -19,12 +19,12 @@ public static class ShopApi
         app.MapGet("/roasters.json", (Catalog catalog) =>
             Results.Ok(new { roasters = catalog.Roasters.Select(Catalog.ToJson) }));
 
-        app.MapGet("/{handle}/products.json", (string handle, Catalog catalog) =>
+        app.MapGet("/{handle}/products.json", (string handle, Catalog catalog, ShopStore store) =>
         {
             var roaster = catalog.FindRoaster(handle);
             if (roaster is null) return NotFound($"Unknown roaster '{handle}'.");
             var today = catalog.Today;
-            return Results.Ok(new { products = catalog.ProductsFor(roaster).Select(p => Catalog.ToJson(p, today)) });
+            return Results.Ok(new { products = catalog.ProductsFor(roaster).Select(p => Catalog.ToJson(p, today, store.PriceOf(p))) });
         });
 
         // Cart permalink, like Shopify: /{handle}/cart/{variant}:{qty}[,{variant}:{qty}]
@@ -119,7 +119,7 @@ public static class ShopApi
         api.MapGet("/demo/faults", (ShopStore store) => Results.Ok(store.GetFaults()));
 
         api.MapPost("/demo/faults", (FaultsUpdate body, ShopStore store) =>
-            Results.Ok(store.UpdateFaults(body.OrderTimeoutArmed, body.IgnoreIdempotencyKeys)));
+            Results.Ok(store.UpdateFaults(body.OrderTimeoutArmed, body.IgnoreIdempotencyKeys, body.PriceIncreasePercent)));
 
         api.MapPost("/demo/reset", (ShopStore store) =>
         {

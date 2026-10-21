@@ -40,8 +40,11 @@ public sealed record Order(
     public string? ProposalId =>Attributes.TryGetValue(ShopStore.ProposalIdAttribute, out var id) ? id : null;
 }
 
-/// <summary>Fault toggles for the talk. Both off by default.</summary>
-public sealed record Faults(bool OrderTimeoutArmed, bool IgnoreIdempotencyKeys)
+/// <summary>
+/// Fault toggles for the talk. All off by default. <c>PriceIncreasePercent</c>
+/// raises every price, so a pick made before the change is out of date.
+/// </summary>
+public sealed record Faults(bool OrderTimeoutArmed, bool IgnoreIdempotencyKeys, int PriceIncreasePercent = 0)
 {
     public static readonly Faults Off = new(false, false);
 }
@@ -60,7 +63,7 @@ public sealed record OrderRequest(
     List<LineRequest>? Lines = null,
     Dictionary<string, string>? Attributes = null);
 
-public sealed record FaultsUpdate(bool? OrderTimeoutArmed, bool? IgnoreIdempotencyKeys);
+public sealed record FaultsUpdate(bool? OrderTimeoutArmed, bool? IgnoreIdempotencyKeys, int? PriceIncreasePercent = null);
 
 /// <summary>Cart as the API returns it: the stored cart plus an absolute checkout URL.</summary>
 public sealed record CartResponse(

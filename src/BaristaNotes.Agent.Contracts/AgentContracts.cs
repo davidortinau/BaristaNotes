@@ -182,6 +182,9 @@ public enum ProposalStatus
     Ordered,
     Dismissed,
     CartRemoved,
+
+    /// <summary>The price or availability changed after the pick. Run again for a fresh pick.</summary>
+    Stale,
 }
 
 /// <summary>

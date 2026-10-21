@@ -81,6 +81,14 @@ public sealed class ShopClient(HttpClient http)
         return new ShopOrderResult(order, replayed);
     }
 
+    /// <summary>The variant's current price and availability, or null when it is gone.</summary>
+    public async Task<ShopVariantNow?> GetVariantNowAsync(string roaster, long productId, long variantId, CancellationToken ct)
+    {
+        var products = await GetProductsAsync(roaster, ct);
+        var variant = products.FirstOrDefault(p => p.Id == productId)?.Variants.FirstOrDefault(v => v.Id == variantId);
+        return variant is null ? null : new ShopVariantNow(variant.Price, variant.Available);
+    }
+
     /// <summary>Demo only: clears carts and orders and turns the fault toggles off.</summary>
     public async Task ResetAsync(CancellationToken ct)
     {

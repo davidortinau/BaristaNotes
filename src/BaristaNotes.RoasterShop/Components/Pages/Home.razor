@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using System.Globalization
 @inject Catalog Catalog
+@inject ShopStore Store
 
 <PageTitle>Roaster Shop</PageTitle>
 
@@ -49,7 +50,7 @@
                     </dl>
                     <p class="notes">@string.Join(", ", p.Notes)</p>
                     <div class="card-foot">
-                        <span class="price">@Money.Display(p.Price) <span class="muted">/ @CatalogProduct.VariantTitle</span></span>
+                        <span class="price">@Money.Display(Store.PriceOf(p)) <span class="muted">/ @CatalogProduct.VariantTitle</span></span>
                         @if (p.Available)
                         {
                             <a class="button" href="/@roaster.Handle/cart/@(p.VariantId):1">Buy</a>

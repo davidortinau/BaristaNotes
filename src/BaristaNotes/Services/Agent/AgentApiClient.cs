@@ -179,10 +179,40 @@ public sealed class AgentApiClient(HttpClient http)
         response.EnsureSuccessStatusCode();
     }
 
+    /// <summary>Reads <c>{"error": "..."}</c> from a refusal, without reflection-based JSON.</summary>
+    static async Task<string> ReadErrorAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        try
+        {
+            using var document = await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+            if (document.RootElement.TryGetProperty("error", out var error) && error.GetString() is { Length: > 0 } text)
+            {
+                return text;
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+        }
+
+        return "The agent could not do that right now.";
+    }
+
     static async Task<T> ReadAsync<T>(HttpResponseMessage response, JsonTypeInfo<T> type, CancellationToken ct)
     {
+        if (response.StatusCode == HttpStatusCode.Conflict)
+        {
+            throw new AgentConflictException(await ReadErrorAsync(response, ct));
+        }
+
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync(type, ct)
             ?? throw new HttpRequestException($"The agent API returned an empty {typeof(T).Name}.");
     }
 }
+
+/// <summary>
+/// The API refused the action and said why, for example "The price changed
+/// from €17.50 to €19.25 since I picked it."
+/// </summary>
+public sealed class AgentConflictException(string message) : Exception(message);
+

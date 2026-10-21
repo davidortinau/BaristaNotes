@@ -361,3 +361,28 @@ public class ProductMatchTests
         Assert.False(ProductMatch.Same(null, "Huila Washed", "Wickerline Roasters", "Huila Washed"));
     }
 }
+
+public class StaleCheckTests
+{
+    static ShopVariantNow Now(decimal price = 17.50m, bool available = true) => new(price, available);
+
+    [Fact]
+    public void Same_price_and_in_stock_is_current()
+    {
+        Assert.Null(StaleCheck.Reason(17.50m, "EUR", Now()));
+    }
+
+    [Fact]
+    public void A_price_change_makes_the_pick_stale()
+    {
+        Assert.Equal("The price changed from €17.50 to €19.25 since I picked it.", StaleCheck.Reason(17.50m, "EUR", Now(19.25m)));
+    }
+
+    [Fact]
+    public void Sold_out_or_gone_makes_the_pick_stale()
+    {
+        Assert.Equal("It sold out since I picked it.", StaleCheck.Reason(17.50m, "EUR", Now(available: false)));
+        Assert.Equal("It is no longer in the catalog.", StaleCheck.Reason(17.50m, "EUR", null));
+    }
+}
+

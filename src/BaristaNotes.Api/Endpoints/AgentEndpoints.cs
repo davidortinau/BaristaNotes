@@ -305,9 +305,27 @@ public static class AgentEndpoints
                 return Results.NotFound();
             }
 
-            if (row.Status is ProposalStatus.Ordered or ProposalStatus.Dismissed)
+            if (row.Status is ProposalStatus.Ordered or ProposalStatus.Dismissed or ProposalStatus.Stale)
             {
-                return Results.Conflict(new { error = $"This pick is {row.Status.ToString().ToLowerInvariant()}." });
+                return Results.Conflict(new { error = row.Status == ProposalStatus.Stale
+                    ? row.ActionNote ?? "This pick is out of date. Run the agent again."
+                    : $"This pick is {row.Status.ToString().ToLowerInvariant()}." });
+            }
+
+            // What you approve must still be what you get: recheck before checkout.
+            var now = await shop.GetVariantNowAsync(row.Roaster, row.ProductId, row.VariantId, ct);
+            if (StaleCheck.Reason(row.Price, row.Currency, now) is { } stale)
+            {
+                var removed = row.Status == ProposalStatus.CartReady && row.CartId is not null
+                              && await shop.DeleteCartAsync(row.CartId, ct)
+                    ? $" Removed the cart at {row.RoasterName}."
+                    : "";
+                row.Status = ProposalStatus.Stale;
+                row.ActionNote = stale + " Run the agent again for a fresh pick.";
+                await db.SaveChangesAsync(ct);
+                await ledger.WriteAsync(row.RunId, LedgerKind.Notice, "This pick is out of date.",
+                    stale + " I did not open checkout." + removed, row.Roaster, row.Id);
+                return Results.Conflict(new { error = row.ActionNote });
             }
 
             if (row.Status != ProposalStatus.CartReady || row.CheckoutUrl is null)

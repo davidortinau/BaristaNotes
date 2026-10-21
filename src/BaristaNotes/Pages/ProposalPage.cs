@@ -177,6 +177,12 @@ partial class ProposalPage : Component<ProposalPageState, ProposalPageProps>
             StartOrderWatch();
             await Browser.Default.OpenAsync(checkout, BrowserLaunchMode.External);
         }
+        catch (AgentConflictException ex)
+        {
+            // For example, the price changed after the pick. Show why, then the new status.
+            await _feedbackService.ShowWarningAsync(ex.Message, 5000);
+            _ = LoadAsync();
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Could not prepare the cart for proposal {ProposalId}", Props.ProposalId);
@@ -384,7 +390,7 @@ partial class ProposalPage : Component<ProposalPageState, ProposalPageProps>
         }
 
         var busy = State.BusyAction;
-        var canBuy = proposal.Status != ProposalStatus.Ordered;
+        var canBuy = proposal.Status is ProposalStatus.Proposed or ProposalStatus.CartReady or ProposalStatus.CartRemoved;
         var canDismiss = proposal.Status is ProposalStatus.Proposed or ProposalStatus.CartReady;
         var canNever = proposal.Status is ProposalStatus.Proposed or ProposalStatus.CartReady or ProposalStatus.CartRemoved;
 
@@ -415,6 +421,7 @@ partial class ProposalPage : Component<ProposalPageState, ProposalPageProps>
         ProposalStatus.Ordered => MaterialSymbolsFont.Receipt_long,
         ProposalStatus.Dismissed => MaterialSymbolsFont.Schedule,
         ProposalStatus.CartRemoved => MaterialSymbolsFont.Remove_shopping_cart,
+        ProposalStatus.Stale => MaterialSymbolsFont.Price_change,
         _ => MaterialSymbolsFont.Recommend,
     };
 }

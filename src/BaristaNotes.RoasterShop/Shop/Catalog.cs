@@ -106,7 +106,10 @@ public sealed class Catalog
 
     public ProductJson ToJson(CatalogProduct p) => ToJson(p, Today);
 
-    public static ProductJson ToJson(CatalogProduct p, DateOnly today) => new(
+    public static ProductJson ToJson(CatalogProduct p, DateOnly today) => ToJson(p, today, p.Price);
+
+    /// <summary>As above, with the current price (the price-increase fault may change it).</summary>
+    public static ProductJson ToJson(CatalogProduct p, DateOnly today, decimal price) => new(
         p.Id,
         p.Title,
         p.Handle,
@@ -114,7 +117,7 @@ public sealed class Catalog
         "Coffee",
         BodyHtml(p),
         Tags(p, today),
-        [new VariantJson(p.VariantId, CatalogProduct.VariantTitle, p.Price, p.Available, p.Sku, CatalogProduct.Grams)]);
+        [new VariantJson(p.VariantId, CatalogProduct.VariantTitle, price, p.Available, p.Sku, CatalogProduct.Grams)]);
 
     /// <summary>
     /// Tag prefixes are lowercase. Origin and region keep their place-name

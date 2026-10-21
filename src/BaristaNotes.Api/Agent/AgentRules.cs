@@ -215,6 +215,37 @@ public static class CandidateFilter
 }
 
 // ---------------------------------------------------------------------------
+// Stale picks: what you approved must still be what you get
+// ---------------------------------------------------------------------------
+
+/// <summary>The variant's price and availability in the shop right now.</summary>
+public sealed record ShopVariantNow(decimal Price, bool Available);
+
+public static class StaleCheck
+{
+    /// <summary>Returns why the pick is out of date, or null when it still holds.</summary>
+    public static string? Reason(decimal pickedPrice, string currency, ShopVariantNow? now)
+    {
+        if (now is null)
+        {
+            return "It is no longer in the catalog.";
+        }
+
+        if (!now.Available)
+        {
+            return "It sold out since I picked it.";
+        }
+
+        if (now.Price != pickedPrice)
+        {
+            return $"The price changed from {Money.Format(pickedPrice, currency)} to {Money.Format(now.Price, currency)} since I picked it.";
+        }
+
+        return null;
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Matching the app's beans to shop products
 // ---------------------------------------------------------------------------
 

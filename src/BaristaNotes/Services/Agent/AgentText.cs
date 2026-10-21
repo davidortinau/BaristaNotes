@@ -144,6 +144,7 @@ public static class AgentText
             : $"Ordered #{proposal.OrderNumber.TrimStart('#')}",
         ProposalStatus.Dismissed => "Dismissed",
         ProposalStatus.CartRemoved => "Cart removed",
+        ProposalStatus.Stale => "Out of date",
         _ => proposal.Status.ToString(),
     };
 

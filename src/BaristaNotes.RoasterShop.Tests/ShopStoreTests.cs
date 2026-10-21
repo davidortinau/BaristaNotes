@@ -247,4 +247,21 @@ public class ShopStoreTests
         Assert.Equal(new Faults(true, true), shop.Store.UpdateFaults(ignoreIdempotencyKeys: true));
         Assert.Equal(new Faults(false, true), shop.Store.UpdateFaults(orderTimeoutArmed: false));
     }
+
+    [Fact]
+    public void Price_increase_applies_to_the_catalog_and_new_carts_and_reset_clears_it()
+    {
+        var shop = new TestShop();
+        var guji = shop.Catalog.FindVariant(TestShop.GujiVariant)!;
+        Assert.Equal(17.50m, shop.Store.PriceOf(guji));
+
+        shop.Store.UpdateFaults(priceIncreasePercent: 10);
+        Assert.Equal(19.25m, shop.Store.PriceOf(guji));
+
+        var cart = shop.CreateGujiCart();
+        Assert.Equal(19.25m, cart.Lines[0].Price);
+
+        shop.Store.Reset();
+        Assert.Equal(17.50m, shop.Store.PriceOf(guji));
+    }
 }

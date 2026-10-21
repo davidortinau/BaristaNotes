@@ -242,17 +242,29 @@ public sealed class ShopStore
         }
     }
 
-    public Faults UpdateFaults(bool? orderTimeoutArmed = null, bool? ignoreIdempotencyKeys = null)
+    public Faults UpdateFaults(bool? orderTimeoutArmed = null, bool? ignoreIdempotencyKeys = null, int? priceIncreasePercent = null)
     {
         lock (_gate)
         {
             _faults = new Faults(
                 orderTimeoutArmed ?? _faults.OrderTimeoutArmed,
-                ignoreIdempotencyKeys ?? _faults.IgnoreIdempotencyKeys);
+                ignoreIdempotencyKeys ?? _faults.IgnoreIdempotencyKeys,
+                Math.Clamp(priceIncreasePercent ?? _faults.PriceIncreasePercent, 0, 100));
             _logger.LogInformation(
-                "Faults: order timeout armed {Armed}, ignore idempotency keys {Ignore}",
-                _faults.OrderTimeoutArmed, _faults.IgnoreIdempotencyKeys);
+                "Faults: order timeout armed {Armed}, ignore idempotency keys {Ignore}, price increase {Percent}%",
+                _faults.OrderTimeoutArmed, _faults.IgnoreIdempotencyKeys, _faults.PriceIncreasePercent);
             return _faults;
+        }
+    }
+
+    /// <summary>The current price, with the price-increase fault applied.</summary>
+    public decimal PriceOf(CatalogProduct product)
+    {
+        lock (_gate)
+        {
+            return _faults.PriceIncreasePercent == 0
+                ? product.Price
+                : Math.Round(product.Price * (100 + _faults.PriceIncreasePercent) / 100m, 2, MidpointRounding.AwayFromZero);
         }
     }
 
@@ -314,7 +326,7 @@ public sealed class ShopStore
                 error = $"Quantity for variant {line.VariantId} must be between 1 and {MaxQuantity}.";
                 return false;
             }
-            result.Add(new LineItem(p.VariantId, p.Id, p.Title, line.Quantity, p.Price));
+            result.Add(new LineItem(p.VariantId, p.Id, p.Title, line.Quantity, PriceOf(p)));
         }
 
         roaster = r;

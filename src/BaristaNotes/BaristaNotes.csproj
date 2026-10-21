@@ -166,9 +166,14 @@
 		</ItemGroup>
 	</Target>
 
-	<!-- MAUI DevFlow (DEBUG only): in-process agent for UI inspection, logs, network, preferences. -->
+	<!-- MAUI DevFlow (DEBUG only): in-process agent for UI inspection, logs, network, preferences.
+	     Keep MauiDevFlowVersion equal to the maui CLI version in dotnet-tools.json (run it as `dotnet maui`),
+	     so the CLI and the agent speak the same protocol. -->
+	<PropertyGroup>
+		<MauiDevFlowVersion Condition="'$(MauiDevFlowVersion)' == ''">0.1.0-dev.20261021.2</MauiDevFlowVersion>
+	</PropertyGroup>
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-		<PackageReference Include="Microsoft.Maui.DevFlow.Agent" Version="0.1.0-preview.13.0" />
+		<PackageReference Include="Microsoft.Maui.DevFlow.Agent" Version="$(MauiDevFlowVersion)" />
 	</ItemGroup>
 
 	<!-- Microsoft.Maui.Labs.HotReload (DEBUG only): IHotReloadAware + MetadataUpdateHandler.

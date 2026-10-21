@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "microsoft.maui.cli": {
+      "version": "0.1.0-dev.20261021.2",
+      "commands": [
+        "maui"
+      ],
+      "rollForward": false
+    }
+  }
+}

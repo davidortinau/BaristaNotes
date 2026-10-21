@@ -1,4 +1,5 @@
 using BaristaNotes.Integrations.Popups;
+using BaristaNotes.Services.Agent;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using Application = Microsoft.Maui.Controls.Application;
 
@@ -20,12 +21,19 @@ class ActivityFeedState
     public int FilteredShotCount { get; set; }
 
     public bool HasActiveFilters => ActiveFilters.HasFilters;
+
+    // Reorder agent card (check-in due, or a run finished while away)
+    public AgentHomeCard? AgentCard { get; set; }
 }
 
 partial class ActivityFeedPage : Component<ActivityFeedState>
 {
     [Inject] IShotService _shotService;
     [Inject] DatabaseInitializationService _databaseInitialization;
+    [Inject] AgentApiClient _agentApi;
+    [Inject] AgentSnapshotBuilder _agentLocalData;
+    [Inject] IPreferencesStore _preferencesStore;
+    [Inject] ILogger<ActivityFeedPage> _logger;
 #if MAUI_PERFORMANCE
     [Inject] MauiPerformanceProbe _performanceProbe;
 #endif
@@ -119,6 +127,40 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         }
     }
 
+    /// <summary>
+    /// Loads the agent card. Never throws: when the API is down the feed
+    /// simply has no card.
+    /// </summary>
+    async Task LoadAgentCardAsync()
+    {
+        if (!_agentApi.IsConnected)
+        {
+            return;
+        }
+
+        try
+        {
+            var status = await _agentApi.GetStatusAsync();
+            var openBags = status.CheckIn.Due
+                ? (await _agentLocalData.GetOpenBagsAsync()).Count
+                : 0;
+            var lastSeen = _preferencesStore.Get(AgentHomeCard.LastSeenRunIdKey, null);
+            var card = AgentHomeCard.Decide(status, openBags, lastSeen);
+            SetState(s => s.AgentCard = card);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not load the agent card for the activity feed");
+            SetState(s => s.AgentCard = null);
+        }
+    }
+
+    async Task OpenAgentCardAsync(AgentHomeCard card)
+    {
+        var route = card.Kind == AgentHomeCardKind.CheckIn ? "checkin" : "agent";
+        await Microsoft.Maui.Controls.Shell.Current.GoToAsync(route);
+    }
+
     async void NavigateToDetail(int shotId)
     {
         await Microsoft.Maui.Controls.Shell.Current.GoToAsync<ShotLoggingGridPageProps>("shot-logging", props => props.ShotId = shotId);
@@ -179,11 +221,15 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
 
     public override VisualNode Render()
     {
+        var card = State.AgentCard;
         return ContentPage("Activity",
-            Grid(rows: "Auto,*,Auto", columns: "*",
+            // The card is the last child so the feed keeps its place in the
+            // tree (and its scroll position) when the card comes and goes.
+            Grid(rows: card is null ? "Auto,*,Auto" : "Auto,Auto,*,Auto", columns: "*",
                 HeaderTile().GridRow(0),
-                RenderBody().GridRow(1),
-                BottomNavRow().GridRow(2)
+                RenderBody().GridRow(card is null ? 1 : 2),
+                BottomNavRow().GridRow(card is null ? 2 : 3),
+                card is null ? null : AgentCardTile(card).GridRow(1)
             )
             .RowSpacing(1)
             .BackgroundColor(DividerColor())
@@ -193,7 +239,11 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         .Set(MauiControls.Shell.NavBarIsVisibleProperty, false)
         .Set(MauiControls.Shell.TabBarIsVisibleProperty, false)
         .OniOS(_ => _.Set(MauiControls.PlatformConfiguration.iOSSpecific.Page.LargeTitleDisplayProperty, LargeTitleDisplayMode.Never))
-        .OnAppearing(() => _ = LoadShotsAsync(isRefresh: true));
+        .OnAppearing(() =>
+        {
+            _ = LoadShotsAsync(isRefresh: true);
+            _ = LoadAgentCardAsync();
+        });
     }
 
     // ------------------------------------------------------------
@@ -239,6 +289,37 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
         .StrokeThickness(0)
         .StrokeShape(new Rectangle())
         .MinimumHeightRequest(120);
+    }
+
+    // ------------------------------------------------------------
+    // Agent card — at most one tile between the header and the feed
+    // ------------------------------------------------------------
+
+    VisualNode AgentCardTile(AgentHomeCard card)
+    {
+        var glyph = card.Kind == AgentHomeCardKind.CheckIn
+            ? MaterialSymbolsFont.Inventory_2
+            : MaterialSymbolsFont.Smart_toy;
+
+        return new AdaptiveTwoLineTile(
+                Label(card.Label)
+                    .FontSize(10)
+                    .CharacterSpacing(2)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextSecondary())
+                    .LineBreakMode(LineBreakMode.TailTruncation)
+                    .MaxLines(1),
+                Label(card.Title)
+                    .FontSize(18)
+                    .FontAttributes(MauiControls.FontAttributes.Bold)
+                    .TextColor(TextPrimary())
+                    .LineBreakMode(LineBreakMode.WordWrap))
+            .Leading(AdaptiveTwoLineTile.DecorativeGlyph(glyph, AccentColor()))
+            .Trailing(AdaptiveTwoLineTile.StatusWithChevron(card.Action, AccentColor(), TextPrimary()))
+            .ColumnSpacing(12)
+            .BackgroundColor(SurfaceColor())
+            .AutomationId("AgentHomeCard")
+            .OnTapped($"{card.Label}. {card.Title}. {card.Action}.", () => _ = OpenAgentCardAsync(card));
     }
 
     // ------------------------------------------------------------

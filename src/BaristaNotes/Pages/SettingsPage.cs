@@ -1,3 +1,5 @@
+using BaristaNotes.Agent.Contracts;
+using BaristaNotes.Services.Agent;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
 using Application = Microsoft.Maui.Controls.Application;
 
@@ -11,6 +13,13 @@ class SettingsPageState
         = BaristaNotes.Core.Models.Enums.TemperatureUnit.Fahrenheit;
     public Dictionary<DrinkValueMetric, ValueRangeMode> RangeModes { get; set; } = [];
     public Dictionary<DrinkValueMetric, int> RangeOverrideCounts { get; set; } = [];
+
+    // Reorder agent (only when the Aspire AppHost started the app)
+    public AgentStatus? Agent { get; set; }
+    public int? AgentMemoryCount { get; set; }
+    public bool AgentFailed { get; set; }
+    public bool AgentSaving { get; set; }
+    public bool ResettingDemo { get; set; }
 }
 
 partial class SettingsPage : Component<SettingsPageState>
@@ -24,9 +33,13 @@ partial class SettingsPage : Component<SettingsPageState>
     [Inject]
     IDrinkValueRangeService _rangeService;
 
+    [Inject] AgentApiClient _agentApi;
+    [Inject] DemoDataSeeder _demoDataSeeder;
+    [Inject] IFeedbackService _feedbackService;
+    [Inject] ILogger<SettingsPage> _logger;
+
 #if IOS || ANDROID
     [Inject] BaristaNotes.Core.Services.Origins.NominatimOriginGeocoder _geocoder;
-    [Inject] ILogger<SettingsPage> _logger;
 #endif
 #if MAUI_PERFORMANCE
     [Inject] MauiPerformanceProbe _performanceProbe;
@@ -41,6 +54,7 @@ partial class SettingsPage : Component<SettingsPageState>
     void LoadPreferences()
     {
         _ = LoadCurrentTheme();
+        _ = LoadAgentAsync();
         var snapshot = _rangeService.GetSettings();
         SetState(s =>
         {
@@ -110,6 +124,163 @@ partial class SettingsPage : Component<SettingsPageState>
         }
     }
 #endif
+
+    // ============================================================
+    // Reorder agent
+    // ============================================================
+
+    async Task LoadAgentAsync()
+    {
+        if (!_agentApi.IsConnected)
+        {
+            return;
+        }
+
+        try
+        {
+            var memoryCount = LoadAgentMemoryCountAsync();
+            var status = await _agentApi.GetStatusAsync();
+            var count = await memoryCount;
+            SetState(s =>
+            {
+                s.Agent = status;
+                s.AgentMemoryCount = count;
+                s.AgentFailed = false;
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not load the agent status");
+            SetState(s => s.AgentFailed = true);
+        }
+    }
+
+    async Task<int?> LoadAgentMemoryCountAsync()
+    {
+        try
+        {
+            return (await _agentApi.GetMemoryAsync()).Items.Count;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not load the agent memory count");
+            return null;
+        }
+    }
+
+    async Task OnAutonomySelected(Autonomy autonomy)
+    {
+        if (State.Agent is not { } status || status.Settings.Autonomy == autonomy || State.AgentSaving)
+        {
+            return;
+        }
+
+        await SaveAgentSettingsAsync(status.Settings with { Autonomy = autonomy });
+    }
+
+    async Task ChangeBudgetAsync()
+    {
+        if (State.Agent is not { } status || ContainerPage is not { } page || State.AgentSaving)
+        {
+            return;
+        }
+
+        var input = await page.DisplayPromptAsync(
+            "Monthly budget",
+            $"How much may the agent spend each month, in {status.Settings.Currency}?",
+            accept: "Save",
+            cancel: "Cancel",
+            maxLength: 8,
+            keyboard: Keyboard.Numeric,
+            initialValue: status.Settings.MonthlyBudget.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture));
+        if (input is null)
+        {
+            return;
+        }
+
+        if (!AgentText.TryParseBudget(input, out var amount))
+        {
+            await _feedbackService.ShowErrorAsync(
+                $"Enter an amount from 0 to {AgentText.MaxMonthlyBudget:0}.",
+                "Use digits only, for example 80 or 57.50.");
+            return;
+        }
+
+        await SaveAgentSettingsAsync(status.Settings with { MonthlyBudget = amount });
+    }
+
+    async Task SaveAgentSettingsAsync(AgentSettings settings)
+    {
+        var before = State.Agent;
+        if (before is null)
+        {
+            return;
+        }
+
+        // Show the change right away. Put it back if the save fails.
+        SetState(s =>
+        {
+            s.Agent = before with { Settings = settings };
+            s.AgentSaving = true;
+        });
+
+        try
+        {
+            await _agentApi.SaveSettingsAsync(settings);
+            SetState(s => s.AgentSaving = false);
+            await LoadAgentAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not save the agent settings");
+            SetState(s =>
+            {
+                s.Agent = before;
+                s.AgentSaving = false;
+            });
+            await _feedbackService.ShowErrorAsync("Could not save the agent settings.", "Check that the API is running.");
+        }
+    }
+
+    Task ConfirmResetDemoAsync() =>
+        AgentTiles.ConfirmAsync(
+            "Reset demo data?",
+            "This replaces the demo beans, bags, and drinks, and clears the agent's runs, picks, orders, check-ins, and memory.",
+            "Reset",
+            ResetDemoAsync);
+
+    async Task ResetDemoAsync()
+    {
+        if (State.ResettingDemo)
+        {
+            return;
+        }
+
+        SetState(s => s.ResettingDemo = true);
+        try
+        {
+            await _demoDataSeeder.ResetAsync();
+            if (_agentApi.IsConnected)
+            {
+                await _agentApi.ResetDemoAsync();
+            }
+
+            await _feedbackService.ShowSuccessAsync("Demo data reset.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Could not reset the demo data");
+            await _feedbackService.ShowErrorAsync("Could not reset the demo data.", "Check that the API is running, then try again.");
+        }
+        finally
+        {
+            SetState(s => s.ResettingDemo = false);
+        }
+
+        await LoadAgentAsync();
+    }
+
+    static Task GoToAsync(string route) => MauiControls.Shell.Current.GoToAsync(route);
 
     // ============================================================
     // Rendering
@@ -188,53 +359,128 @@ partial class SettingsPage : Component<SettingsPageState>
 
     VisualNode RenderBody()
     {
+        // Rows are numbered from this list, so sections can be added without
+        // renumbering. The last row is the star-sized footer.
+        var rows = new List<VisualNode>
+        {
+            SectionLabel("APPEARANCE"),
+            ThemePickerRow(),
+        };
+        rows.AddRange(AgentRows());
+        rows.AddRange(
+        [
+            SectionLabel("MANAGE"),
+            ManageTile("EQUIPMENT", "Machines, grinders, accessories",
+                async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("equipment")),
+            ManageTile("BEANS", "Coffee beans and roasters",
+                async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("beans")),
+            ManageTile("PROFILES", "Coffee lovers",
+                async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("profiles")),
+            SectionLabel("UNITS"),
+            TempUnitPickerRow(),
+            SectionLabel("VALUE RANGES"),
+            ValueRangeTile(DrinkValueMetric.DoseIn),
+            ValueRangeTile(DrinkValueMetric.Yield),
+            ValueRangeTile(DrinkValueMetric.GrindMicrons),
+            ValueRangeTile(DrinkValueMetric.Time),
+            SectionLabel("ABOUT"),
+            AboutTile(),
+        ]);
 #if IOS || ANDROID
-        const string rows = "Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*";
-        const int footerRow = 16;
-#else
-        const string rows = "Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*";
-        const int footerRow = 15;
+        rows.Add(ManageTile("MAP GEOCODER", "Change search service endpoint",
+            async () => await ChangeGeocoderEndpointAsync()));
 #endif
+        rows.Add(
+            Border()
+                .BackgroundColor(SurfaceColor())
+                .StrokeThickness(0)
+                .StrokeShape(new Rectangle())
+                .MinimumHeightRequest(16)
+                .VerticalOptions(LayoutOptions.Fill));
+
+        var rowDefinitions = string.Join(",", Enumerable.Repeat("Auto", rows.Count - 1).Append("*"));
+
         return Grid("*", "*",
             ScrollView(
                 Grid(
-                    rows: rows,
+                    rows: rowDefinitions,
                     columns: "*",
-                    SectionLabel("APPEARANCE").GridRow(0),
-                    ThemePickerRow().GridRow(1),
-                    SectionLabel("MANAGE").GridRow(2),
-                    ManageTile("EQUIPMENT", "Machines, grinders, accessories",
-                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("equipment")).GridRow(3),
-                    ManageTile("BEANS", "Coffee beans and roasters",
-                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("beans")).GridRow(4),
-                    ManageTile("PROFILES", "Coffee lovers",
-                        async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("profiles")).GridRow(5),
-                    SectionLabel("UNITS").GridRow(6),
-                    TempUnitPickerRow().GridRow(7),
-                    SectionLabel("VALUE RANGES").GridRow(8),
-                    ValueRangeTile(DrinkValueMetric.DoseIn).GridRow(9),
-                    ValueRangeTile(DrinkValueMetric.Yield).GridRow(10),
-                    ValueRangeTile(DrinkValueMetric.GrindMicrons).GridRow(11),
-                    ValueRangeTile(DrinkValueMetric.Time).GridRow(12),
-                    SectionLabel("ABOUT").GridRow(13),
-                    AboutTile().GridRow(14),
-#if IOS || ANDROID
-                    ManageTile("MAP GEOCODER", "Change search service endpoint",
-                        async () => await ChangeGeocoderEndpointAsync()).GridRow(15),
-#endif
-                    Border()
-                        .BackgroundColor(SurfaceColor())
-                        .StrokeThickness(0)
-                        .StrokeShape(new Rectangle())
-                        .MinimumHeightRequest(16)
-                        .VerticalOptions(LayoutOptions.Fill)
-                        .GridRow(footerRow)
+                    rows.Select((row, index) => row.GridRow(index)).ToArray()
                 )
                 .RowSpacing(1)
                 .BackgroundColor(DividerColor())
             )
         )
         .BackgroundColor(SurfaceColor());
+    }
+
+    // ------------------------------------------------------------
+    // Agent section
+    // ------------------------------------------------------------
+
+    IEnumerable<VisualNode> AgentRows()
+    {
+        yield return SectionLabel("AGENT");
+
+        if (!_agentApi.IsConnected)
+        {
+            yield return AgentTiles.InfoTile(
+                "AGENT NOT CONNECTED",
+                "Start the app from the Aspire AppHost.",
+                glyph: MaterialSymbolsFont.Info);
+        }
+        else if (State.Agent is not { } status)
+        {
+            yield return State.AgentFailed
+                ? ManageTile("AGENT UNAVAILABLE", "Tap to try again", async () => await LoadAgentAsync())
+                : AgentTiles.InfoTile("AGENT", "Loading\u2026");
+        }
+        else
+        {
+            var now = DateTimeOffset.Now;
+            var autonomy = status.Settings.Autonomy;
+
+            yield return AutonomyPickerRow(autonomy);
+            yield return AgentTiles.TextTile(AgentText.AutonomyDescription(autonomy), secondary: true);
+            yield return ManageTile("MONTHLY BUDGET", AgentText.BudgetTile(status),
+                async () => await ChangeBudgetAsync());
+            yield return ManageTile("ROASTERS", $"{status.Settings.WatchedRoasters.Count} watched",
+                async () => await GoToAsync("agent-roasters"));
+            yield return ManageTile("AGENT ACTIVITY", AgentText.RunTitle(status.LatestRun, now),
+                async () => await GoToAsync("agent"));
+            yield return ManageTile("MEMORY",
+                State.AgentMemoryCount is { } learned ? AgentText.LearnedTitle(learned) : "What the agent learned",
+                async () => await GoToAsync("memory"));
+            yield return ManageTile("CHECK-IN", AgentText.CheckInLine(status.CheckIn, now),
+                async () => await GoToAsync("checkin"));
+        }
+
+        if (AgentApiAddress.IsDemo)
+        {
+            yield return ManageTile("RESET DEMO DATA",
+                State.ResettingDemo ? "Resetting\u2026" : "Start the demo again",
+                async () => await ConfirmResetDemoAsync());
+        }
+    }
+
+    VisualNode AutonomyPickerRow(Autonomy selected)
+    {
+        return AgentTiles.ActionRow(
+            AutonomyOptionTile(Autonomy.Watch, MaterialSymbolsFont.Visibility, selected),
+            AutonomyOptionTile(Autonomy.PrepareCart, MaterialSymbolsFont.Shopping_cart, selected),
+            AutonomyOptionTile(Autonomy.ReorderFavorites, MaterialSymbolsFont.Quick_reorder, selected));
+    }
+
+    VisualNode AutonomyOptionTile(Autonomy autonomy, string glyph, Autonomy selected)
+    {
+        var isSelected = autonomy == selected;
+        return AgentTiles.ActionTile(
+            AgentText.AutonomyLabel(autonomy),
+            glyph,
+            async () => await OnAutonomySelected(autonomy),
+            primary: isSelected,
+            enabled: !State.AgentSaving || isSelected,
+            accessibilityName: $"Autonomy {AgentText.AutonomyLabel(autonomy)}. {AgentText.AutonomyDescription(autonomy)}{(isSelected ? " Selected." : "")}");
     }
 
     VisualNode SectionLabel(string text)
@@ -355,6 +601,7 @@ partial class SettingsPage : Component<SettingsPageState>
                 MaterialSymbolsFont.Chevron_right,
                 TextPrimary()))
         .BackgroundColor(SurfaceColor())
+        .AutomationId(AgentTiles.AutomationIdFor(label))
         .OnTapped($"{label}: {subtitle}", onTapped);
     }
 

@@ -196,6 +196,8 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\BaristaNotes.Core\BaristaNotes.Core.csproj" />
+	  <!-- Records shared with the agent API. JSON uses its source-generated AgentJsonContext. -->
+	  <ProjectReference Include="..\BaristaNotes.Agent.Contracts\BaristaNotes.Agent.Contracts.csproj" />
 	</ItemGroup>
 
 	<Target Name="ValidateMauiPerformanceConfiguration"

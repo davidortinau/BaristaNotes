@@ -1,0 +1,49 @@
+{
+  "comment": "Demo data for the reorder agent. Roasters are fictional and match the roaster shop catalog. Dates are relative to the day the demo database is created.",
+  "profiles": [
+    { "key": "me", "name": "David" },
+    { "key": "guest", "name": "Sam" }
+  ],
+  "beans": [
+    { "key": "kochere", "name": "Kochere Natural", "roaster": "Lanternfish Coffee", "origin": "Ethiopia, Yirgacheffe", "notes": "Natural process. Light roast. Blueberry, jasmine." },
+    { "key": "huila", "name": "Huila Washed", "roaster": "Wickerline Roasters", "origin": "Colombia, Huila", "notes": "Washed. Medium roast. Milk chocolate, caramel." },
+    { "key": "nyeri", "name": "Nyeri Washed", "roaster": "Tidewell Roasting", "origin": "Kenya, Nyeri", "notes": "Washed. Light roast. Grapefruit, blackcurrant." },
+    { "key": "santos", "name": "Santos Dark", "roaster": "Ninefold Coffee", "origin": "Brazil, Santos", "notes": "Dark roast. Cocoa, smoke." },
+    { "key": "sidamo", "name": "Sidamo Natural", "roaster": "Copperhaze Coffee", "origin": "Ethiopia, Sidamo", "notes": "Natural process. Light roast. Strawberry, red wine." }
+  ],
+  "bags": [
+    { "key": "kochere-1", "bean": "kochere", "roastedDaysAgo": 27, "finished": false },
+    { "key": "huila-1", "bean": "huila", "roastedDaysAgo": 21, "finished": false },
+    { "key": "nyeri-1", "bean": "nyeri", "roastedDaysAgo": 9, "finished": false },
+    { "key": "santos-1", "bean": "santos", "roastedDaysAgo": 75, "finished": true },
+    { "key": "sidamo-1", "bean": "sidamo", "roastedDaysAgo": 60, "finished": true }
+  ],
+  "shots": [
+    { "bag": "kochere-1", "daysAgo": 24, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 40, "time": 29, "rating": 4, "notes": "Blueberry jam and jasmine. Best shot this month." },
+    { "bag": "kochere-1", "daysAgo": 22, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 42, "time": 25, "rating": 3, "notes": "Sweet and floral, a little thin. Grind finer." },
+    { "bag": "kochere-1", "daysAgo": 19, "madeBy": "me", "madeFor": "me", "drinkType": "Flat White", "doseIn": 18, "output": 38, "time": 28, "rating": 4, "notes": "The berry comes through the milk. Lovely." },
+    { "bag": "kochere-1", "daysAgo": 18, "madeBy": "me", "madeFor": "guest", "drinkType": "Latte", "doseIn": 18, "output": 38, "time": 28, "rating": 1, "notes": "Sam: too fruity for me." },
+    { "bag": "kochere-1", "daysAgo": 15, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 40, "time": 30, "rating": 4, "notes": "Blueberry again. This is the one." },
+    { "bag": "kochere-1", "daysAgo": 10, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 40, "time": 29, "rating": 3, "notes": "Still fruity, starting to fade." },
+    { "bag": "kochere-1", "daysAgo": 5, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 40, "time": 28, "rating": 3, "notes": "Fading, but still sweet." },
+
+    { "bag": "huila-1", "daysAgo": 18, "madeBy": "me", "madeFor": "me", "drinkType": "Flat White", "doseIn": 18, "output": 36, "time": 27, "rating": 3, "notes": "Milk chocolate and caramel. Easy daily." },
+    { "bag": "huila-1", "daysAgo": 14, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 38, "time": 28, "rating": 3, "notes": "Chocolate, a bit flat on its own." },
+    { "bag": "huila-1", "daysAgo": 9, "madeBy": "me", "madeFor": "me", "drinkType": "Flat White", "doseIn": 18, "output": 36, "time": 27, "rating": 4, "notes": "Caramel sweetness in milk. Great daily coffee." },
+    { "bag": "huila-1", "daysAgo": 3, "madeBy": "me", "madeFor": "me", "drinkType": "Cortado", "doseIn": 18, "output": 36, "time": 28, "rating": 3, "notes": "Reliable." },
+
+    { "bag": "nyeri-1", "daysAgo": 7, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 40, "time": 26, "rating": 2, "notes": "Very bright, grapefruit. Sour." },
+    { "bag": "nyeri-1", "daysAgo": 4, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 38, "time": 31, "rating": 2, "notes": "Sour unless I grind much finer." },
+    { "bag": "nyeri-1", "daysAgo": 2, "madeBy": "me", "madeFor": "me", "drinkType": "Americano", "doseIn": 18, "output": 40, "time": 30, "rating": 3, "notes": "Better as an Americano. Blackcurrant." },
+
+    { "bag": "santos-1", "daysAgo": 70, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 36, "time": 27, "rating": 1, "notes": "Bitter and ashy." },
+    { "bag": "santos-1", "daysAgo": 68, "madeBy": "me", "madeFor": "guest", "drinkType": "Latte", "doseIn": 18, "output": 36, "time": 27, "rating": 4, "notes": "Sam loved this one in a latte." },
+    { "bag": "santos-1", "daysAgo": 66, "madeBy": "me", "madeFor": "me", "drinkType": "Latte", "doseIn": 18, "output": 36, "time": 26, "rating": 1, "notes": "Too roasty, even in milk." },
+    { "bag": "santos-1", "daysAgo": 64, "madeBy": "me", "madeFor": "guest", "drinkType": "Cappuccino", "doseIn": 18, "output": 36, "time": 27, "rating": 4, "notes": "Sam: perfect." },
+    { "bag": "santos-1", "daysAgo": 62, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 34, "time": 26, "rating": 0, "notes": "Burnt. Not for me." },
+
+    { "bag": "sidamo-1", "daysAgo": 58, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 40, "time": 29, "rating": 4, "notes": "Strawberry and red wine. Wow." },
+    { "bag": "sidamo-1", "daysAgo": 55, "madeBy": "me", "madeFor": "me", "drinkType": "Espresso", "doseIn": 18, "output": 41, "time": 28, "rating": 3, "notes": "Winey, very sweet." },
+    { "bag": "sidamo-1", "daysAgo": 50, "madeBy": "me", "madeFor": "me", "drinkType": "Flat White", "doseIn": 18, "output": 38, "time": 28, "rating": 4, "notes": "Strawberry jam in milk." }
+  ]
+}

@@ -57,6 +57,16 @@ app.AddMacCatalystDevice("app-maccatalyst")
     // Use a separate demo database so David's own data is not touched.
     .WithEnvironment("BARISTANOTES_DEMO", "1");
 
+// Fallback stage head, and the target for UI automation of popups. Set the
+// simulator per machine in user secrets: Demo:IosSimulatorUdid. The simulator
+// must trust the ASP.NET Core dev certificate (xcrun simctl keychain <udid> add-root-cert).
+var simulatorUdid = builder.Configuration["Demo:IosSimulatorUdid"];
+(string.IsNullOrWhiteSpace(simulatorUdid)
+        ? app.AddiOSSimulator("app-ios")
+        : app.AddiOSSimulator("app-ios", simulatorUdid))
+    .WithReference(api)
+    .WithEnvironment("BARISTANOTES_DEMO", "1");
+
 builder.Build().Run();
 
 static HttpCommandOptions Json(string body, string description, string icon, bool highlighted = false, string? confirm = null) => new()

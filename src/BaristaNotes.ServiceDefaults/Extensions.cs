@@ -80,10 +80,13 @@ public static class Extensions
         return builder;
     }
 
-    // Reads the app repeats while a run is going: run status, ledger, and status card.
+    // Reads the app repeats: run status, ledger, status card, and the pick
+    // page waiting for an order.
     private static bool IsPoll(Microsoft.AspNetCore.Http.HttpRequest request) =>
         Microsoft.AspNetCore.Http.HttpMethods.IsGet(request.Method)
-        && (request.Path.StartsWithSegments("/runs") || request.Path.StartsWithSegments("/agent/status"));
+        && (request.Path.StartsWithSegments("/runs")
+            || request.Path.StartsWithSegments("/agent/status")
+            || request.Path.StartsWithSegments("/proposals"));
 
     private static TBuilder AddOpenTelemetryExporters<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {

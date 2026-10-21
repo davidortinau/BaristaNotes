@@ -12,7 +12,7 @@
 | 1 | **Done.** The app's own AI call goes through the forwarder: the voice harness asked "How many shots have I pulled?" and got "You have pulled 22 shots in total" (`POST /openai/deployments/gpt-4.1-mini/chat/completions`, 200) |
 | 2 | **Done.** Beats 2-5 run end to end in the Mac Catalyst app: run, ledger, pick with evidence, Buy, checkout in the shop, signed webhook, Ordered in the app |
 | 3 | **Done.** All 8 beats work in the app, driven with DevFlow. Not automated: the three confirmation popups (Forget, Never this roaster, Reset demo data). Their API calls are tested |
-| 4 | **Partly done.** Demo data, pacing, dashboard commands, rehearsal replay, and the [runbook](demo-runbook.md) are done. Left for David: the rehearsal on the presentation machine, the backup video, and the [open decisions](#needs-davids-input) |
+| 4 | **Partly done.** Demo data, pacing, dashboard commands, rehearsal replay, and the [runbook](demo-runbook.md) are done. A silent, app-only draft backup video of beats 1-6 (iOS simulator) is in the davidos project assets. Left for David: the rehearsal on the presentation machine, the narrated backup video, and the [open decisions](#needs-davids-input) |
 
 Tests: 61 API, 37 shop, 1005 app (52 new). A code review of the branch on 21 October found 9 issues; 8 are fixed (see the [findings log](#findings-log)).
 

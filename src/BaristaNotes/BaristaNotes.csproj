@@ -101,7 +101,10 @@
 		
 		<!-- iOS: PROJECT ROOT with BundleResource (per Shiny docs) -->
 		<BundleResource Include="appsettings.json" Condition="$(TargetFramework.Contains('ios')) or $(TargetFramework.Contains('maccatalyst'))" />
-		<BundleResource Include="appsettings.Development.json" Condition="($(TargetFramework.Contains('ios')) or $(TargetFramework.Contains('maccatalyst'))) and Exists('appsettings.Development.json')" />
+		<!-- Mac Catalyst does not bundle the development settings, so no AI key ships
+		     in it. Under the Aspire AppHost, its AI calls go through the API, which
+		     adds the key. iOS still bundles them until it moves to the API too. -->
+		<BundleResource Include="appsettings.Development.json" Condition="$(TargetFramework.Contains('ios')) and Exists('appsettings.Development.json')" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(MauiPerformance)' == 'true' And '$(TargetFramework)' == 'net11.0-ios'">

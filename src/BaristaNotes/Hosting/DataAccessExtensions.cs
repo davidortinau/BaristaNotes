@@ -9,7 +9,9 @@ internal static class DataAccessExtensions
 #if MAUI_PERFORMANCE
         var dbPath = MauiPerformanceFixture.PrepareDatabase();
 #else
-        var dbPath = Path.Combine(FileSystem.AppDataDirectory, "barista_notes.db");
+        // The AppHost sets BARISTANOTES_DEMO=1 so the demo never touches real data.
+        var dbName = BaristaNotes.Services.Agent.AgentApiAddress.IsDemo ? "barista_notes_demo.db" : "barista_notes.db";
+        var dbPath = Path.Combine(FileSystem.AppDataDirectory, dbName);
 #endif
 
         // Bootstrap-only Console.WriteLine: ILogger<T> isn't resolvable during

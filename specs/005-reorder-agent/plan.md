@@ -25,6 +25,7 @@ Tests: 49 API, 36 shop, 1005 app (52 new). Commits on the branch: `c1bfd0d` to `
 | More code checks on model output: a like must cite drinks rated 3-4 and a dislike 0-2; a finished coffee rated below 3 is never re-picked; the ranker is told what you had from each roaster | Each came from a real model mistake in testing (see the [findings log](#findings-log)) |
 | `app-ios` resource on a dedicated simulator, "BaristaNotes Agent Demo" (iOS 27.0, iPhone 17 Pro, trusts the dev certificate) | The fallback stage head from the plan. Tested: it connects to the API and loads the demo data |
 | Automation IDs on all agent tiles, from their accessible names | DevFlow and future UI tests |
+| Stale picks (TF-14): Buy and the agent's own order recheck the price and availability first. A changed pick is refused, its cart removed, and it shows "Out of date". Shop command **Raise prices 10%** | The outline's TF-14 includes rejecting a stale approval. Tested in the app on 21 October |
 
 ### What Mac Catalyst needed
 

@@ -31,6 +31,7 @@
 | 6 Autonomy and retry | Settings → autonomy **Reorder**. Check in Huila Washed as finished. Dashboard `shop` → **Arm order timeout**. **Run now** | Ledger: "Ordering...", "Retrying POST /api/orders ... same Idempotency-Key", "The shop returned the existing order #1002". One order | Shop orders page: one #1002 |
 | 6b The bug (optional) | Reset first (see below). Dashboard `shop` → **Ignore idempotency keys** + **Arm order timeout**. Run | Ledger: "Second order for the same pick: #1002 ... charged twice" | Shop orders page: two orders marked Duplicate |
 | 7 Stop | Settings → autonomy **Cart**. Check in Nyeri Washed as finished. **Run now**, then **Stop** right after "Cart ready at Tidewell Roasting" (set the step delay to 2500 ms if the timing is tight) | "Stopped by you. Already done: the cart at Tidewell Roasting is still open." **Remove cart** on that entry | Shop cart status is "removed" |
+| 7b Stale pick (TF-14) | After a run in Cart mode: dashboard `shop` → **Raise prices 10%**. Open the pick and tap **Buy** | "The price changed from €17.50 to €19.25 since I picked it." No checkout opens. The cart is removed and the pick shows "Out of date". Afterwards: **Normal prices** | Shop prices are 10% higher |
 | 8 Memory | Settings → Memory: show what it learned, with your drinks as evidence. Forget one item: it moves to Removed and is never relearned. Then on the Guji pick tap **Never this roaster** and run again | The next run skips Copperhaze Coffee ("You said never this roaster") and picks Rwanda Natural instead. Recommended: forgetting "likes naturals" alone does not change the pick, because other preferences and the finished bag's own notes still point to Guji | |
 
 ## Dashboard commands
@@ -45,6 +46,8 @@
 | shop | Arm order timeout | The next order is created, then the shop waits 6 s. The API gives up after 3 s and retries |
 | shop | Ignore idempotency keys | The shop creates a new order for every request, like a buggy store |
 | shop | Honor idempotency keys | The fix |
+| shop | Raise prices 10% | Every price goes up 10%. Picks made before are out of date, and Buy refuses them |
+| shop | Normal prices | Back to the catalog prices. **Reset demo** also does this |
 
 ## Timing
 

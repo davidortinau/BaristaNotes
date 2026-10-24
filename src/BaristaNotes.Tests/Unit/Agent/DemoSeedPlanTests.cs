@@ -20,9 +20,9 @@ public sealed class DemoSeedPlanTests
         var data = LoadFixture();
 
         Assert.Equal(2, data.Profiles.Count);
-        Assert.Equal(5, data.Beans.Count);
-        Assert.Equal(5, data.Bags.Count);
-        Assert.Equal(22, data.Shots.Count);
+        Assert.Equal(6, data.Beans.Count);
+        Assert.Equal(6, data.Bags.Count);
+        Assert.Equal(26, data.Shots.Count);
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public sealed class DemoSeedPlanTests
 
         Assert.All(entities.Shots, shot => Assert.Same(me, shot.MadeBy));
         Assert.Equal(3, entities.Shots.Count(shot => ReferenceEquals(shot.MadeFor, guest)));
-        Assert.Equal(19, entities.Shots.Count(shot => ReferenceEquals(shot.MadeFor, me)));
+        Assert.Equal(23, entities.Shots.Count(shot => ReferenceEquals(shot.MadeFor, me)));
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public sealed class DemoSeedPlanTests
         }
 
         var forMe = entities.Shots.Count(shot => AgentSnapshotMapper.IsForMe(shot.MadeBy?.Id, shot.MadeFor?.Id));
-        Assert.Equal(19, forMe);
+        Assert.Equal(23, forMe);
     }
 
     [Theory]

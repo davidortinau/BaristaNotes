@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "profiles": {
+    "unit": {
+      "description": "Build and run shared and native-linked regression tests. Runtime checks remain separate.",
+      "inputs": ["src/BaristaNotes.Core", "src/BaristaNotes.Tests", "src/BaristaNotes/Resources", "src/BaristaNotes/Components/BeanPageScrollGeometry.cs", "src/BaristaNotes.Android/Views/UiAnimationLifetime.cs", "src/BaristaNotes.iOS/SpeechPermissionPreflight.cs", "global.json", "Directory.Build.props", "Directory.Build.targets", "Directory.Packages.props", "NuGet.Config"],
+      "tools": [["dotnet", "--version"]],
+      "steps": [
+        {
+          "name": "unit-tests",
+          "argv": ["dotnet", "test", "src/BaristaNotes.Tests/BaristaNotes.Tests.csproj", "--no-restore", "--verbosity", "minimal"],
+          "cwd": ".",
+          "timeout": 600
+        }
+      ]
+    },
+    "comparison-tools": {
+      "description": "Run the existing work-comparison tool tests. Does not run an app or collect performance samples.",
+      "inputs": ["scripts/compare_work.py", "scripts/tests"],
+      "tools": [["python3", "--version"]],
+      "steps": [
+        {
+          "name": "comparison-tests",
+          "argv": ["python3", "-B", "-m", "unittest", "discover", "-s", "scripts/tests", "-p", "test_compare_work.py", "-q"],
+          "cwd": ".",
+          "timeout": 120
+        }
+      ]
+    }
+  }
+}

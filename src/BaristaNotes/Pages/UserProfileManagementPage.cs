@@ -253,6 +253,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
         return Grid(rows: "Auto", columns: "*,*,*,*",
             NavTile(AppIcons.CoffeeCup,
                 async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("//shots"))
+                .AutomationId("ProfilesDrinkButton")
                 .GridColumn(0),
             NavTile(AppIcons.Feed,
                 async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("//history"))
@@ -262,6 +263,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
                 .GridColumn(2),
             NavTile(AppIcons.Add,
                 async () => await NavigateToAddProfile(), inverted: true)
+                .AutomationId("AddProfileButton")
                 .GridColumn(3)
         )
         .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
@@ -269,7 +271,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
         .BackgroundColor(DividerColor());
     }
 
-    VisualNode NavTile(FontImageSource imageSource, Action onTap, bool inverted = false)
+    MauiReactor.Border NavTile(FontImageSource imageSource, Action onTap, bool inverted = false)
     {
         FontImageSource source = imageSource;
         if (inverted)

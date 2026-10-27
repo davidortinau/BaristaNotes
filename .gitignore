@@ -139,3 +139,6 @@ BaristaNotes/SyncfusionLicense.txt
 
 # Agent API demo database
 src/BaristaNotes.Api/App_Data/
+
+# Local DevFlow demo evidence
+.artifacts/demo-test/

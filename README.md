@@ -99,6 +99,33 @@ For the MAUI reference-head setup and DevFlow run workflow, see
 [Getting Started](docs/GETTING_STARTED.md). The native-head guides linked below
 cover the platform-specific projects.
 
+### Repeatable MAUI Android demo
+
+Ask Copilot to **“run the demo test”**. The
+[demo skill](.github/skills/run-demo-test/SKILL.md) opens the mobile canvas,
+starts the existing BaristaNotes Android emulator, deploys the MAUI Debug app,
+and runs a DevFlow UI sequence: create a bean, create a local profile, and
+log a Cortado with explicit dose, yield, time, temperature, and recipient.
+The test reopens the saved drink and checks it again after an app restart.
+For recordings, use QuickTime's **Record Entire Screen**, with GitHub Copilot
+on the left and the emulator on the right. An emulator-only video is not the
+demo recording. If desktop-control tools cannot arrange the windows or operate
+the recording toolbar, Copilot asks for that step before running the sequence.
+
+To run the same test from a terminal after booting the emulator:
+
+```bash
+python3 -B scripts/demo_test.py --device emulator-5554
+```
+
+Use the emulator's actual serial. Each run preserves existing data and adds
+new, uniquely named records through the app. Results, screenshots, and the
+action transcript go to `.artifacts/demo-test/<run-id>/` unless `--output-dir`
+is supplied. QuickTime saves the desktop recording separately. Copilot opens
+the mobile canvas when available; a canvas failure does not block the test.
+The terminal script does not control desktop windows or recording.
+A failure returns a nonzero exit code and writes `result.json`.
+
 ## Architecture
 
 The native heads use platform controls and navigation while sharing application

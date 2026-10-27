@@ -1,4 +1,4 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.6.2">
+<Project Sdk="Aspire.AppHost.Sdk/13.6.4">
 
   <ItemGroup>
     <ProjectReference Include="..\BaristaNotes.Api\BaristaNotes.Api.csproj" />
@@ -6,7 +6,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.Maui" Version="13.6.2-preview.1.26519.11" />
+    <PackageReference Include="Aspire.Hosting.Maui" Version="13.6.4-preview.1.26523.11" />
   </ItemGroup>
 
   <PropertyGroup>

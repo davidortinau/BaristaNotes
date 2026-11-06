@@ -657,10 +657,22 @@ public static class VoiceOverlayExtensions
     {
         builder.ConfigureMauiHandlers(handlers =>
         {
+            // Create the overlay before the window content is mapped. On Mac
+            // Catalyst, mapping Content lays out the first page at once, and that
+            // page resolves IOverlayService in its constructor. The constructor
+            // only builds managed objects, so creating it early is safe.
+            WindowHandler.Mapper.PrependToMapping(nameof(Microsoft.Maui.IWindow.Content), (handler, view) =>
+            {
+                _overlay ??= new VoiceOverlay(handler.VirtualView);
+            });
+
             WindowHandler.Mapper.AppendToMapping("AddVoiceOverlay", (handler, view) =>
             {
-                _overlay = new VoiceOverlay(handler.VirtualView);
-                handler.VirtualView.AddOverlay(_overlay);
+                _overlay ??= new VoiceOverlay(handler.VirtualView);
+                if (!handler.VirtualView.Overlays.Contains(_overlay))
+                {
+                    handler.VirtualView.AddOverlay(_overlay);
+                }
                 _overlay.SetupPlatformTouchHandling();
             });
         });

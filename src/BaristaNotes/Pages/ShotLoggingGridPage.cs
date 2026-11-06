@@ -334,8 +334,10 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                     SaveTile().GridRow(6).GridColumn(0).GridColumnSpan(4),
 
                     NavTile(AppIcons.Feed, async () => await MauiControls.Shell.Current.GoToAsync("//history"))
+                        .AutomationId("DrinkHistoryButton")
                         .GridRow(7).GridColumn(0),
                     NavTile(AppIcons.Settings, async () => await MauiControls.Shell.Current.GoToAsync("//settings"))
+                        .AutomationId("DrinkSettingsButton")
                         .GridRow(7).GridColumn(1),
                     NavTile(AppIcons.Voice, async () => await ToggleVoiceSheetAsync())
                         .GridRow(7).GridColumn(2),
@@ -810,7 +812,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
             inverted: true);
     }
 
-    VisualNode NavTile(FontImageSource imageSource, Action onTap)
+    MauiReactor.Border NavTile(FontImageSource imageSource, Action onTap)
     {
         var isLight = Application.Current?.RequestedTheme != AppTheme.Dark;
         var bg = isLight ? AppColors.Light.Surface : AppColors.Dark.Surface;
@@ -1043,18 +1045,20 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
                 PeopleColumn(
                     selectedId: State.SelectedMaker?.Id,
                     onSelect: u => SetState(s => s.SelectedMaker = u),
-                    textPrimary, textSecondary, accent).GridColumn(0),
+                    textPrimary, textSecondary, accent)
+                    .AutomationId("DrinkMadeByPicker").GridColumn(0),
                 BoxView().Color(DividerColor()).GridColumn(1),
                 PeopleColumn(
                     selectedId: State.SelectedRecipient?.Id,
                     onSelect: u => SetState(s => s.SelectedRecipient = u),
-                    textPrimary, textSecondary, accent).GridColumn(2)
+                    textPrimary, textSecondary, accent)
+                    .AutomationId("DrinkMadeForPicker").GridColumn(2)
             ).GridRow(2)
         ).BackgroundColor(surface);
     }
 
     // A single scrolling column of profiles with the selected row centered.
-    VisualNode PeopleColumn(
+    MauiReactor.CollectionView PeopleColumn(
         int? selectedId,
         Action<UserProfileDto> onSelect,
         Color textPrimary,

@@ -11,6 +11,7 @@ public class AppShellState
 public partial class AppShell : Component<AppShellState>
 {
     [Inject] DatabaseInitializationService _databaseInitialization;
+    [Inject] BaristaNotes.Services.Agent.DemoDataSeeder _demoDataSeeder;
     [Inject] ILogger<AppShell> _logger;
 
     protected override void OnMounted()
@@ -26,6 +27,11 @@ public partial class AppShell : Component<AppShellState>
         try
         {
             await _databaseInitialization.InitializeAsync();
+            if (BaristaNotes.Services.Agent.AgentApiAddress.IsDemo)
+            {
+                // The separate demo database starts empty. Fill it before any page reads it.
+                await _demoDataSeeder.SeedIfEmptyAsync();
+            }
             SetState(s => s.IsDatabaseReady = true);
         }
         catch (Exception ex)

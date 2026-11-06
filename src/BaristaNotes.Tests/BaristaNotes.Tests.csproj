@@ -35,8 +35,19 @@
           CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- Reorder agent: the app's pure sharing, seeding, and wording logic. -->
+  <ItemGroup>
+    <Compile Include="..\BaristaNotes\Services\Agent\AgentSnapshotMapper.cs" Link="Agent\AgentSnapshotMapper.cs" />
+    <Compile Include="..\BaristaNotes\Services\Agent\DemoSeedPlan.cs" Link="Agent\DemoSeedPlan.cs" />
+    <Compile Include="..\BaristaNotes\Services\Agent\AgentText.cs" Link="Agent\AgentText.cs" />
+    <Compile Include="..\BaristaNotes\Services\Agent\AgentHomeCard.cs" Link="Agent\AgentHomeCard.cs" />
+    <None Include="..\BaristaNotes\Resources\Raw\demo\demo-data.json" Link="Agent\demo-data.json"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\BaristaNotes.Core\BaristaNotes.Core.csproj" />
+    <ProjectReference Include="..\BaristaNotes.Agent.Contracts\BaristaNotes.Agent.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

@@ -48,5 +48,22 @@
 	<string>BaristaNotes uses speech recognition to convert your spoken commands into actions like logging a shot or navigating to a bean.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Bluetooth is not used by BaristaNotes. This entry is required because the debug-only MAUI DevFlow diagnostic agent probes the Bluetooth subsystem at startup.</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>__MAUI_DEFAULT_SCENE_CONFIGURATION__</string>
+					<key>UISceneDelegateClassName</key>
+					<string>SceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 </dict>
 </plist>

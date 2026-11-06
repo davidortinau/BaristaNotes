@@ -44,9 +44,9 @@
       },
       "Microsoft.NET.ILLink.Tasks": {
         "type": "Direct",
-        "requested": "[11.0.0-rc.2.26475.136, )",
-        "resolved": "11.0.0-rc.2.26475.136",
-        "contentHash": "OmrvODF5Wnt+ZAnz0wfxOPPb+uRUxUpxwOmL6FjwADa5YrJcdhs39QzlA9wOZumuGhBVbw1JV4Ji5NdHeQXGIA=="
+        "requested": "[11.0.0-rc.2.26504.105, )",
+        "resolved": "11.0.0-rc.2.26504.105",
+        "contentHash": "Mkb6kHfPr4/txc4n/41yUiEBT44Haup2qnyecIO1ADo2QB4YxleZHsOvgYJT6roL1SNuFSpbeNpoe70BJ953Uw=="
       },
       "Xamarin.AndroidX.RecyclerView": {
         "type": "Direct",
@@ -837,6 +837,36 @@
       }
     },
     "net11.0-android37.0/android-arm64": {
+      "HarfBuzzSharp.NativeAssets.Android": {
+        "type": "Transitive",
+        "resolved": "8.3.1.3",
+        "contentHash": "Yte9/yYql8ngAjo7YgHlXSinLJcJXIRBM9gegVXpJ2SVYT1i2O/wMA+H3jmYiYiTQxHpHKi4exZUcMzry171MA=="
+      },
+      "HarfBuzzSharp.NativeAssets.Linux": {
+        "type": "Transitive",
+        "resolved": "2.8.2.3",
+        "contentHash": "Qu1yJSHEN7PD3+fqfkaClnORWN5e2xJ2Xoziz/GUi/oBT1Z+Dp2oZeiONKP6NFltboSOBkvH90QuOA6YN/U1zg==",
+        "dependencies": {
+          "HarfBuzzSharp": "2.8.2.3"
+        }
+      },
+      "SkiaSharp.NativeAssets.Android": {
+        "type": "Transitive",
+        "resolved": "3.119.2",
+        "contentHash": "r/IIcpJRl2C6xBadDvtdeXRfyQcjvZ5Md8e7J5piZE785JM1WjTq69xoduKt48qTbUza86GhO92dYaXkYNxnxA=="
+      },
+      "SkiaSharp.NativeAssets.Linux": {
+        "type": "Transitive",
+        "resolved": "3.119.2",
+        "contentHash": "9WzxSyG/s9Id506j0Ht+Bi5ucOpWKPzd1XXr9TD4fuCafHHy2swRSlbZtC3IDQAsvCH63OerkDJajj43uSv5og=="
+      },
+      "SQLite": {
+        "type": "Transitive",
+        "resolved": "3.53.4",
+        "contentHash": "KN7jeWqgUPeBRe1FlcpZURzxomuKKEKHmBBQfg+Nx7NkY1LjKhzHvH+3ASkNvhayESE34nMBinL9CV21JfPRJw=="
+      }
+    },
+    "net11.0-android37.0/android-x64": {
       "HarfBuzzSharp.NativeAssets.Android": {
         "type": "Transitive",
         "resolved": "8.3.1.3",

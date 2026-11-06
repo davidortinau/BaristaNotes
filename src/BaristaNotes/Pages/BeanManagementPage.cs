@@ -473,15 +473,18 @@ partial class BeanManagementPage : Component<BeanManagementState>
         return Grid(rows: "Auto", columns: "*,*,*,*",
             NavTile(AppIcons.CoffeeCup,
                 async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("//shots"))
+                .AutomationId("BeansDrinkButton")
                 .GridColumn(0),
             NavTile(AppIcons.Feed,
                 async () => await Microsoft.Maui.Controls.Shell.Current.GoToAsync("//history"))
                 .GridColumn(1),
             NavTile(AppIcons.Settings,
                 async () => await NavigateBack())
+                .AutomationId("BeansSettingsButton")
                 .GridColumn(2),
             NavTile(AppIcons.Add,
                 async () => await NavigateToAddBean(), inverted: true)
+                .AutomationId("AddBeanButton")
                 .GridColumn(3)
         )
         .SafeAreaEdges(new SafeAreaEdges(SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None, SafeAreaRegions.None))
@@ -489,7 +492,7 @@ partial class BeanManagementPage : Component<BeanManagementState>
         .BackgroundColor(DividerColor());
     }
 
-    VisualNode NavTile(FontImageSource imageSource, Action onTap, bool inverted = false)
+    MauiReactor.Border NavTile(FontImageSource imageSource, Action onTap, bool inverted = false)
     {
         FontImageSource source = imageSource;
         if (inverted)

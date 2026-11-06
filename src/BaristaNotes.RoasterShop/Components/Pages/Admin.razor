@@ -1,0 +1,135 @@
+@page "/admin"
+@inject ShopStore Store
+@inject Microsoft.Extensions.Options.IOptionsMonitor<FaultOptions> FaultOptions
+
+<PageTitle>Admin</PageTitle>
+
+<div class="page-head">
+    <h1>Demo controls</h1>
+    <p class="muted">Faults for the talk. They make this shop misbehave on purpose.</p>
+</div>
+
+@if (message is not null)
+{
+    <div class="callout callout-ok" role="status">@message</div>
+}
+
+<div class="controls">
+    <section class="control">
+        <div>
+            <h2>Order timeout</h2>
+            <p class="muted">
+                When armed, the next API order is created, then the reply is held for
+                @FaultOptions.CurrentValue.OrderTimeoutDelay.TotalSeconds seconds. One shot: it disarms itself.
+            </p>
+        </div>
+        <div class="control-state">
+            @if (faults.OrderTimeoutArmed)
+            {
+                <span class="badge badge-danger">Armed</span>
+            }
+            else
+            {
+                <span class="badge badge-muted">Off</span>
+            }
+            <form method="post" @formname="order-timeout" @onsubmit="SetOrderTimeout">
+                <AntiforgeryToken />
+                <input type="hidden" name="OrderTimeoutAction" value="@(faults.OrderTimeoutArmed ? "disarm" : "arm")" />
+                <button type="submit" class="button @(faults.OrderTimeoutArmed ? null : "button-danger")">@(faults.OrderTimeoutArmed ? "Disarm" : "Arm")</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="control">
+        <div>
+            <h2>Idempotency keys</h2>
+            <p class="muted">
+                When ignored, every order request creates a new order, even with a key that was already used.
+                This simulates a buggy store.
+            </p>
+        </div>
+        <div class="control-state">
+            @if (faults.IgnoreIdempotencyKeys)
+            {
+                <span class="badge badge-danger">Ignored</span>
+            }
+            else
+            {
+                <span class="badge badge-ok">Honored</span>
+            }
+            <form method="post" @formname="idempotency" @onsubmit="SetIdempotency">
+                <AntiforgeryToken />
+                <input type="hidden" name="IdempotencyAction" value="@(faults.IgnoreIdempotencyKeys ? "honor" : "ignore")" />
+                <button type="submit" class="button @(faults.IgnoreIdempotencyKeys ? null : "button-danger")">@(faults.IgnoreIdempotencyKeys ? "Honor" : "Ignore")</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="control">
+        <div>
+            <h2>Reset</h2>
+            <p class="muted">
+                Clears all carts and orders, restarts order numbers at #@ShopStore.FirstOrderNumber, and turns both faults off.
+                Now: @Plural(orderCount, "order"), @Plural(openCarts, "open cart").
+            </p>
+        </div>
+        <div class="control-state">
+            <form method="post" @formname="reset" @onsubmit="Reset">
+                <AntiforgeryToken />
+                <input type="hidden" name="ResetConfirm" value="yes" />
+                <button type="submit" class="button">Reset demo</button>
+            </form>
+        </div>
+    </section>
+</div>
+
+@code {
+    [SupplyParameterFromForm(FormName = "order-timeout")]
+    public string? OrderTimeoutAction { get; set; }
+
+    [SupplyParameterFromForm(FormName = "idempotency")]
+    public string? IdempotencyAction { get; set; }
+
+    [SupplyParameterFromForm(FormName = "reset")]
+    public string? ResetConfirm { get; set; }
+
+    private Faults faults = Faults.Off;
+    private int orderCount;
+    private int openCarts;
+    private string? message;
+
+    protected override void OnInitialized() => Load();
+
+    private static string Plural(int count, string noun) => count == 1 ? $"1 {noun}" : $"{count} {noun}s";
+
+    private void Load()
+    {
+        faults = Store.GetFaults();
+        orderCount = Store.GetOrders().Count;
+        openCarts = Store.OpenCartCount;
+    }
+
+    // Each form posts the state it wants, not "toggle", so a double submit is harmless.
+    private void SetOrderTimeout()
+    {
+        var arm = OrderTimeoutAction == "arm";
+        Store.UpdateFaults(orderTimeoutArmed: arm);
+        message = arm ? "Order timeout armed for the next API order." : "Order timeout disarmed.";
+        Load();
+    }
+
+    private void SetIdempotency()
+    {
+        var ignore = IdempotencyAction == "ignore";
+        Store.UpdateFaults(ignoreIdempotencyKeys: ignore);
+        message = ignore ? "Idempotency keys are now ignored." : "Idempotency keys are honored again.";
+        Load();
+    }
+
+    private void Reset()
+    {
+        Store.Reset();
+        message = "Demo reset. Next order is #" + ShopStore.FirstOrderNumber + ".";
+        Load();
+    }
+}

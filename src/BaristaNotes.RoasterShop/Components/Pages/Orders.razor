@@ -1,0 +1,90 @@
+@page "/orders"
+@inject ShopStore Store
+@inject Catalog Catalog
+
+<PageTitle>Orders</PageTitle>
+<HeadContent>
+    @* Refresh so orders placed by the agent show up on stage without a click. *@
+    <meta http-equiv="refresh" content="5" />
+</HeadContent>
+
+<div class="page-head">
+    <h1>Orders</h1>
+    <p class="muted">Newest first. This page refreshes every 5 seconds.</p>
+</div>
+
+@if (duplicateGroups.Count > 0)
+{
+    <div class="callout callout-danger" role="alert">
+        <strong>Duplicate orders</strong>
+        @foreach (var g in duplicateGroups)
+        {
+            <span>@g.Count() orders share proposal <code title="@g.Key">@Ids.Short(g.Key)</code>: @string.Join(", ", g.OrderBy(o => o.CreatedAt).Select(o => o.OrderNumber)).</span>
+        }
+    </div>
+}
+
+@if (orders.Count == 0)
+{
+    <p class="empty">No orders yet.</p>
+}
+else
+{
+    <div class="table-scroll">
+        <table class="table orders">
+            <thead>
+                <tr>
+                    <th>Order</th>
+                    <th>Roaster</th>
+                    <th class="num">Total</th>
+                    <th>Source</th>
+                    <th>Proposal</th>
+                    <th>Idempotency key</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var o in orders)
+                {
+                    var duplicate = o.ProposalId is not null && duplicateIds.Contains(o.ProposalId);
+                    <tr class="@(duplicate ? "is-duplicate" : null)">
+                        <td>
+                            <strong>@o.OrderNumber</strong>
+                            @if (duplicate)
+                            {
+                                <span class="badge badge-danger">Duplicate</span>
+                            }
+                        </td>
+                        <td>@(Catalog.FindRoaster(o.Roaster)?.Name ?? o.Roaster)</td>
+                        <td class="num">@Money.Display(o.Total)</td>
+                        <td>@(o.Source == OrderSource.Api ? "api" : "checkout")</td>
+                        <td>@Id(o.ProposalId)</td>
+                        <td>@Id(o.IdempotencyKey)</td>
+                        <td><time datetime="@o.CreatedAt.ToString("O")">@o.CreatedAt.ToString("HH:mm:ss")</time></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<Order> orders = [];
+    private List<IGrouping<string, Order>> duplicateGroups = [];
+    private HashSet<string> duplicateIds = [];
+
+    protected override void OnInitialized()
+    {
+        orders = Store.GetOrders();
+        duplicateGroups = orders
+            .Where(o => o.ProposalId is not null)
+            .GroupBy(o => o.ProposalId!)
+            .Where(g => g.Count() > 1)
+            .ToList();
+        duplicateIds = duplicateGroups.Select(g => g.Key).ToHashSet();
+    }
+
+    private static RenderFragment Id(string? value) => string.IsNullOrEmpty(value)
+        ? @<span class="muted">none</span>
+        : @<code title="@value">@Ids.Short(value)</code>;
+}

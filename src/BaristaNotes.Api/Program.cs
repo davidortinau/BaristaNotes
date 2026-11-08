@@ -1,5 +1,6 @@
 using System.ClientModel;
 using Azure.AI.OpenAI;
+using Azure.Core;
 using BaristaNotes.Agent.Contracts;
 using BaristaNotes.Api.Agent;
 using BaristaNotes.Api.Data;
@@ -22,14 +23,14 @@ builder.Services.AddOpenApi();
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.TypeInfoResolverChain.Insert(0, AgentJsonContext.Default));
 builder.Services.AddSingleton(TimeProvider.System);
 
-// The app's existing AI calls go through here, and the key is added on the way.
+// The app's existing AI calls go through here; credentials stay in the API.
 builder.AddFoundryForwarder();
 
 // Agent state. Demo only: the schema is created on start, and Reset demo empties it.
 var dataDirectory = Path.Combine(builder.Environment.ContentRootPath, "App_Data");
 Directory.CreateDirectory(dataDirectory);
-var agentDb = builder.Configuration.GetConnectionString("agentdb") ?? $"Data Source={Path.Combine(dataDirectory, "agent.db")}";
-builder.Services.AddDbContextFactory<AgentDb>(o => o.UseSqlite(agentDb));
+var storage = AgentStorage.Provider(builder.Configuration);
+builder.Services.AddDbContextFactory<AgentDb>(o => AgentStorage.Configure(o, builder.Configuration, dataDirectory));
 builder.Services.AddScoped(sp => sp.GetRequiredService<IDbContextFactory<AgentDb>>().CreateDbContext());
 
 // The shop. Aspire service defaults give every HttpClient the standard
@@ -51,12 +52,15 @@ builder.Services.AddHttpClient<ShopClient>(c =>
         o.Retry.OnRetry = args => LogRetryAsync(args, shopAttemptTimeout);
     });
 
-// The model. Endpoint and key come from the "foundry" connection string.
+// Provisioned Foundry uses Entra ID; existing endpoint/key connections still work.
 builder.Services.AddSingleton<IChatClient>(sp =>
 {
     var foundry = sp.GetRequiredService<FoundryConnection>();
     var deployment = builder.Configuration["Agent:Model"] ?? "gpt-4.1-mini";
-    return new AzureOpenAIClient(foundry.Endpoint, new ApiKeyCredential(foundry.Key))
+    var client = foundry.Key is { } key
+        ? new AzureOpenAIClient(foundry.Endpoint, new ApiKeyCredential(key))
+        : new AzureOpenAIClient(foundry.Endpoint, sp.GetRequiredService<TokenCredential>());
+    return client
         .GetChatClient(deployment)
         .AsIChatClient()
         .AsBuilder()
@@ -81,6 +85,7 @@ builder.Services.AddOpenTelemetry()
     .WithMetrics(m => m.AddMeter(FoundryReorderModel.TelemetrySource));
 
 var app = builder.Build();
+app.Logger.LogInformation("Agent storage provider: {StorageProvider}", storage);
 
 await using (var scope = app.Services.CreateAsyncScope())
 {
@@ -100,6 +105,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapGet("/", () => Results.Ok(new { name = "BaristaNotes API" }));
+app.MapGet("/demo/storage", () => Results.Ok(new { provider = storage }));
 app.MapAgentEndpoints();
 app.MapShopWebhook();
 app.MapFoundryForwarder();

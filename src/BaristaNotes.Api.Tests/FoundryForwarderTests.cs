@@ -1,4 +1,5 @@
 using System.Net;
+using Azure.Core;
 using BaristaNotes.Api.Forwarding;
 
 namespace BaristaNotes.Api.Tests;
@@ -37,12 +38,59 @@ public class FoundryForwarderTests
     }
 
     [Theory]
-    [InlineData("Endpoint=https://example.cognitiveservices.azure.com/")]
     [InlineData("Key=abc123")]
     [InlineData("Endpoint=;Key=abc123")]
+    [InlineData("Endpoint=https://example.cognitiveservices.azure.com/;Key=' '")]
     public void Parse_rejects_incomplete_connection_strings(string value)
     {
         Assert.Throws<InvalidOperationException>(() => FoundryConnection.Parse(value));
+    }
+
+    [Fact]
+    public void Parse_accepts_provisioned_Foundry_without_a_key()
+    {
+        var connection = FoundryConnection.Parse(
+            "Endpoint=https://example.cognitiveservices.azure.com/;EndpointAIInference=https://example.services.ai.azure.com/models");
+
+        Assert.Equal(new Uri("https://example.cognitiveservices.azure.com/"), connection.Endpoint);
+        Assert.Null(connection.Key);
+    }
+
+    [Fact]
+    public async Task Entra_authentication_replaces_caller_credentials()
+    {
+        using var request = new HttpRequestMessage();
+        request.Headers.TryAddWithoutValidation("api-key", "placeholder");
+        request.Headers.TryAddWithoutValidation("Authorization", "Bearer caller-token");
+        var credential = new TestCredential();
+        using var cancellation = new CancellationTokenSource();
+
+        await FoundryForwarder.ApplyAuthenticationAsync(request.Headers,
+            new FoundryConnection(new Uri("https://example.cognitiveservices.azure.com/"), null),
+            credential, cancellation.Token);
+
+        Assert.False(request.Headers.Contains("api-key"));
+        Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+        Assert.Equal("server-token", request.Headers.Authorization?.Parameter);
+        Assert.NotNull(credential.Context);
+        Assert.Equal(["https://cognitiveservices.azure.com/.default"], credential.Context.Value.Scopes);
+        Assert.Equal(cancellation.Token, credential.CancellationToken);
+    }
+
+    [Fact]
+    public async Task Key_authentication_does_not_request_an_Entra_token()
+    {
+        using var request = new HttpRequestMessage();
+        request.Headers.TryAddWithoutValidation("Authorization", "Bearer caller-token");
+        var credential = new TestCredential();
+
+        await FoundryForwarder.ApplyAuthenticationAsync(request.Headers,
+            new FoundryConnection(new Uri("https://example.cognitiveservices.azure.com/"), "server-key"),
+            credential, CancellationToken.None);
+
+        Assert.Equal(["server-key"], request.Headers.GetValues("api-key"));
+        Assert.False(request.Headers.Contains("Authorization"));
+        Assert.Null(credential.Context);
     }
 
     [Fact]
@@ -66,5 +114,21 @@ public class FoundryForwarderTests
     public void IsLoopback_rejects_unknown_caller()
     {
         Assert.False(FoundryForwarder.IsLoopback(null));
+    }
+
+    sealed class TestCredential : TokenCredential
+    {
+        public TokenRequestContext? Context { get; private set; }
+        public CancellationToken CancellationToken { get; private set; }
+
+        public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
+        {
+            Context = requestContext;
+            CancellationToken = cancellationToken;
+            return ValueTask.FromResult(new AccessToken("server-token", DateTimeOffset.UtcNow.AddHours(1)));
+        }
     }
 }

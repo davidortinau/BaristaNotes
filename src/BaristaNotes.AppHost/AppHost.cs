@@ -1,3 +1,6 @@
+using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Foundry;
+
 // The .NET 11 RC2 macios SDK expects Xcode 27.0; this Mac has 27.1. Skip the
 // check. Aspire.Hosting.Maui builds the app in a child process that inherits
 // this, and MSBuild reads environment variables as properties.
@@ -5,10 +8,63 @@ Environment.SetEnvironmentVariable("ValidateXcodeVersion", "false");
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-// Foundry endpoint and key. Set in this project's user secrets:
-// ConnectionStrings:foundry = "Endpoint=https://...;Key=..."
-// Only the API reads it. The app never receives the key.
-var foundry = builder.AddConnectionString("foundry");
+var storage = (builder.Configuration["Parameters:storage"] ?? builder.Configuration["Demo:Storage"] ?? "sqlite").ToLowerInvariant();
+if (storage is not ("sqlite" or "postgres"))
+{
+    throw new InvalidOperationException("The storage parameter must be 'sqlite' or 'postgres'.");
+}
+
+var storageParameter = builder.AddParameter("storage", storage)
+    .WithDescription("Agent API storage. Choose SQLite or PostgreSQL, save to user secrets, then restart the AppHost to apply. Existing data is not copied between stores.")
+    .WithCustomInput(parameter => new()
+    {
+        Name = parameter.Name,
+        Label = "Agent storage",
+        InputType = InputType.Choice,
+        Required = true,
+        Value = storage,
+        Options = [
+            new("sqlite", "SQLite"),
+            new("postgres", "PostgreSQL"),
+        ],
+        Description = parameter.Description,
+        EnableDescriptionMarkdown = parameter.EnableDescriptionMarkdown,
+    });
+
+IResourceBuilder<PostgresDatabaseResource>? agentDatabase = null;
+if (storage == "postgres")
+{
+    agentDatabase = builder.AddPostgres("postgres")
+        .WithDataVolume()
+        .AddDatabase("agentdb");
+#pragma warning disable ASPIREPOSTGRES001
+    agentDatabase.WithPostgresMcp(mcp => mcp.WithArgs(args =>
+    {
+        args.Args.Remove("--access-mode=unrestricted");
+        args.Args.Add("--access-mode=restricted");
+    }));
+#pragma warning restore ASPIREPOSTGRES001
+}
+
+// An explicit connection string reuses an existing account; otherwise Aspire
+// provisions Foundry and the models used by the agent and the app.
+IResourceBuilder<IResourceWithConnectionString> foundry;
+if (!string.IsNullOrWhiteSpace(builder.Configuration["ConnectionStrings:foundry"]))
+{
+    foundry = builder.AddConnectionString("foundry");
+}
+else
+{
+    var account = builder.AddFoundry("foundry");
+    account.AddDeployment("chat", FoundryModel.OpenAI.Gpt41Mini)
+        .WithProperties(d => { d.DeploymentName = "gpt-4.1-mini"; d.SkuName = "GlobalStandard"; d.SkuCapacity = 10; });
+    // Keep the app's deployment names while using models available for new accounts.
+    account.AddDeployment("vision", FoundryModel.OpenAI.Gpt41)
+        .WithProperties(d => { d.DeploymentName = "gpt-4o"; d.SkuName = "GlobalStandard"; d.SkuCapacity = 10; });
+    account.AddDeployment("extraction", FoundryModel.OpenAI.Gpt41Mini)
+        .WithProperties(d => { d.DeploymentName = "gpt-4o-mini"; d.SkuName = "GlobalStandard"; d.SkuCapacity = 10; });
+    foundry = account;
+}
 
 // The shop signs its order webhooks with this secret, and the API checks the
 // signature. Generated once and kept in user secrets.
@@ -43,7 +99,9 @@ var shop = builder.AddProject<Projects.BaristaNotes_RoasterShop>("shop")
         "ArrowUndo"));
 
 var api = builder.AddProject<Projects.BaristaNotes_Api>("api")
+    .WithEnvironment("Agent__Storage", storageParameter)
     .WithReference(foundry)
+    .WaitFor(foundry)
     .WithReference(shop)
     .WaitFor(shop)
     .WithEnvironment("Webhooks__Secret", webhookSecret)
@@ -63,8 +121,20 @@ var api = builder.AddProject<Projects.BaristaNotes_Api>("api")
         "{}", "Clears runs, picks, orders, check-ins, and memory in the API and the shop.", "ArrowReset",
         confirm: "Reset the API and the shop? The app's demo data is reset from its Settings page."));
 
+if (agentDatabase is not null)
+{
+    api.WithReference(agentDatabase).WaitFor(agentDatabase);
+}
+
 // The shop sends order webhooks to the API through service discovery.
 shop.WithReference(api);
+
+#pragma warning disable ASPIREBROWSERLOGS001
+builder.AddViteApp("web", "../BaristaNotes.Web")
+    .WithReference(api)
+    .WaitFor(api)
+    .WithBrowserLogs();
+#pragma warning restore ASPIREBROWSERLOGS001
 
 var app = builder.AddMauiProject("app", "../BaristaNotes/BaristaNotes.csproj");
 

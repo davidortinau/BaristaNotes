@@ -25,7 +25,7 @@ internal static class ConfigurationExtensions
 
     /// <summary>
     /// Under the Aspire AppHost, send the existing Azure OpenAI calls to the
-    /// API's forwarder. The API adds the Foundry key, so the app holds none.
+    /// API's forwarder. The API authenticates with Foundry, so the app holds no credentials.
     /// The AI services read these values and do not change.
     /// </summary>
     static void UseAgentApiForAI(this MauiAppBuilder builder)
@@ -39,7 +39,7 @@ internal static class ConfigurationExtensions
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["AzureOpenAI:Endpoint"] = api.ToString(),
-            // The client library requires a value. The API removes it and adds the real key.
+            // The client library requires a value. The API replaces it with server-side authentication.
             ["AzureOpenAI:ApiKey"] = "added-by-api",
         });
     }

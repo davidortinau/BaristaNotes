@@ -6,7 +6,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.Browsers" Version="13.6.4-preview.1.26523.11" />
+    <PackageReference Include="Aspire.Hosting.Foundry" Version="13.6.4-preview.1.26523.11" />
+    <PackageReference Include="Aspire.Hosting.JavaScript" Version="13.6.4" />
     <PackageReference Include="Aspire.Hosting.Maui" Version="13.6.4-preview.1.26523.11" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.6.4" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -51,8 +51,8 @@ Optional extensions:
   switch from the Mac app.
 - **Dependency evidence:** show the `dotnet-inspect` skill for inspecting
   actual package APIs/source rather than inventing preview API signatures.
-- **Storage choice:** show `--Demo:Storage=sqlite` versus
-  `--Demo:Storage=postgres` in the startup command. Prefer explaining this
+- **Storage choice:** show the **storage** parameter's **Set parameter** command,
+  choose SQLite or PostgreSQL, and save to user secrets. Prefer explaining this
   after the live flow: restarting changes web ports, and the shop's
   in-memory carts disappear even though API state persists.
 - **Rehearsal controls:** show the existing replay, reset, timeout,
@@ -116,7 +116,16 @@ MauiReactor's own hot-reload feature switch remains enabled in Debug.
 ### SQLite or PostgreSQL
 
 The startup option switches the **agent API's** storage, not the MAUI app's
-on-device journal. SQLite is the default and needs no container engine:
+on-device journal. SQLite is the default and needs no container engine.
+
+In the resource workbench or dashboard, **storage → Set parameter** offers
+SQLite and PostgreSQL. Enable **Save to user secrets**, then restart the
+entire AppHost to apply the resource-graph change. The saved `Parameters:storage`
+value takes precedence over the legacy `Demo:Storage` setting shown below.
+For a command-line override, use `--Parameters:storage=sqlite` or
+`--Parameters:storage=postgres` instead.
+
+The legacy option still works when no storage parameter has been saved:
 
 ```bash
 aspire start --non-interactive --apphost src/BaristaNotes.AppHost/BaristaNotes.AppHost.csproj -- --Demo:Storage=sqlite

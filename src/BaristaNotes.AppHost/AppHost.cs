@@ -1,5 +1,3 @@
-#pragma warning disable
-
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Foundry;
 
@@ -10,11 +8,28 @@ Environment.SetEnvironmentVariable("ValidateXcodeVersion", "false");
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var storage = (builder.Configuration["Demo:Storage"] ?? "sqlite").ToLowerInvariant();
+var storage = (builder.Configuration["Parameters:storage"] ?? builder.Configuration["Demo:Storage"] ?? "sqlite").ToLowerInvariant();
 if (storage is not ("sqlite" or "postgres"))
 {
-    throw new InvalidOperationException("Demo:Storage must be 'sqlite' or 'postgres'.");
+    throw new InvalidOperationException("The storage parameter must be 'sqlite' or 'postgres'.");
 }
+
+var storageParameter = builder.AddParameter("storage", storage)
+    .WithDescription("Agent API storage. Choose SQLite or PostgreSQL, save to user secrets, then restart the AppHost to apply. Existing data is not copied between stores.")
+    .WithCustomInput(parameter => new()
+    {
+        Name = parameter.Name,
+        Label = "Agent storage",
+        InputType = InputType.Choice,
+        Required = true,
+        Value = storage,
+        Options = [
+            new("sqlite", "SQLite"),
+            new("postgres", "PostgreSQL"),
+        ],
+        Description = parameter.Description,
+        EnableDescriptionMarkdown = parameter.EnableDescriptionMarkdown,
+    });
 
 IResourceBuilder<PostgresDatabaseResource>? agentDatabase = null;
 if (storage == "postgres")
@@ -22,11 +37,13 @@ if (storage == "postgres")
     agentDatabase = builder.AddPostgres("postgres")
         .WithDataVolume()
         .AddDatabase("agentdb");
+#pragma warning disable ASPIREPOSTGRES001
     agentDatabase.WithPostgresMcp(mcp => mcp.WithArgs(args =>
     {
         args.Args.Remove("--access-mode=unrestricted");
         args.Args.Add("--access-mode=restricted");
     }));
+#pragma warning restore ASPIREPOSTGRES001
 }
 
 // An explicit connection string reuses an existing account; otherwise Aspire
@@ -82,7 +99,7 @@ var shop = builder.AddProject<Projects.BaristaNotes_RoasterShop>("shop")
         "ArrowUndo"));
 
 var api = builder.AddProject<Projects.BaristaNotes_Api>("api")
-    .WithEnvironment("Agent__Storage", storage)
+    .WithEnvironment("Agent__Storage", storageParameter)
     .WithReference(foundry)
     .WaitFor(foundry)
     .WithReference(shop)
@@ -112,10 +129,12 @@ if (agentDatabase is not null)
 // The shop sends order webhooks to the API through service discovery.
 shop.WithReference(api);
 
+#pragma warning disable ASPIREBROWSERLOGS001
 builder.AddViteApp("web", "../BaristaNotes.Web")
     .WithReference(api)
     .WaitFor(api)
     .WithBrowserLogs();
+#pragma warning restore ASPIREBROWSERLOGS001
 
 var app = builder.AddMauiProject("app", "../BaristaNotes/BaristaNotes.csproj");
 

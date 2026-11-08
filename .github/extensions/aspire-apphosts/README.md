@@ -122,9 +122,19 @@ bounded request bodies.
 - Older CLI compatibility retries only when the optional disabled-command flag
   is actually unsupported and marks the resulting model accordingly.
 
-## Regression coverage
+## Validation
 
-Run `npm test` from the repository root. It includes the AppHosts model,
-provider, renderer, plugin-mirror and bundle-workflow suites as well as the
-nested Aspireify suites. Provider and renderer boundary fixtures use synthetic
-data and do not start, stop or deploy a real Aspire application.
+From the repository root, check the bundled JavaScript syntax:
+
+```bash
+node --check .github/extensions/aspire-apphosts/extension.mjs
+node --check .github/extensions/aspire-apphosts/lib/app-model.mjs
+node --check .github/extensions/aspire-apphosts/lib/browser.mjs
+node --check .github/extensions/aspire-apphosts/ui/app.js
+```
+
+The upstream regression suites are not bundled in this repository. Syntax
+checks do not verify runtime behavior. To smoke-test the canvas in GitHub
+Copilot App, open it against an existing AppHost, refresh the Resources and
+Graph tabs, and confirm endpoints and commands appear on their owning cards.
+Opening or refreshing the canvas must not start an AppHost.

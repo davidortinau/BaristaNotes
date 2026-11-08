@@ -126,6 +126,19 @@ the mobile canvas when available; a canvas failure does not block the test.
 The terminal script does not control desktop windows or recording.
 A failure returns a nonzero exit code and writes `result.json`.
 
+### Aspire agent storage
+
+The AppHost exposes a non-secret **storage** parameter. In the Aspire resource
+workbench or dashboard, open **storage → Set parameter**, choose **SQLite** or
+**PostgreSQL**, and enable **Save to user secrets**. Restart the entire AppHost
+to apply the choice: PostgreSQL adds the database resource and its API dependency,
+while SQLite uses the API's local `agent.db` file.
+
+The parameter uses `Parameters:storage` configuration. The existing
+`Demo:Storage` setting remains a fallback when that parameter has not been saved;
+otherwise the default is `sqlite`. Switching stores does not migrate or delete
+their data, and does not change the mobile app's own SQLite database.
+
 ## Architecture
 
 The native heads use platform controls and navigation while sharing application

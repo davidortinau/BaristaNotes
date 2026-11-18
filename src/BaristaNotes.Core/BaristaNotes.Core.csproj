@@ -39,7 +39,7 @@
 
   <Target Name="RemoveMauiAiAttributesGenerator" BeforeTargets="CoreCompile">
     <ItemGroup>
-      <Analyzer Remove="$(PkgMicrosoft_Maui_AI_Attributes)/analyzers/dotnet/cs/Microsoft.Maui.AI.Attributes.Generators.dll" />
+      <Analyzer Remove="@(Analyzer)" Condition="'%(Filename)' == 'Microsoft.Maui.AI.Attributes.Generators'" />
     </ItemGroup>
   </Target>
 

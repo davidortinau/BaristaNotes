@@ -6,14 +6,21 @@ internal static class ConfigurationExtensions
 {
     /// <summary>
     /// Loads <c>appsettings.json</c> via Shiny's platform bundle support
-    /// (Android Assets / iOS-Mac Bundle Resources / Windows embedded) and, in
+    /// (Android Assets / iOS-Mac Bundle Resources, or files next to the app on
+    /// Windows) and, in
     /// DEBUG, layers <c>appsettings.Development.json</c> on top for local API
     /// keys. When the Aspire AppHost starts the app, AI calls go through the
     /// API instead (see <see cref="UseAgentApiForAI"/>).
     /// </summary>
     public static MauiAppBuilder AddAppConfiguration(this MauiAppBuilder builder)
     {
+#if WINDOWS
+        // Shiny has no Windows bundle loader. The project copies the files next to the app.
+        builder.Configuration.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: true);
 #if DEBUG
+        builder.Configuration.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Development.json"), optional: true);
+#endif
+#elif DEBUG
         builder.Configuration.AddJsonPlatformBundle("Development");
 #else
         builder.Configuration.AddJsonPlatformBundle();

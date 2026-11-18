@@ -1,0 +1,5 @@
+# EF Core precompiled queries (src/BaristaNotes.Core/Data/CompiledModels/*.EFInterceptors.*.cs)
+# use [InterceptsLocation] with a checksum of each intercepted source file. Keep those
+# sources LF on every OS, or a CRLF checkout (core.autocrlf=true on Windows) changes the
+# checksum and the build fails with CS9234.
+src/BaristaNotes.Core/**/*.cs text eol=lf

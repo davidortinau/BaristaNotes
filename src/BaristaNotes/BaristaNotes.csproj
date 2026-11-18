@@ -105,6 +105,9 @@
 		     in it. Under the Aspire AppHost, its AI calls go through the API, which
 		     adds the key. iOS still bundles them until it moves to the API too. -->
 		<BundleResource Include="appsettings.Development.json" Condition="$(TargetFramework.Contains('ios')) and Exists('appsettings.Development.json')" />
+		<!-- Windows: copied next to the app and read from AppContext.BaseDirectory. -->
+		<Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" Condition="$(TargetFramework.Contains('-windows'))" />
+		<Content Include="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" Condition="$(TargetFramework.Contains('-windows')) and '$(Configuration)' == 'Debug' and Exists('appsettings.Development.json')" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(MauiPerformance)' == 'true' And '$(TargetFramework)' == 'net11.0-ios'">
@@ -165,24 +168,38 @@
 
 	<Target Name="RemoveMauiAiAttributesGenerator" BeforeTargets="CoreCompile">
 		<ItemGroup>
-			<Analyzer Remove="$(PkgMicrosoft_Maui_AI_Attributes)/analyzers/dotnet/cs/Microsoft.Maui.AI.Attributes.Generators.dll" />
+			<Analyzer Remove="@(Analyzer)" Condition="'%(Filename)' == 'Microsoft.Maui.AI.Attributes.Generators'" />
 		</ItemGroup>
 	</Target>
 
 	<!-- MAUI DevFlow (DEBUG only): in-process agent for UI inspection, logs, network, preferences.
 	     Keep MauiDevFlowVersion equal to the maui CLI version in dotnet-tools.json (run it as `dotnet maui`),
 	     so the CLI and the agent speak the same protocol. -->
+	<!-- Local maui-labs builds live in a LocalNuGets folder next to the repository, or in
+	     ~/work/LocalNuGets (used by worktrees). When it exists, restore also uses it, and the
+	     app gets the local DevFlow agent and Microsoft.Maui.Labs.HotReload. Without it
+	     (a fresh clone, Windows, CI), restore uses nuget.org only: the published DevFlow
+	     agent, and no HotReload. Pass -p:UseLocalNuGets=false to force the public path. -->
 	<PropertyGroup>
-		<MauiDevFlowVersion Condition="'$(MauiDevFlowVersion)' == ''">0.1.0-dev.20261021.2</MauiDevFlowVersion>
+		<LocalNuGetsDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\LocalNuGets'))</LocalNuGetsDir>
+		<LocalNuGetsDir Condition="!Exists('$(LocalNuGetsDir)')">$([System.IO.Path]::Combine($([System.Environment]::GetFolderPath(SpecialFolder.UserProfile)), 'work', 'LocalNuGets'))</LocalNuGetsDir>
+		<UseLocalNuGets Condition="'$(UseLocalNuGets)' == '' And Exists('$(LocalNuGetsDir)')">true</UseLocalNuGets>
+		<RestoreAdditionalProjectSources Condition="'$(UseLocalNuGets)' == 'true'">$(RestoreAdditionalProjectSources);$(LocalNuGetsDir)</RestoreAdditionalProjectSources>
+		<MauiDevFlowVersion Condition="'$(MauiDevFlowVersion)' == '' And '$(UseLocalNuGets)' == 'true'">0.1.0-dev.20261021.2</MauiDevFlowVersion>
+		<MauiDevFlowVersion Condition="'$(MauiDevFlowVersion)' == ''">0.1.0-preview.14.26567.2</MauiDevFlowVersion>
 	</PropertyGroup>
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
 		<PackageReference Include="Microsoft.Maui.DevFlow.Agent" Version="$(MauiDevFlowVersion)" />
 	</ItemGroup>
 
-	<!-- Microsoft.Maui.Labs.HotReload (DEBUG only): IHotReloadAware + MetadataUpdateHandler.
-	     Lets any class (not just Components) react to .NET Hot Reload updates.
+	<!-- Microsoft.Maui.Labs.HotReload (DEBUG only, local builds only): IHotReloadAware +
+	     MetadataUpdateHandler. Lets any class (not just Components) react to .NET Hot Reload
+	     updates. It is not published, so it needs LocalNuGets.
 	     Tracking: dotnet/maui-labs#254, dotnet/maui#35229. -->
-	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug' And '$(UseLocalNuGets)' == 'true'">
+		<DefineConstants>$(DefineConstants);MAUI_LABS_HOTRELOAD</DefineConstants>
+	</PropertyGroup>
+	<ItemGroup Condition="'$(Configuration)' == 'Debug' And '$(UseLocalNuGets)' == 'true'">
 		<PackageReference Include="Microsoft.Maui.Labs.HotReload" Version="0.1.0-dev" />
 	</ItemGroup>
 

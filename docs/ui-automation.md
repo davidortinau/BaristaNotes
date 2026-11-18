@@ -27,6 +27,8 @@ Why not one tool: an agent lives inside the app and reports that app's UI tree. 
 
 The fixes are in review as dotnet/maui-labs#726 (lease) and dotnet/maui-labs#727 (popups). When they ship in a published preview, set both pins to that version.
 
+`../LocalNuGets` (or `~/work/LocalNuGets`) is optional. `BaristaNotes.csproj` adds it as a restore source only when it exists. Without it (Windows, a fresh clone, CI), the app restores from nuget.org, uses the published agent `0.1.0-preview.14.26567.2`, and builds without `Microsoft.Maui.Labs.HotReload` (code behind `MAUI_LABS_HOTRELOAD`). On such a machine, install the matching published CLI rather than the pinned local one.
+
 ## Everyday commands
 
 ```bash

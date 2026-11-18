@@ -25,7 +25,16 @@ internal static class AppBuilderExtensions
                 fonts.AddFont("MaterialSymbols.ttf", MaterialSymbolsFont.FontFamily);
                 fonts.AddFont("coffee-icons.ttf", "coffee-icons");
             })
-            .ConfigureMauiHandlers(_ => EntryHandlerCustomizations.Apply());
+            .ConfigureMauiHandlers(handlers =>
+            {
+                EntryHandlerCustomizations.Apply();
+#if WINDOWS
+                // WinUI ItemsView rejects a null ItemTemplate when MauiReactor
+                // clears it during unmount, leaving the page blank.
+                handlers.AddHandler<Microsoft.Maui.Controls.CollectionView,
+                    Microsoft.Maui.Controls.Handlers.Items.CollectionViewHandler>();
+#endif
+            });
 
         return builder;
     }

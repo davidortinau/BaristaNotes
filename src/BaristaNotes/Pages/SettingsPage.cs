@@ -693,12 +693,7 @@ partial class SettingsPage : Component<SettingsPageState>
 
     VisualNode NavTile(FontImageSource imageSource, Action onTap)
     {
-        return Border(
-            Image()
-                .Source(imageSource)
-                .HCenter()
-                .VCenter()
-        )
+        return Border(NavigationIcon.Create(imageSource))
         .BackgroundColor(SurfaceColor())
         .StrokeThickness(0)
         .StrokeShape(new Rectangle())

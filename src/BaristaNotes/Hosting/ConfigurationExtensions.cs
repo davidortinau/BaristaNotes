@@ -16,7 +16,7 @@ internal static class ConfigurationExtensions
     {
 #if WINDOWS
         // Shiny has no Windows bundle loader. The project copies the files next to the app.
-        builder.Configuration.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: true);
+        builder.Configuration.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: false);
 #if DEBUG
         builder.Configuration.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Development.json"), optional: true);
 #endif

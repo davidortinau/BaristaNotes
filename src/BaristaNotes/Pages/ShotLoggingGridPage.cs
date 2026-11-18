@@ -297,7 +297,11 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         }
 
         var editorGrid = Grid(
+#if WINDOWS
+                    rows: "Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto",
+#else
                     rows: "Auto,*,*,*,*,*,*,Auto",
+#endif
                     columns: "*,*,*,*",
                     Tile("METHOD", State.BrewMethod.DisplayName(),
                             () => Open(GridPickerKind.BrewMethod)).GridRow(0).GridColumn(0).GridColumnSpan(2),
@@ -369,7 +373,11 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
 
         return ContentPage(title,
             Grid(
+#if WINDOWS
+                ScrollView(editorGrid),
+#else
                 editorGrid,
+#endif
                 State.IsPhotoWorkflowBusy
                     ? RenderPhotoProcessingOverlay()
                     : null
@@ -818,12 +826,7 @@ partial class ShotLoggingGridPage : Component<ShotLoggingGridState, ShotLoggingG
         var bg = isLight ? AppColors.Light.Surface : AppColors.Dark.Surface;
         var labelColor = isLight ? AppColors.Light.TextPrimary : AppColors.Dark.TextPrimary;
 
-        return Border(
-            Image()
-                .Source(imageSource)
-                .HCenter()
-                .VCenter()
-        )
+        return Border(NavigationIcon.Create(imageSource))
         .BackgroundColor(bg)
         .StrokeThickness(0)
         .StrokeShape(new Rectangle())

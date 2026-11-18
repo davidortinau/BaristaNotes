@@ -362,12 +362,7 @@ static partial class AgentTiles
     static VisualNode NavTile(FontImageSource imageSource, string accessibilityName, Action onTap)
     {
         return Grid(
-            Border(
-                Image()
-                    .Source(imageSource)
-                    .HCenter()
-                    .VCenter()
-            )
+            Border(NavigationIcon.Create(imageSource))
             .BackgroundColor(SurfaceColor())
             .StrokeThickness(0)
             .StrokeShape(new Rectangle())

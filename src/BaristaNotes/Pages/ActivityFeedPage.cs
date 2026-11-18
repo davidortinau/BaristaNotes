@@ -518,12 +518,7 @@ partial class ActivityFeedPage : Component<ActivityFeedState>
 
     VisualNode NavTile(FontImageSource imageSource, Action onTap)
     {
-        return Border(
-            Image()
-                .Source(imageSource)
-                .HCenter()
-                .VCenter()
-        )
+        return Border(NavigationIcon.Create(imageSource))
         .BackgroundColor(SurfaceColor())
         .StrokeThickness(0)
         .StrokeShape(new Rectangle())

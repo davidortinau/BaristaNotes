@@ -87,7 +87,19 @@ dotnet build src/BaristaNotes -f net11.0-maccatalyst
 dotnet test src/BaristaNotes.Tests
 ```
 
-On Windows, the app also targets `net11.0-windows10.0.19041.0`.
+On Windows, install the MAUI Windows workload and build or run the unpackaged
+MAUI app:
+
+```powershell
+dotnet build src\BaristaNotes -f net11.0-windows10.0.19041.0
+dotnet build src\BaristaNotes -f net11.0-windows10.0.19041.0 -t:Run
+```
+
+The checked-in `.gitattributes` keeps Core source files LF for the EF Core
+precompiled-query checksums. Existing Windows checkouts with CRLF files must
+refresh those files after saving any local edits. See
+[UI automation](docs/ui-automation.md) for the published DevFlow CLI used
+when the optional local packages are unavailable.
 
 The RC2 SDK and workload package builds must agree. The measured environment
 needed a session-only runtime-pack override because the installed SDK requested

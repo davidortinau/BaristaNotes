@@ -32,25 +32,24 @@ public sealed class SharedWorkflowTests : IAsyncLifetime
     public async Task DisposeAsync()
     {
         await _provider.DisposeAsync();
-
-        // Windows will not delete a SQLite file while a connection is still open,
-        // and a pooled connection can close a moment after the provider is disposed.
+        foreach (var databasePath in Directory.EnumerateFiles(_directory, "*.db", SearchOption.AllDirectories))
+        {
+            using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+            {
+                DataSource = databasePath
+            }.ToString());
+            SqliteConnection.ClearPool(connection);
+        }
         for (var attempt = 0; ; attempt++)
         {
-            SqliteConnection.ClearAllPools();
             try
             {
                 Directory.Delete(_directory, recursive: true);
-                return;
+                break;
             }
             catch (IOException) when (attempt < 20)
             {
                 await Task.Delay(100);
-            }
-            catch (IOException)
-            {
-                // Temp folder only; leave it rather than fail the test.
-                return;
             }
         }
     }

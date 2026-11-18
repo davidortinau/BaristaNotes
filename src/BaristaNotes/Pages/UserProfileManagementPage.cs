@@ -287,12 +287,7 @@ partial class UserProfileManagementPage : Component<UserProfileManagementState>
 
         var bg = inverted ? TextPrimary() : SurfaceColor();
 
-        return Border(
-            Image()
-                .Source(source)
-                .HCenter()
-                .VCenter()
-        )
+        return Border(NavigationIcon.Create(source))
         .BackgroundColor(bg)
         .StrokeThickness(0)
         .StrokeShape(new Rectangle())

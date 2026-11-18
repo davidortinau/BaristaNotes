@@ -5,8 +5,7 @@ internal static class EntryHandlerCustomizations
     /// <summary>
     /// Applies per-platform <see cref="EntryHandler"/> and <see cref="PickerHandler"/>
     /// mappings used by form controls to strip the default platform chrome
-    /// (iOS/MacCatalyst borders, Android underlines), and the Windows
-    /// <see cref="ImageHandler"/> font-icon size cap.
+    /// (iOS/MacCatalyst borders, Android underlines).
     /// </summary>
     public static void Apply()
     {
@@ -51,21 +50,5 @@ internal static class EntryHandlerCustomizations
         });
 #endif
 
-#if WINDOWS
-        // WinUI stretches an Image up to fill its space, so an unsized font icon
-        // renders far larger than its glyph Size. iOS and Android draw it at its
-        // Size, so cap it to match.
-        ImageHandler.Mapper.AppendToMapping("FontImageSize", (handler, view) =>
-        {
-            if (view is Microsoft.Maui.Controls.Image image
-                && image.Source is FontImageSource font
-                && image.WidthRequest < 0
-                && image.HeightRequest < 0)
-            {
-                image.MaximumWidthRequest = font.Size;
-                image.MaximumHeightRequest = font.Size;
-            }
-        });
-#endif
     }
 }

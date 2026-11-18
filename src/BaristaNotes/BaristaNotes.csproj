@@ -172,21 +172,18 @@
 		</ItemGroup>
 	</Target>
 
-	<!-- MAUI DevFlow (DEBUG only): in-process agent for UI inspection, logs, network, preferences.
-	     Keep MauiDevFlowVersion equal to the maui CLI version in dotnet-tools.json (run it as `dotnet maui`),
-	     so the CLI and the agent speak the same protocol. -->
+	<!-- MAUI DevFlow (DEBUG only): use a CLI version matching the selected agent. -->
 	<!-- Local maui-labs builds live in a LocalNuGets folder next to the repository, or in
-	     ~/work/LocalNuGets (used by worktrees). When it exists, restore also uses it, and the
-	     app gets the local DevFlow agent and Microsoft.Maui.Labs.HotReload. Without it
-	     (a fresh clone, Windows, CI), restore uses nuget.org only: the published DevFlow
-	     agent, and no HotReload. Pass -p:UseLocalNuGets=false to force the public path. -->
+	     ~/work/LocalNuGets (used by worktrees). Select each local package only if it exists.
+	     Pass -p:UseLocalNuGets=false to force the public path. -->
 	<PropertyGroup>
-		<LocalNuGetsDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\LocalNuGets'))</LocalNuGetsDir>
-		<LocalNuGetsDir Condition="!Exists('$(LocalNuGetsDir)')">$([System.IO.Path]::Combine($([System.Environment]::GetFolderPath(SpecialFolder.UserProfile)), 'work', 'LocalNuGets'))</LocalNuGetsDir>
+		<LocalNuGetsDir Condition="'$(LocalNuGetsDir)' == '' And Exists('$(MSBuildThisFileDirectory)..\..\..\LocalNuGets')">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\LocalNuGets'))</LocalNuGetsDir>
+		<LocalNuGetsDir Condition="'$(LocalNuGetsDir)' == ''">$([System.IO.Path]::Combine($([System.Environment]::GetFolderPath(SpecialFolder.UserProfile)), 'work', 'LocalNuGets'))</LocalNuGetsDir>
 		<UseLocalNuGets Condition="'$(UseLocalNuGets)' == '' And Exists('$(LocalNuGetsDir)')">true</UseLocalNuGets>
 		<RestoreAdditionalProjectSources Condition="'$(UseLocalNuGets)' == 'true'">$(RestoreAdditionalProjectSources);$(LocalNuGetsDir)</RestoreAdditionalProjectSources>
-		<MauiDevFlowVersion Condition="'$(MauiDevFlowVersion)' == '' And '$(UseLocalNuGets)' == 'true'">0.1.0-dev.20261021.2</MauiDevFlowVersion>
+		<MauiDevFlowVersion Condition="'$(MauiDevFlowVersion)' == '' And '$(UseLocalNuGets)' == 'true' And Exists('$(LocalNuGetsDir)\Microsoft.Maui.DevFlow.Agent.0.1.0-dev.20261021.2.nupkg')">0.1.0-dev.20261021.2</MauiDevFlowVersion>
 		<MauiDevFlowVersion Condition="'$(MauiDevFlowVersion)' == ''">0.1.0-preview.14.26567.2</MauiDevFlowVersion>
+		<UseMauiLabsHotReload Condition="'$(UseMauiLabsHotReload)' == '' And '$(UseLocalNuGets)' == 'true' And Exists('$(LocalNuGetsDir)\Microsoft.Maui.Labs.HotReload.0.1.0-dev.nupkg')">true</UseMauiLabsHotReload>
 	</PropertyGroup>
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
 		<PackageReference Include="Microsoft.Maui.DevFlow.Agent" Version="$(MauiDevFlowVersion)" />
@@ -196,10 +193,10 @@
 	     MetadataUpdateHandler. Lets any class (not just Components) react to .NET Hot Reload
 	     updates. It is not published, so it needs LocalNuGets.
 	     Tracking: dotnet/maui-labs#254, dotnet/maui#35229. -->
-	<PropertyGroup Condition="'$(Configuration)' == 'Debug' And '$(UseLocalNuGets)' == 'true'">
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug' And '$(UseMauiLabsHotReload)' == 'true'">
 		<DefineConstants>$(DefineConstants);MAUI_LABS_HOTRELOAD</DefineConstants>
 	</PropertyGroup>
-	<ItemGroup Condition="'$(Configuration)' == 'Debug' And '$(UseLocalNuGets)' == 'true'">
+	<ItemGroup Condition="'$(Configuration)' == 'Debug' And '$(UseMauiLabsHotReload)' == 'true'">
 		<PackageReference Include="Microsoft.Maui.Labs.HotReload" Version="0.1.0-dev" />
 	</ItemGroup>
 

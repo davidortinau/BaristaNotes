@@ -27,7 +27,14 @@ Why not one tool: an agent lives inside the app and reports that app's UI tree. 
 
 The fixes are in review as dotnet/maui-labs#726 (lease) and dotnet/maui-labs#727 (popups). When they ship in a published preview, set both pins to that version.
 
-`../LocalNuGets` (or `~/work/LocalNuGets`) is optional. `BaristaNotes.csproj` adds it as a restore source only when it exists. Without it (Windows, a fresh clone, CI), the app restores from nuget.org, uses the published agent `0.1.0-preview.14.26567.2`, and builds without `Microsoft.Maui.Labs.HotReload` (code behind `MAUI_LABS_HOTRELOAD`). On such a machine, install the matching published CLI rather than the pinned local one.
+`../LocalNuGets` (or `~/work/LocalNuGets`) is optional. `BaristaNotes.csproj` adds it as a restore source when it exists and selects each local package only if its `.nupkg` is present. Without the local packages, the app uses the published agent `0.1.0-preview.14.26567.2` and builds without `Microsoft.Maui.Labs.HotReload` (code behind `MAUI_LABS_HOTRELOAD`).
+
+The repo's `dotnet maui` tool manifest still pins the local CLI. To automate an app built with the published agent, install and invoke a matching CLI separately, for example on Windows:
+
+```powershell
+dotnet tool install Microsoft.Maui.Cli --tool-path "$env:USERPROFILE\.dotnet\maui-devflow-public" --version 0.1.0-preview.14.26567.2
+& "$env:USERPROFILE\.dotnet\maui-devflow-public\maui.exe" devflow list
+```
 
 ## Everyday commands
 

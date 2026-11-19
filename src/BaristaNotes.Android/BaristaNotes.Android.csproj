@@ -22,7 +22,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(NativePerformance)' == 'true'">
-    <ApplicationId>com.simplyprofound.baristanotes.perf.nativeviews$(NativePerformanceDataset)</ApplicationId>
+    <ApplicationId>com.simplyprofound.baristanotes.perf.nativeviews$(NativePerformanceDataset).$(BenchmarkVariant)</ApplicationId>
     <ApplicationTitle>Barista Notes Native Perf $(NativePerformanceDataset)</ApplicationTitle>
     <DefineConstants>$(DefineConstants);NATIVE_PERFORMANCE</DefineConstants>
   </PropertyGroup>
@@ -78,7 +78,9 @@
            Text="NativePerformance is supported only for Release builds." />
     <Error Condition="'$(NativePerformanceDataset)' != '100' And '$(NativePerformanceDataset)' != '1000'"
            Text="NativePerformanceDataset must be 100 or 1000." />
-    <Error Condition="'$(ApplicationId)' != 'com.simplyprofound.baristanotes.perf.nativeviews$(NativePerformanceDataset)'"
+    <Error Condition="'$(BenchmarkVariant)' == ''"
+           Text="NativePerformance builds require an isolated BenchmarkVariant." />
+    <Error Condition="'$(ApplicationId)' != 'com.simplyprofound.baristanotes.perf.nativeviews$(NativePerformanceDataset).$(BenchmarkVariant)'"
            Text="NativePerformance builds must use the isolated performance application ID for the selected dataset. Evaluated ApplicationId: $(ApplicationId)" />
     <Error Condition="!Exists('$(NativePerformanceDatabase)')"
            Text="NativePerformanceDatabase does not exist: $(NativePerformanceDatabase)" />

@@ -20,12 +20,11 @@
     <ApplicationTitle>BaristaNotes</ApplicationTitle>
     <ApplicationDisplayVersion>2.0</ApplicationDisplayVersion>
     <ApplicationVersion>3</ApplicationVersion>
-    <PublishReadyToRun>false</PublishReadyToRun>
     <TrimMode>partial</TrimMode>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(NativePerformance)' == 'true'">
-    <ApplicationId>com.simplyprofound.baristanotes.native</ApplicationId>
+    <ApplicationId>com.simplyprofound.baristanotes.perf.ga.nativeviews.ios.$(BenchmarkVariant)</ApplicationId>
     <ApplicationTitle>BaristaNotes Performance</ApplicationTitle>
     <ApplicationDisplayVersion>2.0</ApplicationDisplayVersion>
     <ApplicationVersion>900</ApplicationVersion>
@@ -91,8 +90,10 @@
           Condition="'$(NativePerformance)' == 'true'">
     <Error Condition="'$(Configuration)' != 'Release'"
            Text="NativePerformance is supported only for Release builds." />
-    <Error Condition="'$(ApplicationId)' != 'com.simplyprofound.baristanotes.native'"
-           Text="NativePerformance builds must use the isolated com.simplyprofound.baristanotes.native application ID. Evaluated ApplicationId: $(ApplicationId)" />
+    <Error Condition="'$(BenchmarkVariant)' == ''"
+           Text="NativePerformance builds require an isolated BenchmarkVariant." />
+    <Error Condition="'$(ApplicationId)' != 'com.simplyprofound.baristanotes.perf.ga.nativeviews.ios.$(BenchmarkVariant)'"
+           Text="NativePerformance builds must use an isolated iOS benchmark application ID. Evaluated ApplicationId: $(ApplicationId)" />
     <Error Condition="'$(NativePerformanceDataset)' != '1000'"
            Text="The iOS runtime comparison uses the accepted 1000-drink fixture." />
     <Error Condition="!Exists('$(NativePerformanceDatabase)')"

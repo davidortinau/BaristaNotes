@@ -36,16 +36,19 @@ public sealed class DatabaseInitializer(
 
             EnsureMigrationHistoryTable(connection);
             CreateInitialSchemaIfNeeded(connection);
-            EnsureInitialMigrationRecord(connection);
-            ApplyMigration(connection, BagMigrationId, HasBagSchema, AddBagSql, disableForeignKeys: true);
+            var migrations = LoadMigrationHistory(connection);
+            EnsureInitialMigrationRecord(connection, migrations);
+            ApplyMigration(connection, migrations, BagMigrationId, HasBagSchema, AddBagSql, disableForeignKeys: true);
             ApplyMigration(
                 connection,
+                migrations,
                 TastingNotesMigrationId,
                 c => ColumnExists(c, "ShotRecords", "TastingNotes"),
                 """ALTER TABLE "ShotRecords" ADD COLUMN "TastingNotes" TEXT NULL;""");
-            ApplyMigration(connection, RecipeMigrationId, c => TableExists(c, "Recipes"), AddRecipeSql);
+            ApplyMigration(connection, migrations, RecipeMigrationId, c => TableExists(c, "Recipes"), AddRecipeSql);
             ApplyMigration(
                 connection,
+                migrations,
                 BrewMethodMigrationId,
                 c => ColumnExists(c, "ShotRecords", "BrewMethod")
                      && ColumnExists(c, "ShotRecords", "ParametersJson"),
@@ -55,11 +58,13 @@ public sealed class DatabaseInitializer(
                 """);
             ApplyMigration(
                 connection,
+                migrations,
                 GrinderMigrationId,
                 c => TableExists(c, "GrinderProfiles") && TableExists(c, "GrindTranslationCache"),
                 AddGrinderTablesSql);
             ApplyMigration(
                 connection,
+                migrations,
                 GrindMicronsMigrationId,
                 c => ColumnExists(c, "ShotRecords", "GrindMicrons")
                      && !ColumnExists(c, "ShotRecords", "GrindSetting"),
@@ -67,6 +72,7 @@ public sealed class DatabaseInitializer(
                 disableForeignKeys: true);
             ApplyMigration(
                 connection,
+                migrations,
                 RatingMigrationId,
                 HasPostRatingSchema,
                 """
@@ -82,16 +88,19 @@ public sealed class DatabaseInitializer(
                 """);
             ApplyMigration(
                 connection,
+                migrations,
                 ProfileContextMigrationId,
                 c => ColumnExists(c, "UserProfiles", "Context"),
                 """ALTER TABLE "UserProfiles" ADD COLUMN "Context" TEXT NULL;""");
             ApplyMigration(
                 connection,
+                migrations,
                 RoasterUrlMigrationId,
                 c => ColumnExists(c, "Beans", "RoasterUrl"),
                 """ALTER TABLE "Beans" ADD COLUMN "RoasterUrl" TEXT NULL;""");
             ApplyMigration(
                 connection,
+                migrations,
                 WaterTempMigrationId,
                 c => ColumnExists(c, "ShotRecords", "WaterTempC"),
                 """ALTER TABLE "ShotRecords" ADD COLUMN "WaterTempC" TEXT NULL;""");
@@ -133,9 +142,9 @@ public sealed class DatabaseInitializer(
         logger.LogInformation("Created the BaristaNotes database");
     }
 
-    private void EnsureInitialMigrationRecord(DbConnection connection)
+    private void EnsureInitialMigrationRecord(DbConnection connection, HashSet<string> migrations)
     {
-        if (MigrationExists(connection, InitialMigrationId))
+        if (migrations.Contains(InitialMigrationId) || MigrationExists(connection, InitialMigrationId))
         {
             return;
         }
@@ -150,6 +159,7 @@ public sealed class DatabaseInitializer(
         }
 
         RecordMigration(connection, InitialMigrationId);
+        migrations.Add(InitialMigrationId);
     }
 
     private static bool HasApplicationTables(DbConnection connection)
@@ -172,12 +182,13 @@ public sealed class DatabaseInitializer(
 
     private void ApplyMigration(
         DbConnection connection,
+        HashSet<string> migrations,
         string migrationId,
         Func<DbConnection, bool> schemaAlreadyApplied,
         string sql,
         bool disableForeignKeys = false)
     {
-        if (MigrationExists(connection, migrationId))
+        if (migrations.Contains(migrationId) || MigrationExists(connection, migrationId))
         {
             return;
         }
@@ -185,6 +196,7 @@ public sealed class DatabaseInitializer(
         if (schemaAlreadyApplied(connection))
         {
             RecordMigration(connection, migrationId);
+            migrations.Add(migrationId);
             return;
         }
 
@@ -199,6 +211,7 @@ public sealed class DatabaseInitializer(
             ExecuteSql(connection, transaction, sql);
             RecordMigration(connection, migrationId, transaction);
             transaction.Commit();
+            migrations.Add(migrationId);
             logger.LogInformation("Applied database schema update {MigrationId}", migrationId);
         }
         finally
@@ -223,6 +236,21 @@ public sealed class DatabaseInitializer(
 
     private void RepairOrphanedShots(DbConnection connection)
     {
+        using (var orphanCheck = connection.CreateCommand())
+        {
+            orphanCheck.CommandText = """
+                SELECT 1
+                FROM "ShotRecords" AS "s"
+                LEFT JOIN "Bags" AS "b" ON "s"."BagId" = "b"."Id"
+                WHERE "b"."Id" IS NULL
+                LIMIT 1;
+                """;
+            if (orphanCheck.ExecuteScalar() is null)
+            {
+                return;
+            }
+        }
+
         using var transaction = connection.BeginTransaction();
         ExecuteSql(
             connection,
@@ -352,6 +380,20 @@ public sealed class DatabaseInitializer(
                 "ProductVersion" TEXT NOT NULL
             );
             """);
+
+    private static HashSet<string> LoadMigrationHistory(DbConnection connection)
+    {
+        var migrations = new HashSet<string>(StringComparer.Ordinal);
+        using var command = connection.CreateCommand();
+        command.CommandText = """SELECT "MigrationId" FROM "__EFMigrationsHistory";""";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            migrations.Add(reader.GetString(0));
+        }
+
+        return migrations;
+    }
 
     private static bool MigrationExists(DbConnection connection, string migrationId)
     {

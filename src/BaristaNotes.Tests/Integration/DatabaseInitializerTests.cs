@@ -186,6 +186,117 @@ public sealed class DatabaseInitializerTests
         Assert.Equal(0L, ExecuteScalar(connection, "SELECT COUNT(*) FROM pragma_foreign_key_check;"));
     }
 
+    [Fact]
+    public void Initialize_RepairsOrphanedShotAfterLatestMigrationWasRecorded()
+    {
+        using var connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
+        using var context = CreateContext(connection);
+        var initializer = CreateInitializer(context);
+        initializer.Initialize();
+
+        ExecuteNonQuery(connection, "PRAGMA foreign_keys = 0;");
+        ExecuteNonQuery(connection, """
+            INSERT INTO "ShotRecords"
+                ("Timestamp", "BagId", "DoseIn", "GrindMicrons", "ExpectedTime", "ExpectedOutput",
+                 "DrinkType", "SyncId", "LastModifiedAt")
+            VALUES
+                ('2026-01-03T00:00:00+00:00', 0, '18.0', 640, '30.0', '36.0',
+                 'Espresso', '00000000-0000-0000-0000-000000000005',
+                 '2026-01-03T00:00:00+00:00');
+            """);
+        ExecuteNonQuery(connection, "PRAGMA foreign_keys = 1;");
+
+        initializer.Initialize();
+
+        Assert.Equal(1L, ExecuteScalar(
+            connection,
+            """
+            SELECT COUNT(*)
+            FROM "ShotRecords" AS "s"
+            INNER JOIN "Bags" AS "b" ON "s"."BagId" = "b"."Id"
+            INNER JOIN "Beans" AS "bean" ON "b"."BeanId" = "bean"."Id"
+            WHERE "bean"."Name" = 'Recovered shots';
+            """));
+        Assert.Equal(0L, ExecuteScalar(connection, "SELECT COUNT(*) FROM pragma_foreign_key_check;"));
+    }
+
+    [Fact]
+    public void Initialize_ReportsForeignKeyViolationOutsideShotRepair()
+    {
+        using var connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
+        using var context = CreateContext(connection);
+        var initializer = CreateInitializer(context);
+        initializer.Initialize();
+
+        ExecuteNonQuery(connection, "PRAGMA foreign_keys = 0;");
+        ExecuteNonQuery(connection, """
+            INSERT INTO "Bags"
+                ("BeanId", "RoastDate", "CreatedAt", "SyncId", "LastModifiedAt")
+            VALUES
+                (0, '2026-01-03T00:00:00+00:00', '2026-01-03T00:00:00+00:00',
+                 '00000000-0000-0000-0000-000000000006',
+                 '2026-01-03T00:00:00+00:00');
+            """);
+        ExecuteNonQuery(connection, "PRAGMA foreign_keys = 1;");
+
+        var exception = Assert.Throws<InvalidOperationException>(initializer.Initialize);
+
+        Assert.Contains("Database foreign-key validation failed for table 'Bags'.", exception.Message);
+    }
+
+    [Fact]
+    public void Initialize_RerecordsMissingEarlierMigrationWhenLatestIsRecorded()
+    {
+        using var connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
+        using var context = CreateContext(connection);
+        var initializer = CreateInitializer(context);
+        initializer.Initialize();
+        ExecuteNonQuery(connection, """
+            DELETE FROM "__EFMigrationsHistory"
+            WHERE "MigrationId" = '20251206024345_InitialCreate';
+            """);
+
+        initializer.Initialize();
+
+        Assert.Equal(1L, ExecuteScalar(connection, """
+            SELECT COUNT(*) FROM "__EFMigrationsHistory"
+            WHERE "MigrationId" = '20251206024345_InitialCreate';
+            """));
+    }
+
+    [Fact]
+    public void Initialize_RejectsMissingRequiredTableWhenLatestMigrationIsRecorded()
+    {
+        using var connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
+        using var context = CreateContext(connection);
+        var initializer = CreateInitializer(context);
+        initializer.Initialize();
+        ExecuteNonQuery(connection, """DROP TABLE "GrindTranslationCache";""");
+
+        var exception = Assert.Throws<InvalidOperationException>(initializer.Initialize);
+
+        Assert.Contains("required table 'GrindTranslationCache'", exception.Message);
+    }
+
+    [Fact]
+    public void Initialize_RejectsMissingRequiredColumnWhenLatestMigrationIsRecorded()
+    {
+        using var connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
+        using var context = CreateContext(connection);
+        var initializer = CreateInitializer(context);
+        initializer.Initialize();
+        ExecuteNonQuery(connection, """ALTER TABLE "ShotRecords" DROP COLUMN "WaterTempC";""");
+
+        var exception = Assert.Throws<InvalidOperationException>(initializer.Initialize);
+
+        Assert.Contains("required column 'ShotRecords.WaterTempC'", exception.Message);
+    }
+
     private static BaristaNotesContext CreateContext(SqliteConnection connection)
     {
         var options = new DbContextOptionsBuilder<BaristaNotesContext>()

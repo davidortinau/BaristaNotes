@@ -1,0 +1,480 @@
+{
+  "date": "2026-11-18",
+  "platform": "iOS",
+  "device": "iPhone 15 Pro (iPhone16,1)",
+  "os": "26.7.2",
+  "os_build": "23H128",
+  "sdk": "11.0.100",
+  "workload_set": "11.0.100.1",
+  "ios_workload": "27.2.11039",
+  "xcode": "27.2 (27B52)",
+  "runtime_version": "11.0.0",
+  "maui_controls": "11.0.0",
+  "source_commit": "6fc8c22f6ceedb277cf41ee44db14b0ab699ced6",
+  "original_product_commit": "883448adea5148669f0e6009e9e16c7f54ec9e55",
+  "fixture_sha256": "7e23a022af101dd46bd596e6a377f7597b103edb0d735896dfcc6c07e6ae8fbf",
+  "startup_contract": "Kernel process-start ticks to New Drink readiness plus two CADisplayLink frames; process-cold, not cleared OS caches",
+  "startup_samples": {
+    "pilot": 1,
+    "conditioning": 5,
+    "measured": 30
+  },
+  "transition_contract": "Action handler entry to content-qualified readiness plus two CADisplayLink frames",
+  "transition_samples_per_route": 10,
+  "percentile_contract": "p50 is sample median; p90 uses nearest rank",
+  "memory_contract": {
+    "processes_per_state": 10,
+    "settle_seconds": 10,
+    "snapshots_per_process": 3,
+    "snapshot_interval_seconds": 1,
+    "statistic": "median of process medians",
+    "metric": "physical footprint bytes; not Android PSS"
+  },
+  "thermal_and_battery": "not collected through original probe",
+  "scene_compatibility": "MAUI scene manifest and MauiUISceneDelegate added to isolated snapshot as required by GA iOS workload; obsolete Mono interpreter setting cleared",
+  "selection_policy": "First complete startup and navigation cohort per cell. Later memory failures do not replace timing observations. No MAUI AOT memory medians published. This metric-level acceptance differs from the original whole-cell acceptance plan after an interrupted collection; no result values were used to select cohorts.",
+  "confirmation_policy": "Keep reverse-order timing confirmation separate; do not pool or substitute",
+  "cells": {
+    "ios-maui-fullr2r": {
+      "source_run": "ios-ga-full01",
+      "status": "complete",
+      "startup_ms": {
+        "n": 30,
+        "p50": 568.5905,
+        "p90": 585.886,
+        "min": 540.101,
+        "max": 659.562
+      },
+      "transitions_ms": {
+        "new-drink-to-activity": {
+          "n": 10,
+          "p50": 660.472,
+          "p90": 704.222,
+          "min": 629.153,
+          "max": 1383.261
+        },
+        "activity-to-settings": {
+          "n": 10,
+          "p50": 283.348,
+          "p90": 299.988,
+          "min": 266.61,
+          "max": 300.04
+        }
+      },
+      "memory_status": "complete",
+      "memory_successful_samples_by_state": {
+        "initial-new-drink": 10,
+        "first-activity": 10,
+        "repeated-navigation": 10
+      },
+      "package_bytes": 61732540,
+      "ipa_sha256": "a0b5f1d8bb4b26efd84d2d5dd65e53148d969ab4474a9f55673f48321091b33f",
+      "build_properties": {
+        "UseMonoRuntime": "false",
+        "MtouchInterpreter": "",
+        "PublishAot": "false",
+        "PublishReadyToRun": "true",
+        "PublishReadyToRunComposite": "true"
+      },
+      "raw_csv_sha256": {
+        "startup.csv": "30a820f68ee1759350e445c5bb68f17483e11f86e2f241831355b7eded8698d6",
+        "transitions.csv": "56c44347b10ef60beae80d974b918395c603644088e27de49e0607accc3db662",
+        "memory.csv": "e676e791aac5119b8d093da186ba36524307a4d7688ac5286bcd65c29adfde6e"
+      },
+      "memory_footprint_bytes": {
+        "initial-new-drink": {
+          "n": 10,
+          "p50": 85353512.0,
+          "p90": 86656016,
+          "min": 84640784,
+          "max": 86918160
+        },
+        "first-activity": {
+          "n": 10,
+          "p50": 103154752.0,
+          "p90": 104055848,
+          "min": 102810688,
+          "max": 104891456
+        },
+        "repeated-navigation": {
+          "n": 10,
+          "p50": 133588104.0,
+          "p90": 134513800,
+          "min": 132285576,
+          "max": 135857288
+        }
+      },
+      "process_count": 86,
+      "confirmation": {
+        "source_run": "ios-ga-confirm01",
+        "startup_ms": {
+          "n": 30,
+          "p50": 530.8105,
+          "p90": 544.976,
+          "min": 519.255,
+          "max": 557.338
+        },
+        "transitions_ms": {
+          "new-drink-to-activity": {
+            "n": 10,
+            "p50": 575.0535,
+            "p90": 587.433,
+            "min": 566.741,
+            "max": 595.784
+          },
+          "activity-to-settings": {
+            "n": 10,
+            "p50": 166.5975,
+            "p90": 166.696,
+            "min": 133.392,
+            "max": 166.737
+          }
+        },
+        "process_count": 56,
+        "raw_csv_sha256": {
+          "confirmation-startup.csv": "fc7a3ba9c05a005344fc9891d42eaef71ce93550fd51f36fe92883ee71255252",
+          "confirmation-transitions.csv": "5952222b17317aa1599ec236dd764e9c4aa0ec9684c450873512bc2ed3da49ba"
+        }
+      }
+    },
+    "ios-native-fullr2r": {
+      "source_run": "ios-ga-full01",
+      "status": "complete",
+      "startup_ms": {
+        "n": 30,
+        "p50": 366.74350000000004,
+        "p90": 425.473,
+        "min": 325.56,
+        "max": 565.63
+      },
+      "transitions_ms": {
+        "new-drink-to-activity": {
+          "n": 10,
+          "p50": 114.9645,
+          "p90": 115.049,
+          "min": 98.324,
+          "max": 131.732
+        },
+        "activity-to-settings": {
+          "n": 10,
+          "p50": 43.907,
+          "p90": 47.956,
+          "min": 30.846,
+          "max": 47.992
+        }
+      },
+      "memory_status": "complete",
+      "memory_successful_samples_by_state": {
+        "initial-new-drink": 10,
+        "first-activity": 10,
+        "repeated-navigation": 10
+      },
+      "package_bytes": 51473502,
+      "ipa_sha256": "6f31951ca6c98bd7a95df89dc93d189fe32263883963167d7ddd71775f03ab72",
+      "build_properties": {
+        "UseMonoRuntime": "false",
+        "MtouchInterpreter": "",
+        "PublishAot": "false",
+        "PublishReadyToRun": "true",
+        "PublishReadyToRunComposite": "true"
+      },
+      "raw_csv_sha256": {
+        "startup.csv": "7a52a3e9b9238d4d7933c6c0b42e85c475e001cd04da0bd1d2781ecc3ab1c4a7",
+        "transitions.csv": "5994cc45552739a1ad1d3ba6f3448bdf3c731721375c5b686688a6560f0bdf6a",
+        "memory.csv": "a8bebbe3ab4911fee4cbb77fa1171734c5617676ad64f019acb778a51dd24c1f"
+      },
+      "memory_footprint_bytes": {
+        "initial-new-drink": {
+          "n": 10,
+          "p50": 63644688.0,
+          "p90": 63751184,
+          "min": 63374304,
+          "max": 63800336
+        },
+        "first-activity": {
+          "n": 10,
+          "p50": 63931396.0,
+          "p90": 63947768,
+          "min": 63783928,
+          "max": 63996944
+        },
+        "repeated-navigation": {
+          "n": 10,
+          "p50": 67331064.0,
+          "p90": 67503096,
+          "min": 65143800,
+          "max": 67535864
+        }
+      },
+      "process_count": 86,
+      "confirmation": {
+        "source_run": "ios-ga-confirm01",
+        "startup_ms": {
+          "n": 30,
+          "p50": 330.3695,
+          "p90": 341.081,
+          "min": 319.119,
+          "max": 350.551
+        },
+        "transitions_ms": {
+          "new-drink-to-activity": {
+            "n": 10,
+            "p50": 114.9555,
+            "p90": 115.014,
+            "min": 98.157,
+            "max": 115.669
+          },
+          "activity-to-settings": {
+            "n": 10,
+            "p50": 47.8555,
+            "p90": 47.965,
+            "min": 31.427,
+            "max": 47.972
+          }
+        },
+        "process_count": 56,
+        "raw_csv_sha256": {
+          "confirmation-startup.csv": "271dcc648f3116cbbb3b940120e7e6d657e4743b4e810d3b0ede72a6ae530aee",
+          "confirmation-transitions.csv": "81ab1af4c51692c9ca2652f692e41a497d20175d583d80ca66efee0b0da12810"
+        }
+      }
+    },
+    "ios-maui-aot": {
+      "source_run": "ios-ga-full01",
+      "status": "timing-complete-memory-incomplete",
+      "startup_ms": {
+        "n": 30,
+        "p50": 349.1495,
+        "p90": 395.094,
+        "min": 322.497,
+        "max": 410.041
+      },
+      "transitions_ms": {
+        "new-drink-to-activity": {
+          "n": 10,
+          "p50": 412.5145,
+          "p90": 429.242,
+          "min": 350.067,
+          "max": 430.946
+        },
+        "activity-to-settings": {
+          "n": 10,
+          "p50": 150.0215,
+          "p90": 166.672,
+          "min": 133.342,
+          "max": 166.692
+        }
+      },
+      "memory_status": "incomplete; no medians published",
+      "memory_successful_samples_by_state": {
+        "initial-new-drink": 10,
+        "first-activity": 8
+      },
+      "package_bytes": 44137678,
+      "ipa_sha256": "9e4898cf82d1721bb84cc064093b9693445061de9af0eae0111e9ee299b9ae72",
+      "build_properties": {
+        "UseMonoRuntime": "false",
+        "MtouchInterpreter": "",
+        "EnableNativeAot": "true",
+        "PublishAot": "true",
+        "PublishAotUsingRuntimePack": "true",
+        "PublishReadyToRun": "false",
+        "TrimMode": "full",
+        "MtouchLink": "Full"
+      },
+      "raw_csv_sha256": {
+        "startup.csv": "e83fcea64046031bc7f764aa47a47e0133ea705c1e62b3b736facfd8678bd34a",
+        "transitions.csv": "853d26fbe79d466c5fc9d86cb3f9d820a1a5ac17071cfef5687383aa7199ad85",
+        "memory-incomplete.csv": "177a24eafca1a84c749538d6fbb51025055270676a500c0a8fade0d9dcd1d4f0"
+      },
+      "interrupted_retry": {
+        "source_run": "ios-ga-full02",
+        "startup_ms": {
+          "n": 30,
+          "p50": 355.139,
+          "p90": 383.578,
+          "min": 326.387,
+          "max": 398.07
+        },
+        "transitions_ms": {
+          "new-drink-to-activity": {
+            "n": 10,
+            "p50": 400.11249999999995,
+            "p90": 416.622,
+            "min": 383.406,
+            "max": 433.403
+          },
+          "activity-to-settings": {
+            "n": 10,
+            "p50": 166.63150000000002,
+            "p90": 199.984,
+            "min": 150.01,
+            "max": 233.357
+          }
+        },
+        "successful_memory_samples_by_state": {
+          "initial-new-drink": 10,
+          "first-activity": 5
+        },
+        "failure": {
+          "mode": "memory",
+          "state": "first-activity",
+          "sample": 5,
+          "readiness_timeout_seconds": 65,
+          "successful_status_reads": 167,
+          "last_probe_state": "starting",
+          "cause": "undetermined; does not establish a framework or NativeAOT defect"
+        },
+        "raw_csv_sha256": {
+          "interrupted-retry-startup.csv": "6a45afc14a9a2edd67761983b8a3f34518d5a07001bd422b2a7c850a6c15da2b",
+          "interrupted-retry-transitions.csv": "6c339c8b6e9275db0b187d42db833c5d7d35897572a8e723e0a5d4d94777cf1b",
+          "interrupted-retry-memory.csv": "5334cd315973a260eeeacf8c2810943a063d2799473e43bfd7d14e970042b3ce",
+          "readiness-timeout-status.csv": "e1bdc4128cc2c135875c9e8acd267183fb1ee29c4cd8c514c0c3b262e5925413"
+        }
+      },
+      "primary_interruption": {
+        "mode": "memory",
+        "state": "first-activity",
+        "sample": 8,
+        "status_copy_timeout_seconds": 25,
+        "later_status_retry": "complete; not an app-reported failure"
+      },
+      "confirmation": {
+        "source_run": "ios-ga-confirm01",
+        "startup_ms": {
+          "n": 30,
+          "p50": 504.5565,
+          "p90": 559.117,
+          "min": 331.906,
+          "max": 590.441
+        },
+        "transitions_ms": {
+          "new-drink-to-activity": {
+            "n": 10,
+            "p50": 360.49649999999997,
+            "p90": 366.826,
+            "min": 345.869,
+            "max": 379.215
+          },
+          "activity-to-settings": {
+            "n": 10,
+            "p50": 149.99599999999998,
+            "p90": 150.052,
+            "min": 133.233,
+            "max": 150.055
+          }
+        },
+        "process_count": 56,
+        "raw_csv_sha256": {
+          "confirmation-startup.csv": "2ad8c3ec836dbfb59ff1ed2b063be0bf8400f50487f46b42503b2d02ae847252",
+          "confirmation-transitions.csv": "ff8a6c32afd70088127ace43a14da54c49095fb28a018a8f629aac4b1e37accc"
+        }
+      }
+    },
+    "ios-native-aot": {
+      "source_run": "ios-ga-full02",
+      "status": "complete",
+      "startup_ms": {
+        "n": 30,
+        "p50": 200.61,
+        "p90": 210.678,
+        "min": 183.797,
+        "max": 220.597
+      },
+      "transitions_ms": {
+        "new-drink-to-activity": {
+          "n": 10,
+          "p50": 65.3065,
+          "p90": 73.512,
+          "min": 64.15,
+          "max": 77.364
+        },
+        "activity-to-settings": {
+          "n": 10,
+          "p50": 54.6415,
+          "p90": 56.785,
+          "min": 52.484,
+          "max": 56.795
+        }
+      },
+      "memory_status": "complete",
+      "memory_successful_samples_by_state": {
+        "initial-new-drink": 10,
+        "first-activity": 10,
+        "repeated-navigation": 10
+      },
+      "package_bytes": 33688931,
+      "ipa_sha256": "ed53c35b2729e7d6481e33cea1aed2b98fe691e129ec60692f93d48e196e98f7",
+      "build_properties": {
+        "UseMonoRuntime": "false",
+        "MtouchInterpreter": "",
+        "EnableNativeAot": "true",
+        "PublishAot": "true",
+        "PublishAotUsingRuntimePack": "true",
+        "PublishReadyToRun": "false",
+        "TrimMode": "full",
+        "MtouchLink": "Full"
+      },
+      "raw_csv_sha256": {
+        "startup.csv": "67b7798aebf724f606ff773ce6eeea7608dc127c69a20d28fff54d40d405ef2c",
+        "transitions.csv": "a4e985c5dffe0d0fe36446f8ead9d8564f895af505d21bd76500f6de232e83fe",
+        "memory.csv": "b3b317d8b5c64c28a87b736555445cbf115b54d4aba974934d59713a2296d0b7"
+      },
+      "memory_footprint_bytes": {
+        "initial-new-drink": {
+          "n": 10,
+          "p50": 54166496.0,
+          "p90": 54395848,
+          "min": 52347824,
+          "max": 54461384
+        },
+        "first-activity": {
+          "n": 10,
+          "p50": 54789088.0,
+          "p90": 54854624,
+          "min": 52839368,
+          "max": 54887440
+        },
+        "repeated-navigation": {
+          "n": 10,
+          "p50": 53208020.0,
+          "p90": 53314528,
+          "min": 52708368,
+          "max": 53363680
+        }
+      },
+      "process_count": 86,
+      "confirmation": {
+        "source_run": "ios-ga-confirm01",
+        "startup_ms": {
+          "n": 30,
+          "p50": 204.869,
+          "p90": 217.713,
+          "min": 191.879,
+          "max": 245.113
+        },
+        "transitions_ms": {
+          "new-drink-to-activity": {
+            "n": 10,
+            "p50": 65.163,
+            "p90": 77.602,
+            "min": 62.857,
+            "max": 85.648
+          },
+          "activity-to-settings": {
+            "n": 10,
+            "p50": 47.8605,
+            "p90": 55.932,
+            "min": 35.232,
+            "max": 60.25
+          }
+        },
+        "process_count": 56,
+        "raw_csv_sha256": {
+          "confirmation-startup.csv": "ee534bbcce9b50a3ae27ee1e51dc00e9138ca7a74e5a1556e0022438f19341eb",
+          "confirmation-transitions.csv": "6614393a2cde7422502fe4ea9bed715542d2871ec19fe7fed106feefea4ae9aa"
+        }
+      }
+    }
+  }
+}

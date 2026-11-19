@@ -1,0 +1,28 @@
+{
+  "status": "complete",
+  "cell": "native-partialr2r",
+  "bytes": 17072395,
+  "startup": {
+    "n": 30,
+    "p50": 965.5,
+    "p90": 991,
+    "min": 936,
+    "max": 1013
+  },
+  "transitions": {
+    "new-drink-to-activity": {
+      "n": 10,
+      "p50": 589.0084999999999,
+      "p90": 670.594,
+      "min": 524.289,
+      "max": 715.087
+    },
+    "activity-to-settings": {
+      "n": 10,
+      "p50": 77.9585,
+      "p90": 82.569,
+      "min": 72.343,
+      "max": 83.654
+    }
+  }
+}

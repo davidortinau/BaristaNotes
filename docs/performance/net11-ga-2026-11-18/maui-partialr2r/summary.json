@@ -1,0 +1,28 @@
+{
+  "status": "complete",
+  "cell": "maui-partialr2r",
+  "bytes": 30243039,
+  "startup": {
+    "n": 30,
+    "p50": 1192.0,
+    "p90": 1234,
+    "min": 1159,
+    "max": 1261
+  },
+  "transitions": {
+    "new-drink-to-activity": {
+      "n": 10,
+      "p50": 1037.3575,
+      "p90": 1151.056,
+      "min": 977.02,
+      "max": 1181.82
+    },
+    "activity-to-settings": {
+      "n": 10,
+      "p50": 105.2555,
+      "p90": 110.798,
+      "min": 98.121,
+      "max": 112.173
+    }
+  }
+}

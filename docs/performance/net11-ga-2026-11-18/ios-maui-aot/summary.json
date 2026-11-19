@@ -1,0 +1,29 @@
+{
+  "cell": "ios-maui-aot",
+  "status": "timing-complete-memory-incomplete",
+  "scope": "startup, screen navigation, and signed IPA size; memory completeness recorded in ios-summary.json",
+  "bytes": 44137678,
+  "startup": {
+    "n": 30,
+    "p50": 349.1495,
+    "p90": 395.094,
+    "min": 322.497,
+    "max": 410.041
+  },
+  "transitions": {
+    "new-drink-to-activity": {
+      "n": 10,
+      "p50": 412.5145,
+      "p90": 429.242,
+      "min": 350.067,
+      "max": 430.946
+    },
+    "activity-to-settings": {
+      "n": 10,
+      "p50": 150.0215,
+      "p90": 166.672,
+      "min": 133.342,
+      "max": 166.692
+    }
+  }
+}

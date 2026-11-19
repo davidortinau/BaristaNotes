@@ -1,5 +1,11 @@
 # BaristaNotes runtime and UI architecture performance comparison
 
+For the .NET 11 GA rerun, see the
+[Android comparison](native-runtime-comparison-net11-ga.md) and
+[iOS comparison](native-runtime-comparison-ios-net11-ga.md).
+The measurements below are the original RC2 results, including the
+historical iOS comparison. They have not been relabeled as GA.
+
 This report compares the BaristaNotes .NET MAUI application with the native
 .NET for iOS and .NET for Android applications. It covers CoreCLR full
 ReadyToRun (R2R), CoreCLR partial R2R where the workload supports it, and

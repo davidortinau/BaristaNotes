@@ -1,0 +1,29 @@
+{
+  "cell": "ios-native-fullr2r",
+  "status": "complete",
+  "scope": "startup, screen navigation, and signed IPA size; memory completeness recorded in ios-summary.json",
+  "bytes": 51473502,
+  "startup": {
+    "n": 30,
+    "p50": 366.74350000000004,
+    "p90": 425.473,
+    "min": 325.56,
+    "max": 565.63
+  },
+  "transitions": {
+    "new-drink-to-activity": {
+      "n": 10,
+      "p50": 114.9645,
+      "p90": 115.049,
+      "min": 98.324,
+      "max": 131.732
+    },
+    "activity-to-settings": {
+      "n": 10,
+      "p50": 43.907,
+      "p90": 47.956,
+      "min": 30.846,
+      "max": 47.992
+    }
+  }
+}

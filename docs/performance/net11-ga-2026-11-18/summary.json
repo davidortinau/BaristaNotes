@@ -1,0 +1,629 @@
+{
+  "date": "2026-11-18",
+  "platform": "Android",
+  "device": "Pixel 5 (redfin)",
+  "os": "Android 14",
+  "sdk": "11.0.100",
+  "workload_set": "11.0.100.1",
+  "android_workload": "37.2.31",
+  "maui_controls": "11.0.0",
+  "framework_runtime": "11.0.0",
+  "source_commit": "6fc8c22f6ceedb277cf41ee44db14b0ab699ced6",
+  "original_product_commit": "883448adea5148669f0e6009e9e16c7f54ec9e55",
+  "fixture_sha256": "7e23a022af101dd46bd596e6a377f7597b103edb0d735896dfcc6c07e6ae8fbf",
+  "startup_contract": "am start -W TotalTime; separate application and fixture readiness validation",
+  "startup_samples": {
+    "pilot": 1,
+    "conditioning": 5,
+    "measured": 30
+  },
+  "transition_contract": "action handler entry to content-qualified frame commit",
+  "transition_samples_per_route": 10,
+  "memory_contract": {
+    "processes_per_state": 10,
+    "settle_seconds": 10,
+    "snapshots_per_process": 3,
+    "per_process_statistic": "median",
+    "state_statistic": "median of process medians",
+    "unit": "KiB PSS"
+  },
+  "percentile_contract": "p50 is sample median; p90 uses nearest rank",
+  "default_android_modes": {
+    "maui": "partial composite R2R with MAUI profiles",
+    "native": "full composite R2R"
+  },
+  "primary_run": "android-ga-full02",
+  "confirmation_run": "android-ga-confirm01",
+  "confirmation_policy": "Keep reverse-order confirmation separate; do not pool or substitute its observations",
+  "cells": {
+    "maui-fullr2r": {
+      "startup_ms": {
+        "n": 30,
+        "p50": 1233.0,
+        "p90": 1251,
+        "min": 1206,
+        "max": 1274
+      },
+      "transitions_ms": {
+        "new-drink-to-activity": {
+          "n": 10,
+          "p50": 826.8019999999999,
+          "p90": 1043.025,
+          "min": 765.446,
+          "max": 1048.449
+        },
+        "activity-to-settings": {
+          "n": 10,
+          "p50": 102.661,
+          "p90": 110.171,
+          "min": 91.441,
+          "max": 110.827
+        }
+      },
+      "memory_pss_kib": {
+        "initial": {
+          "n": 10,
+          "p50": 363711.5,
+          "p90": 364086,
+          "min": 363468,
+          "max": 368069
+        },
+        "activity": {
+          "n": 10,
+          "p50": 375702.0,
+          "p90": 384726,
+          "min": 375010,
+          "max": 385117
+        },
+        "repeated": {
+          "n": 10,
+          "p50": 410278.0,
+          "p90": 410500,
+          "min": 406287,
+          "max": 410604
+        }
+      },
+      "process_count": 86,
+      "package_bytes": 47859935,
+      "apk_sha256": "ba6a537895108aac543ddc26c064f072f95b5a9a3ea5fe54f4c956549805ed18",
+      "abis": [
+        "arm64-v8a"
+      ],
+      "ga_packages": [
+        "Microsoft.EntityFrameworkCore/11.0.0",
+        "Microsoft.Extensions.Logging/11.0.0",
+        "Microsoft.Extensions.Logging.Debug/11.0.0",
+        "Microsoft.Maui.Controls/11.0.0"
+      ],
+      "thermal_status_before": 0,
+      "thermal_status_after": 0,
+      "raw_csv_sha256": {
+        "startup.csv": "1349aac9d7f38b7e4c4cd3aa0482fdc98381e66678c4e5efe31dbd805d60c195",
+        "transitions.csv": "d986e2a6b4b0d77deff5b4f8a7003548ea333d30ecdc5027d17a94b1270ad74f",
+        "memory.csv": "f6be236e45a384ea3979f653c9923e92878cb245234f0b1764de83c6a9d1fc30"
+      },
+      "confirmation": {
+        "startup_ms": {
+          "n": 30,
+          "p50": 1210.5,
+          "p90": 1239,
+          "min": 1184,
+          "max": 1259
+        },
+        "transitions_ms": {
+          "new-drink-to-activity": {
+            "n": 10,
+            "p50": 774.1344999999999,
+            "p90": 1066.715,
+            "min": 696.906,
+            "max": 1072.836
+          },
+          "activity-to-settings": {
+            "n": 10,
+            "p50": 90.115,
+            "p90": 107.662,
+            "min": 87.614,
+            "max": 110.632
+          }
+        },
+        "process_count": 56,
+        "thermal_status_before": 0,
+        "thermal_status_after": 0,
+        "raw_csv_sha256": {
+          "confirmation-startup.csv": "4e5359fdc01df7b63627cb1aa62bb9278d87c385fd5525e3eee0e787cc498103",
+          "confirmation-transitions.csv": "1f0ddb39339a9a389c0a8dd5ce614e9807fce4306fe25643aa970f4e60c60501"
+        }
+      }
+    },
+    "native-fullr2r": {
+      "startup_ms": {
+        "n": 30,
+        "p50": 615.0,
+        "p90": 653,
+        "min": 601,
+        "max": 854
+      },
+      "transitions_ms": {
+        "new-drink-to-activity": {
+          "n": 10,
+          "p50": 380.96299999999997,
+          "p90": 393.306,
+          "min": 357.718,
+          "max": 490.557
+        },
+        "activity-to-settings": {
+          "n": 10,
+          "p50": 62.107,
+          "p90": 68.052,
+          "min": 49.845,
+          "max": 72.679
+        }
+      },
+      "memory_pss_kib": {
+        "initial": {
+          "n": 10,
+          "p50": 286095.0,
+          "p90": 286146,
+          "min": 285938,
+          "max": 290350
+        },
+        "activity": {
+          "n": 10,
+          "p50": 288274.5,
+          "p90": 288344,
+          "min": 287883,
+          "max": 288427
+        },
+        "repeated": {
+          "n": 10,
+          "p50": 311817.0,
+          "p90": 312308,
+          "min": 311536,
+          "max": 314367
+        }
+      },
+      "process_count": 86,
+      "package_bytes": 33280267,
+      "apk_sha256": "5492eb575107de421ac9eeef8935a407b460722eb165f1a26260f224853275b9",
+      "abis": [
+        "arm64-v8a"
+      ],
+      "ga_packages": [
+        "Microsoft.EntityFrameworkCore/11.0.0",
+        "Microsoft.Extensions.Logging/11.0.0"
+      ],
+      "thermal_status_before": 0,
+      "thermal_status_after": 0,
+      "raw_csv_sha256": {
+        "startup.csv": "8df461f92395f93f048458a7aea87f5e7af8150d03c48a610f9e92411f3a9759",
+        "transitions.csv": "7f94a390d154b8b9587fc86c07a6da1c9361f5a924e473a3b9fcdb082d70dd3b",
+        "memory.csv": "b451c30c0e5ab678b8a0ff072eda39233d807cc40f5751c37383be4796d569f0"
+      },
+      "confirmation": {
+        "startup_ms": {
+          "n": 30,
+          "p50": 593.5,
+          "p90": 607,
+          "min": 581,
+          "max": 616
+        },
+        "transitions_ms": {
+          "new-drink-to-activity": {
+            "n": 10,
+            "p50": 411.301,
+            "p90": 440.092,
+            "min": 385.853,
+            "max": 485.066
+          },
+          "activity-to-settings": {
+            "n": 10,
+            "p50": 59.6755,
+            "p90": 65.391,
+            "min": 48.538,
+            "max": 67.456
+          }
+        },
+        "process_count": 56,
+        "thermal_status_before": 0,
+        "thermal_status_after": 0,
+        "raw_csv_sha256": {
+          "confirmation-startup.csv": "92d1b50f860de5f7a331a5faf9e116b283dbd77b1d269ec9810812723dd048fd",
+          "confirmation-transitions.csv": "503b89d42081762e248f80ca4330801e4a44d3dfe3764e1733174f7397ac9c41"
+        }
+      }
+    },
+    "maui-partialr2r": {
+      "startup_ms": {
+        "n": 30,
+        "p50": 1192.0,
+        "p90": 1234,
+        "min": 1159,
+        "max": 1261
+      },
+      "transitions_ms": {
+        "new-drink-to-activity": {
+          "n": 10,
+          "p50": 1037.3575,
+          "p90": 1151.056,
+          "min": 977.02,
+          "max": 1181.82
+        },
+        "activity-to-settings": {
+          "n": 10,
+          "p50": 105.2555,
+          "p90": 110.798,
+          "min": 98.121,
+          "max": 112.173
+        }
+      },
+      "memory_pss_kib": {
+        "initial": {
+          "n": 10,
+          "p50": 205599.0,
+          "p90": 210603,
+          "min": 203181,
+          "max": 223953
+        },
+        "activity": {
+          "n": 10,
+          "p50": 217370.5,
+          "p90": 218066,
+          "min": 216637,
+          "max": 218161
+        },
+        "repeated": {
+          "n": 10,
+          "p50": 236967.0,
+          "p90": 240255,
+          "min": 233949,
+          "max": 240442
+        }
+      },
+      "process_count": 86,
+      "package_bytes": 30243039,
+      "apk_sha256": "587761b45435b2095aa8100afa4b27a9c95deea134e9405f7f4c7066dde20b9b",
+      "abis": [
+        "arm64-v8a"
+      ],
+      "ga_packages": [
+        "Microsoft.EntityFrameworkCore/11.0.0",
+        "Microsoft.Extensions.Logging/11.0.0",
+        "Microsoft.Extensions.Logging.Debug/11.0.0",
+        "Microsoft.Maui.Controls/11.0.0"
+      ],
+      "thermal_status_before": 0,
+      "thermal_status_after": 0,
+      "raw_csv_sha256": {
+        "startup.csv": "9b8145f30e187cd24ddeabcfa9e02e516b9ca26369fba70bef424ca3471e3ff5",
+        "transitions.csv": "5be068d980aae6d8ca78d5e0bca58be0611facf3312d53d2281a4cba8170b8f4",
+        "memory.csv": "caa8e6ef81724839e732263bf96a6bad5f5bae3254f1ff4aebad62b5ce28df16"
+      },
+      "confirmation": {
+        "startup_ms": {
+          "n": 30,
+          "p50": 1163.5,
+          "p90": 1197,
+          "min": 1143,
+          "max": 1759
+        },
+        "transitions_ms": {
+          "new-drink-to-activity": {
+            "n": 10,
+            "p50": 1062.109,
+            "p90": 1150.696,
+            "min": 919.365,
+            "max": 1201.116
+          },
+          "activity-to-settings": {
+            "n": 10,
+            "p50": 103.69,
+            "p90": 107.589,
+            "min": 97.512,
+            "max": 112.031
+          }
+        },
+        "process_count": 56,
+        "thermal_status_before": 0,
+        "thermal_status_after": 0,
+        "raw_csv_sha256": {
+          "confirmation-startup.csv": "80b792fced311901f8dc3ee83b08287cd7917c23bd1da1bf7d199bd8ca896bb8",
+          "confirmation-transitions.csv": "fa728606643f5a8162384b6cdb4e774565ba511430a9b7015cf2fd26291da167"
+        }
+      }
+    },
+    "native-partialr2r": {
+      "startup_ms": {
+        "n": 30,
+        "p50": 965.5,
+        "p90": 991,
+        "min": 936,
+        "max": 1013
+      },
+      "transitions_ms": {
+        "new-drink-to-activity": {
+          "n": 10,
+          "p50": 589.0084999999999,
+          "p90": 670.594,
+          "min": 524.289,
+          "max": 715.087
+        },
+        "activity-to-settings": {
+          "n": 10,
+          "p50": 77.9585,
+          "p90": 82.569,
+          "min": 72.343,
+          "max": 83.654
+        }
+      },
+      "memory_pss_kib": {
+        "initial": {
+          "n": 10,
+          "p50": 145095.0,
+          "p90": 145237,
+          "min": 144629,
+          "max": 149535
+        },
+        "activity": {
+          "n": 10,
+          "p50": 144602.0,
+          "p90": 144721,
+          "min": 144529,
+          "max": 144791
+        },
+        "repeated": {
+          "n": 10,
+          "p50": 162857.5,
+          "p90": 165488,
+          "min": 162663,
+          "max": 166184
+        }
+      },
+      "process_count": 86,
+      "package_bytes": 17072395,
+      "apk_sha256": "ab0e870aca4e8633b140775c0b6b0d1e1aefd0cee0ea484f62ca47748c95e6b1",
+      "abis": [
+        "arm64-v8a"
+      ],
+      "ga_packages": [
+        "Microsoft.EntityFrameworkCore/11.0.0",
+        "Microsoft.Extensions.Logging/11.0.0"
+      ],
+      "thermal_status_before": 0,
+      "thermal_status_after": 0,
+      "raw_csv_sha256": {
+        "startup.csv": "63e55d96dabab11b7ca53b20e87a70f1cc90564355aa39a4d57707fb79ee6da7",
+        "transitions.csv": "19976cc8c0dedd5b06a2b4e0c875513725dc53c124a4b176e7e8b4d7cada7bf8",
+        "memory.csv": "ad10b17fb77e78f833ae775198bca0d862773da7a2ec54c80697ebf44e31173b"
+      },
+      "confirmation": {
+        "startup_ms": {
+          "n": 30,
+          "p50": 943.5,
+          "p90": 974,
+          "min": 919,
+          "max": 991
+        },
+        "transitions_ms": {
+          "new-drink-to-activity": {
+            "n": 10,
+            "p50": 651.5315,
+            "p90": 736.012,
+            "min": 543.197,
+            "max": 809.965
+          },
+          "activity-to-settings": {
+            "n": 10,
+            "p50": 77.2085,
+            "p90": 83.132,
+            "min": 73.683,
+            "max": 84.281
+          }
+        },
+        "process_count": 56,
+        "thermal_status_before": 0,
+        "thermal_status_after": 0,
+        "raw_csv_sha256": {
+          "confirmation-startup.csv": "60c284f4f7628741b01cf52a4e88d7f04f28fa69b60f17d09ee4700a523a1725",
+          "confirmation-transitions.csv": "996c530bc1164d7da6048a84f03e162ecd7a95e0ac95e95624f0f5222432b502"
+        }
+      }
+    },
+    "maui-aot": {
+      "startup_ms": {
+        "n": 30,
+        "p50": 725.5,
+        "p90": 771,
+        "min": 451,
+        "max": 855
+      },
+      "transitions_ms": {
+        "new-drink-to-activity": {
+          "n": 10,
+          "p50": 361.46299999999997,
+          "p90": 370.788,
+          "min": 344.022,
+          "max": 457.235
+        },
+        "activity-to-settings": {
+          "n": 10,
+          "p50": 42.713499999999996,
+          "p90": 44.656,
+          "min": 39.593,
+          "max": 45.156
+        }
+      },
+      "memory_pss_kib": {
+        "initial": {
+          "n": 10,
+          "p50": 146588.5,
+          "p90": 147662,
+          "min": 146254,
+          "max": 150967
+        },
+        "activity": {
+          "n": 10,
+          "p50": 152400.5,
+          "p90": 152917,
+          "min": 152198,
+          "max": 152918
+        },
+        "repeated": {
+          "n": 10,
+          "p50": 175164.5,
+          "p90": 175647,
+          "min": 171593,
+          "max": 175666
+        }
+      },
+      "process_count": 86,
+      "package_bytes": 31892995,
+      "apk_sha256": "51ea70e530553831753616529ae8f52ed41cd2ff442c6e3d37cfd1311912cfa3",
+      "abis": [
+        "arm64-v8a"
+      ],
+      "ga_packages": [
+        "Microsoft.EntityFrameworkCore/11.0.0",
+        "Microsoft.Extensions.Logging/11.0.0",
+        "Microsoft.Extensions.Logging.Debug/11.0.0",
+        "Microsoft.Maui.Controls/11.0.0"
+      ],
+      "thermal_status_before": 0,
+      "thermal_status_after": 0,
+      "raw_csv_sha256": {
+        "startup.csv": "33fd86742aae92dd429464968d35b7b0b32a64e756c2d46b770ed8529413ec8c",
+        "transitions.csv": "242c3eb0cfd56db10a5f9a37233944f84b7327f4da1108047b8b19a9faee7aab",
+        "memory.csv": "815d2cbf312292ece7273ca447fc8e55e33cabfa00ac6ad83c8fb75c7276e6c3"
+      },
+      "confirmation": {
+        "startup_ms": {
+          "n": 30,
+          "p50": 688.0,
+          "p90": 701,
+          "min": 359,
+          "max": 726
+        },
+        "transitions_ms": {
+          "new-drink-to-activity": {
+            "n": 10,
+            "p50": 361.582,
+            "p90": 364.05,
+            "min": 341.389,
+            "max": 380.648
+          },
+          "activity-to-settings": {
+            "n": 10,
+            "p50": 40.184,
+            "p90": 42.66,
+            "min": 37.397,
+            "max": 45.25
+          }
+        },
+        "process_count": 56,
+        "thermal_status_before": 0,
+        "thermal_status_after": 0,
+        "raw_csv_sha256": {
+          "confirmation-startup.csv": "d218782e0452dd78a417826b55217d608297df49f9ecba78d9093a573ddf85e4",
+          "confirmation-transitions.csv": "1f35515ad92442a1ae646299f614a72212af3934358fb42705327a2ffc6eaea6"
+        }
+      }
+    },
+    "native-aot": {
+      "startup_ms": {
+        "n": 30,
+        "p50": 203.5,
+        "p90": 223,
+        "min": 182,
+        "max": 235
+      },
+      "transitions_ms": {
+        "new-drink-to-activity": {
+          "n": 10,
+          "p50": 227.137,
+          "p90": 231.096,
+          "min": 208.904,
+          "max": 235.38
+        },
+        "activity-to-settings": {
+          "n": 10,
+          "p50": 46.683,
+          "p90": 51.361,
+          "min": 41.08,
+          "max": 58.484
+        }
+      },
+      "memory_pss_kib": {
+        "initial": {
+          "n": 10,
+          "p50": 110454.5,
+          "p90": 110567,
+          "min": 110329,
+          "max": 114879
+        },
+        "activity": {
+          "n": 10,
+          "p50": 116309.0,
+          "p90": 116363,
+          "min": 116201,
+          "max": 116420
+        },
+        "repeated": {
+          "n": 10,
+          "p50": 127234.5,
+          "p90": 127508,
+          "min": 127088,
+          "max": 127538
+        }
+      },
+      "process_count": 86,
+      "package_bytes": 19439217,
+      "apk_sha256": "5b7efb88fa06248749cce5496f3e0d73ac231d840f2b2b7de472c0d34ceb5ab3",
+      "abis": [
+        "arm64-v8a"
+      ],
+      "ga_packages": [
+        "Microsoft.EntityFrameworkCore/11.0.0",
+        "Microsoft.Extensions.Logging/11.0.0"
+      ],
+      "thermal_status_before": 0,
+      "thermal_status_after": 0,
+      "raw_csv_sha256": {
+        "startup.csv": "4552c25849b37f510efcfc98a6688ba29dcbdce3c14e2e9e6e9d335da5aea053",
+        "transitions.csv": "04a36cadc17f4ffbf645c1ccd6c795bc13e2cfa3a6e81d1f558d94eb3fae6eee",
+        "memory.csv": "0747205369ed59d3c7df1f5000a6792fed97a0f7061d60180f41b2c1681f3203"
+      },
+      "confirmation": {
+        "startup_ms": {
+          "n": 30,
+          "p50": 182.5,
+          "p90": 194,
+          "min": 158,
+          "max": 238
+        },
+        "transitions_ms": {
+          "new-drink-to-activity": {
+            "n": 10,
+            "p50": 215.9515,
+            "p90": 235.92,
+            "min": 202.695,
+            "max": 247.087
+          },
+          "activity-to-settings": {
+            "n": 10,
+            "p50": 45.549499999999995,
+            "p90": 49.511,
+            "min": 34.82,
+            "max": 52.103
+          }
+        },
+        "process_count": 56,
+        "thermal_status_before": 0,
+        "thermal_status_after": 0,
+        "raw_csv_sha256": {
+          "confirmation-startup.csv": "297d48605e0088c2f8d12807ec1a9319599050f4af27dee40f9709edceb3ef2b",
+          "confirmation-transitions.csv": "a908420b232df32b4dde8e8b0ec5c2c0c7ea7c435eb736b732271b807979e522"
+        }
+      }
+    }
+  },
+  "confirmation_status": "complete; all directional comparisons reproduced without pooling runs"
+}

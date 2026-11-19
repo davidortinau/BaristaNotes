@@ -1,0 +1,28 @@
+{
+  "status": "complete",
+  "cell": "native-aot",
+  "bytes": 19439217,
+  "startup": {
+    "n": 30,
+    "p50": 203.5,
+    "p90": 223,
+    "min": 182,
+    "max": 235
+  },
+  "transitions": {
+    "new-drink-to-activity": {
+      "n": 10,
+      "p50": 227.137,
+      "p90": 231.096,
+      "min": 208.904,
+      "max": 235.38
+    },
+    "activity-to-settings": {
+      "n": 10,
+      "p50": 46.683,
+      "p90": 51.361,
+      "min": 41.08,
+      "max": 58.484
+    }
+  }
+}

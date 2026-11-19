@@ -1,0 +1,29 @@
+{
+  "cell": "ios-native-aot",
+  "status": "complete",
+  "scope": "startup, screen navigation, and signed IPA size; memory completeness recorded in ios-summary.json",
+  "bytes": 33688931,
+  "startup": {
+    "n": 30,
+    "p50": 200.61,
+    "p90": 210.678,
+    "min": 183.797,
+    "max": 220.597
+  },
+  "transitions": {
+    "new-drink-to-activity": {
+      "n": 10,
+      "p50": 65.3065,
+      "p90": 73.512,
+      "min": 64.15,
+      "max": 77.364
+    },
+    "activity-to-settings": {
+      "n": 10,
+      "p50": 54.6415,
+      "p90": 56.785,
+      "min": 52.484,
+      "max": 56.795
+    }
+  }
+}

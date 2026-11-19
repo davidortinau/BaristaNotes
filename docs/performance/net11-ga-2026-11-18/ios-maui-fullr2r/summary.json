@@ -1,0 +1,29 @@
+{
+  "cell": "ios-maui-fullr2r",
+  "status": "complete",
+  "scope": "startup, screen navigation, and signed IPA size; memory completeness recorded in ios-summary.json",
+  "bytes": 61732540,
+  "startup": {
+    "n": 30,
+    "p50": 568.5905,
+    "p90": 585.886,
+    "min": 540.101,
+    "max": 659.562
+  },
+  "transitions": {
+    "new-drink-to-activity": {
+      "n": 10,
+      "p50": 660.472,
+      "p90": 704.222,
+      "min": 629.153,
+      "max": 1383.261
+    },
+    "activity-to-settings": {
+      "n": 10,
+      "p50": 283.348,
+      "p90": 299.988,
+      "min": 266.61,
+      "max": 300.04
+    }
+  }
+}

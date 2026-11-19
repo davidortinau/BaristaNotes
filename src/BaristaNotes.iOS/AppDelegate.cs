@@ -21,8 +21,7 @@ public sealed class AppDelegate : UIApplicationDelegate
         Logging.CreateLogger<AppDelegate>().LogInformation(
             "Native UIKit startup for {AppId}, build {BuildNumber}",
             NSBundle.MainBundle.BundleIdentifier, NSBundle.MainBundle.ObjectForInfoDictionary("CFBundleVersion"));
-        var services = Services = new NativeServices(Logging);
-        _ = services.InitializeAsync();
+        Services = new NativeServices(Logging);
         return true;
     }
 

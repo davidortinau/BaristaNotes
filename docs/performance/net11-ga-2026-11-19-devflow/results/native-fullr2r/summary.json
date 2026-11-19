@@ -1,0 +1,40 @@
+{
+  "app": "native",
+  "configuration": "fullr2r",
+  "package": "com.simplyprofound.baristanotes.perf.nativeviews1000.dffull",
+  "bytes": 43639205,
+  "sha256": "ff1119ddd284a254592e16b83217e448737dbcd6eab26f25f7243cd2d2be38bf",
+  "fixture_sha256": "7e23a022af101dd46bd596e6a377f7597b103edb0d735896dfcc6c07e6ae8fbf",
+  "abis": [
+    "arm64-v8a"
+  ],
+  "startup": {
+    "n": 30,
+    "p50": 830.5,
+    "p90": 864,
+    "min": 790,
+    "max": 916
+  },
+  "transitions": {
+    "new-drink-to-activity": {
+      "n": 10,
+      "p50": 508.05,
+      "p90": 561.416,
+      "min": 416.139,
+      "max": 581.683
+    },
+    "activity-to-settings": {
+      "n": 10,
+      "p50": 62.375,
+      "p90": 67.034,
+      "min": 55.386,
+      "max": 69.542
+    }
+  },
+  "process_count": 56,
+  "status": "complete",
+  "thermal_status_before": 0,
+  "battery_percent_before": 100,
+  "thermal_status_after": 0,
+  "battery_percent_after": 100
+}

@@ -1,0 +1,35 @@
+{
+  "app": "native",
+  "configuration": "fullr2r",
+  "package": "com.simplyprofound.baristanotes.perf.ga.nativeviews.ios.dffull",
+  "bytes": 64291787,
+  "sha256": "cf6c7fd9d9ffdc6d524a23073dedcaf67a7b6e303fa2472ddec9f3a6c51b9b48",
+  "fixture_sha256": "7e23a022af101dd46bd596e6a377f7597b103edb0d735896dfcc6c07e6ae8fbf",
+  "executable_sha256": "9f1dce51838e9350415cc3f33c7dc8a6364b9f46722fbb82f00f76a1fe20f04d",
+  "broker_wait": "timed out",
+  "startup": {
+    "n": 30,
+    "p50": 334.304,
+    "p90": 433.106,
+    "min": 316.771,
+    "max": 471.017
+  },
+  "transitions": {
+    "new-drink-to-activity": {
+      "n": 10,
+      "p50": 98.261,
+      "p90": 114.826,
+      "min": 93.915,
+      "max": 114.968
+    },
+    "activity-to-settings": {
+      "n": 10,
+      "p50": 31.41,
+      "p90": 48.029,
+      "min": 30.653,
+      "max": 48.102
+    }
+  },
+  "status": "complete",
+  "process_count": 56
+}

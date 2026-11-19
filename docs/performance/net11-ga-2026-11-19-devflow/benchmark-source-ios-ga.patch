@@ -1,0 +1,646 @@
+diff --git a/Directory.Build.props b/Directory.Build.props
+new file mode 100644
+--- /dev/null
++++ b/Directory.Build.props
+@@ -0,0 +1,8 @@
++<Project>
++  <PropertyGroup>
++    <MauiVersion>11.0.0</MauiVersion>
++    <BaseIntermediateOutputPath>$(BenchmarkOutputRoot)/obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
++    <BaseOutputPath>$(BenchmarkOutputRoot)/bin/$(MSBuildProjectName)/</BaseOutputPath>
++    <RestoreLockedMode>false</RestoreLockedMode>
++  </PropertyGroup>
++</Project>
+diff --git a/Directory.Build.targets b/Directory.Build.targets
+new file mode 100644
+--- /dev/null
++++ b/Directory.Build.targets
+@@ -0,0 +1,8 @@
++<Project>
++  <ItemGroup>
++    <PackageReference Update="Microsoft.EntityFrameworkCore;Microsoft.EntityFrameworkCore.Design;Microsoft.EntityFrameworkCore.Sqlite;Microsoft.EntityFrameworkCore.Tasks;Microsoft.Extensions.Configuration.Json;Microsoft.Extensions.Http;Microsoft.Extensions.Logging;Microsoft.Extensions.Logging.Debug;Microsoft.Maui.Graphics" Version="11.0.0" />
++  </ItemGroup>
++  <Target Name="RecordBenchmarkConfiguration" BeforeTargets="PrepareForBuild">
++    <Message Importance="High" Text="BENCHMARK project=$(MSBuildProjectName) sdk=$(NETCoreSdkVersion) tfm=$(TargetFramework) rid=$(RuntimeIdentifier) app=$(ApplicationId) maui=$(MauiVersion) mono=$(UseMonoRuntime) aot=$(PublishAot) r2r=$(PublishReadyToRun) composite=$(PublishReadyToRunComposite) full=$(MauiEnableFullReadyToRun) crossgen2=$(PublishReadyToRunCrossgen2ExtraArgs)" />
++  </Target>
++</Project>
+diff --git a/src/BaristaNotes.Android/BaristaNotes.Android.csproj b/src/BaristaNotes.Android/BaristaNotes.Android.csproj
+--- a/src/BaristaNotes.Android/BaristaNotes.Android.csproj
++++ b/src/BaristaNotes.Android/BaristaNotes.Android.csproj
+@@ -26,6 +26,9 @@
+     <ApplicationTitle>Barista Notes Native Perf $(NativePerformanceDataset)</ApplicationTitle>
+     <DefineConstants>$(DefineConstants);NATIVE_PERFORMANCE</DefineConstants>
+   </PropertyGroup>
++  <PropertyGroup Condition="'$(BenchmarkDevFlow)' == 'true'">
++    <DefineConstants>$(DefineConstants);BENCHMARK_DEVFLOW</DefineConstants>
++  </PropertyGroup>
+ 
+   <PropertyGroup Condition="'$(NativeMapSlice)' == 'true'">
+     <ApplicationId>com.simplyprofound.baristanotes.maps.nativeandroid</ApplicationId>
+@@ -42,6 +45,9 @@
+     <PackageReference Include="Microsoft.Extensions.Logging" Version="11.0.0-rc.1.26425.128" />
+     <PackageReference Include="Xamarin.AndroidX.RecyclerView" Version="1.4.0.6" />
+     <ProjectReference Include="../BaristaNotes.Core/BaristaNotes.Core.csproj" />
++  </ItemGroup>
++  <ItemGroup Condition="'$(BenchmarkDevFlow)' == 'true'">
++    <PackageReference Include="Microsoft.Maui.DevFlow.Agent.Native" Version="$(MauiDevFlowVersion)" />
+   </ItemGroup>
+ 
+   <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+diff --git a/src/BaristaNotes.Android/MainActivity.Performance.cs b/src/BaristaNotes.Android/MainActivity.Performance.cs
+--- a/src/BaristaNotes.Android/MainActivity.Performance.cs
++++ b/src/BaristaNotes.Android/MainActivity.Performance.cs
+@@ -103,6 +103,26 @@
+ 
+         return Status(null);
+     }
++
++#if BENCHMARK_DEVFLOW
++    [Microsoft.Maui.DevFlow.Agent.Core.DevFlowAction("benchmark-command",
++        Description = "Prepare, drive, or inspect the isolated performance probe")]
++    public static string DevFlowCommand(string command, string route = "", int sample = 0)
++    {
++        var activity = PerformanceCurrent;
++        if (activity is null)
++            return "state=missing;failure=activity-not-running";
++        if (command == "prepare")
++        {
++            if (activity._performanceState != "ready")
++                return activity.Status("probe-not-ready");
++            activity._performanceRoute = route;
++            activity._performanceSample = sample;
++            return activity.Status(null);
++        }
++        return activity.ReceivePerformanceCommand(command);
++    }
++#endif
+ 
+     private void InvokePerformanceNavigation(string id)
+     {
+diff --git a/src/BaristaNotes.Android/MainActivity.cs b/src/BaristaNotes.Android/MainActivity.cs
+--- a/src/BaristaNotes.Android/MainActivity.cs
++++ b/src/BaristaNotes.Android/MainActivity.cs
+@@ -12,6 +12,10 @@
+ using Microsoft.Extensions.DependencyInjection;
+ using Microsoft.Extensions.Logging;
+ using OperationCanceledException = System.OperationCanceledException;
++#if BENCHMARK_DEVFLOW
++using Microsoft.Maui.DevFlow.Agent.Core;
++using Microsoft.Maui.DevFlow.Agent.Native;
++#endif
+ 
+ namespace BaristaNotes.AndroidApp;
+ 
+@@ -50,6 +54,9 @@
+ 
+     private DrinkDraft Draft => _editingShotId.HasValue ? _editDraft! : _newDraft;
+ 
++#if BENCHMARK_DEVFLOW
++    [System.Diagnostics.CodeAnalysis.DynamicDependency(nameof(DevFlowCommand))]
++#endif
+     protected override void OnCreate(Bundle? savedInstanceState)
+     {
+         _app = Application as NativeApplication
+@@ -64,6 +71,14 @@
+         _root.SetBackgroundColor(_style.Surface);
+         _root.AddView(_host, new FrameLayout.LayoutParams(-1, -1));
+         SetContentView(_root);
++#if BENCHMARK_DEVFLOW
++        this.StartDevFlowAgent(new AgentOptions
++        {
++            EnableFileLogging = false,
++            EnableNetworkMonitoring = false,
++            EnableHighLevelUiHooks = false,
++        });
++#endif
+         ConfigurePerformance(Intent);
+         _feedback = new NativeFeedbackPresenter(this, _style,
+             _app.LoggerFactory.CreateLogger<NativeFeedbackPresenter>(), blocked =>
+diff --git a/src/BaristaNotes.Android/packages.Release.lock.json b/src/BaristaNotes.Android/packages.Release.lock.json
+--- a/src/BaristaNotes.Android/packages.Release.lock.json
++++ b/src/BaristaNotes.Android/packages.Release.lock.json
+@@ -25,28 +25,42 @@
+       },
+       "Microsoft.Extensions.Configuration.Json": {
+         "type": "Direct",
+-        "requested": "[11.0.0-rc.1.26425.128, )",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "miSqJU+LJExUlMWIaz6aoJ7T44yctRxk7+/GCgEWyUEzwXr2nY7ouh6tJeu+gnhPPqQgMyF/+KWO973+oHe2/g==",
+-        "dependencies": {
+-          "Microsoft.Extensions.Configuration": "11.0.0-rc.1.26425.128",
+-          "Microsoft.Extensions.Configuration.FileExtensions": "11.0.0-rc.1.26425.128"
++        "requested": "[11.0.0, )",
++        "resolved": "11.0.0",
++        "contentHash": "WsNcEnVlq43lXBHAXtQg1b7job819SUf9BPtJrq44vhthL9Ijl2mkRBx5L3hIU1p2AN+wiRg47yhYj+vQxEgeQ==",
++        "dependencies": {
++          "Microsoft.Extensions.Configuration": "11.0.0",
++          "Microsoft.Extensions.Configuration.FileExtensions": "11.0.0"
+         }
+       },
+       "Microsoft.Extensions.Logging": {
+         "type": "Direct",
+-        "requested": "[11.0.0-rc.1.26425.128, )",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "SxnI3xH/jZ11sRY5l1DqaqH4z7tyEqAa0ehQ6xsBGenst1mFy91iGWGZfUA0MnyPxQCdjmAlvPmuCvLsrv/ufw==",
+-        "dependencies": {
+-          "Microsoft.Extensions.DependencyInjection": "11.0.0-rc.1.26425.128"
++        "requested": "[11.0.0, )",
++        "resolved": "11.0.0",
++        "contentHash": "zsse8MOgo0bj2KAEsSkg9WtNAfZbHbTlGeqfhy5PGozomM3zQM0XzumSQzQ0451IWNSJWLqYaSIQEpCi2j1sCA==",
++        "dependencies": {
++          "Microsoft.Extensions.DependencyInjection": "11.0.0"
++        }
++      },
++      "Microsoft.Maui.DevFlow.Agent.Native": {
++        "type": "Direct",
++        "requested": "[0.1.0-preview.14.26567.2, )",
++        "resolved": "0.1.0-preview.14.26567.2",
++        "contentHash": "geW/DIrVw4U4UmXSJzVMI9QfZ/KF9VtBVdCn/fK9Ne/Ri3VESkxBwaJ/xRFLLsvhi6bQsWlmROmiXYCQPzozkw==",
++        "dependencies": {
++          "Fizzler": "1.3.1",
++          "Microsoft.Extensions.Configuration.Binder": "10.0.5",
++          "Microsoft.Extensions.DependencyInjection": "10.0.5",
++          "Microsoft.Extensions.Http": "10.0.5",
++          "Microsoft.Maui.DevFlow.Agent.Abstractions": "0.1.0-preview.14.26567.2",
++          "SkiaSharp": "3.119.2"
+         }
+       },
+       "Microsoft.NET.ILLink.Tasks": {
+         "type": "Direct",
+-        "requested": "[11.0.0-rc.2.26475.136, )",
+-        "resolved": "11.0.0-rc.2.26475.136",
+-        "contentHash": "OmrvODF5Wnt+ZAnz0wfxOPPb+uRUxUpxwOmL6FjwADa5YrJcdhs39QzlA9wOZumuGhBVbw1JV4Ji5NdHeQXGIA=="
++        "requested": "[11.0.0, )",
++        "resolved": "11.0.0",
++        "contentHash": "gK2aq4XvChj5kvozpPHrkfKkr7zc5Z4xoTrJb4GPZzDEPMlCk0TX632bwY3LsWcX2UVcVRQBBGzsBGC2lq6YhA=="
+       },
+       "Xamarin.AndroidX.RecyclerView": {
+         "type": "Direct",
+@@ -90,6 +104,11 @@
+         "type": "Transitive",
+         "resolved": "4.3.1",
+         "contentHash": "A8UtcghHQlWxPJhJF5bsfEYO7068JHGTuJ7tzyyMjd5fE/N/xY1cVOUhzuLLFwMOCJVnM4mqSQc93W9fGfZ1kA=="
++      },
++      "Fizzler": {
++        "type": "Transitive",
++        "resolved": "1.3.1",
++        "contentHash": "ujU39lID9SL1PjD2hyiaQJw8tObM2c+T/vlTNV0Xl9+rj/8a2rHr9G2j9e5dL8rhkekZ1Wx5AIEYoO/LW06dnA=="
+       },
+       "HarfBuzzSharp": {
+         "type": "Transitive",
+@@ -160,66 +179,66 @@
+       },
+       "Microsoft.Data.Sqlite.Core": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "PtB6tpWSM3lt91xvCCb5pNoxlaLEXPY4n8DipzIeHyD21LQletLzfKi0bGT9rIFVJtxbJMwtD78ljLd6PTlK7Q==",
++        "resolved": "11.0.0",
++        "contentHash": "aWaF2LDjuFZwE9UsAGRYGNyS48xqaXoKPAjwpJI85fsaM/43s5NTRnl4xtqbTGKq8of2M/W8mo7DJk7v4zzHGQ==",
+         "dependencies": {
+           "SQLitePCLRaw.core": "3.0.5"
+         }
+       },
+       "Microsoft.EntityFrameworkCore": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "nichlvtvebHy90cJoHQjTr6TvWhdxbUxK1mQac/6NJcVMz/HYRQF0ihJ1ZkE/JeKr2ys3jDjl1IdNhHiWpQ/HQ==",
+-        "dependencies": {
+-          "Microsoft.EntityFrameworkCore.Abstractions": "[11.0.0-rc.1.26425.128, 12.0.0-a)",
+-          "Microsoft.EntityFrameworkCore.Analyzers": "[11.0.0-rc.1.26425.128, 12.0.0-a)",
+-          "Microsoft.Extensions.Caching.Memory": "11.0.0-rc.1.26425.128",
+-          "Microsoft.Extensions.Logging": "11.0.0-rc.1.26425.128"
++        "resolved": "11.0.0",
++        "contentHash": "1zGKYhZMHG9gIfC89cC2QKM6DpNotDglm+UzYEV9dAWyLwJI8kLx+yfjAQVpC83iUzvr9y+1HJ0HZ8cOaosBXA==",
++        "dependencies": {
++          "Microsoft.EntityFrameworkCore.Abstractions": "[11.0.0, 12.0.0-a)",
++          "Microsoft.EntityFrameworkCore.Analyzers": "[11.0.0, 12.0.0-a)",
++          "Microsoft.Extensions.Caching.Memory": "11.0.0",
++          "Microsoft.Extensions.Logging": "11.0.0"
+         }
+       },
+       "Microsoft.EntityFrameworkCore.Abstractions": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "WFsX+C+h2e/BKr//Cv9c82+zPweVUQN/dWXJiW8KvXwhkpJXB5tj3E3vgDmjX0nHbVnrrnE9G7iJlMSf0l2VoQ=="
++        "resolved": "11.0.0",
++        "contentHash": "iL0D3Dohk6bNYIHSM3VhvDXrJ+WXs7yMBVv+4L1ozxbsDmohG0T3ogd0mLgWBofu49BHGOgfFKgSGLsOirsjoQ=="
+       },
+       "Microsoft.EntityFrameworkCore.Analyzers": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "EC8SOxAcKbRGToF7MpHr0zPZ2QSZ3mkHuqI+rxu3ITz19ctvep0dzaHPN3F/JQ1vVQBbMr7gN0a9KxMqDhRcoQ=="
++        "resolved": "11.0.0",
++        "contentHash": "R7QxcmtQLP5np732En6eyzv2DjKevbrRxUUY9jPRQwuLzOSbyDowE5l0KyqdEEySvdHbrdRILg99FlaJTwcPbQ=="
+       },
+       "Microsoft.EntityFrameworkCore.Relational": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "JOxKBGYUg8aj/flaHdvhkqsRO5iKKiROMjVt+25BzVvSzMb/y1SnuvlGnsDFjtTI9qlZ0+TLsmNe1WDKxBkUMw==",
+-        "dependencies": {
+-          "Microsoft.EntityFrameworkCore": "[11.0.0-rc.1.26425.128, 12.0.0-a)",
+-          "Microsoft.Extensions.Caching.Memory": "11.0.0-rc.1.26425.128",
+-          "Microsoft.Extensions.Logging": "11.0.0-rc.1.26425.128"
++        "resolved": "11.0.0",
++        "contentHash": "yGS+J269mYUl8V17rHWaeFDySoUnGdiugIzszlNZr0F2+JirFatQyw2s2He92wyYIuy/Y3Yv3QLdq/HdTSj7cA==",
++        "dependencies": {
++          "Microsoft.EntityFrameworkCore": "[11.0.0, 12.0.0-a)",
++          "Microsoft.Extensions.Caching.Memory": "11.0.0",
++          "Microsoft.Extensions.Logging": "11.0.0"
+         }
+       },
+       "Microsoft.EntityFrameworkCore.Sqlite": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "AdxPeaX50H0cwK5z+xGTMYxy8EnJIVhbwAxZMmPBaI2EsRMpqOlsc11OcB40GGa5ctqRyQDFj41dL0KcUcv2TQ==",
+-        "dependencies": {
+-          "Microsoft.EntityFrameworkCore.Sqlite.Core": "[11.0.0-rc.1.26425.128, 12.0.0-a)",
+-          "Microsoft.Extensions.Caching.Memory": "11.0.0-rc.1.26425.128",
+-          "Microsoft.Extensions.DependencyModel": "11.0.0-rc.1.26425.128",
+-          "Microsoft.Extensions.Logging": "11.0.0-rc.1.26425.128",
++        "resolved": "11.0.0",
++        "contentHash": "12olimxsnuTo+9jsQvbS9fF/FXUhW7AHaXFcK/TgpND3Ki53CBvXnvT+AnPnk6d6f02D5NBdmBcZzfAynBgkRw==",
++        "dependencies": {
++          "Microsoft.EntityFrameworkCore.Sqlite.Core": "[11.0.0, 12.0.0-a)",
++          "Microsoft.Extensions.Caching.Memory": "11.0.0",
++          "Microsoft.Extensions.DependencyModel": "11.0.0",
++          "Microsoft.Extensions.Logging": "11.0.0",
+           "SQLitePCLRaw.bundle_e_sqlite3": "3.0.5",
+           "SQLitePCLRaw.core": "3.0.5"
+         }
+       },
+       "Microsoft.EntityFrameworkCore.Sqlite.Core": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "8IcxcTeVz7fKiCxPzD2HBnMui7S/RWMhOOa7FaKLzmIEK4hNrjOpRksRjAxMGo+Is4VhXBn3UQ9Zrxfjz5NlHQ==",
+-        "dependencies": {
+-          "Microsoft.Data.Sqlite.Core": "[11.0.0-rc.1.26425.128, 12.0.0-a)",
+-          "Microsoft.EntityFrameworkCore.Relational": "[11.0.0-rc.1.26425.128, 12.0.0-a)",
+-          "Microsoft.Extensions.Caching.Memory": "11.0.0-rc.1.26425.128",
+-          "Microsoft.Extensions.DependencyModel": "11.0.0-rc.1.26425.128",
+-          "Microsoft.Extensions.Logging": "11.0.0-rc.1.26425.128",
++        "resolved": "11.0.0",
++        "contentHash": "7u0jhtUY4GXr2MRsvSzemUpgf2znOCf8+3VLYxYNthIU5rIKk5Y+9EvS+yAlLIBL2218LeahsHYKA0MWKBYo5Q==",
++        "dependencies": {
++          "Microsoft.Data.Sqlite.Core": "[11.0.0, 12.0.0-a)",
++          "Microsoft.EntityFrameworkCore.Relational": "[11.0.0, 12.0.0-a)",
++          "Microsoft.Extensions.Caching.Memory": "11.0.0",
++          "Microsoft.Extensions.DependencyModel": "11.0.0",
++          "Microsoft.Extensions.Logging": "11.0.0",
+           "SQLitePCLRaw.core": "3.0.5"
+         }
+       },
+@@ -248,78 +267,78 @@
+       },
+       "Microsoft.Extensions.Caching.Memory": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "vm0cIPeFy1TZWcr7xLY/aqvZmXZ63GvAuieN0Fec1Fz+P/vi1sPFdRTJEbJ/NrOP+DduYE/1Ba7Wv0V01g1hdQ=="
++        "resolved": "11.0.0",
++        "contentHash": "w0nn5qRLxZC2T3sSmXj5PhrBFpGFCSFxg7E/zBi4lne0wZcZPY8of3qQDowqGobMZ3PW5qJnM1Q8fmGjL2B6Iw=="
+       },
+       "Microsoft.Extensions.Configuration": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "67EIKOU5pzuMcTHoezn/hmv1hyMcxpiSIlVL9oT6Uc3bcErYhkTBuZCuVqHuNjJBm0nqmpJb1v644M/NV7Q0Vw=="
++        "resolved": "11.0.0",
++        "contentHash": "VQS/GkFU9oLQmXZv0AR/zluF0YAbEAoUQ5aYMqcRc2TWeKa6m2AjInAOnDhCcoWI5a6LQUCzTcl8B3DZZaPZLg=="
+       },
+       "Microsoft.Extensions.Configuration.Binder": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "1AI7GybRhwcPmOgi275FOlxDP3PL/pspE1R4itBxLgQ771sRy0LhYi4usSYNvixnocxcPp0aZqJ27CyYdM9Aaw==",
+-        "dependencies": {
+-          "Microsoft.Extensions.Configuration": "11.0.0-rc.1.26425.128"
++        "resolved": "11.0.0",
++        "contentHash": "3eoaKF4Stat1PSN+KFwqmy04sM9DwGuHM1o1lHwuNFM/TqwQ+PCIvaQHS4lcT3kJl5rwvDK4w/rIlR0wc024eQ==",
++        "dependencies": {
++          "Microsoft.Extensions.Configuration": "11.0.0"
+         }
+       },
+       "Microsoft.Extensions.Configuration.FileExtensions": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "TL/JWfhVSpWQ20MU0qyc8b+msicxWQ1mCgksMEozZm6+lB3XvojKPsXF25QIHzTA5qwL+m6gEOcl6c6UG1NW0Q==",
+-        "dependencies": {
+-          "Microsoft.Extensions.Configuration": "11.0.0-rc.1.26425.128",
+-          "Microsoft.Extensions.FileProviders.Physical": "11.0.0-rc.1.26425.128"
++        "resolved": "11.0.0",
++        "contentHash": "ViBZDt2Y7TfVIxiWG5HKfP1KHTzsxn7a31ikZSg/1mdOfGyGAPj278v63NOU+n4UqvaOR43t9MOCUfadSohjQA==",
++        "dependencies": {
++          "Microsoft.Extensions.Configuration": "11.0.0",
++          "Microsoft.Extensions.FileProviders.Physical": "11.0.0"
+         }
+       },
+       "Microsoft.Extensions.DependencyInjection": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "r9VvtUpwM0MZ21DaTQWDqmsm6ABmuuXA/4aqa9LJVZET0HGlIG0Z5eN2esarFAQW2xtgGFyIYcnWs5uxUUizgg=="
++        "resolved": "11.0.0",
++        "contentHash": "KygQMITBDDPXw7+AAgdwQvVAaTXuDsc1iCAuvhO73ERxKX+d92cdbgZmpoYF7DIUq2hfs/yO2KD87uIreRy3MA=="
+       },
+       "Microsoft.Extensions.DependencyModel": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "Vp6l7w5Q4M8z3DCzHuu/KFtwjt7zI5fMm1/QdXk72c/nnSSp7ws7pR3Ls8b5qGaGeUjU0MigDFebn0FUDEk8nQ=="
++        "resolved": "11.0.0",
++        "contentHash": "K6M9zulTQ3OU0myKAcBb/Gbfw/aTKa3wlxyDhwfOmT7Wavoxe0lzAkeDjS5+/1dqcgGDUZtIykJIo3T4W7zKbQ=="
+       },
+       "Microsoft.Extensions.Diagnostics": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "4O8+S1awKr1nwX0KboSyMszc1TGlxI1rSZsuFfvoByNnvlOj2C0Zg0/DUTFaBTpKAMCGvBZomDbY3uOtUvhvTw==",
+-        "dependencies": {
+-          "Microsoft.Extensions.Configuration": "11.0.0-rc.1.26425.128",
+-          "Microsoft.Extensions.Options.ConfigurationExtensions": "11.0.0-rc.1.26425.128"
++        "resolved": "11.0.0",
++        "contentHash": "tX8piU+KbYHXIf5F70leczIWwtTkPKhyjRqjbo6D2uTA1PwrhcMD+Ls7rzqSMkx1U3osyrD4/kCrZeF13Lkgnw==",
++        "dependencies": {
++          "Microsoft.Extensions.Configuration": "11.0.0",
++          "Microsoft.Extensions.Options.ConfigurationExtensions": "11.0.0"
+         }
+       },
+       "Microsoft.Extensions.FileProviders.Physical": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "Pd0sz0cuM5sS4bMiD31G6Uv+PStLZOYEahGLq9pFMg7s4Spg/oPQQTV5nr4BqweXOsQtHF8hEhlnZqPZOBAvtw==",
+-        "dependencies": {
+-          "Microsoft.Extensions.FileSystemGlobbing": "11.0.0-rc.1.26425.128"
++        "resolved": "11.0.0",
++        "contentHash": "lHezhjI8zoTpltXwNy6QMr4/6lIhbXsAYZnCrgRDNNzMHCKvh+x95mkBVXLMzs8axrw7J5Cy21K8lM5YHCfgAw==",
++        "dependencies": {
++          "Microsoft.Extensions.FileSystemGlobbing": "11.0.0"
+         }
+       },
+       "Microsoft.Extensions.FileSystemGlobbing": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "uW8Q1sSMS2vnS8mhPdVTkbz5b0S5OEFMV8T7nS0bgz1ubQ/Bl7P2l/fmM8ZScqxNKqjZdNvRQaNgac6YA0HnUw=="
++        "resolved": "11.0.0",
++        "contentHash": "Ycwu/y22NK/ZyJpaFRJc4FB88mjOnsttk2AVHaKgEeShq0vodXZ4FJErpMM2Jju3r3t/2VYWrcHuIxj3ZT/aow=="
+       },
+       "Microsoft.Extensions.Http": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "/QwyZQrjhK4Bh2YEyqPEV7RqznsHtEdrh0sdYBrY6hVtxmIhVX+IHJ6AZegF1rwCPxI9Rr21dp7mHLduTfrQ9w==",
+-        "dependencies": {
+-          "Microsoft.Extensions.Diagnostics": "11.0.0-rc.1.26425.128",
+-          "Microsoft.Extensions.Logging": "11.0.0-rc.1.26425.128"
++        "resolved": "11.0.0",
++        "contentHash": "Pa5xJYtE5weFzv8sRwei1yvqCc05PareJABDtUSigzyj0xmrnG7ZU5VBy0hf5tgh7HN3/psGiOQouw5PLaQD8w==",
++        "dependencies": {
++          "Microsoft.Extensions.Diagnostics": "11.0.0",
++          "Microsoft.Extensions.Logging": "11.0.0"
+         }
+       },
+       "Microsoft.Extensions.Options.ConfigurationExtensions": {
+         "type": "Transitive",
+-        "resolved": "11.0.0-rc.1.26425.128",
+-        "contentHash": "z3K4AJwVQeNAHUfU4DSvs3Yvnzak7vbbD/rtcU4eKMxCKmmw3PA3sTefMTUUcIrePEhpIEODGtiOGJ00b/dNzg==",
+-        "dependencies": {
+-          "Microsoft.Extensions.Configuration.Binder": "11.0.0-rc.1.26425.128"
++        "resolved": "11.0.0",
++        "contentHash": "s4JrxDPwxk8pE6LFVj+M5TrDHxOVIoCnQBy5lexs5uAYeggPYwAc/pSDNgVuZN14pCmZGCInygI/2ylCdLYShw==",
++        "dependencies": {
++          "Microsoft.Extensions.Configuration.Binder": "11.0.0"
+         }
+       },
+       "Microsoft.Maui.AI.Attributes": {
+@@ -331,6 +350,21 @@
+           "Microsoft.Extensions.AI.Abstractions": "10.4.1",
+           "Microsoft.Extensions.DependencyInjection": "10.0.5"
+         }
++      },
++      "Microsoft.Maui.DevFlow.Agent.Abstractions": {
++        "type": "Transitive",
++        "resolved": "0.1.0-preview.14.26567.2",
++        "contentHash": "iu3kIPstm9zKPuG9wpXpbl7KKestKkXGCW5nJaYY0e0bTEkpaHbBB35VdX11jTBzzIMDSHd0CsJQh1+FkQcDWg==",
++        "dependencies": {
++          "Fizzler": "1.3.1",
++          "Microsoft.Maui.DevFlow.Logging": "0.1.0-preview.14.26567.2",
++          "SkiaSharp": "3.119.2"
++        }
++      },
++      "Microsoft.Maui.DevFlow.Logging": {
++        "type": "Transitive",
++        "resolved": "0.1.0-preview.14.26567.2",
++        "contentHash": "7ro54tSA+7eVnawn29KpzexQLWitaOYcEEiVpvp+4vFm3O+ogSnXXV3SzjmTybQU6ODXQb2NcoE5Ljow5YQTyA=="
+       },
+       "Microsoft.Recognizers.Definitions": {
+         "type": "Transitive",
+@@ -819,11 +853,11 @@
+         "dependencies": {
+           "Azure.AI.OpenAI": "[2.9.0-beta.1, )",
+           "Mapsui.Tiling": "[5.1.0, )",
+-          "Microsoft.EntityFrameworkCore": "[11.0.0-rc.1.26425.128, )",
+-          "Microsoft.EntityFrameworkCore.Sqlite": "[11.0.0-rc.1.26425.128, )",
++          "Microsoft.EntityFrameworkCore": "[11.0.0, )",
++          "Microsoft.EntityFrameworkCore.Sqlite": "[11.0.0, )",
+           "Microsoft.Extensions.AI": "[10.9.0, )",
+           "Microsoft.Extensions.AI.OpenAI": "[10.9.0, )",
+-          "Microsoft.Extensions.Http": "[11.0.0-rc.1.26425.128, )",
++          "Microsoft.Extensions.Http": "[11.0.0, )",
+           "Microsoft.Maui.AI.Attributes": "[0.1.0-preview.12.26421.1, )",
+           "Microsoft.Recognizers.Text.Number": "[1.8.13, )",
+           "NuGet.CommandLine": "[7.9.0, )"
+diff --git a/src/BaristaNotes.iOS/AppDelegate.cs b/src/BaristaNotes.iOS/AppDelegate.cs
+--- a/src/BaristaNotes.iOS/AppDelegate.cs
++++ b/src/BaristaNotes.iOS/AppDelegate.cs
+@@ -1,6 +1,10 @@
+ using Foundation;
+ using Microsoft.Extensions.Logging;
+ using UIKit;
++#if BENCHMARK_DEVFLOW
++using Microsoft.Maui.DevFlow.Agent.Core;
++using Microsoft.Maui.DevFlow.Agent.Native;
++#endif
+ 
+ namespace BaristaNotes.Native.iOS;
+ 
+@@ -23,6 +27,15 @@
+             NSBundle.MainBundle.BundleIdentifier, NSBundle.MainBundle.ObjectForInfoDictionary("CFBundleVersion"));
+         var services = Services = new NativeServices(Logging);
+         _ = services.InitializeAsync();
++#if BENCHMARK_DEVFLOW
++        BaristaNotes.Benchmarking.BenchmarkDevFlowBrokerRejector.Start();
++        DevFlowAgent.Start(new AgentOptions
++        {
++            EnableFileLogging = false,
++            EnableNetworkMonitoring = false,
++            EnableHighLevelUiHooks = false,
++        });
++#endif
+         return true;
+     }
+ 
+diff --git a/src/BaristaNotes.iOS/BaristaNotes.iOS.csproj b/src/BaristaNotes.iOS/BaristaNotes.iOS.csproj
+--- a/src/BaristaNotes.iOS/BaristaNotes.iOS.csproj
++++ b/src/BaristaNotes.iOS/BaristaNotes.iOS.csproj
+@@ -30,6 +30,9 @@
+     <ApplicationVersion>900</ApplicationVersion>
+     <DefineConstants>$(DefineConstants);NATIVE_PERFORMANCE</DefineConstants>
+   </PropertyGroup>
++  <PropertyGroup Condition="'$(BenchmarkDevFlow)' == 'true'">
++    <DefineConstants>$(DefineConstants);BENCHMARK_DEVFLOW</DefineConstants>
++  </PropertyGroup>
+ 
+   <PropertyGroup Condition="'$(NativeMapSlice)' == 'true'">
+     <ApplicationId>com.simplyprofound.baristanotes.maps.native.ios</ApplicationId>
+@@ -60,6 +63,10 @@
+     <BundleResource Include="$(_SourceResources)/AppIcon/beans.png" LogicalName="Images/beans.png" />
+     <ImageAsset Include="Assets.xcassets/AppIcon.appiconset/Contents.json" />
+     <ImageAsset Include="Assets.xcassets/AppIcon.appiconset/AppIcon.png" />
++  </ItemGroup>
++  <ItemGroup Condition="'$(BenchmarkDevFlow)' == 'true'">
++    <PackageReference Include="Microsoft.Maui.DevFlow.Agent.Native" Version="$(MauiDevFlowVersion)" />
++    <Compile Include="../BenchmarkDevFlowBrokerRejector.cs" Link="BenchmarkDevFlowBrokerRejector.cs" />
+   </ItemGroup>
+ 
+   <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+diff --git a/src/BaristaNotes/BaristaNotes.csproj b/src/BaristaNotes/BaristaNotes.csproj
+--- a/src/BaristaNotes/BaristaNotes.csproj
++++ b/src/BaristaNotes/BaristaNotes.csproj
+@@ -53,12 +53,15 @@
+ 	</PropertyGroup>
+ 
+ 	<PropertyGroup Condition="'$(MauiPerformance)' == 'true'">
+-		<ApplicationId Condition="'$(TargetFramework)' == 'net11.0-ios'">com.simplyprofound.baristanotes.maui.performance</ApplicationId>
+-		<ApplicationId Condition="'$(TargetFramework)' == 'net11.0-android'">com.simplyprofound.baristanotes.perf.maui.$(MauiPerformanceVariant)</ApplicationId>
++		<ApplicationId Condition="'$(TargetFramework)' == 'net11.0-ios'">com.simplyprofound.baristanotes.perf.ga.maui.ios.$(BenchmarkVariant)</ApplicationId>
++		<ApplicationId Condition="'$(TargetFramework)' == 'net11.0-android'">com.simplyprofound.baristanotes.perf.ga.maui.android.$(BenchmarkVariant)</ApplicationId>
+ 		<ApplicationTitle>BaristaNotes MAUI Performance</ApplicationTitle>
+ 		<ApplicationDisplayVersion>2.0</ApplicationDisplayVersion>
+ 		<ApplicationVersion>901</ApplicationVersion>
+ 		<DefineConstants>$(DefineConstants);MAUI_PERFORMANCE</DefineConstants>
++	</PropertyGroup>
++	<PropertyGroup Condition="'$(BenchmarkDevFlow)' == 'true'">
++		<DefineConstants>$(DefineConstants);BENCHMARK_DEVFLOW</DefineConstants>
+ 	</PropertyGroup>
+ 
+ 	<PropertyGroup Condition="'$(BaristaMapsComparison)' == 'true'">
+@@ -175,8 +178,11 @@
+ 	<PropertyGroup>
+ 		<MauiDevFlowVersion Condition="'$(MauiDevFlowVersion)' == ''">0.1.0-dev.20261021.2</MauiDevFlowVersion>
+ 	</PropertyGroup>
+-	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
++	<ItemGroup Condition="'$(Configuration)' == 'Debug' Or '$(BenchmarkDevFlow)' == 'true'">
+ 		<PackageReference Include="Microsoft.Maui.DevFlow.Agent" Version="$(MauiDevFlowVersion)" />
++	</ItemGroup>
++	<ItemGroup Condition="'$(BenchmarkDevFlow)' == 'true' And '$(TargetFramework)' == 'net11.0-ios'">
++		<Compile Include="../BenchmarkDevFlowBrokerRejector.cs" Link="BenchmarkDevFlowBrokerRejector.cs" />
+ 	</ItemGroup>
+ 
+ 	<!-- Microsoft.Maui.Labs.HotReload (DEBUG only): IHotReloadAware + MetadataUpdateHandler.
+@@ -217,9 +223,11 @@
+ 			   Text="MauiPerformance is supported only for net11.0-ios and net11.0-android." />
+ 		<Error Condition="'$(TargetFramework)' == 'net11.0-android' And '$(MauiPerformanceVariant)' != 'fullr2r' And '$(MauiPerformanceVariant)' != 'partialr2r' And '$(MauiPerformanceVariant)' != 'aot'"
+ 			   Text="MauiPerformanceVariant must be fullr2r, partialr2r, or aot for Android." />
+-		<Error Condition="'$(TargetFramework)' == 'net11.0-ios' And '$(ApplicationId)' != 'com.simplyprofound.baristanotes.maui.performance'"
+-			   Text="iOS MauiPerformance builds must use the isolated com.simplyprofound.baristanotes.maui.performance application ID. Evaluated ApplicationId: $(ApplicationId)" />
+-		<Error Condition="'$(TargetFramework)' == 'net11.0-android' And '$(ApplicationId)' != 'com.simplyprofound.baristanotes.perf.maui.$(MauiPerformanceVariant)'"
++		<Error Condition="'$(BenchmarkVariant)' == ''"
++			   Text="MauiPerformance builds require an isolated BenchmarkVariant." />
++		<Error Condition="'$(TargetFramework)' == 'net11.0-ios' And '$(ApplicationId)' != 'com.simplyprofound.baristanotes.perf.ga.maui.ios.$(BenchmarkVariant)'"
++			   Text="iOS MauiPerformance builds must use the isolated benchmark application ID. Evaluated ApplicationId: $(ApplicationId)" />
++		<Error Condition="'$(TargetFramework)' == 'net11.0-android' And '$(ApplicationId)' != 'com.simplyprofound.baristanotes.perf.ga.maui.android.$(BenchmarkVariant)'"
+ 			   Text="Android MauiPerformance builds must use the isolated performance application ID for the selected variant. Evaluated ApplicationId: $(ApplicationId)" />
+ 		<Error Condition="'$(MauiPerformanceDataset)' != '1000'"
+ 			   Text="The MAUI comparison uses the accepted 1000-drink fixture." />
+diff --git a/src/BaristaNotes/Hosting/DebugDiagnosticsExtensions.cs b/src/BaristaNotes/Hosting/DebugDiagnosticsExtensions.cs
+--- a/src/BaristaNotes/Hosting/DebugDiagnosticsExtensions.cs
++++ b/src/BaristaNotes/Hosting/DebugDiagnosticsExtensions.cs
+@@ -11,6 +11,13 @@
+ #if DEBUG
+         builder.Logging.AddDebug();
+         Microsoft.Maui.DevFlow.Agent.AgentServiceExtensions.AddMauiDevFlowAgent(builder);
++#elif BENCHMARK_DEVFLOW
++        Microsoft.Maui.DevFlow.Agent.AgentServiceExtensions.AddMauiDevFlowAgent(builder, options =>
++        {
++            options.EnableFileLogging = false;
++            options.EnableNetworkMonitoring = false;
++            options.EnableHighLevelUiHooks = false;
++        });
+ #endif
+         return builder;
+     }
+diff --git a/src/BaristaNotes/MauiProgram.cs b/src/BaristaNotes/MauiProgram.cs
+--- a/src/BaristaNotes/MauiProgram.cs
++++ b/src/BaristaNotes/MauiProgram.cs
+@@ -6,8 +6,15 @@
+ 
+ public static class MauiProgram
+ {
++#if BENCHMARK_DEVFLOW && ANDROID
++    [System.Diagnostics.CodeAnalysis.DynamicDependency(
++        nameof(MauiPerformanceProbe.DevFlowCommand), typeof(MauiPerformanceProbe))]
++#endif
+     public static MauiApp CreateMauiApp()
+     {
++#if BENCHMARK_DEVFLOW && IOS
++        BaristaNotes.Benchmarking.BenchmarkDevFlowBrokerRejector.Start();
++#endif
+         var builder = MauiApp.CreateBuilder();
+ 
+ #if IOS || ANDROID
+diff --git a/src/BaristaNotes/Performance/MauiPerformanceProbe.Android.cs b/src/BaristaNotes/Performance/MauiPerformanceProbe.Android.cs
+--- a/src/BaristaNotes/Performance/MauiPerformanceProbe.Android.cs
++++ b/src/BaristaNotes/Performance/MauiPerformanceProbe.Android.cs
+@@ -98,6 +98,26 @@
+         return Status(null);
+     }
+ 
++#if BENCHMARK_DEVFLOW
++    [Microsoft.Maui.DevFlow.Agent.Core.DevFlowAction("benchmark-command",
++        Description = "Prepare, drive, or inspect the isolated performance probe")]
++    public static string DevFlowCommand(string command, string route = "", int sample = 0)
++    {
++        var probe = IPlatformApplication.Current?.Services.GetService<MauiPerformanceProbe>();
++        if (probe is null)
++            return "state=missing;failure=app-not-running";
++        if (command == "prepare")
++        {
++            if (probe._state != "ready")
++                return probe.Status("probe-not-ready");
++            probe._route = route;
++            probe._sample = sample;
++            return probe.Status(null);
++        }
++        return probe.ReceiveCommand(command);
++    }
++#endif
++
+     private void Navigate(string route, string destination, bool measure)
+     {
+         if (_state is "complete" or "rejected")
+diff --git a/src/BenchmarkDevFlowBrokerRejector.cs b/src/BenchmarkDevFlowBrokerRejector.cs
+new file mode 100644
+--- /dev/null
++++ b/src/BenchmarkDevFlowBrokerRejector.cs
+@@ -0,0 +1,28 @@
++using System.Net;
++using System.Net.Sockets;
++
++namespace BaristaNotes.Benchmarking;
++
++internal static class BenchmarkDevFlowBrokerRejector
++{
++    public static void Start()
++    {
++        StartListener(IPAddress.Loopback);
++        StartListener(IPAddress.IPv6Loopback);
++    }
++
++    private static void StartListener(IPAddress address)
++    {
++        var listener = new TcpListener(address, 19223);
++        listener.Start();
++        var thread = new Thread(() =>
++        {
++            while (true)
++            {
++                using var connection = listener.AcceptTcpClient();
++            }
++        });
++        thread.IsBackground = true;
++        thread.Start();
++    }
++}

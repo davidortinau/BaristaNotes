@@ -1,0 +1,35 @@
+{
+  "app": "native",
+  "configuration": "aot",
+  "package": "com.simplyprofound.baristanotes.perf.ga.nativeviews.ios.dfaot",
+  "bytes": 45628645,
+  "sha256": "5e72de207f4b638b41b74ba51a2482fd4336e0d8ec923f434b78517cffa1f246",
+  "fixture_sha256": "7e23a022af101dd46bd596e6a377f7597b103edb0d735896dfcc6c07e6ae8fbf",
+  "executable_sha256": "c0561625a296db05e03b00c75153dee4291a2e437b55fa4cd585ee1208800db4",
+  "broker_wait": "timed out",
+  "startup": {
+    "n": 30,
+    "p50": 201.493,
+    "p90": 221.521,
+    "min": 180.425,
+    "max": 259.448
+  },
+  "transitions": {
+    "new-drink-to-activity": {
+      "n": 10,
+      "p50": 65.357,
+      "p90": 94.463,
+      "min": 61.158,
+      "max": 107.049
+    },
+    "activity-to-settings": {
+      "n": 10,
+      "p50": 51.9135,
+      "p90": 64.947,
+      "min": 31.68,
+      "max": 65.022
+    }
+  },
+  "status": "complete",
+  "process_count": 56
+}

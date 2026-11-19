@@ -1,0 +1,35 @@
+{
+  "app": "maui",
+  "configuration": "aot",
+  "package": "com.simplyprofound.baristanotes.perf.ga.maui.ios.dfaot",
+  "bytes": 59572889,
+  "sha256": "9fbe43614ae9b41be34ac6c336b4e01cd60eff36556067fe7f784d0939bf166b",
+  "fixture_sha256": "7e23a022af101dd46bd596e6a377f7597b103edb0d735896dfcc6c07e6ae8fbf",
+  "executable_sha256": "90f284d61ce0a699736336755464736ecf2253107acf9707cf2167591a39b889",
+  "broker_wait": "timed out",
+  "startup": {
+    "n": 30,
+    "p50": 371.0755,
+    "p90": 413.347,
+    "min": 342.854,
+    "max": 427.954
+  },
+  "transitions": {
+    "new-drink-to-activity": {
+      "n": 10,
+      "p50": 350.07000000000005,
+      "p90": 408.845,
+      "min": 316.725,
+      "max": 416.68
+    },
+    "activity-to-settings": {
+      "n": 10,
+      "p50": 141.69299999999998,
+      "p90": 166.679,
+      "min": 133.298,
+      "max": 166.683
+    }
+  },
+  "status": "complete",
+  "process_count": 56
+}

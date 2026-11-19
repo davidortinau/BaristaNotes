@@ -1,0 +1,40 @@
+{
+  "app": "maui",
+  "configuration": "fullr2r",
+  "package": "com.simplyprofound.baristanotes.perf.ga.maui.android.dffull",
+  "bytes": 59705793,
+  "sha256": "5c328242fca1fe227b89efcb715e91cd0094122d014a2655ff7d7142c3b25fe5",
+  "fixture_sha256": "7e23a022af101dd46bd596e6a377f7597b103edb0d735896dfcc6c07e6ae8fbf",
+  "abis": [
+    "arm64-v8a"
+  ],
+  "startup": {
+    "n": 30,
+    "p50": 1432.0,
+    "p90": 1505,
+    "min": 1405,
+    "max": 1562
+  },
+  "transitions": {
+    "new-drink-to-activity": {
+      "n": 10,
+      "p50": 813.8125,
+      "p90": 872.237,
+      "min": 684.102,
+      "max": 1018.247
+    },
+    "activity-to-settings": {
+      "n": 10,
+      "p50": 164.2785,
+      "p90": 182.911,
+      "min": 97.737,
+      "max": 188.845
+    }
+  },
+  "process_count": 56,
+  "status": "complete",
+  "thermal_status_before": 0,
+  "battery_percent_before": 100,
+  "thermal_status_after": 0,
+  "battery_percent_after": 100
+}

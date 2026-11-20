@@ -173,17 +173,10 @@
 	     Keep MauiDevFlowVersion equal to the maui CLI version in dotnet-tools.json (run it as `dotnet maui`),
 	     so the CLI and the agent speak the same protocol. -->
 	<PropertyGroup>
-		<MauiDevFlowVersion Condition="'$(MauiDevFlowVersion)' == ''">0.1.0-dev.20261021.2</MauiDevFlowVersion>
+		<MauiDevFlowVersion Condition="'$(MauiDevFlowVersion)' == ''">0.1.0-preview.13.26526.5</MauiDevFlowVersion>
 	</PropertyGroup>
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
 		<PackageReference Include="Microsoft.Maui.DevFlow.Agent" Version="$(MauiDevFlowVersion)" />
-	</ItemGroup>
-
-	<!-- Microsoft.Maui.Labs.HotReload (DEBUG only): IHotReloadAware + MetadataUpdateHandler.
-	     Lets any class (not just Components) react to .NET Hot Reload updates.
-	     Tracking: dotnet/maui-labs#254, dotnet/maui#35229. -->
-	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-		<PackageReference Include="Microsoft.Maui.Labs.HotReload" Version="0.1.0-dev" />
 	</ItemGroup>
 
 	<!-- Mac Catalyst: use sandbox-disabled entitlements in Debug so dotnet watch's

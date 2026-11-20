@@ -3,7 +3,7 @@
   "isRoot": true,
   "tools": {
     "microsoft.maui.cli": {
-      "version": "0.1.0-dev.20261021.2",
+      "version": "0.1.0-preview.13.26526.5",
       "commands": [
         "maui"
       ],

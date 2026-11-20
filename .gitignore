@@ -106,6 +106,7 @@ appsettings.Development.json
 *.nupkg
 *.snupkg
 .nuget/
+.dotnet/
 
 # Build results specific
 publish/

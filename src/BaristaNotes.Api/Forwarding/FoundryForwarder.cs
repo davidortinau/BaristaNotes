@@ -1,14 +1,16 @@
 using System.Data.Common;
 using System.Net;
 using System.Net.Http.Headers;
+using Azure.Core;
+using Azure.Identity;
 using Yarp.ReverseProxy.Configuration;
 using Yarp.ReverseProxy.Transforms;
 
 namespace BaristaNotes.Api.Forwarding;
 
 /// <summary>
-/// Forwards the app's existing Azure OpenAI calls to Foundry and adds the key,
-/// so the app does not hold one. This is a local demo forwarder with no user
+/// Forwards the app's existing Azure OpenAI calls to Foundry and authenticates
+/// server-side. This is a local demo forwarder with no user
 /// sign-in, so it accepts loopback callers only. Production needs sign-in and
 /// per-feature endpoints instead.
 /// </summary>
@@ -21,6 +23,7 @@ public static class FoundryForwarder
     {
         var connection = FoundryConnection.FromConfiguration(builder.Configuration);
         builder.Services.AddSingleton(connection);
+        builder.Services.AddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
 
         builder.Services.AddReverseProxy()
             .LoadFromMemory(
@@ -43,10 +46,11 @@ public static class FoundryForwarder
                     },
                 ])
             .AddTransforms(context => context.AddRequestTransform(transform =>
-            {
-                ApplyKey(transform.ProxyRequest.Headers, connection.Key);
-                return ValueTask.CompletedTask;
-            }));
+                ApplyAuthenticationAsync(
+                    transform.ProxyRequest.Headers,
+                    connection,
+                    transform.HttpContext.RequestServices.GetRequiredService<TokenCredential>(),
+                    transform.HttpContext.RequestAborted)));
 
         return builder;
     }
@@ -77,32 +81,53 @@ public static class FoundryForwarder
         headers.TryAddWithoutValidation(KeyHeader, key);
     }
 
+    public static async ValueTask ApplyAuthenticationAsync(
+        HttpRequestHeaders headers, FoundryConnection connection, TokenCredential credential, CancellationToken ct)
+    {
+        if (connection.Key is { } key)
+        {
+            ApplyKey(headers, key);
+            return;
+        }
+
+        headers.Remove(KeyHeader);
+        headers.Remove("Authorization");
+        var token = await credential.GetTokenAsync(
+            new TokenRequestContext(["https://cognitiveservices.azure.com/.default"]), ct);
+        headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
+    }
+
     public static bool IsLoopback(IPAddress? address) =>
         address is not null && IPAddress.IsLoopback(address);
 }
 
-/// <summary>Foundry endpoint and key from the "foundry" connection string.</summary>
-public sealed class FoundryConnection(Uri endpoint, string key)
+/// <summary>Foundry connection; an omitted key selects Entra ID authentication.</summary>
+public sealed class FoundryConnection(Uri endpoint, string? key)
 {
     public Uri Endpoint { get; } = endpoint;
 
-    public string Key { get; } = key;
+    public string? Key { get; } = key;
 
     public static FoundryConnection FromConfiguration(IConfiguration configuration) =>
         Parse(configuration.GetConnectionString("foundry")
             ?? throw new InvalidOperationException(
-                "Missing connection string 'foundry'. Set ConnectionStrings:foundry in the AppHost user secrets."));
+                "Missing connection string 'foundry'. Start through the AppHost or set ConnectionStrings:foundry."));
 
     public static FoundryConnection Parse(string connectionString)
     {
         var parts = new DbConnectionStringBuilder { ConnectionString = connectionString };
-        if (!parts.TryGetValue("Endpoint", out var endpoint) || !parts.TryGetValue("Key", out var key) ||
-            string.IsNullOrWhiteSpace(endpoint as string) || string.IsNullOrWhiteSpace(key as string))
+        if (!parts.TryGetValue("Endpoint", out var endpoint) || string.IsNullOrWhiteSpace(endpoint as string))
         {
-            throw new InvalidOperationException("Connection string 'foundry' must contain Endpoint and Key.");
+            throw new InvalidOperationException("Connection string 'foundry' must contain Endpoint.");
         }
 
-        return new FoundryConnection(new Uri((string)endpoint), (string)key);
+        var hasKey = parts.TryGetValue("Key", out var key);
+        if (hasKey && string.IsNullOrWhiteSpace(key as string))
+        {
+            throw new InvalidOperationException("Connection string 'foundry' must omit Key for Entra ID or supply a non-empty Key.");
+        }
+
+        return new FoundryConnection(new Uri((string)endpoint), hasKey ? (string)key! : null);
     }
 
     // Never write the key to logs.

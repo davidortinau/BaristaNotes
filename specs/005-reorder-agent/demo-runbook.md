@@ -3,7 +3,188 @@
 > [!summary]
 > One `aspire start`, then everything on stage runs from the app, the shop page, and the Aspire dashboard. Reset between rehearsals with **Reset demo** (dashboard) and **Reset demo data** (app Settings). If the Wi-Fi fails, switch the dashboard to **Use rehearsal answers**. The ledger says so out loud.
 
+## AI development-loop demo (10-12 minutes)
+
+The story is not just "I added an AI feature to David's app." It is "I made
+the running app observable and operable by a coding agent, so it can close
+the loop from a request to verified behavior." Keep Copilot, the Mac app,
+and the live web companion visible; use the Aspire dashboard for the
+resource graph and trace waterfall.
+
+Start in PostgreSQL mode for the database-tool beat. Before a fresh
+rehearsal, use the dashboard's **Reset demo** and the app's **Reset demo
+data**, then check in through the app. Do not reset in the middle of the
+walkthrough. If using the current populated demo instead, show its existing
+run and use **Run now** without promising the original two-pick scenario.
+
+| Beat | Show / ask the coding agent | What the augmentation enables |
+|---|---|---|
+| 1. Teach it the environment (1 min) | Show `.mcp.json`, the project-local `.agents/skills/`, and the matching MAUI CLI/agent versions. Explain that `aspire agent init` supplied the Aspire guidance. | Checked-in workflows and tools rather than relying on a chat remembering machine-specific instructions. Public package sources and an SDK pin make the setup repeatable. |
+| 2. Discover the running system (1 min) | "Use Aspire to show this AppHost's resources, endpoints, and health." Show the native heads, API, shop, Foundry, web, and PostgreSQL on the graph. | One orchestration model supplies dependencies, service discovery, startup, and resource commands. The coding agent can inspect it through Aspire MCP. |
+| 3. Give it native eyes and hands (2 min) | "Use DevFlow to capture the Mac app, inspect its visual tree, and open Agent activity." Let it identify controls by automation ID, not guessed screen coordinates. | Debug-only DevFlow exposes screenshots, the live UI tree, interaction, and app diagnostics. This works against the real MAUI app, not a browser imitation. |
+| 4. Follow a real action across surfaces (2 min) | From the native app, save a cupboard check-in if needed and press **Run now**. Watch the companion's journal counts, ledger, picks, and memory update without a page refresh. | The native app and read-only React companion share the same API. The web polls every two seconds; it is not replaying a scripted animation. Foundry credentials stay server-side. |
+| 5. Inspect, don't guess (2 min) | "Find the latest run's trace and explain where the time went." Show API/shop spans and the learner/ranker model calls. Then ask for the tracked browser's activity or error logs through Aspire. | Service-default telemetry and AI spans expose backend/model behavior; `WithBrowserLogs()` brings the tracked Edge browser's diagnostics into the same tooling. Prompt capture is development-only. |
+| 6. Verify persisted reality (1 min) | "Through the Aspire MCP gateway, list the agent tables and show the latest run's status, picks, and roasters checked. Verify the connection is read-only." | PostgreSQL's MCP tools are discovered through Aspire, with restricted access. Query `Runs`, then `SHOW transaction_read_only`; this is the agent backend, not the native app's local journal database. |
+| 7. Close the edit/verify loop (2 min) | "Change the web heading to 'From cupboard to coffee', build and lint it, then use Playwright to confirm the new heading and that the live ledger still appears." Show the Vite update and the browser evidence. | The coding agent can change code and verify rendered behavior with browser automation. For a native change, use the separate build/deploy/DevFlow loop; do not claim the removed private MAUI hot-reload callbacks still work. |
+| 8. Bring the control room into Copilot (1 min) | Open the Aspire AppHosts canvas, show its Resources and Graph tabs, then choose **Run agent** on the API card and watch the app/web update. | The project-local canvas exposes the same AppHost-defined commands, endpoints, health, and diagnostics inside Copilot. No duplicate command wiring. |
+
+Finish with: **"The coding agent can see the UI, operate the app, inspect
+the services and database, and prove its change against the running system."**
+
+The canvas is installed in `.github/extensions/aspire-apphosts` from
+[`microsoft/aspire-skills`](https://github.com/microsoft/aspire-skills/tree/main/extensions/aspire-apphosts),
+with its upstream MIT license. Open it with `open_aspire_apphosts` targeting
+`src/BaristaNotes.AppHost/BaristaNotes.AppHost.csproj`. Custom commands live
+on their owning resource cards; the Graph tab is read-only. The **Stop
+window off** command was exercised successfully through the canvas command
+handler without resetting data or creating orders.
+
+Optional extensions:
+
+- **Failure visibility:** stop only the `api` resource, show the web's
+  stale-data warning and tracked-browser errors, then start `api` again and
+  show automatic recovery. Do not stop the whole AppHost for this beat.
+- **Repeatable native verification:** show the `run-demo-test` skill and
+  `scripts/demo_test.py`: create a bean, profile, and drink through Android
+  UI, reopen the saved data, and verify it after a data-preserving deployment.
+  Run this as a separate prepared Android demo, not an unannounced target
+  switch from the Mac app.
+- **Dependency evidence:** show the `dotnet-inspect` skill for inspecting
+  actual package APIs/source rather than inventing preview API signatures.
+- **Storage choice:** show the **storage** parameter's **Set parameter** command,
+  choose SQLite or PostgreSQL, and save to user secrets. Prefer explaining this
+  after the live flow: restarting changes web ports, and the shop's
+  in-memory carts disappear even though API state persists.
+- **Rehearsal controls:** show the existing replay, reset, timeout,
+  idempotency, and price-change resource commands as repeatable scenarios,
+  not ad-hoc database edits. Rehearsal model answers are explicitly labeled
+  in the ledger.
+
 ## Before the talk
+
+### First run on another Mac
+
+The repository pins the .NET 11 RC3 SDK and uses Aspire CLI 13.6.4. The
+backend and AppHost target .NET 10: install the .NET 10 and ASP.NET Core 10
+runtimes in the same dotnet installation as the SDK. The MAUI
+heads additionally require MAUI workloads and
+full Xcode selected with `xcode-select` (Command Line Tools alone are not enough).
+Starting the dashboard does not build or launch a MAUI head; those resources
+start explicitly from the dashboard.
+
+On a Mac where Xcode is installed but not selected globally, prefix the start
+command with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
+When using the ignored repo-local SDK, also set `DOTNET_ROOT="$PWD/.dotnet"`
+and prepend it to `PATH`; this lets the child MAUI build find its workloads.
+Podman is supported: start its existing machine and set
+`ASPIRE_CONTAINER_RUNTIME=podman` when starting the AppHost.
+
+By default, the AppHost provisions Azure AI Foundry with three deployments
+(GlobalStandard, capacity 10 each): `gpt-4.1-mini` uses GPT-4.1 mini,
+`gpt-4o` uses GPT-4.1 for vision, and `gpt-4o-mini` uses GPT-4.1 mini for
+extraction. The last two retain the app's existing deployment names, not the
+underlying model names: Azure no longer permits new GPT-4o mini deployments.
+Provisioning and model calls can incur Azure charges. Configure your own
+subscription and a region with quota for all three models:
+
+```bash
+az login
+dotnet user-secrets set "Azure:SubscriptionId" "<subscription-id>" --project src/BaristaNotes.AppHost
+dotnet user-secrets set "Azure:Location" "swedencentral" --project src/BaristaNotes.AppHost
+aspire start --apphost src/BaristaNotes.AppHost/BaristaNotes.AppHost.csproj
+```
+
+Aspire creates a development resource group and assigns the developer the
+Foundry roles. The API uses `DefaultAzureCredential` for both agent calls and
+forwarded app requests. Credentials are never sent to the app. Provisioned
+Azure resources remain after stopping the AppHost.
+
+To reuse an existing account instead, set `ConnectionStrings:foundry` in the
+AppHost user secrets to `Endpoint=https://<account>.cognitiveservices.azure.com/`
+for Entra ID, or include `;Key=<key>` for key authentication. This skips
+provisioning; the account must already have the three deployments and the
+signed-in developer needs permission to invoke them. Remove that connection
+string to return to Aspire provisioning.
+
+NuGet restore uses the public feed, not a required machine-specific sibling
+folder. The MAUI Debug head and local `maui` tool use the matching public
+DevFlow preview `0.1.0-preview.13.26526.5`. Run `dotnet tool restore`, then
+`dotnet maui devflow --help`. The private Labs HotReload integration is
+removed; its custom app/theme hot-reload callbacks are not part of this demo.
+MauiReactor's own hot-reload feature switch remains enabled in Debug.
+
+### SQLite or PostgreSQL
+
+The startup option switches the **agent API's** storage, not the MAUI app's
+on-device journal. SQLite is the default and needs no container engine.
+
+In the resource workbench or dashboard, **storage → Set parameter** offers
+SQLite and PostgreSQL. Enable **Save to user secrets**, then restart the
+entire AppHost to apply the resource-graph change. The saved `Parameters:storage`
+value takes precedence over the legacy `Demo:Storage` setting shown below.
+For a command-line override, use `--Parameters:storage=sqlite` or
+`--Parameters:storage=postgres` instead.
+
+The legacy option still works when no storage parameter has been saved:
+
+```bash
+aspire start --non-interactive --apphost src/BaristaNotes.AppHost/BaristaNotes.AppHost.csproj -- --Demo:Storage=sqlite
+```
+
+For PostgreSQL and the MCP gateway demo, stop this AppHost and start it again:
+
+```bash
+aspire stop --non-interactive --apphost src/BaristaNotes.AppHost/BaristaNotes.AppHost.csproj
+aspire start --non-interactive --apphost src/BaristaNotes.AppHost/BaristaNotes.AppHost.csproj -- --Demo:Storage=postgres
+aspire wait agentdb-mcp --apphost src/BaristaNotes.AppHost/BaristaNotes.AppHost.csproj --timeout 60
+```
+
+SQLite keeps `src/BaristaNotes.Api/App_Data/agent.db`; PostgreSQL keeps a
+named data volume. Settings, check-ins, runs, memory, and proposals remain
+independent in each store. Switching does not copy or delete them. A new
+store needs its own check-in: mark a currently open bag finished in the app,
+save, then run the agent. Previously finished bags are no longer in the
+app's open-bag check-in list.
+
+Postgres mode adds `postgres`, `agentdb`, and `agentdb-mcp`. Its MCP server
+uses **restricted/read-only access**, including read-only SQL transactions.
+Discover and call it through Aspire:
+
+```bash
+aspire mcp tools --apphost src/BaristaNotes.AppHost/BaristaNotes.AppHost.csproj --format Json
+aspire mcp call agentdb-mcp list_objects --input '{"schema_name":"public"}' --apphost src/BaristaNotes.AppHost/BaristaNotes.AppHost.csproj
+aspire mcp call agentdb-mcp execute_sql --input '{"sql":"SELECT \"Status\", \"Picks\" FROM \"Runs\" ORDER BY \"StartedAt\" DESC LIMIT 5"}' --apphost src/BaristaNotes.AppHost/BaristaNotes.AppHost.csproj
+```
+
+The same nine database tools are proxied into the Aspire MCP server used by
+the coding agent. If they are not visible after switching, list AppHosts,
+select this exact AppHost, and refresh the MCP tools.
+
+### Mac app to live web companion
+
+The `web` resource is a React / TypeScript / Vite dashboard. Use its URL from
+the Aspire dashboard or `aspire describe`; the web port is allocated at startup.
+The storage badge reports the API's actual provider. The page polls every two
+seconds for shared journal counts, budget, latest-run ledger, picks, and memory.
+It is read-only and shows no fabricated activity.
+
+1. Start `app-maccatalyst` from Aspire. In the app, open Settings → Check-in,
+   mark an open bag finished, and save. The web check-in and journal counts update.
+2. In the app, open Agent activity → **Run now**. Watch steps and recommendations
+   appear on the web without refreshing it.
+3. Use **Open tracked browser** on `web-browser-logs`. Its console log stream
+   includes actual activity changes, manual refreshes, fetches, and errors:
+   `aspire logs web-browser-logs --apphost src/BaristaNotes.AppHost/BaristaNotes.AppHost.csproj`.
+
+To select Edge Beta on this Mac without hardcoding it into the AppHost:
+
+```bash
+dotnet user-secrets set "Aspire:Hosting:BrowserLogs:web:Browser" "/Applications/Microsoft Edge Beta.app/Contents/MacOS/Microsoft Edge Beta" --project src/BaristaNotes.AppHost
+```
+
+The web page retains its last successful data during an API outage, labels it
+with a refresh error, and reconnects automatically. The tracked browser uses an
+Aspire-managed profile, not the user's normal browser profile.
 
 | When | Do | Check |
 |---|---|---|
@@ -17,7 +198,9 @@
 ## Windows on screen
 
 1. The app (Mac Catalyst).
-2. The browser with two tabs: the shop (`https://localhost:7032/orders`) and the Aspire dashboard.
+2. The browser with the live `web` companion, the shop (`https://localhost:7032/orders`),
+   and the Aspire dashboard. Open the companion through `web-browser-logs` to show
+   browser telemetry.
 
 ## Script
 
